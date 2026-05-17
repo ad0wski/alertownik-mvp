@@ -82,7 +82,17 @@ export function AlertCard({ alert }: { alert: Alert }) {
       </div>
 
       {/* Source */}
-      <p className="text-xs text-gray-400">Źródło: {alert.source}</p>
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-gray-400">Źródło: {alert.source}</p>
+        <a
+          href={alert.sourceUrl ?? "#"}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline"
+        >
+          Zobacz źródło →
+        </a>
+      </div>
     </article>
   );
 }

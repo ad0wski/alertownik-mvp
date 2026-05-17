@@ -19,4 +19,5 @@ export interface Alert {
   summary: string;
   action: string;
   source: string;
+  sourceUrl?: string;
 }

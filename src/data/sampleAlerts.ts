@@ -14,6 +14,7 @@ export const sampleAlerts: Alert[] = [
     action:
       "Sprawdź aktualne rozkłady jazdy na stronie WKD lub aplikacji mobilnej.",
     source: "WKD – Warszawska Kolej Dojazdowa",
+    sourceUrl: "#",
   },
   {
     id: "2",
@@ -28,6 +29,7 @@ export const sampleAlerts: Alert[] = [
     action:
       "Zaopatrz się w wodę pitną z wyprzedzeniem. W razie pytań dzwoń na infolinię MPWiK.",
     source: "MPWiK Pruszków",
+    sourceUrl: "#",
   },
   {
     id: "3",
@@ -42,6 +44,7 @@ export const sampleAlerts: Alert[] = [
     action:
       "Zabezpiecz urządzenia wrażliwe na brak zasilania. Upewnij się, że naładujesz telefon wcześniej.",
     source: "Energa Operator SA",
+    sourceUrl: "#",
   },
   {
     id: "4",
@@ -55,6 +58,7 @@ export const sampleAlerts: Alert[] = [
     action:
       "Wystaw pojemniki w czwartek 22 maja zamiast w środę. Harmonogram dostępny na stronie gminy.",
     source: "Urząd Gminy Michałowice",
+    sourceUrl: "#",
   },
   {
     id: "5",
@@ -69,5 +73,6 @@ export const sampleAlerts: Alert[] = [
     action:
       "Uwzględnij możliwe opóźnienia w podróży. Rozważ użycie alternatywnej trasy przez ul. Parkową.",
     source: "Zarząd Dróg Powiatu Pruszkowskiego",
+    sourceUrl: "#",
   },
 ];
