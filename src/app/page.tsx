@@ -10,12 +10,20 @@ export default function Home() {
             <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
               Alertownik
             </h1>
-            <Link
-              href="/builder"
-              className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              Kreator alertu →
-            </Link>
+            <div className="flex items-center gap-4">
+              <Link
+                href="/builder"
+                className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                Kreator alertu →
+              </Link>
+              <Link
+                href="/ai-helper"
+                className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                AI Helper →
+              </Link>
+            </div>
           </div>
           <p className="mt-2 text-gray-500 text-base">
             Lokalne utrudnienia i zmiany w Twojej okolicy
