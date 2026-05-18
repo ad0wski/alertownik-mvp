@@ -72,6 +72,7 @@ function pickPlace(place: unknown, location: unknown, fallback: string): string 
 // ── Draft helpers ────────────────────────────────────────────────────────────
 
 const DRAFTS_KEY = "alertownik-drafts";
+const PUBLISHED_KEY = "alertownik-published-alerts";
 
 type DraftForm = typeof initialForm;
 
@@ -80,6 +81,8 @@ interface Draft {
   createdAt: string;
   form: DraftForm;
 }
+
+type PublishedAlert = Alert & { publishedAt: string };
 
 function loadDrafts(): Draft[] {
   try {
@@ -94,7 +97,35 @@ function saveDrafts(drafts: Draft[]): void {
   localStorage.setItem(DRAFTS_KEY, JSON.stringify(drafts));
 }
 
-function formatDraftDate(iso: string): string {
+function loadPublished(): PublishedAlert[] {
+  try {
+    const raw = localStorage.getItem(PUBLISHED_KEY);
+    return raw ? (JSON.parse(raw) as PublishedAlert[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function savePublished(alerts: PublishedAlert[]): void {
+  localStorage.setItem(PUBLISHED_KEY, JSON.stringify(alerts));
+}
+
+function generateSlug(title: string): string {
+  const polishMap: Record<string, string> = {
+    ą: "a", ć: "c", ę: "e", ł: "l", ń: "n", ó: "o", ś: "s", ź: "z", ż: "z",
+    Ą: "a", Ć: "c", Ę: "e", Ł: "l", Ń: "n", Ó: "o", Ś: "s", Ź: "z", Ż: "z",
+  };
+  const slug = title
+    .split("")
+    .map((c) => polishMap[c] ?? c)
+    .join("")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || `alert-${Date.now()}`;
+}
+
+function formatItemDate(iso: string): string {
   const d = new Date(iso);
   return d.toLocaleString("pl-PL", {
     day: "2-digit",
@@ -109,6 +140,7 @@ function formatDraftDate(iso: string): string {
 
 type ImportStatus = "idle" | "success" | "error";
 type DraftStatus = "idle" | "saved" | "loaded" | "deleted";
+type PublishStatus = "idle" | "published" | "loaded" | "deleted";
 
 export default function BuilderPage() {
   const [form, setForm] = useState(initialForm);
@@ -117,9 +149,12 @@ export default function BuilderPage() {
   const [importStatus, setImportStatus] = useState<ImportStatus>("idle");
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [draftStatus, setDraftStatus] = useState<DraftStatus>("idle");
+  const [publishedAlerts, setPublishedAlerts] = useState<PublishedAlert[]>([]);
+  const [publishStatus, setPublishStatus] = useState<PublishStatus>("idle");
 
   useEffect(() => {
     setDrafts(loadDrafts());
+    setPublishedAlerts(loadPublished());
   }, []);
 
   function handleChange(
@@ -156,6 +191,8 @@ export default function BuilderPage() {
     }
   }
 
+  // ── Draft actions ────────────────────────────────────────────────────────
+
   function saveDraft() {
     const draft: Draft = {
       id: `draft-${Date.now()}`,
@@ -182,6 +219,60 @@ export default function BuilderPage() {
     setDraftStatus("deleted");
     setTimeout(() => setDraftStatus("idle"), 2500);
   }
+
+  // ── Publish actions ──────────────────────────────────────────────────────
+
+  function publishAlert() {
+    const now = Date.now();
+    const today = new Date().toISOString().split("T")[0];
+    const newAlert: PublishedAlert = {
+      id: `local-${now}`,
+      slug: generateSlug(form.title || "alert"),
+      category: form.category,
+      severity: form.severity,
+      title: form.title,
+      place: form.place,
+      startsAt: form.startsAt || today,
+      ...(form.endsAt ? { endsAt: form.endsAt } : {}),
+      change: form.change,
+      action: form.action,
+      sourceName: form.sourceName,
+      ...(form.sourceUrl ? { sourceUrl: form.sourceUrl } : {}),
+      publishedAt: new Date().toISOString(),
+    };
+    const updated = [newAlert, ...publishedAlerts];
+    savePublished(updated);
+    setPublishedAlerts(updated);
+    setPublishStatus("published");
+    setTimeout(() => setPublishStatus("idle"), 2500);
+  }
+
+  function loadPublishedToForm(pa: PublishedAlert) {
+    setForm({
+      category: pa.category,
+      severity: pa.severity,
+      title: pa.title,
+      place: pa.place,
+      startsAt: pa.startsAt.split("T")[0],
+      endsAt: pa.endsAt ? pa.endsAt.split("T")[0] : "",
+      change: pa.change,
+      action: pa.action,
+      sourceName: pa.sourceName,
+      sourceUrl: pa.sourceUrl ?? "",
+    });
+    setPublishStatus("loaded");
+    setTimeout(() => setPublishStatus("idle"), 2500);
+  }
+
+  function deletePublished(id: string) {
+    const updated = publishedAlerts.filter((a) => a.id !== id);
+    savePublished(updated);
+    setPublishedAlerts(updated);
+    setPublishStatus("deleted");
+    setTimeout(() => setPublishStatus("idle"), 2500);
+  }
+
+  // ── Preview / output ─────────────────────────────────────────────────────
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -237,11 +328,6 @@ export default function BuilderPage() {
   "sourceName": "WKD",
   "sourceUrl": "https://wkd.com.pl/aktualnosci/"
 }`;
-
-  const categoryLabel =
-    categoryOptions.find((o) => o.value === form.category)?.label ?? form.category;
-  const severityLabel =
-    severityOptions.find((o) => o.value === form.severity)?.label ?? form.severity;
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -459,13 +545,19 @@ export default function BuilderPage() {
           </div>
         </div>
 
-        {/* ── Save draft ────────────────────────────────────────────────── */}
+        {/* ── Form actions ──────────────────────────────────────────────── */}
         <div className="flex flex-wrap items-center gap-3 mb-8">
           <button
             onClick={saveDraft}
             className="rounded-lg bg-gray-800 px-4 py-2 text-sm font-medium text-white hover:bg-gray-900 transition-colors"
           >
             Zapisz jako draft
+          </button>
+          <button
+            onClick={publishAlert}
+            className="rounded-lg bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 transition-colors"
+          >
+            Opublikuj lokalnie
           </button>
 
           {draftStatus === "saved" && (
@@ -481,6 +573,21 @@ export default function BuilderPage() {
           {draftStatus === "deleted" && (
             <span className="text-xs font-medium text-gray-500">
               Draft usunięty.
+            </span>
+          )}
+          {publishStatus === "published" && (
+            <span className="text-xs font-medium text-green-700">
+              Alert opublikowany lokalnie.
+            </span>
+          )}
+          {publishStatus === "loaded" && (
+            <span className="text-xs font-medium text-blue-700">
+              Alert wczytany do edycji.
+            </span>
+          )}
+          {publishStatus === "deleted" && (
+            <span className="text-xs font-medium text-gray-500">
+              Alert usunięty z lokalnie opublikowanych.
             </span>
           )}
         </div>
@@ -514,7 +621,7 @@ export default function BuilderPage() {
         </section>
 
         {/* ── Saved drafts ──────────────────────────────────────────────── */}
-        <section>
+        <section className="mb-10">
           <h2 className={labelClass + " mb-4"}>Zapisane drafty</h2>
 
           {drafts.length === 0 ? (
@@ -533,7 +640,7 @@ export default function BuilderPage() {
                     <p className="text-xs text-gray-500 mt-0.5">
                       {categoryOptions.find((o) => o.value === draft.form.category)?.label} ·{" "}
                       {severityOptions.find((o) => o.value === draft.form.severity)?.label} ·{" "}
-                      {formatDraftDate(draft.createdAt)}
+                      {formatItemDate(draft.createdAt)}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
@@ -548,6 +655,51 @@ export default function BuilderPage() {
                       className="rounded-lg border border-red-100 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors"
                     >
                       Usuń
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* ── Published alerts ──────────────────────────────────────────── */}
+        <section>
+          <h2 className={labelClass + " mb-4"}>Lokalnie opublikowane alerty</h2>
+
+          {publishedAlerts.length === 0 ? (
+            <p className="text-sm text-gray-400">
+              Brak lokalnie opublikowanych alertów.
+            </p>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {publishedAlerts.map((pa) => (
+                <div
+                  key={pa.id}
+                  className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col sm:flex-row sm:items-center gap-3"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate">
+                      {pa.title || "Bez tytułu"}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {categoryOptions.find((o) => o.value === pa.category)?.label} ·{" "}
+                      {severityOptions.find((o) => o.value === pa.severity)?.label} ·{" "}
+                      opublikowano {formatItemDate(pa.publishedAt)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => loadPublishedToForm(pa)}
+                      className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      Wczytaj do edycji
+                    </button>
+                    <button
+                      onClick={() => deletePublished(pa.id)}
+                      className="rounded-lg border border-red-100 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors"
+                    >
+                      Usuń z publikowanych
                     </button>
                   </div>
                 </div>

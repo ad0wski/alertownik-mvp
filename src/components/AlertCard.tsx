@@ -59,7 +59,7 @@ function formatRange(startsAt: string, endsAt?: string): string {
   return `${formatDateTime(startsAt)} – ${formatDateTime(endsAt)}`;
 }
 
-export function AlertCard({ alert, isPreview }: { alert: Alert; isPreview?: boolean }) {
+export function AlertCard({ alert, isPreview, isLocal }: { alert: Alert; isPreview?: boolean; isLocal?: boolean }) {
   const [expanded, setExpanded] = useState(false);
   const severity = severityConfig[alert.severity];
   const isRealLink = Boolean(alert.sourceUrl && alert.sourceUrl !== "#");
@@ -103,6 +103,8 @@ export function AlertCard({ alert, isPreview }: { alert: Alert; isPreview?: bool
           <span className="text-xs text-gray-400">
             Podgląd roboczy — ten alert nie ma jeszcze własnej strony.
           </span>
+        ) : isLocal ? (
+          <span className="text-xs text-gray-400">Alert lokalny.</span>
         ) : (
           <Link
             href={`/alerts/${alert.slug}`}

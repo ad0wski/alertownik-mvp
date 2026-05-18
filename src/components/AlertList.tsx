@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AlertCard } from "@/components/AlertCard";
 import { sampleAlerts } from "@/data/sampleAlerts";
-import { AlertCategory } from "@/types/alert";
+import type { Alert, AlertCategory } from "@/types/alert";
+
+const PUBLISHED_KEY = "alertownik-published-alerts";
 
 type FilterValue = AlertCategory | "all";
 
@@ -19,11 +21,24 @@ const categoryFilters: { label: string; value: FilterValue }[] = [
 
 export function AlertList() {
   const [selected, setSelected] = useState<FilterValue>("all");
+  const [localAlerts, setLocalAlerts] = useState<Alert[]>([]);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(PUBLISHED_KEY);
+      if (raw) setLocalAlerts(JSON.parse(raw) as Alert[]);
+    } catch {
+      // localStorage unavailable or corrupt — show only sample alerts
+    }
+  }, []);
+
+  const localIds = new Set(localAlerts.map((a) => a.id));
+  const allAlerts = [...localAlerts, ...sampleAlerts];
 
   const filtered =
     selected === "all"
-      ? sampleAlerts
-      : sampleAlerts.filter((a) => a.category === selected);
+      ? allAlerts
+      : allAlerts.filter((a) => a.category === selected);
 
   return (
     <>
@@ -51,7 +66,7 @@ export function AlertList() {
       <p className="text-sm text-gray-500 mb-6">
         Wyświetlane alerty:{" "}
         <span className="font-semibold text-gray-700">{filtered.length}</span> z{" "}
-        <span className="font-semibold text-gray-700">{sampleAlerts.length}</span>
+        <span className="font-semibold text-gray-700">{allAlerts.length}</span>
       </p>
 
       {/* Alert cards */}
@@ -66,7 +81,13 @@ export function AlertList() {
             </p>
           </div>
         ) : (
-          filtered.map((alert) => <AlertCard key={alert.id} alert={alert} />)
+          filtered.map((alert) => (
+            <AlertCard
+              key={alert.id}
+              alert={alert}
+              isLocal={localIds.has(alert.id)}
+            />
+          ))
         )}
       </section>
     </>
