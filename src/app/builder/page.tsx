@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ChangeEvent } from "react";
+import { useState, useEffect, type ChangeEvent } from "react";
 import Link from "next/link";
 import { AlertCard } from "@/components/AlertCard";
 import type { Alert, AlertCategory, AlertSeverity } from "@/types/alert";
@@ -46,42 +46,81 @@ const VALID_CATEGORIES: AlertCategory[] = [
 ];
 const VALID_SEVERITIES: AlertSeverity[] = ["info", "warning", "critical"];
 
-// Strip optional ```json … ``` or ``` … ``` code fences that AI sometimes adds.
 function stripCodeFences(text: string): string {
   const match = text.trim().match(/^```(?:json)?\s*\n?([\s\S]*?)\n?```$/);
   return match ? match[1].trim() : text.trim();
 }
 
-// Return the string value, or "" for explicit null, or fallback if field absent.
 function stringField(val: unknown, fallback: string): string {
   if (val === undefined) return fallback;
   if (val === null || val === "null") return "";
   return typeof val === "string" ? val : fallback;
 }
 
-// Like stringField but also strips the time component (for date inputs).
 function dateField(val: unknown, fallback: string): string {
   if (val === undefined) return fallback;
   if (val === null || val === "null" || val === "") return "";
   return typeof val === "string" ? val.split("T")[0] : fallback;
 }
 
-// Try place first, then location (older AI output used "location" instead).
 function pickPlace(place: unknown, location: unknown, fallback: string): string {
   if (typeof place === "string" && place !== "null" && place.trim()) return place;
   if (typeof location === "string" && location !== "null" && location.trim()) return location;
   return fallback;
 }
 
+// ── Draft helpers ────────────────────────────────────────────────────────────
+
+const DRAFTS_KEY = "alertownik-drafts";
+
+type DraftForm = typeof initialForm;
+
+interface Draft {
+  id: string;
+  createdAt: string;
+  form: DraftForm;
+}
+
+function loadDrafts(): Draft[] {
+  try {
+    const raw = localStorage.getItem(DRAFTS_KEY);
+    return raw ? (JSON.parse(raw) as Draft[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveDrafts(drafts: Draft[]): void {
+  localStorage.setItem(DRAFTS_KEY, JSON.stringify(drafts));
+}
+
+function formatDraftDate(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleString("pl-PL", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 
 type ImportStatus = "idle" | "success" | "error";
+type DraftStatus = "idle" | "saved" | "loaded" | "deleted";
 
 export default function BuilderPage() {
   const [form, setForm] = useState(initialForm);
   const [copied, setCopied] = useState(false);
   const [jsonInput, setJsonInput] = useState("");
   const [importStatus, setImportStatus] = useState<ImportStatus>("idle");
+  const [drafts, setDrafts] = useState<Draft[]>([]);
+  const [draftStatus, setDraftStatus] = useState<DraftStatus>("idle");
+
+  useEffect(() => {
+    setDrafts(loadDrafts());
+  }, []);
 
   function handleChange(
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -115,6 +154,33 @@ export default function BuilderPage() {
     } catch {
       setImportStatus("error");
     }
+  }
+
+  function saveDraft() {
+    const draft: Draft = {
+      id: `draft-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      form: { ...form },
+    };
+    const updated = [draft, ...drafts];
+    saveDrafts(updated);
+    setDrafts(updated);
+    setDraftStatus("saved");
+    setTimeout(() => setDraftStatus("idle"), 2500);
+  }
+
+  function loadDraft(draft: Draft) {
+    setForm({ ...draft.form });
+    setDraftStatus("loaded");
+    setTimeout(() => setDraftStatus("idle"), 2500);
+  }
+
+  function deleteDraft(id: string) {
+    const updated = drafts.filter((d) => d.id !== id);
+    saveDrafts(updated);
+    setDrafts(updated);
+    setDraftStatus("deleted");
+    setTimeout(() => setDraftStatus("idle"), 2500);
   }
 
   const today = new Date().toISOString().split("T")[0];
@@ -171,6 +237,11 @@ export default function BuilderPage() {
   "sourceName": "WKD",
   "sourceUrl": "https://wkd.com.pl/aktualnosci/"
 }`;
+
+  const categoryLabel =
+    categoryOptions.find((o) => o.value === form.category)?.label ?? form.category;
+  const severityLabel =
+    severityOptions.find((o) => o.value === form.severity)?.label ?? form.severity;
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -240,7 +311,7 @@ export default function BuilderPage() {
         </div>
 
         {/* ── Manual form ───────────────────────────────────────────────── */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col gap-5 mb-8">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col gap-5 mb-6">
           {/* Category + Severity */}
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
@@ -388,6 +459,32 @@ export default function BuilderPage() {
           </div>
         </div>
 
+        {/* ── Save draft ────────────────────────────────────────────────── */}
+        <div className="flex flex-wrap items-center gap-3 mb-8">
+          <button
+            onClick={saveDraft}
+            className="rounded-lg bg-gray-800 px-4 py-2 text-sm font-medium text-white hover:bg-gray-900 transition-colors"
+          >
+            Zapisz jako draft
+          </button>
+
+          {draftStatus === "saved" && (
+            <span className="text-xs font-medium text-green-700">
+              Draft zapisany lokalnie.
+            </span>
+          )}
+          {draftStatus === "loaded" && (
+            <span className="text-xs font-medium text-blue-700">
+              Draft wczytany do formularza.
+            </span>
+          )}
+          {draftStatus === "deleted" && (
+            <span className="text-xs font-medium text-gray-500">
+              Draft usunięty.
+            </span>
+          )}
+        </div>
+
         {/* ── Card preview ──────────────────────────────────────────────── */}
         <section className="mb-8">
           <h2 className={labelClass + " mb-3"}>Podgląd karty</h2>
@@ -395,7 +492,7 @@ export default function BuilderPage() {
         </section>
 
         {/* ── JSON output ───────────────────────────────────────────────── */}
-        <section>
+        <section className="mb-10">
           <div className="flex items-center justify-between mb-3">
             <h2 className={labelClass}>JSON alertu</h2>
             <button
@@ -414,6 +511,49 @@ export default function BuilderPage() {
           <pre className="bg-gray-900 text-green-400 rounded-xl p-4 text-xs leading-relaxed overflow-x-auto">
             {jsonOutput}
           </pre>
+        </section>
+
+        {/* ── Saved drafts ──────────────────────────────────────────────── */}
+        <section>
+          <h2 className={labelClass + " mb-4"}>Zapisane drafty</h2>
+
+          {drafts.length === 0 ? (
+            <p className="text-sm text-gray-400">Brak zapisanych draftów.</p>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {drafts.map((draft) => (
+                <div
+                  key={draft.id}
+                  className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col sm:flex-row sm:items-center gap-3"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate">
+                      {draft.form.title || "Bez tytułu"}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {categoryOptions.find((o) => o.value === draft.form.category)?.label} ·{" "}
+                      {severityOptions.find((o) => o.value === draft.form.severity)?.label} ·{" "}
+                      {formatDraftDate(draft.createdAt)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => loadDraft(draft)}
+                      className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      Wczytaj
+                    </button>
+                    <button
+                      onClick={() => deleteDraft(draft.id)}
+                      className="rounded-lg border border-red-100 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors"
+                    >
+                      Usuń
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
       </div>
     </main>
