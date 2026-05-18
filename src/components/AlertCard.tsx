@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Alert } from "@/types/alert";
 
 const categoryLabels: Record<Alert["category"], string> = {
@@ -89,14 +90,22 @@ export function AlertCard({ alert }: { alert: Alert }) {
         {alert.place} · {formatRange(alert.startsAt, alert.endsAt)}
       </p>
 
-      {/* Toggle button */}
-      <button
-        onClick={() => setExpanded((prev) => !prev)}
-        aria-expanded={expanded}
-        className="self-start text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
-      >
-        {expanded ? "Ukryj szczegóły ▲" : "Pokaż szczegóły ▼"}
-      </button>
+      {/* Actions row */}
+      <div className="flex flex-wrap items-center gap-4">
+        <button
+          onClick={() => setExpanded((prev) => !prev)}
+          aria-expanded={expanded}
+          className="text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
+        >
+          {expanded ? "Ukryj szczegóły ▲" : "Pokaż szczegóły ▼"}
+        </button>
+        <Link
+          href={`/alerts/${alert.slug}`}
+          className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+        >
+          Otwórz alert →
+        </Link>
+      </div>
 
       {/* Expanded details */}
       {expanded && (

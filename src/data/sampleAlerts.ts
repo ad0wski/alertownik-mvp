@@ -3,6 +3,7 @@ import { Alert } from "@/types/alert";
 export const sampleAlerts: Alert[] = [
   {
     id: "1",
+    slug: "zmiana-trasy-wkd-linia-w1",
     category: "transport",
     severity: "warning",
     title: "Zmiana trasy WKD – linia W1",
@@ -18,6 +19,7 @@ export const sampleAlerts: Alert[] = [
   },
   {
     id: "2",
+    slug: "przerwa-w-dostawie-wody-komorow",
     category: "water",
     severity: "critical",
     title: "Przerwa w dostawie wody",
@@ -33,6 +35,7 @@ export const sampleAlerts: Alert[] = [
   },
   {
     id: "3",
+    slug: "planowana-przerwa-pradu-michalowice",
     category: "power",
     severity: "warning",
     title: "Planowana przerwa w dostawie prądu",
@@ -48,6 +51,7 @@ export const sampleAlerts: Alert[] = [
   },
   {
     id: "4",
+    slug: "zmiana-odbioru-odpadow-komorow",
     category: "waste",
     severity: "info",
     title: "Zmiana harmonogramu odbioru odpadów",
@@ -62,6 +66,7 @@ export const sampleAlerts: Alert[] = [
   },
   {
     id: "5",
+    slug: "roboty-drogowe-michalowice",
     category: "roads",
     severity: "info",
     title: "Roboty drogowe – zwężenie pasa ruchu",
@@ -77,6 +82,7 @@ export const sampleAlerts: Alert[] = [
   },
   {
     id: "6",
+    slug: "konsultacje-spoleczne-michalowice",
     category: "municipal",
     severity: "info",
     title: "Konsultacje społeczne – zmiany w planie zagospodarowania",
