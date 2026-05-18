@@ -13,11 +13,11 @@ export interface Alert {
   category: AlertCategory;
   severity: AlertSeverity;
   title: string;
-  location: string;
-  dateFrom: string;  // ISO date, e.g. "2026-05-19"
-  dateTo?: string;
-  summary: string;
-  action: string;
-  source: string;
-  sourceUrl?: string;
+  place: string;       // Gdzie
+  startsAt: string;    // ISO date or datetime, e.g. "2026-05-19" or "2026-05-19T09:00"
+  endsAt?: string;
+  change: string;      // Co się zmienia
+  action: string;      // Co zrobić
+  sourceName: string;  // Źródło – nazwa
+  sourceUrl?: string;  // Źródło – link
 }
