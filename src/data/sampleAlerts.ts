@@ -14,7 +14,7 @@ export const sampleAlerts: Alert[] = [
     action:
       "Sprawdź aktualne rozkłady jazdy na stronie WKD lub w aplikacji mobilnej.",
     sourceName: "WKD – Warszawska Kolej Dojazdowa",
-    sourceUrl: "#",
+    sourceUrl: "https://wkd.com.pl/aktualnosci/",
   },
   {
     id: "2",
@@ -27,9 +27,9 @@ export const sampleAlerts: Alert[] = [
     change:
       "Brak dostawy wody pitnej z powodu awarii sieci wodociągowej. Prace naprawcze trwają.",
     action:
-      "Zaopatrz się w wodę pitną z wyprzedzeniem. W razie pytań dzwoń na infolinię MPWiK.",
+      "Zaopatrz się w wodę pitną z wyprzedzeniem. W razie pytań dzwoń na infolinię MPWiK: 22 758 50 50.",
     sourceName: "MPWiK Pruszków",
-    sourceUrl: "#",
+    sourceUrl: "https://www.pruszkow.pl/",
   },
   {
     id: "3",
@@ -40,25 +40,25 @@ export const sampleAlerts: Alert[] = [
     startsAt: "2026-05-21T09:00",
     endsAt: "2026-05-21T14:00",
     change:
-      "Brak energii elektrycznej z powodu planowanych prac konserwacyjnych sieci elektroenergetycznej Energa Operator.",
+      "Brak energii elektrycznej z powodu planowanych prac konserwacyjnych sieci elektroenergetycznej PGE Dystrybucja.",
     action:
       "Zabezpiecz urządzenia wrażliwe na brak zasilania. Naładuj telefon i powerbanki dzień wcześniej.",
-    sourceName: "Energa Operator SA",
-    sourceUrl: "#",
+    sourceName: "PGE Dystrybucja SA",
+    sourceUrl: "https://pgedystrybucja.pl/wylaczenia/planowane-wylaczenia",
   },
   {
     id: "4",
     category: "waste",
     severity: "info",
     title: "Zmiana harmonogramu odbioru odpadów",
-    place: "Komorów, strefa A",
+    place: "Gmina Michałowice – strefy A, B, C",
     startsAt: "2026-05-22",
     change:
       "Odbiór odpadów komunalnych (zmieszanych i segregowanych) przesunięty o jeden dzień z powodu Święta Bożego Ciała.",
     action:
-      "Wystaw pojemniki w czwartek 22 maja zamiast w środę. Aktualny harmonogram dostępny na stronie gminy.",
-    sourceName: "Urząd Gminy Michałowice",
-    sourceUrl: "#",
+      "Wystaw pojemniki w czwartek 22 maja zamiast w środę. Aktualny harmonogram sprawdzisz w aplikacji Eco-Harmonogram.",
+    sourceName: "Gmina Michałowice / Eco-Harmonogram",
+    sourceUrl: "https://www.pruszkow.pl/aplikacja-eco-harmonogram/",
   },
   {
     id: "5",
@@ -73,6 +73,21 @@ export const sampleAlerts: Alert[] = [
     action:
       "Uwzględnij możliwe opóźnienia w podróży. Rozważ alternatywną trasę przez ul. Parkową.",
     sourceName: "Zarząd Dróg Powiatu Pruszkowskiego",
-    sourceUrl: "#",
+    sourceUrl: "https://www.pruszkow-powiat.pl/",
+  },
+  {
+    id: "6",
+    category: "municipal",
+    severity: "info",
+    title: "Konsultacje społeczne – zmiany w planie zagospodarowania",
+    place: "Gmina Michałowice, teren ul. Turystycznej i okolic",
+    startsAt: "2026-05-20",
+    endsAt: "2026-06-04",
+    change:
+      "Urząd Gminy Michałowice prowadzi konsultacje dotyczące zmian w Miejscowym Planie Zagospodarowania Przestrzennego dla rejonu ul. Turystycznej.",
+    action:
+      "Zapoznaj się z projektem planu na stronie gminy. Uwagi składaj w formie pisemnej w urzędzie lub przez formularz online do 4 czerwca 2026.",
+    sourceName: "Urząd Gminy Michałowice",
+    sourceUrl: "https://www.michalowice.pl/dzieje-sie/aktualnosci/komunikaty",
   },
 ];

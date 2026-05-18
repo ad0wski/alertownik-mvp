@@ -57,9 +57,14 @@ export function AlertList() {
       {/* Alert cards */}
       <section className="flex flex-col gap-4">
         {filtered.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-10">
-            Brak alertów w tej kategorii.
-          </p>
+          <div className="text-center py-12">
+            <p className="text-sm font-medium text-gray-500">
+              Brak alertów w tej kategorii.
+            </p>
+            <p className="text-sm text-gray-400 mt-1">
+              Spróbuj wybrać inną kategorię albo wróć później.
+            </p>
+          </div>
         ) : (
           filtered.map((alert) => <AlertCard key={alert.id} alert={alert} />)
         )}

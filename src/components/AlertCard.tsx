@@ -137,14 +137,18 @@ export function AlertCard({ alert }: { alert: Alert }) {
             </dt>
             <dd className="text-sm text-gray-800 flex flex-wrap items-center gap-3">
               <span>{alert.sourceName}</span>
-              <a
-                href={alert.sourceUrl ?? "#"}
-                target={isRealLink ? "_blank" : undefined}
-                rel={isRealLink ? "noopener noreferrer" : undefined}
-                className="text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline"
-              >
-                Zobacz źródło →
-              </a>
+              {isRealLink ? (
+                <a
+                  href={alert.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                >
+                  Zobacz źródło →
+                </a>
+              ) : (
+                <span className="text-xs text-gray-400">Źródło niedostępne</span>
+              )}
             </dd>
           </div>
         </dl>
