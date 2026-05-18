@@ -72,8 +72,8 @@ export const sampleAlerts: Alert[] = [
       "Jeden pas ruchu wyłączony z eksploatacji. Obowiązuje ruch wahadłowy sterowany tymczasową sygnalizacją świetlną z powodu remontu nawierzchni jezdni.",
     action:
       "Uwzględnij możliwe opóźnienia w podróży. Rozważ alternatywną trasę przez ul. Parkową.",
-    sourceName: "Zarząd Dróg Powiatu Pruszkowskiego",
-    sourceUrl: "https://www.pruszkow-powiat.pl/",
+    sourceName: "Gmina Michałowice — utrudnienia drogowe",
+    sourceUrl: "https://www.michalowice.pl/start?q=utrudnienia",
   },
   {
     id: "6",
