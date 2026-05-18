@@ -32,7 +32,6 @@ export function AlertList() {
     }
   }, []);
 
-  const localIds = new Set(localAlerts.map((a) => a.id));
   const allAlerts = [...localAlerts, ...sampleAlerts];
 
   const filtered =
@@ -82,11 +81,7 @@ export function AlertList() {
           </div>
         ) : (
           filtered.map((alert) => (
-            <AlertCard
-              key={alert.id}
-              alert={alert}
-              isLocal={localIds.has(alert.id)}
-            />
+            <AlertCard key={alert.id} alert={alert} />
           ))
         )}
       </section>
