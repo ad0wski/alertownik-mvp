@@ -53,7 +53,8 @@ Zwróć obiekt JSON z dokładnie tymi polami:
   "category": "transport" | "water" | "power" | "waste" | "roads" | "municipal",
   "severity": "info" | "warning" | "critical",
   "title": "<krótki tytuł, max 60 znaków>",
-  "place": "<dokładna lokalizacja>",
+  "location": "<ogólna lokalizacja lub rejon, np. Komorów / Pruszków>",
+  "place": "<dokładna lokalizacja z ulicą lub adresem>",
   "startsAt": "<YYYY-MM-DD lub YYYY-MM-DDTHH:MM>",
   "endsAt": "<YYYY-MM-DD lub YYYY-MM-DDTHH:MM — jeśli brak w komunikacie: null>",
   "change": "<co dokładnie się zmienia — 1–3 zdania>",
@@ -75,6 +76,7 @@ Zwróć obiekt JSON z dokładnie tymi polami:
    - "warning" = planowane utrudnienie lub zmiana wymagająca przygotowania
    - "info" = informacja bez pilności
 8. Slug: małe litery, myślniki zamiast spacji i polskich liter, np. "przerwa-w-dostawie-wody-komorow".
+9. Zwróć sam obiekt JSON — bez owijania w blok kodu markdown (bez \`\`\`json). Sam obiekt, nic więcej.
 
 ## Komunikat źródłowy
 

@@ -2,6 +2,8 @@ import Link from "next/link";
 import { sampleAlerts } from "@/data/sampleAlerts";
 import { Alert } from "@/types/alert";
 
+export const dynamicParams = true;
+
 export function generateStaticParams() {
   return sampleAlerts.map((alert) => ({ slug: alert.slug }));
 }

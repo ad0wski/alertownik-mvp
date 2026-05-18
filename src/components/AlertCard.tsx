@@ -59,7 +59,7 @@ function formatRange(startsAt: string, endsAt?: string): string {
   return `${formatDateTime(startsAt)} – ${formatDateTime(endsAt)}`;
 }
 
-export function AlertCard({ alert }: { alert: Alert }) {
+export function AlertCard({ alert, isPreview }: { alert: Alert; isPreview?: boolean }) {
   const [expanded, setExpanded] = useState(false);
   const severity = severityConfig[alert.severity];
   const isRealLink = Boolean(alert.sourceUrl && alert.sourceUrl !== "#");
@@ -99,12 +99,18 @@ export function AlertCard({ alert }: { alert: Alert }) {
         >
           {expanded ? "Ukryj szczegóły ▲" : "Pokaż szczegóły ▼"}
         </button>
-        <Link
-          href={`/alerts/${alert.slug}`}
-          className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
-        >
-          Otwórz alert →
-        </Link>
+        {isPreview ? (
+          <span className="text-xs text-gray-400">
+            Podgląd roboczy — ten alert nie ma jeszcze własnej strony.
+          </span>
+        ) : (
+          <Link
+            href={`/alerts/${alert.slug}`}
+            className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+          >
+            Otwórz alert →
+          </Link>
+        )}
       </div>
 
       {/* Expanded details */}

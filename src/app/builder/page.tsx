@@ -39,15 +39,82 @@ const initialForm = {
   sourceUrl: "",
 };
 
+// ── JSON import helpers ──────────────────────────────────────────────────────
+
+const VALID_CATEGORIES: AlertCategory[] = [
+  "transport", "water", "power", "waste", "roads", "municipal",
+];
+const VALID_SEVERITIES: AlertSeverity[] = ["info", "warning", "critical"];
+
+// Strip optional ```json … ``` or ``` … ``` code fences that AI sometimes adds.
+function stripCodeFences(text: string): string {
+  const match = text.trim().match(/^```(?:json)?\s*\n?([\s\S]*?)\n?```$/);
+  return match ? match[1].trim() : text.trim();
+}
+
+// Return the string value, or "" for explicit null, or fallback if field absent.
+function stringField(val: unknown, fallback: string): string {
+  if (val === undefined) return fallback;
+  if (val === null || val === "null") return "";
+  return typeof val === "string" ? val : fallback;
+}
+
+// Like stringField but also strips the time component (for date inputs).
+function dateField(val: unknown, fallback: string): string {
+  if (val === undefined) return fallback;
+  if (val === null || val === "null" || val === "") return "";
+  return typeof val === "string" ? val.split("T")[0] : fallback;
+}
+
+// Try place first, then location (older AI output used "location" instead).
+function pickPlace(place: unknown, location: unknown, fallback: string): string {
+  if (typeof place === "string" && place !== "null" && place.trim()) return place;
+  if (typeof location === "string" && location !== "null" && location.trim()) return location;
+  return fallback;
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+
+type ImportStatus = "idle" | "success" | "error";
+
 export default function BuilderPage() {
   const [form, setForm] = useState(initialForm);
   const [copied, setCopied] = useState(false);
+  const [jsonInput, setJsonInput] = useState("");
+  const [importStatus, setImportStatus] = useState<ImportStatus>("idle");
 
   function handleChange(
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+  }
+
+  function importFromJson() {
+    try {
+      const data = JSON.parse(stripCodeFences(jsonInput));
+
+      setForm({
+        category: VALID_CATEGORIES.includes(data.category)
+          ? (data.category as AlertCategory)
+          : form.category,
+        severity: VALID_SEVERITIES.includes(data.severity)
+          ? (data.severity as AlertSeverity)
+          : form.severity,
+        title: stringField(data.title, form.title),
+        place: pickPlace(data.place, data.location, form.place),
+        startsAt: dateField(data.startsAt, form.startsAt),
+        endsAt: dateField(data.endsAt, form.endsAt),
+        change: stringField(data.change, form.change),
+        action: stringField(data.action, form.action),
+        sourceName: stringField(data.sourceName, form.sourceName),
+        sourceUrl: stringField(data.sourceUrl, form.sourceUrl),
+      });
+
+      setImportStatus("success");
+    } catch {
+      setImportStatus("error");
+    }
   }
 
   const today = new Date().toISOString().split("T")[0];
@@ -91,6 +158,20 @@ export default function BuilderPage() {
     });
   }
 
+  const jsonPlaceholder = `{
+  "category": "transport",
+  "severity": "warning",
+  "title": "Zmiana trasy WKD",
+  "location": "Komorów / Pruszków",
+  "startsAt": "2026-05-19",
+  "endsAt": "2026-05-23",
+  "place": "Warszawa Śródmieście – Pruszków",
+  "change": "Pociągi WKD kursują zmienioną trasą...",
+  "action": "Sprawdź rozkład przed wyjściem...",
+  "sourceName": "WKD",
+  "sourceUrl": "https://wkd.com.pl/aktualnosci/"
+}`;
+
   return (
     <main className="min-h-screen bg-gray-50">
       <div className="max-w-2xl mx-auto px-4 py-10">
@@ -112,7 +193,53 @@ export default function BuilderPage() {
           </p>
         </header>
 
-        {/* Form */}
+        {/* ── JSON import ───────────────────────────────────────────────── */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col gap-4 mb-6">
+          <div>
+            <h2 className="text-sm font-semibold text-gray-900">
+              Wczytaj alert z JSON
+            </h2>
+            <p className="text-xs text-gray-500 mt-1">
+              Wklej tutaj JSON wygenerowany przez AI Helper, aby automatycznie
+              uzupełnić formularz alertu.
+            </p>
+          </div>
+
+          <textarea
+            value={jsonInput}
+            onChange={(e) => {
+              setJsonInput(e.target.value);
+              if (importStatus !== "idle") setImportStatus("idle");
+            }}
+            rows={5}
+            placeholder={jsonPlaceholder}
+            className={
+              inputClass + " resize-y font-mono text-xs placeholder-gray-300"
+            }
+          />
+
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={importFromJson}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+            >
+              Wczytaj JSON do formularza
+            </button>
+
+            {importStatus === "success" && (
+              <span className="text-xs font-medium text-green-700">
+                Alert wczytany do formularza.
+              </span>
+            )}
+            {importStatus === "error" && (
+              <span className="text-xs font-medium text-red-600">
+                Nie udało się wczytać JSON. Sprawdź, czy format jest poprawny.
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* ── Manual form ───────────────────────────────────────────────── */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col gap-5 mb-8">
           {/* Category + Severity */}
           <div className="grid grid-cols-2 gap-4">
@@ -261,13 +388,13 @@ export default function BuilderPage() {
           </div>
         </div>
 
-        {/* Card preview */}
+        {/* ── Card preview ──────────────────────────────────────────────── */}
         <section className="mb-8">
           <h2 className={labelClass + " mb-3"}>Podgląd karty</h2>
-          <AlertCard alert={previewAlert} />
+          <AlertCard alert={previewAlert} isPreview />
         </section>
 
-        {/* JSON preview */}
+        {/* ── JSON output ───────────────────────────────────────────────── */}
         <section>
           <div className="flex items-center justify-between mb-3">
             <h2 className={labelClass}>JSON alertu</h2>
