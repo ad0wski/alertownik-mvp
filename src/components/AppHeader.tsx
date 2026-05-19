@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const navLinks = [
-  { href: "/", label: "Alerty" },
+const publicLinks = [{ href: "/", label: "Alerty" }];
+
+const toolLinks = [
   { href: "/builder", label: "Kreator alertu" },
   { href: "/ai-helper", label: "AI Helper" },
 ];
@@ -33,10 +34,10 @@ export function AppHeader() {
             </p>
           </div>
           <nav
-            className="flex flex-wrap items-center justify-end gap-x-1 gap-y-1"
+            className="flex flex-wrap items-center justify-end gap-x-1 gap-y-2"
             aria-label="Nawigacja"
           >
-            {navLinks.map((link) => (
+            {publicLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
@@ -44,6 +45,40 @@ export function AppHeader() {
                   isActive(link.href)
                     ? "bg-blue-50 text-blue-700"
                     : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
+
+            <span className="hidden sm:flex items-center gap-1 ml-2 pl-2 border-l border-slate-200">
+              <span className="text-xs text-slate-400 font-medium">
+                Narzędzia MVP
+              </span>
+              {toolLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    isActive(link.href)
+                      ? "bg-amber-50 text-amber-700"
+                      : "text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </span>
+
+            {/* Mobile: tool links without separator label */}
+            {toolLinks.map((link) => (
+              <Link
+                key={`mobile-${link.href}`}
+                href={link.href}
+                className={`sm:hidden px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  isActive(link.href)
+                    ? "bg-amber-50 text-amber-700"
+                    : "text-slate-400 hover:text-slate-700 hover:bg-slate-100"
                 }`}
               >
                 {link.label}

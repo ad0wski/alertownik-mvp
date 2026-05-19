@@ -343,6 +343,11 @@ export default function BuilderPage() {
         </p>
       </div>
 
+      {/* MVP notice */}
+      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 mb-6">
+        Kreator alertu to narzędzie robocze do przygotowywania alertów. W finalnej aplikacji nie będzie widoczne dla zwykłego użytkownika.
+      </div>
+
       {/* ── JSON import ───────────────────────────────────────────────── */}
       <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-4 mb-6">
         <div>

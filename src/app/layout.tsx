@@ -31,6 +31,13 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <AppHeader />
         <div className="flex-1 flex flex-col">{children}</div>
+        <footer className="border-t border-slate-200 mt-auto">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
+            <p className="text-xs text-slate-400 text-center">
+              Alertownik MVP · wersja demonstracyjna
+            </p>
+          </div>
+        </footer>
       </body>
     </html>
   );

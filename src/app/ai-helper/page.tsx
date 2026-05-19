@@ -116,6 +116,11 @@ export default function AiHelperPage() {
         </p>
       </div>
 
+      {/* MVP notice */}
+      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 mb-6">
+        AI Helper to narzędzie robocze do przygotowywania alertów z komunikatów źródłowych. Na tym etapie nie łączy się z żadnym API.
+      </div>
+
       {/* Input form */}
       <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-5 mb-6">
         <h2 className="text-base font-semibold text-slate-800">
