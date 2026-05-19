@@ -18,22 +18,22 @@ const categoryLabels: Record<Alert["category"], string> = {
 
 const severityConfig: Record<
   Alert["severity"],
-  { label: string; badge: string; border: string }
+  { label: string; badge: string; accent: string }
 > = {
   info: {
     label: "Informacja",
-    badge: "bg-blue-100 text-blue-800",
-    border: "border-l-blue-400",
+    badge: "bg-blue-50 text-blue-700 ring-1 ring-blue-200",
+    accent: "border-l-blue-400",
   },
   warning: {
     label: "Uwaga",
-    badge: "bg-amber-100 text-amber-800",
-    border: "border-l-amber-400",
+    badge: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
+    accent: "border-l-amber-400",
   },
   critical: {
     label: "Pilne",
-    badge: "bg-red-100 text-red-800",
-    border: "border-l-red-500",
+    badge: "bg-red-50 text-red-700 ring-1 ring-red-200",
+    accent: "border-l-red-500",
   },
 };
 
@@ -85,22 +85,22 @@ export function AlertDetailClient({ slug }: { slug: string }) {
   }, [slug]);
 
   if (!ready) {
-    return <main className="max-w-2xl mx-auto w-full px-4 py-8" />;
+    return <main className="max-w-3xl mx-auto w-full px-4 sm:px-6 py-10" />;
   }
 
   if (!alert) {
     return (
-      <main className="max-w-2xl mx-auto w-full px-4 py-8">
-        <div className="text-center py-16">
-          <p className="text-base font-semibold text-gray-700 mb-2">
+      <main className="max-w-3xl mx-auto w-full px-4 sm:px-6 py-10">
+        <div className="text-center py-20 bg-white rounded-2xl border border-slate-200">
+          <p className="text-lg font-semibold text-slate-700 mb-2">
             Nie znaleziono alertu
           </p>
-          <p className="text-sm text-gray-400 mb-6">
+          <p className="text-sm text-slate-400 mb-8">
             Alert mógł zostać usunięty lub link jest nieprawidłowy.
           </p>
           <Link
             href="/"
-            className="text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
+            className="inline-block rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
           >
             ← Wróć do listy alertów
           </Link>
@@ -113,97 +113,95 @@ export function AlertDetailClient({ slug }: { slug: string }) {
   const isRealLink = Boolean(alert.sourceUrl && alert.sourceUrl !== "#");
 
   return (
-    <main className="max-w-2xl mx-auto w-full px-4 py-8">
-      <div>
-        <Link
-          href="/"
-          className="inline-block text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors mb-6"
-        >
-          ← Wróć do listy alertów
-        </Link>
+    <main className="max-w-3xl mx-auto w-full px-4 sm:px-6 py-10">
+      <Link
+        href="/"
+        className="inline-block text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors mb-6"
+      >
+        ← Wróć do listy alertów
+      </Link>
 
-        <article
-          className={`bg-white rounded-xl shadow-sm border border-gray-100 border-l-4 ${severity.border} p-6 flex flex-col gap-4`}
-        >
-          {/* Badges */}
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 bg-gray-100 rounded-full px-3 py-1">
-              {categoryLabels[alert.category]}
-            </span>
-            <span
-              className={`text-xs font-semibold uppercase tracking-wide rounded-full px-3 py-1 ${severity.badge}`}
-            >
-              {severity.label}
-            </span>
+      <article
+        className={`bg-white rounded-2xl border border-slate-200 shadow-sm border-l-4 ${severity.accent} p-6 flex flex-col gap-4`}
+      >
+        {/* Badges */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium text-slate-500 bg-slate-100 rounded-full px-2.5 py-0.5">
+            {categoryLabels[alert.category]}
+          </span>
+          <span
+            className={`text-xs font-semibold rounded-full px-2.5 py-0.5 ${severity.badge}`}
+          >
+            {severity.label}
+          </span>
+        </div>
+
+        {/* Title */}
+        <h1 className="text-xl font-bold text-slate-900 leading-snug">
+          {alert.title}
+        </h1>
+
+        {/* Compact line */}
+        <p className="text-sm text-slate-500">
+          {alert.place} · {formatRange(alert.startsAt, alert.endsAt)}
+        </p>
+
+        {/* Detail rows */}
+        <dl className="border-t border-slate-100 pt-4 flex flex-col divide-y divide-slate-100">
+          <div className="flex flex-col sm:flex-row py-3.5 gap-1 sm:gap-6">
+            <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400 sm:w-28 shrink-0 pt-px">
+              Kiedy
+            </dt>
+            <dd className="text-sm text-slate-700 leading-relaxed">
+              {formatRange(alert.startsAt, alert.endsAt)}
+            </dd>
           </div>
 
-          {/* Title */}
-          <h1 className="text-xl font-bold text-gray-900 leading-snug">
-            {alert.title}
-          </h1>
+          <div className="flex flex-col sm:flex-row py-3.5 gap-1 sm:gap-6">
+            <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400 sm:w-28 shrink-0 pt-px">
+              Gdzie
+            </dt>
+            <dd className="text-sm text-slate-700 leading-relaxed">{alert.place}</dd>
+          </div>
 
-          {/* Compact line */}
-          <p className="text-sm text-gray-500">
-            {alert.place} · {formatRange(alert.startsAt, alert.endsAt)}
-          </p>
+          <div className="flex flex-col sm:flex-row py-3.5 gap-1 sm:gap-6">
+            <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400 sm:w-28 shrink-0 pt-px">
+              Co się zmienia
+            </dt>
+            <dd className="text-sm text-slate-700 leading-relaxed">{alert.change}</dd>
+          </div>
 
-          {/* Detail rows */}
-          <dl className="border-t border-gray-100 pt-4 flex flex-col divide-y divide-gray-100">
-            <div className="flex flex-col sm:flex-row py-3 gap-1 sm:gap-4">
-              <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500 sm:w-36 shrink-0">
-                Kiedy
-              </dt>
-              <dd className="text-sm text-gray-800">
-                {formatRange(alert.startsAt, alert.endsAt)}
-              </dd>
-            </div>
+          <div className="flex flex-col sm:flex-row py-3.5 gap-1 sm:gap-6">
+            <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400 sm:w-28 shrink-0 pt-px">
+              Co zrobić
+            </dt>
+            <dd className="text-sm text-slate-700 leading-relaxed">{alert.action}</dd>
+          </div>
 
-            <div className="flex flex-col sm:flex-row py-3 gap-1 sm:gap-4">
-              <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500 sm:w-36 shrink-0">
-                Gdzie
-              </dt>
-              <dd className="text-sm text-gray-800">{alert.place}</dd>
-            </div>
-
-            <div className="flex flex-col sm:flex-row py-3 gap-1 sm:gap-4">
-              <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500 sm:w-36 shrink-0">
-                Co się zmienia
-              </dt>
-              <dd className="text-sm text-gray-800">{alert.change}</dd>
-            </div>
-
-            <div className="flex flex-col sm:flex-row py-3 gap-1 sm:gap-4">
-              <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500 sm:w-36 shrink-0">
-                Co zrobić
-              </dt>
-              <dd className="text-sm text-gray-800">{alert.action}</dd>
-            </div>
-
-            <div className="flex flex-col sm:flex-row py-3 gap-1 sm:gap-4">
-              <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500 sm:w-36 shrink-0">
-                Źródło
-              </dt>
-              <dd className="text-sm text-gray-800 flex flex-wrap items-center gap-3">
-                <span>{alert.sourceName}</span>
-                {isRealLink ? (
-                  <a
-                    href={alert.sourceUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline"
-                  >
-                    Zobacz źródło →
-                  </a>
-                ) : (
-                  <span className="text-xs text-gray-400">
-                    Źródło niedostępne
-                  </span>
-                )}
-              </dd>
-            </div>
-          </dl>
-        </article>
-      </div>
+          <div className="flex flex-col sm:flex-row py-3.5 gap-1 sm:gap-6">
+            <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400 sm:w-28 shrink-0 pt-px">
+              Źródło
+            </dt>
+            <dd className="text-sm text-slate-700 flex flex-wrap items-center gap-3">
+              <span>{alert.sourceName}</span>
+              {isRealLink ? (
+                <a
+                  href={alert.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                >
+                  Zobacz źródło →
+                </a>
+              ) : (
+                <span className="text-xs text-slate-400">
+                  Źródło niedostępne
+                </span>
+              )}
+            </dd>
+          </div>
+        </dl>
+      </article>
     </main>
   );
 }
