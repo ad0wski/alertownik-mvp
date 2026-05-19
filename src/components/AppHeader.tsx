@@ -34,9 +34,10 @@ export function AppHeader() {
             </p>
           </div>
           <nav
-            className="flex flex-wrap items-center justify-end gap-x-1 gap-y-2"
+            className="flex flex-wrap items-center justify-end gap-x-1 gap-y-1"
             aria-label="Nawigacja"
           >
+            {/* Public link */}
             {publicLinks.map((link) => (
               <Link
                 key={link.href}
@@ -51,31 +52,23 @@ export function AppHeader() {
               </Link>
             ))}
 
-            <span className="hidden sm:flex items-center gap-1 ml-2 pl-2 border-l border-slate-200">
-              <span className="text-xs text-slate-400 font-medium">
-                Narzędzia MVP
-              </span>
-              {toolLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    isActive(link.href)
-                      ? "bg-amber-50 text-amber-700"
-                      : "text-slate-400 hover:text-slate-700 hover:bg-slate-100"
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              ))}
+            {/* Divider — desktop only */}
+            <span className="hidden sm:block w-px h-4 bg-slate-200 mx-2" aria-hidden="true" />
+
+            {/* Non-clickable section label — desktop only */}
+            <span
+              className="hidden sm:block text-xs text-slate-400 select-none cursor-default mr-1"
+              aria-hidden="true"
+            >
+              Narzędzia robocze:
             </span>
 
-            {/* Mobile: tool links without separator label */}
+            {/* Tool links */}
             {toolLinks.map((link) => (
               <Link
-                key={`mobile-${link.href}`}
+                key={link.href}
                 href={link.href}
-                className={`sm:hidden px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                   isActive(link.href)
                     ? "bg-amber-50 text-amber-700"
                     : "text-slate-400 hover:text-slate-700 hover:bg-slate-100"
