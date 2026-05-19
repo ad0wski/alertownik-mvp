@@ -42,14 +42,14 @@ export function AlertList() {
   return (
     <>
       {/* Category filters */}
-      <div className="flex flex-wrap gap-2 mb-4">
+      <div className="flex flex-wrap gap-2 mb-5">
         {categoryFilters.map((filter) => {
           const isActive = filter.value === selected;
           return (
             <button
               key={filter.value}
               onClick={() => setSelected(filter.value)}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+              className={`px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors ${
                 isActive
                   ? "bg-gray-900 text-white border-gray-900"
                   : "bg-white text-gray-600 border-gray-200 hover:border-gray-400 hover:text-gray-900"
@@ -62,16 +62,18 @@ export function AlertList() {
       </div>
 
       {/* Counter */}
-      <p className="text-sm text-gray-500 mb-6">
-        Wyświetlane alerty:{" "}
-        <span className="font-semibold text-gray-700">{filtered.length}</span> z{" "}
-        <span className="font-semibold text-gray-700">{allAlerts.length}</span>
+      <p className="text-xs text-gray-400 mb-5">
+        {filtered.length === allAlerts.length ? (
+          <>Wszystkie alerty: <span className="font-semibold">{allAlerts.length}</span></>
+        ) : (
+          <>Wyświetlane: <span className="font-semibold text-gray-600">{filtered.length}</span> z {allAlerts.length}</>
+        )}
       </p>
 
       {/* Alert cards */}
       <section className="flex flex-col gap-4">
         {filtered.length === 0 ? (
-          <div className="text-center py-12">
+          <div className="text-center py-14">
             <p className="text-sm font-medium text-gray-500">
               Brak alertów w tej kategorii.
             </p>

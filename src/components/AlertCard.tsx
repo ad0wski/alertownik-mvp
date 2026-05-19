@@ -91,24 +91,24 @@ export function AlertCard({ alert, isPreview }: { alert: Alert; isPreview?: bool
       </p>
 
       {/* Actions row */}
-      <div className="flex flex-wrap items-center gap-4">
+      <div className="flex flex-wrap items-center gap-3 pt-1">
         <button
           onClick={() => setExpanded((prev) => !prev)}
           aria-expanded={expanded}
-          className="text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
+          className="rounded-full border border-gray-200 px-3 py-1 text-xs font-medium text-gray-600 hover:border-gray-400 hover:text-gray-900 transition-colors"
         >
-          {expanded ? "Ukryj szczegóły ▲" : "Pokaż szczegóły ▼"}
+          {expanded ? "Ukryj szczegóły ▲" : "Szczegóły ▼"}
         </button>
         {isPreview ? (
-          <span className="text-xs text-gray-400">
-            Podgląd roboczy — ten alert nie ma jeszcze własnej strony.
+          <span className="text-xs text-gray-400 italic">
+            Podgląd roboczy — alert nie ma jeszcze własnej strony.
           </span>
         ) : (
           <Link
             href={`/alerts/${alert.slug}`}
-            className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+            className="rounded-full border border-gray-200 px-3 py-1 text-xs font-medium text-gray-600 hover:border-gray-400 hover:text-gray-900 transition-colors"
           >
-            Otwórz alert →
+            Otwórz →
           </Link>
         )}
       </div>
@@ -116,8 +116,8 @@ export function AlertCard({ alert, isPreview }: { alert: Alert; isPreview?: bool
       {/* Expanded details */}
       {expanded && (
         <dl className="border-t border-gray-100 pt-3 flex flex-col divide-y divide-gray-100">
-          <div className="flex flex-col sm:flex-row py-2.5 gap-1 sm:gap-4">
-            <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500 sm:w-36 shrink-0">
+          <div className="flex flex-col sm:flex-row py-3 gap-1 sm:gap-4">
+            <dt className="text-xs font-semibold uppercase tracking-wide text-gray-400 sm:w-32 shrink-0">
               Kiedy
             </dt>
             <dd className="text-sm text-gray-800">
@@ -125,32 +125,32 @@ export function AlertCard({ alert, isPreview }: { alert: Alert; isPreview?: bool
             </dd>
           </div>
 
-          <div className="flex flex-col sm:flex-row py-2.5 gap-1 sm:gap-4">
-            <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500 sm:w-36 shrink-0">
+          <div className="flex flex-col sm:flex-row py-3 gap-1 sm:gap-4">
+            <dt className="text-xs font-semibold uppercase tracking-wide text-gray-400 sm:w-32 shrink-0">
               Gdzie
             </dt>
             <dd className="text-sm text-gray-800">{alert.place}</dd>
           </div>
 
-          <div className="flex flex-col sm:flex-row py-2.5 gap-1 sm:gap-4">
-            <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500 sm:w-36 shrink-0">
+          <div className="flex flex-col sm:flex-row py-3 gap-1 sm:gap-4">
+            <dt className="text-xs font-semibold uppercase tracking-wide text-gray-400 sm:w-32 shrink-0">
               Co się zmienia
             </dt>
-            <dd className="text-sm text-gray-800">{alert.change}</dd>
+            <dd className="text-sm text-gray-800 leading-relaxed">{alert.change}</dd>
           </div>
 
-          <div className="flex flex-col sm:flex-row py-2.5 gap-1 sm:gap-4">
-            <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500 sm:w-36 shrink-0">
+          <div className="flex flex-col sm:flex-row py-3 gap-1 sm:gap-4">
+            <dt className="text-xs font-semibold uppercase tracking-wide text-gray-400 sm:w-32 shrink-0">
               Co zrobić
             </dt>
-            <dd className="text-sm text-gray-800">{alert.action}</dd>
+            <dd className="text-sm text-gray-800 leading-relaxed">{alert.action}</dd>
           </div>
 
-          <div className="flex flex-col sm:flex-row py-2.5 gap-1 sm:gap-4">
-            <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500 sm:w-36 shrink-0">
+          <div className="flex flex-col sm:flex-row py-3 gap-1 sm:gap-4">
+            <dt className="text-xs font-semibold uppercase tracking-wide text-gray-400 sm:w-32 shrink-0">
               Źródło
             </dt>
-            <dd className="text-sm text-gray-800 flex flex-wrap items-center gap-3">
+            <dd className="text-sm text-gray-700 flex flex-wrap items-center gap-3">
               <span>{alert.sourceName}</span>
               {isRealLink ? (
                 <a

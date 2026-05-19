@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { AppHeader } from "@/components/AppHeader";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Alertownik",
-  description: "Lokalne utrudnienia i zmiany w Twojej okolicy",
+  description: "Lokalne alerty w jednym miejscu",
 };
 
 export default function RootLayout({
@@ -24,10 +25,13 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="pl"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col bg-gray-50">
+        <AppHeader />
+        <div className="flex-1 flex flex-col">{children}</div>
+      </body>
     </html>
   );
 }

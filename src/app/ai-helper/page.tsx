@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import type { AlertCategory } from "@/types/alert";
 
 const categoryOptions: { value: AlertCategory | ""; label: string }[] = [
@@ -105,25 +104,16 @@ export default function AiHelperPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <div className="max-w-2xl mx-auto px-4 py-10">
-        <Link
-          href="/"
-          className="inline-block text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors mb-6"
-        >
-          ← Wróć do listy alertów
-        </Link>
-
-        <header className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
-            AI Helper
-          </h1>
-          <p className="mt-2 text-sm text-gray-500 leading-relaxed">
-            To robocze narzędzie pomaga przygotować prompt do AI. Na razie nie
-            łączy się z żadnym API — generuje tekst, który można wkleić do
-            ChatGPT albo Claude.
-          </p>
-        </header>
+    <main className="max-w-2xl mx-auto w-full px-4 py-8">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
+          AI Helper
+        </h1>
+        <p className="mt-2 text-sm text-gray-500 leading-relaxed">
+          Robocze narzędzie do przygotowania promptu dla AI. Nie łączy się z
+          żadnym API — generuje tekst do wklejenia w ChatGPT lub Claude.
+        </p>
+      </div>
 
         {/* Form */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col gap-5 mb-8">
@@ -231,7 +221,6 @@ export default function AiHelperPage() {
             {prompt}
           </pre>
         </section>
-      </div>
     </main>
   );
 }

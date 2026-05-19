@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, type ChangeEvent } from "react";
-import Link from "next/link";
 import { AlertCard } from "@/components/AlertCard";
 import type { Alert, AlertCategory, AlertSeverity } from "@/types/alert";
 
@@ -330,25 +329,16 @@ export default function BuilderPage() {
 }`;
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <div className="max-w-2xl mx-auto px-4 py-10">
-        <Link
-          href="/"
-          className="inline-block text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors mb-6"
-        >
-          ← Wróć do listy alertów
-        </Link>
-
-        <header className="mb-8">
+    <main className="max-w-2xl mx-auto w-full px-4 py-8">
+      <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
             Kreator alertu
           </h1>
           <p className="mt-2 text-sm text-gray-500 leading-relaxed">
-            To robocze narzędzie do przygotowywania nowych alertów. Na razie
-            nie zapisuje danych w bazie — pomaga tylko ułożyć alert w poprawnym
-            formacie.
+            Robocze narzędzie do przygotowywania nowych alertów. Nie zapisuje
+            danych w bazie — pomaga ułożyć alert w poprawnym formacie.
           </p>
-        </header>
+        </div>
 
         {/* ── JSON import ───────────────────────────────────────────────── */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col gap-4 mb-6">
@@ -707,7 +697,7 @@ export default function BuilderPage() {
             </div>
           )}
         </section>
-      </div>
     </main>
   );
 }
+

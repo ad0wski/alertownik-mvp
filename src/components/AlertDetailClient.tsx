@@ -85,18 +85,22 @@ export function AlertDetailClient({ slug }: { slug: string }) {
   }, [slug]);
 
   if (!ready) {
-    // Minimal shell while localStorage is being checked (local alerts only)
-    return <main className="min-h-screen bg-gray-50" />;
+    return <main className="max-w-2xl mx-auto w-full px-4 py-8" />;
   }
 
   if (!alert) {
     return (
-      <main className="min-h-screen bg-gray-50">
-        <div className="max-w-2xl mx-auto px-4 py-10">
-          <p className="text-gray-700 mb-4">Nie znaleziono alertu.</p>
+      <main className="max-w-2xl mx-auto w-full px-4 py-8">
+        <div className="text-center py-16">
+          <p className="text-base font-semibold text-gray-700 mb-2">
+            Nie znaleziono alertu
+          </p>
+          <p className="text-sm text-gray-400 mb-6">
+            Alert mógł zostać usunięty lub link jest nieprawidłowy.
+          </p>
           <Link
             href="/"
-            className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+            className="text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
           >
             ← Wróć do listy alertów
           </Link>
@@ -109,8 +113,8 @@ export function AlertDetailClient({ slug }: { slug: string }) {
   const isRealLink = Boolean(alert.sourceUrl && alert.sourceUrl !== "#");
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <div className="max-w-2xl mx-auto px-4 py-10">
+    <main className="max-w-2xl mx-auto w-full px-4 py-8">
+      <div>
         <Link
           href="/"
           className="inline-block text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors mb-6"
