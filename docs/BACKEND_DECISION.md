@@ -117,7 +117,7 @@ Reasons:
 
 ## 5. Proposed Initial Database Schema
 
-This is a description of the intended tables and fields. No SQL has been written yet; this is a design reference.
+This is a description of the intended tables and fields. The corresponding SQL draft is in [supabase/schema-draft.sql](supabase/schema-draft.sql).
 
 ---
 
@@ -305,15 +305,26 @@ The following are explicitly out of scope until the core backend is stable:
 
 ## 9. Next Recommended Sprint
 
-**Sprint 18:**
+**Sprint 18 — in progress:**
 
 > "Prepare Supabase integration plan and environment setup"
 
-Specific tasks:
-- Create a Supabase project in the dashboard
-- Create the `alerts` table from the schema in this document
-- Insert the 6 sample alerts manually
-- Document the required environment variable names
-- Verify Supabase can be queried from a local Next.js API route or Server Component (without connecting it to the UI yet)
+Sprint 18 deliverables:
 
-This sprint produces a working Supabase table and a verified connection — no UI changes required.
+| Deliverable | Status |
+|-------------|--------|
+| [docs/SUPABASE_SETUP_CHECKLIST.md](SUPABASE_SETUP_CHECKLIST.md) | ✅ Created |
+| [docs/supabase/schema-draft.sql](supabase/schema-draft.sql) | ✅ Created |
+| [.env.example](../.env.example) with placeholder variable names | ✅ Created |
+| Create Supabase project in dashboard | ⬜ Pending |
+| Execute schema in SQL editor | ⬜ Pending |
+| Insert sample alerts manually | ⬜ Pending |
+| Verify test query works locally | ⬜ Pending |
+
+The setup checklist ([SUPABASE_SETUP_CHECKLIST.md](SUPABASE_SETUP_CHECKLIST.md)) covers every manual step, key safety rules, RLS configuration, and the pre-connection verification checklist.
+
+**Sprint 19 (planned):**
+
+> "Connect Supabase to the app — read-only integration"
+
+Install `@supabase/supabase-js`, initialise the client, and fetch published alerts from the database in `AlertList`. Keep `sampleAlerts.ts` and localStorage as fallbacks. No auth, no writes, no UI changes.

@@ -56,7 +56,7 @@ Alertownik provides a single, consistent view of local alerts in a clean, readab
 | Hosting     | Vercel — [alertownik-mvp.vercel.app](https://alertownik-mvp.vercel.app/) |
 | Font        | Geist (via Next.js font system)   |
 
-No external APIs, no authentication, no database.
+No external APIs, no authentication, no database yet. Supabase integration is planned — see [docs/BACKEND_DECISION.md](docs/BACKEND_DECISION.md).
 
 ---
 
@@ -86,6 +86,7 @@ Early MVP — deployed publicly on Vercel with sample data.
 | [docs/DEMO_GUIDE.md](docs/DEMO_GUIDE.md) | How to present and explain the demo |
 | [docs/QA_CHECKLIST.md](docs/QA_CHECKLIST.md) | Pre-demo and pre-deploy checklist |
 | [docs/BACKEND_DECISION.md](docs/BACKEND_DECISION.md) | Backend options analysis and Supabase recommendation |
+| [docs/SUPABASE_SETUP_CHECKLIST.md](docs/SUPABASE_SETUP_CHECKLIST.md) | Step-by-step Supabase setup guide and pre-connection checklist |
 
 ---
 
