@@ -107,18 +107,18 @@ export default function AiHelperPage() {
 
       {/* Page title */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-          AI Helper
-        </h1>
-        <p className="mt-2 text-sm text-slate-500 leading-relaxed">
+        <div className="flex flex-wrap items-center gap-2.5 mb-1">
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+            AI Helper
+          </h1>
+          <span className="inline-flex items-center text-xs font-medium text-slate-500 bg-slate-100 border border-slate-200 rounded-full px-2.5 py-0.5">
+            Narzędzie robocze MVP
+          </span>
+        </div>
+        <p className="mt-1 text-sm text-slate-500 leading-relaxed">
           Robocze narzędzie do przygotowania promptu dla AI. Nie łączy się z
           żadnym API — generuje tekst do wklejenia w ChatGPT lub Claude.
         </p>
-      </div>
-
-      {/* MVP notice */}
-      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 mb-6">
-        AI Helper to narzędzie robocze do przygotowywania alertów z komunikatów źródłowych. Na tym etapie nie łączy się z żadnym API.
       </div>
 
       {/* Input form */}
@@ -197,7 +197,11 @@ export default function AiHelperPage() {
           </h2>
           <button
             onClick={copyPrompt}
-            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors"
+            className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+              copied
+                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300"
+            }`}
           >
             {copied ? "Skopiowano ✓" : "Kopiuj prompt"}
           </button>
@@ -223,7 +227,7 @@ export default function AiHelperPage() {
           </a>
           .
         </p>
-        <pre className="bg-slate-900 text-slate-100 rounded-2xl p-5 text-sm font-mono leading-relaxed overflow-x-auto whitespace-pre-wrap break-words">
+        <pre className="bg-slate-50 border border-slate-200 text-slate-700 rounded-2xl p-5 text-sm font-mono leading-relaxed overflow-x-auto whitespace-pre-wrap break-words">
           {prompt}
         </pre>
       </section>

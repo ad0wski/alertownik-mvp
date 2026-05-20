@@ -334,18 +334,19 @@ export default function BuilderPage() {
 
       {/* Page title */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-          Kreator alertu
-        </h1>
-        <p className="mt-2 text-sm text-slate-500 leading-relaxed">
+        <div className="flex flex-wrap items-center gap-2.5 mb-1">
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+            Kreator alertu
+          </h1>
+          <span className="inline-flex items-center text-xs font-medium text-slate-500 bg-slate-100 border border-slate-200 rounded-full px-2.5 py-0.5">
+            Narzędzie robocze MVP
+          </span>
+        </div>
+        <p className="mt-1 text-sm text-slate-500 leading-relaxed">
           Robocze narzędzie do przygotowywania nowych alertów. Nie zapisuje
           danych w bazie — pomaga ułożyć alert w poprawnym formacie.
+          W finalnej aplikacji nie będzie widoczne dla zwykłego użytkownika.
         </p>
-      </div>
-
-      {/* MVP notice */}
-      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 mb-6">
-        Kreator alertu to narzędzie robocze do przygotowywania alertów. W finalnej aplikacji nie będzie widoczne dla zwykłego użytkownika.
       </div>
 
       {/* ── JSON import ───────────────────────────────────────────────── */}
@@ -395,7 +396,7 @@ export default function BuilderPage() {
         <h2 className={sectionTitleClass}>Formularz alertu</h2>
 
         {/* Category + Severity */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="flex flex-col gap-2">
             <label className={labelClass}>Kategoria</label>
             <select
@@ -455,7 +456,7 @@ export default function BuilderPage() {
         </div>
 
         {/* Dates */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="flex flex-col gap-2">
             <label className={labelClass}>Data od</label>
             <input
@@ -541,7 +542,7 @@ export default function BuilderPage() {
       <div className="flex flex-wrap items-center gap-3 mb-10">
         <button
           onClick={saveDraft}
-          className="rounded-lg bg-slate-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-slate-800 transition-colors"
+          className="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-colors"
         >
           Zapisz jako draft
         </button>
@@ -596,7 +597,11 @@ export default function BuilderPage() {
           <h2 className={sectionTitleClass}>JSON alertu</h2>
           <button
             onClick={copyJson}
-            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors"
+            className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+              copied
+                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300"
+            }`}
           >
             {copied ? "Skopiowano ✓" : "Kopiuj JSON"}
           </button>
@@ -607,7 +612,7 @@ export default function BuilderPage() {
           Uzupełnij pola <code className="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded">id</code> i{" "}
           <code className="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded">slug</code> ręcznie.
         </p>
-        <pre className="bg-slate-900 text-slate-100 rounded-2xl p-5 text-sm font-mono leading-relaxed overflow-x-auto">
+        <pre className="bg-slate-50 border border-slate-200 text-slate-700 rounded-2xl p-5 text-sm font-mono leading-relaxed overflow-x-auto">
           {jsonOutput}
         </pre>
       </section>

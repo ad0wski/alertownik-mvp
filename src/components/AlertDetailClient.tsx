@@ -100,7 +100,7 @@ export function AlertDetailClient({ slug }: { slug: string }) {
           </p>
           <Link
             href="/"
-            className="inline-block rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
           >
             ← Wróć do listy alertów
           </Link>
@@ -116,13 +116,14 @@ export function AlertDetailClient({ slug }: { slug: string }) {
     <main className="max-w-3xl mx-auto w-full px-4 sm:px-6 py-10">
       <Link
         href="/"
-        className="inline-block text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors mb-6"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-blue-700 transition-colors mb-6 group"
       >
-        ← Wróć do listy alertów
+        <span className="group-hover:-translate-x-0.5 transition-transform inline-block">←</span>
+        Wróć do listy alertów
       </Link>
 
       <article
-        className={`bg-white rounded-2xl border border-slate-200 shadow-sm border-l-4 ${severity.accent} p-6 flex flex-col gap-4`}
+        className={`bg-white rounded-2xl border border-slate-200 shadow-md border-l-4 ${severity.accent} p-6 flex flex-col gap-4`}
       >
         {/* Badges */}
         <div className="flex flex-wrap items-center gap-2">
@@ -149,7 +150,7 @@ export function AlertDetailClient({ slug }: { slug: string }) {
         {/* Detail rows */}
         <dl className="border-t border-slate-100 pt-4 flex flex-col divide-y divide-slate-100">
           <div className="flex flex-col sm:flex-row py-3.5 gap-1 sm:gap-6">
-            <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400 sm:w-28 shrink-0 pt-px">
+            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400 sm:w-28 shrink-0 pt-px">
               Kiedy
             </dt>
             <dd className="text-sm text-slate-700 leading-relaxed">
@@ -158,28 +159,28 @@ export function AlertDetailClient({ slug }: { slug: string }) {
           </div>
 
           <div className="flex flex-col sm:flex-row py-3.5 gap-1 sm:gap-6">
-            <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400 sm:w-28 shrink-0 pt-px">
+            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400 sm:w-28 shrink-0 pt-px">
               Gdzie
             </dt>
             <dd className="text-sm text-slate-700 leading-relaxed">{alert.place}</dd>
           </div>
 
           <div className="flex flex-col sm:flex-row py-3.5 gap-1 sm:gap-6">
-            <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400 sm:w-28 shrink-0 pt-px">
+            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400 sm:w-28 shrink-0 pt-px">
               Co się zmienia
             </dt>
             <dd className="text-sm text-slate-700 leading-relaxed">{alert.change}</dd>
           </div>
 
           <div className="flex flex-col sm:flex-row py-3.5 gap-1 sm:gap-6">
-            <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400 sm:w-28 shrink-0 pt-px">
+            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400 sm:w-28 shrink-0 pt-px">
               Co zrobić
             </dt>
             <dd className="text-sm text-slate-700 leading-relaxed">{alert.action}</dd>
           </div>
 
           <div className="flex flex-col sm:flex-row py-3.5 gap-1 sm:gap-6">
-            <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400 sm:w-28 shrink-0 pt-px">
+            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400 sm:w-28 shrink-0 pt-px">
               Źródło
             </dt>
             <dd className="text-sm text-slate-700 flex flex-wrap items-center gap-3">

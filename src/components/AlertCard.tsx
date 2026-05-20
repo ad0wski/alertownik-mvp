@@ -19,17 +19,17 @@ const severityConfig: Record<
 > = {
   info: {
     label: "Informacja",
-    badge: "bg-blue-50 text-blue-700",
+    badge: "bg-blue-50 text-blue-700 ring-1 ring-blue-200",
     stripe: "border-l-blue-500",
   },
   warning: {
     label: "Uwaga",
-    badge: "bg-amber-50 text-amber-700",
+    badge: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
     stripe: "border-l-amber-500",
   },
   critical: {
     label: "Pilne",
-    badge: "bg-red-50 text-red-700",
+    badge: "bg-red-50 text-red-700 ring-1 ring-red-200",
     stripe: "border-l-red-500",
   },
 };
@@ -66,7 +66,7 @@ export function AlertCard({ alert, isPreview }: { alert: Alert; isPreview?: bool
 
   return (
     <article
-      className={`bg-white rounded-2xl border border-slate-200 shadow-sm border-l-4 ${severity.stripe} p-5 flex flex-col gap-3`}
+      className={`bg-white rounded-2xl border border-slate-200 hover:border-slate-300 shadow-sm hover:shadow-md border-l-4 ${severity.stripe} p-5 flex flex-col gap-3 transition-all duration-150`}
     >
       {/* Badges */}
       <div className="flex flex-wrap items-center gap-2">
@@ -93,7 +93,7 @@ export function AlertCard({ alert, isPreview }: { alert: Alert; isPreview?: bool
         <button
           onClick={() => setExpanded((prev) => !prev)}
           aria-expanded={expanded}
-          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"
         >
           {expanded ? "Ukryj szczegóły ▲" : "Szczegóły ▼"}
         </button>
@@ -104,7 +104,7 @@ export function AlertCard({ alert, isPreview }: { alert: Alert; isPreview?: bool
         ) : (
           <Link
             href={`/alerts/${alert.slug}`}
-            className="text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
+            className="inline-flex items-center gap-1 rounded-lg border border-blue-100 bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-100 hover:border-blue-200 transition-colors"
           >
             Otwórz alert →
           </Link>
