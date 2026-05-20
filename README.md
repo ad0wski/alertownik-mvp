@@ -85,6 +85,7 @@ Early MVP — deployed publicly on Vercel with sample data.
 | [docs/LIMITATIONS.md](docs/LIMITATIONS.md) | Honest breakdown of current constraints |
 | [docs/DEMO_GUIDE.md](docs/DEMO_GUIDE.md) | How to present and explain the demo |
 | [docs/QA_CHECKLIST.md](docs/QA_CHECKLIST.md) | Pre-demo and pre-deploy checklist |
+| [docs/BACKEND_DECISION.md](docs/BACKEND_DECISION.md) | Backend options analysis and Supabase recommendation |
 
 ---
 
