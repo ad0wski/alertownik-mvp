@@ -6,6 +6,8 @@ The app presents alerts in plain, scannable language: what's happening, where, w
 
 > This is an early-stage MVP built for learning and product validation. No real user data is stored or included in this repository.
 
+**Live demo:** [https://alertownik-mvp.vercel.app/](https://alertownik-mvp.vercel.app/)
+
 ---
 
 ## Problem
@@ -51,7 +53,7 @@ Alertownik provides a single, consistent view of local alerts in a clean, readab
 | UI          | React 19                          |
 | Styling     | Tailwind CSS v4                   |
 | Storage     | localStorage (no database)        |
-| Hosting     | — (local dev only at this stage)  |
+| Hosting     | Vercel — [alertownik-mvp.vercel.app](https://alertownik-mvp.vercel.app/) |
 | Font        | Geist (via Next.js font system)   |
 
 No external APIs, no authentication, no database.
@@ -75,15 +77,20 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Project Status
 
-Early MVP — functional and usable locally, not yet deployed publicly.
+Early MVP — deployed publicly on Vercel with sample data.
 
-See [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) for a detailed breakdown of what works, what's limited, and what's intentionally out of scope.
+| Document | Purpose |
+|----------|---------|
+| [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) | What works and what's intentionally out of scope |
+| [docs/LIMITATIONS.md](docs/LIMITATIONS.md) | Honest breakdown of current constraints |
+| [docs/DEMO_GUIDE.md](docs/DEMO_GUIDE.md) | How to present and explain the demo |
+| [docs/QA_CHECKLIST.md](docs/QA_CHECKLIST.md) | Pre-demo and pre-deploy checklist |
 
 ---
 
 ## Roadmap
 
-See [docs/ROADMAP.md](docs/ROADMAP.md) for planned stages: online demo, backend, AI integration, source monitoring, and notifications.
+See [docs/ROADMAP.md](docs/ROADMAP.md) for planned stages: backend, real AI integration, source monitoring, and notifications.
 
 ---
 
