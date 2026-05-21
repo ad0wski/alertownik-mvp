@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { AlertCard } from "@/components/AlertCard";
 import { sampleAlerts } from "@/data/sampleAlerts";
+import { getSupabaseAlerts } from "@/lib/getSupabaseAlerts";
 import type { Alert, AlertCategory } from "@/types/alert";
 
 const PUBLISHED_KEY = "alertownik-published-alerts";
@@ -22,6 +23,7 @@ const categoryFilters: { label: string; value: FilterValue }[] = [
 export function AlertList() {
   const [selected, setSelected] = useState<FilterValue>("all");
   const [localAlerts, setLocalAlerts] = useState<Alert[]>([]);
+  const [supabaseAlerts, setSupabaseAlerts] = useState<Alert[]>([]);
 
   useEffect(() => {
     try {
@@ -32,7 +34,11 @@ export function AlertList() {
     }
   }, []);
 
-  const allAlerts = [...localAlerts, ...sampleAlerts];
+  useEffect(() => {
+    getSupabaseAlerts().then(setSupabaseAlerts);
+  }, []);
+
+  const allAlerts = [...supabaseAlerts, ...localAlerts, ...sampleAlerts];
 
   const filtered =
     selected === "all"

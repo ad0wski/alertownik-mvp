@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { sampleAlerts } from "@/data/sampleAlerts";
+import { getSupabaseAlertBySlug } from "@/lib/getSupabaseAlerts";
+import { formatDateTime, formatRange } from "@/lib/formatDate";
 import type { Alert } from "@/types/alert";
 
 const PUBLISHED_KEY = "alertownik-published-alerts";
@@ -37,27 +39,6 @@ const severityConfig: Record<
   },
 };
 
-function formatDateTime(iso: string): string {
-  if (iso.includes("T")) {
-    const [datePart, timePart] = iso.split("T");
-    const [year, month, day] = datePart.split("-");
-    return `${day}.${month}.${year}, godz. ${timePart}`;
-  }
-  const [year, month, day] = iso.split("-");
-  return `${day}.${month}.${year}`;
-}
-
-function formatRange(startsAt: string, endsAt?: string): string {
-  if (!endsAt) return formatDateTime(startsAt);
-  const startDate = startsAt.split("T")[0];
-  const endDate = endsAt.split("T")[0];
-  if (startDate === endDate && startsAt.includes("T") && endsAt.includes("T")) {
-    const [year, month, day] = startDate.split("-");
-    return `${day}.${month}.${year}, godz. ${startsAt.split("T")[1]} – ${endsAt.split("T")[1]}`;
-  }
-  return `${formatDateTime(startsAt)} – ${formatDateTime(endsAt)}`;
-}
-
 export function AlertDetailClient({ slug }: { slug: string }) {
   // Lazy initialisers run on the server too, so sample alerts render without flash
   const [alert, setAlert] = useState<Alert | null>(
@@ -68,20 +49,29 @@ export function AlertDetailClient({ slug }: { slug: string }) {
   );
 
   useEffect(() => {
-    const fromSample = sampleAlerts.find((a) => a.slug === slug);
-    if (fromSample) {
+    // 1. Sample alerts — resolved synchronously, no loading flash
+    if (sampleAlerts.find((a) => a.slug === slug)) {
       setReady(true);
       return;
     }
-    // Not a sample alert — check localStorage for locally published alerts
+    // 2. Locally published alerts (localStorage)
     try {
       const raw = localStorage.getItem(PUBLISHED_KEY);
       const locals: Alert[] = raw ? JSON.parse(raw) : [];
-      setAlert(locals.find((a) => a.slug === slug) ?? null);
+      const localAlert = locals.find((a) => a.slug === slug);
+      if (localAlert) {
+        setAlert(localAlert);
+        setReady(true);
+        return;
+      }
     } catch {
-      setAlert(null);
+      // localStorage unavailable — continue to Supabase
     }
-    setReady(true);
+    // 3. Supabase published alerts
+    getSupabaseAlertBySlug(slug).then((found) => {
+      setAlert(found);
+      setReady(true);
+    });
   }, [slug]);
 
   if (!ready) {

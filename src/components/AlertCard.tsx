@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Alert } from "@/types/alert";
+import { formatDateTime, formatRange } from "@/lib/formatDate";
 
 const categoryLabels: Record<Alert["category"], string> = {
   transport: "Transport",
@@ -33,31 +34,6 @@ const severityConfig: Record<
     stripe: "border-l-red-500",
   },
 };
-
-function formatDateTime(iso: string): string {
-  if (iso.includes("T")) {
-    const [datePart, timePart] = iso.split("T");
-    const [year, month, day] = datePart.split("-");
-    return `${day}.${month}.${year}, godz. ${timePart}`;
-  }
-  const [year, month, day] = iso.split("-");
-  return `${day}.${month}.${year}`;
-}
-
-function formatRange(startsAt: string, endsAt?: string): string {
-  if (!endsAt) return formatDateTime(startsAt);
-
-  const startDate = startsAt.split("T")[0];
-  const endDate = endsAt.split("T")[0];
-
-  // Same day with times → "21.05.2026, godz. 09:00 – 14:00"
-  if (startDate === endDate && startsAt.includes("T") && endsAt.includes("T")) {
-    const [year, month, day] = startDate.split("-");
-    return `${day}.${month}.${year}, godz. ${startsAt.split("T")[1]} – ${endsAt.split("T")[1]}`;
-  }
-
-  return `${formatDateTime(startsAt)} – ${formatDateTime(endsAt)}`;
-}
 
 export function AlertCard({ alert, isPreview }: { alert: Alert; isPreview?: boolean }) {
   const [expanded, setExpanded] = useState(false);
