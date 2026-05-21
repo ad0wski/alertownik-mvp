@@ -1,10 +1,35 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabaseClient";
+import { signOut } from "@/lib/auth";
+import type { Session } from "@supabase/supabase-js";
 
 export function AppHeader() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [session, setSession] = useState<Session | null>(null);
+
+  useEffect(() => {
+    if (!supabase) return;
+
+    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  async function handleLogout() {
+    await signOut();
+    router.push("/");
+  }
 
   function isActive(href: string): boolean {
     if (href === "/") return pathname === "/" || pathname.startsWith("/alerts");
@@ -90,6 +115,19 @@ export function AppHeader() {
             >
               AI Helper
             </Link>
+
+            {/* Logout button — only when logged in */}
+            {session && (
+              <>
+                <span className="hidden sm:block w-px h-4 bg-slate-200 mx-1" aria-hidden="true" />
+                <button
+                  onClick={handleLogout}
+                  className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  Wyloguj
+                </button>
+              </>
+            )}
           </nav>
         </div>
       </div>

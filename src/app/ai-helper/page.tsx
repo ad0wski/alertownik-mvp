@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { AuthGate } from "@/components/AuthGate";
 import type { AlertCategory } from "@/types/alert";
 
 const categoryOptions: { value: AlertCategory | ""; label: string }[] = [
@@ -103,6 +104,7 @@ export default function AiHelperPage() {
   }
 
   return (
+    <AuthGate>
     <main className="max-w-4xl mx-auto w-full px-4 sm:px-6 py-10">
 
       {/* Page title */}
@@ -232,5 +234,6 @@ export default function AiHelperPage() {
         </pre>
       </section>
     </main>
+    </AuthGate>
   );
 }

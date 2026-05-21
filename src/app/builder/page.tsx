@@ -2,6 +2,7 @@
 
 import { useState, useEffect, type ChangeEvent } from "react";
 import { AlertCard } from "@/components/AlertCard";
+import { AuthGate } from "@/components/AuthGate";
 import type { Alert, AlertCategory, AlertSeverity } from "@/types/alert";
 
 const categoryOptions: { value: AlertCategory; label: string }[] = [
@@ -330,6 +331,7 @@ export default function BuilderPage() {
 }`;
 
   return (
+    <AuthGate>
     <main className="max-w-4xl mx-auto w-full px-4 sm:px-6 py-10">
 
       {/* Page title */}
@@ -705,5 +707,6 @@ export default function BuilderPage() {
         )}
       </section>
     </main>
+    </AuthGate>
   );
 }
