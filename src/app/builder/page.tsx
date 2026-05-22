@@ -8,6 +8,10 @@ import {
   saveAlertDraftToSupabase,
   publishAlertToSupabase,
 } from "@/lib/supabaseAlertWrites";
+import {
+  getAdminSupabaseAlerts,
+  type AdminAlert,
+} from "@/lib/getAdminSupabaseAlerts";
 
 const categoryOptions: { value: AlertCategory; label: string }[] = [
   { value: "transport", label: "Transport" },
@@ -142,6 +146,20 @@ function formatItemDate(iso: string): string {
   });
 }
 
+function statusBadgeClass(status: AdminAlert["status"]): string {
+  if (status === "published")
+    return "inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700";
+  if (status === "archived")
+    return "inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700";
+  return "inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600";
+}
+
+function statusLabel(status: AdminAlert["status"]): string {
+  if (status === "published") return "Opublikowany";
+  if (status === "archived") return "Zarchiwizowany";
+  return "Draft";
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 
 type ImportStatus = "idle" | "success" | "error";
@@ -163,10 +181,15 @@ export default function BuilderPage() {
   >("idle");
   const [supabaseError, setSupabaseError] = useState<string | null>(null);
   const [supabaseSavedSlug, setSupabaseSavedSlug] = useState("");
+  const [supabaseAlerts, setSupabaseAlerts] = useState<AdminAlert[]>([]);
+  const [supabaseAlertsLoading, setSupabaseAlertsLoading] = useState(false);
+  const [supabaseAlertsError, setSupabaseAlertsError] = useState<string | null>(null);
+  const [supabaseLoadedMsg, setSupabaseLoadedMsg] = useState(false);
 
   useEffect(() => {
     setDrafts(loadDrafts());
     setPublishedAlerts(loadPublished());
+    refreshSupabaseAlerts();
   }, []);
 
   function handleChange(
@@ -292,7 +315,34 @@ export default function BuilderPage() {
     setTimeout(() => setPublishStatus("idle"), 2500);
   }
 
+  function loadFromSupabaseAlert(a: AdminAlert) {
+    setForm({
+      category: a.category,
+      severity: a.severity,
+      title: a.title,
+      slug: a.slug,
+      place: a.place,
+      startsAt: a.startsAt.split("T")[0],
+      endsAt: a.endsAt ? a.endsAt.split("T")[0] : "",
+      change: a.change,
+      action: a.action,
+      sourceName: a.sourceName,
+      sourceUrl: a.sourceUrl ?? "",
+    });
+    setSupabaseLoadedMsg(true);
+    setTimeout(() => setSupabaseLoadedMsg(false), 3000);
+  }
+
   // ── Supabase actions ─────────────────────────────────────────────────────
+
+  async function refreshSupabaseAlerts() {
+    setSupabaseAlertsLoading(true);
+    setSupabaseAlertsError(null);
+    const { alerts, error } = await getAdminSupabaseAlerts();
+    setSupabaseAlerts(alerts);
+    setSupabaseAlertsError(error);
+    setSupabaseAlertsLoading(false);
+  }
 
   function validateForSupabase(): string | null {
     if (!form.title.trim()) return "Tytuł jest wymagany.";
@@ -693,6 +743,11 @@ export default function BuilderPage() {
             Alert usunięty z lokalnie opublikowanych.
           </span>
         )}
+        {supabaseLoadedMsg && (
+          <span className="text-sm font-medium text-blue-700">
+            Alert z Supabase wczytany do edycji.
+          </span>
+        )}
       </div>
 
       {/* ── Supabase save ─────────────────────────────────────────────── */}
@@ -820,7 +875,7 @@ export default function BuilderPage() {
       </section>
 
       {/* ── Published alerts ──────────────────────────────────────────── */}
-      <section className="pb-10">
+      <section className="mb-10">
         <h2 className={sectionTitleClass + " mb-4"}>Lokalnie opublikowane alerty</h2>
 
         {publishedAlerts.length === 0 ? (
@@ -863,6 +918,94 @@ export default function BuilderPage() {
           </div>
         )}
       </section>
+      {/* ── Alerty w Supabase ─────────────────────────────────────────── */}
+      <section className="pb-10">
+        <div className="flex items-center justify-between mb-1">
+          <h2 className={sectionTitleClass}>Alerty w Supabase</h2>
+          <button
+            onClick={refreshSupabaseAlerts}
+            disabled={supabaseAlertsLoading}
+            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors"
+          >
+            {supabaseAlertsLoading ? "Ładowanie…" : "Odśwież listę"}
+          </button>
+        </div>
+        <p className="text-sm text-slate-500 mb-4">
+          Alerty zapisane w prawdziwej bazie danych. Widoczne tylko dla zalogowanego administratora.
+        </p>
+
+        {supabaseAlertsLoading && supabaseAlerts.length === 0 ? (
+          <p className="text-sm text-slate-400">Pobieranie alertów z bazy danych…</p>
+        ) : supabaseAlertsError ? (
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+            <p className="text-sm font-medium text-red-700">
+              Nie udało się pobrać alertów z Supabase.
+            </p>
+            <p className="text-xs text-red-500 mt-1 font-mono">{supabaseAlertsError}</p>
+            <p className="text-xs text-red-600 mt-2">
+              Sprawdź czy kolumna <span className="font-mono">updated_at</span> istnieje w tabeli i czy polityki RLS pozwalają na odczyt.
+            </p>
+          </div>
+        ) : supabaseAlerts.length === 0 ? (
+          <p className="text-sm text-slate-400">
+            Brak alertów w Supabase albo nie udało się ich pobrać.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {supabaseAlerts.map((a) => (
+              <div
+                key={a.id}
+                className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex flex-col sm:flex-row sm:items-start gap-3"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
+                    <span className={statusBadgeClass(a.status)}>
+                      {statusLabel(a.status)}
+                    </span>
+                    <span className="text-xs text-slate-400">
+                      {categoryOptions.find((o) => o.value === a.category)?.label}
+                    </span>
+                    <span className="text-xs text-slate-400">·</span>
+                    <span className="text-xs text-slate-400">
+                      {severityOptions.find((o) => o.value === a.severity)?.label}
+                    </span>
+                  </div>
+                  <p className="text-sm font-semibold text-slate-900 truncate">
+                    {a.title || "Bez tytułu"}
+                  </p>
+                  <p className="text-xs text-slate-400 font-mono mt-0.5 truncate">
+                    {a.slug}
+                  </p>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    dodano {formatItemDate(a.updatedAt)}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                  <button
+                    onClick={() => loadFromSupabaseAlert(a)}
+                    className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"
+                  >
+                    Wczytaj do edycji
+                  </button>
+                  {a.status === "published" ? (
+                    <a
+                      href={`/alerts/${a.slug}`}
+                      className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-700 hover:bg-emerald-100 transition-colors"
+                    >
+                      Otwórz alert
+                    </a>
+                  ) : (
+                    <span className="text-xs text-slate-400 italic">
+                      Niewidoczny publicznie
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
     </main>
     </AuthGate>
   );
