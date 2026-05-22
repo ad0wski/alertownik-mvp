@@ -4,6 +4,10 @@ import { useState, useEffect, type ChangeEvent } from "react";
 import { AlertCard } from "@/components/AlertCard";
 import { AuthGate } from "@/components/AuthGate";
 import type { Alert, AlertCategory, AlertSeverity } from "@/types/alert";
+import {
+  saveAlertDraftToSupabase,
+  publishAlertToSupabase,
+} from "@/lib/supabaseAlertWrites";
 
 const categoryOptions: { value: AlertCategory; label: string }[] = [
   { value: "transport", label: "Transport" },
@@ -31,6 +35,7 @@ const initialForm = {
   category: "transport" as AlertCategory,
   severity: "info" as AlertSeverity,
   title: "",
+  slug: "",
   place: "",
   startsAt: "",
   endsAt: "",
@@ -152,6 +157,12 @@ export default function BuilderPage() {
   const [draftStatus, setDraftStatus] = useState<DraftStatus>("idle");
   const [publishedAlerts, setPublishedAlerts] = useState<PublishedAlert[]>([]);
   const [publishStatus, setPublishStatus] = useState<PublishStatus>("idle");
+  const [supabaseSaving, setSupabaseSaving] = useState(false);
+  const [supabaseSuccess, setSupabaseSuccess] = useState<
+    "idle" | "draft" | "published"
+  >("idle");
+  const [supabaseError, setSupabaseError] = useState<string | null>(null);
+  const [supabaseSavedSlug, setSupabaseSavedSlug] = useState("");
 
   useEffect(() => {
     setDrafts(loadDrafts());
@@ -162,7 +173,13 @@ export default function BuilderPage() {
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm((prev) => {
+      const next = { ...prev, [name]: value };
+      if (name === "title" && !prev.slug) {
+        next.slug = generateSlug(value);
+      }
+      return next;
+    });
   }
 
   function importFromJson() {
@@ -177,6 +194,7 @@ export default function BuilderPage() {
           ? (data.severity as AlertSeverity)
           : form.severity,
         title: stringField(data.title, form.title),
+        slug: stringField(data.slug, form.slug),
         place: pickPlace(data.place, data.location, form.place),
         startsAt: dateField(data.startsAt, form.startsAt),
         endsAt: dateField(data.endsAt, form.endsAt),
@@ -208,7 +226,7 @@ export default function BuilderPage() {
   }
 
   function loadDraft(draft: Draft) {
-    setForm({ ...draft.form });
+    setForm({ ...initialForm, ...draft.form });
     setDraftStatus("loaded");
     setTimeout(() => setDraftStatus("idle"), 2500);
   }
@@ -228,7 +246,7 @@ export default function BuilderPage() {
     const today = new Date().toISOString().split("T")[0];
     const newAlert: PublishedAlert = {
       id: `local-${now}`,
-      slug: generateSlug(form.title || "alert"),
+      slug: form.slug || generateSlug(form.title || "alert"),
       category: form.category,
       severity: form.severity,
       title: form.title,
@@ -253,6 +271,7 @@ export default function BuilderPage() {
       category: pa.category,
       severity: pa.severity,
       title: pa.title,
+      slug: pa.slug ?? "",
       place: pa.place,
       startsAt: pa.startsAt.split("T")[0],
       endsAt: pa.endsAt ? pa.endsAt.split("T")[0] : "",
@@ -273,13 +292,85 @@ export default function BuilderPage() {
     setTimeout(() => setPublishStatus("idle"), 2500);
   }
 
+  // ── Supabase actions ─────────────────────────────────────────────────────
+
+  function validateForSupabase(): string | null {
+    if (!form.title.trim()) return "Tytuł jest wymagany.";
+    if (!form.category) return "Kategoria jest wymagana.";
+    if (!form.severity) return "Poziom ważności jest wymagany.";
+    const slug = form.slug.trim() || generateSlug(form.title);
+    if (!slug) return "Nie udało się wygenerować slugu. Wpisz tytuł lub slug ręcznie.";
+    return null;
+  }
+
+  async function handleSaveDraftToSupabase() {
+    const err = validateForSupabase();
+    if (err) { setSupabaseError(err); return; }
+    setSupabaseSaving(true);
+    setSupabaseError(null);
+    setSupabaseSuccess("idle");
+    const slug = form.slug.trim() || generateSlug(form.title);
+    if (!form.slug) setForm((prev) => ({ ...prev, slug }));
+    const result = await saveAlertDraftToSupabase({
+      slug,
+      category: form.category,
+      severity: form.severity,
+      title: form.title,
+      place: form.place,
+      startsAt: form.startsAt,
+      endsAt: form.endsAt || undefined,
+      change: form.change,
+      action: form.action,
+      sourceName: form.sourceName,
+      sourceUrl: form.sourceUrl || undefined,
+    });
+    setSupabaseSaving(false);
+    if (result.ok) {
+      setSupabaseSavedSlug(slug);
+      setSupabaseSuccess("draft");
+      setTimeout(() => setSupabaseSuccess("idle"), 5000);
+    } else {
+      setSupabaseError(result.error ?? "Nieznany błąd.");
+    }
+  }
+
+  async function handlePublishToSupabase() {
+    const err = validateForSupabase();
+    if (err) { setSupabaseError(err); return; }
+    setSupabaseSaving(true);
+    setSupabaseError(null);
+    setSupabaseSuccess("idle");
+    const slug = form.slug.trim() || generateSlug(form.title);
+    if (!form.slug) setForm((prev) => ({ ...prev, slug }));
+    const result = await publishAlertToSupabase({
+      slug,
+      category: form.category,
+      severity: form.severity,
+      title: form.title,
+      place: form.place,
+      startsAt: form.startsAt,
+      endsAt: form.endsAt || undefined,
+      change: form.change,
+      action: form.action,
+      sourceName: form.sourceName,
+      sourceUrl: form.sourceUrl || undefined,
+    });
+    setSupabaseSaving(false);
+    if (result.ok) {
+      setSupabaseSavedSlug(slug);
+      setSupabaseSuccess("published");
+    } else {
+      setSupabaseError(result.error ?? "Nieznany błąd.");
+    }
+  }
+
   // ── Preview / output ─────────────────────────────────────────────────────
 
   const today = new Date().toISOString().split("T")[0];
 
   const previewAlert: Alert = {
     id: "podglad",
-    slug: "podglad",
+    slug: form.slug || "podglad",
     category: form.category,
     severity: form.severity,
     title: form.title || "Tytuł alertu",
@@ -294,7 +385,7 @@ export default function BuilderPage() {
 
   const alertObject = {
     id: "wpisz-sam",
-    slug: "wpisz-sam",
+    slug: form.slug || "wpisz-sam",
     category: form.category,
     severity: form.severity,
     title: form.title,
@@ -345,9 +436,9 @@ export default function BuilderPage() {
           </span>
         </div>
         <p className="mt-1 text-sm text-slate-500 leading-relaxed">
-          Robocze narzędzie do przygotowywania nowych alertów. Nie zapisuje
-          danych w bazie — pomaga ułożyć alert w poprawnym formacie.
-          W finalnej aplikacji nie będzie widoczne dla zwykłego użytkownika.
+          Robocze narzędzie do przygotowywania i zapisywania nowych alertów.
+          Umożliwia zapis lokalny (w przeglądarce) oraz bezpośredni zapis do Supabase.
+          Widoczne tylko dla zalogowanego administratora.
         </p>
       </div>
 
@@ -442,6 +533,22 @@ export default function BuilderPage() {
             placeholder="np. Zmiana trasy WKD – linia W1"
             className={inputClass}
           />
+        </div>
+
+        {/* Slug */}
+        <div className="flex flex-col gap-2">
+          <label className={labelClass}>Slug</label>
+          <input
+            type="text"
+            name="slug"
+            value={form.slug}
+            onChange={handleChange}
+            placeholder="np. zmiana-ruchu-wkd-komorow"
+            className={inputClass + " font-mono text-xs"}
+          />
+          <p className="text-xs text-slate-400">
+            Unikalny adres alertu, np. zmiana-ruchu-wkd-komorow. Wypełnia się automatycznie z tytułu.
+          </p>
         </div>
 
         {/* Place */}
@@ -540,8 +647,9 @@ export default function BuilderPage() {
         </div>
       </section>
 
-      {/* ── Form actions ──────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-3 mb-10">
+      {/* ── Form actions (lokalne) ────────────────────────────────────── */}
+      <p className="text-xs text-slate-400 mb-2">Zapis lokalny (tylko w przeglądarce):</p>
+      <div className="flex flex-wrap items-center gap-3 mb-4">
         <button
           onClick={saveDraft}
           className="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-colors"
@@ -586,6 +694,55 @@ export default function BuilderPage() {
           </span>
         )}
       </div>
+
+      {/* ── Supabase save ─────────────────────────────────────────────── */}
+      <section className="bg-blue-50 border border-blue-200 rounded-2xl p-6 flex flex-col gap-4 mb-10">
+        <div>
+          <h2 className="text-base font-semibold text-blue-900">Zapis do Supabase</h2>
+          <p className="text-sm text-blue-700 mt-1">
+            Zapisuje alert bezpośrednio w bazie danych. Wymaga zalogowania jako administrator.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={handleSaveDraftToSupabase}
+            disabled={supabaseSaving}
+            className="rounded-lg border border-blue-300 bg-white px-5 py-2.5 text-sm font-medium text-blue-700 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {supabaseSaving ? "Zapisywanie…" : "Zapisz jako draft w Supabase"}
+          </button>
+          <button
+            onClick={handlePublishToSupabase}
+            disabled={supabaseSaving}
+            className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {supabaseSaving ? "Publikowanie…" : "Opublikuj w Supabase"}
+          </button>
+        </div>
+
+        {supabaseError && (
+          <p className="text-sm font-medium text-red-700">Błąd: {supabaseError}</p>
+        )}
+        {supabaseSuccess === "draft" && (
+          <p className="text-sm font-medium text-emerald-700">
+            Draft zapisany w Supabase (slug: {supabaseSavedSlug}).
+          </p>
+        )}
+        {supabaseSuccess === "published" && (
+          <div className="flex flex-col gap-1">
+            <p className="text-sm font-medium text-emerald-700">
+              Alert opublikowany w Supabase.
+            </p>
+            <a
+              href={`/alerts/${supabaseSavedSlug}`}
+              className="text-sm text-blue-700 underline hover:text-blue-900"
+            >
+              Otwórz alert → /alerts/{supabaseSavedSlug}
+            </a>
+          </div>
+        )}
+      </section>
 
       {/* ── Card preview ──────────────────────────────────────────────── */}
       <section className="mb-10">
