@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Alert } from "@/types/alert";
-import { formatDateTime, formatRange } from "@/lib/formatDate";
+import { formatAlertRange } from "@/lib/formatAlertDate";
 
 const categoryLabels: Record<Alert["category"], string> = {
   transport: "Transport",
@@ -61,7 +61,7 @@ export function AlertCard({ alert, isPreview }: { alert: Alert; isPreview?: bool
 
       {/* Place · date */}
       <p className="text-sm text-slate-500">
-        {alert.place} · {formatRange(alert.startsAt, alert.endsAt)}
+        {alert.place} · {formatAlertRange(alert.startsAt, alert.endsAt)}
       </p>
 
       {/* Action row */}
@@ -95,7 +95,7 @@ export function AlertCard({ alert, isPreview }: { alert: Alert; isPreview?: bool
               Kiedy
             </dt>
             <dd className="text-sm text-slate-700 leading-relaxed">
-              {formatRange(alert.startsAt, alert.endsAt)}
+              {formatAlertRange(alert.startsAt, alert.endsAt)}
             </dd>
           </div>
 

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { sampleAlerts } from "@/data/sampleAlerts";
 import { getSupabaseAlertBySlug } from "@/lib/getSupabaseAlerts";
-import { formatDateTime, formatRange } from "@/lib/formatDate";
+import { formatAlertRange } from "@/lib/formatAlertDate";
 import type { Alert } from "@/types/alert";
 
 const PUBLISHED_KEY = "alertownik-published-alerts";
@@ -134,7 +134,7 @@ export function AlertDetailClient({ slug }: { slug: string }) {
 
         {/* Compact line */}
         <p className="text-sm text-slate-500">
-          {alert.place} · {formatRange(alert.startsAt, alert.endsAt)}
+          {alert.place} · {formatAlertRange(alert.startsAt, alert.endsAt)}
         </p>
 
         {/* Detail rows */}
@@ -144,7 +144,7 @@ export function AlertDetailClient({ slug }: { slug: string }) {
               Kiedy
             </dt>
             <dd className="text-sm text-slate-700 leading-relaxed">
-              {formatRange(alert.startsAt, alert.endsAt)}
+              {formatAlertRange(alert.startsAt, alert.endsAt)}
             </dd>
           </div>
 
