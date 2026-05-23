@@ -68,7 +68,7 @@ export function AppHeader() {
             className="flex flex-wrap items-center justify-end gap-x-1 gap-y-1"
             aria-label="Nawigacja"
           >
-            {/* Public link — primary */}
+            {/* Public link — always visible */}
             <Link
               href="/"
               className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
@@ -80,46 +80,47 @@ export function AppHeader() {
               Alerty
             </Link>
 
-            {/* Divider — desktop only */}
-            <span className="hidden sm:block w-px h-4 bg-slate-200 mx-2" aria-hidden="true" />
-
-            {/* Tools label — desktop only */}
-            <span
-              className="hidden sm:block text-xs text-slate-400 select-none cursor-default mr-1"
-              aria-hidden="true"
-            >
-              Narzędzia:
-            </span>
-
-            {/* Kreator link — shorter label on mobile */}
-            <Link
-              href="/builder"
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                isActive("/builder")
-                  ? "bg-amber-50 text-amber-700"
-                  : "text-slate-400 hover:text-slate-700 hover:bg-slate-100"
-              }`}
-            >
-              <span className="sm:hidden">Kreator</span>
-              <span className="hidden sm:inline">Kreator alertu</span>
-            </Link>
-
-            {/* AI Helper link */}
-            <Link
-              href="/ai-helper"
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                isActive("/ai-helper")
-                  ? "bg-amber-50 text-amber-700"
-                  : "text-slate-400 hover:text-slate-700 hover:bg-slate-100"
-              }`}
-            >
-              AI Helper
-            </Link>
-
-            {/* Logout button — only when logged in */}
+            {/* Admin tools — only when logged in */}
             {session && (
               <>
+                <span className="hidden sm:block w-px h-4 bg-slate-200 mx-2" aria-hidden="true" />
+
+                {/* Admin badge */}
+                <span
+                  className="hidden sm:block text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5 select-none cursor-default"
+                  aria-label="Tryb admina"
+                >
+                  Admin
+                </span>
+
+                {/* Kreator link — shorter label on mobile */}
+                <Link
+                  href="/builder"
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    isActive("/builder")
+                      ? "bg-amber-50 text-amber-700"
+                      : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                  }`}
+                >
+                  <span className="sm:hidden">Kreator</span>
+                  <span className="hidden sm:inline">Kreator alertu</span>
+                </Link>
+
+                {/* AI Helper link */}
+                <Link
+                  href="/ai-helper"
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    isActive("/ai-helper")
+                      ? "bg-amber-50 text-amber-700"
+                      : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                  }`}
+                >
+                  AI Helper
+                </Link>
+
                 <span className="hidden sm:block w-px h-4 bg-slate-200 mx-1" aria-hidden="true" />
+
+                {/* Logout */}
                 <button
                   onClick={handleLogout}
                   className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors"

@@ -10,7 +10,7 @@ export default function Home() {
           Lokalne zmiany i utrudnienia w prostym formacie.
         </h1>
         <p className="text-sm text-slate-500 mb-5">
-          Demo MVP pokazuje, jak alerty mogą wyglądać dla mieszkańca.
+          Sprawdź najważniejsze informacje z okolicy bez przeszukiwania długich komunikatów.
         </p>
         <div className="flex flex-wrap gap-2">
           <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-full px-3 py-1 shadow-sm">
