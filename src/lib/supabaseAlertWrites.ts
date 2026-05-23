@@ -93,3 +93,40 @@ export async function publishAlertToSupabase(
 
   return { ok: true };
 }
+
+export async function publishSupabaseAlert(slug: string): Promise<SaveResult> {
+  if (!supabase) return { ok: false, error: "Brak połączenia z Supabase." };
+
+  const now = new Date().toISOString();
+  const { error } = await supabase
+    .from("alerts")
+    .update({ status: "published", published_at: now, updated_at: now })
+    .eq("slug", slug);
+
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+export async function archiveSupabaseAlert(slug: string): Promise<SaveResult> {
+  if (!supabase) return { ok: false, error: "Brak połączenia z Supabase." };
+
+  const { error } = await supabase
+    .from("alerts")
+    .update({ status: "archived", updated_at: new Date().toISOString() })
+    .eq("slug", slug);
+
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+export async function restoreSupabaseAlertAsDraft(slug: string): Promise<SaveResult> {
+  if (!supabase) return { ok: false, error: "Brak połączenia z Supabase." };
+
+  const { error } = await supabase
+    .from("alerts")
+    .update({ status: "draft", updated_at: new Date().toISOString() })
+    .eq("slug", slug);
+
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}

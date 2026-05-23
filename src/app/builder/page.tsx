@@ -7,6 +7,9 @@ import type { Alert, AlertCategory, AlertSeverity } from "@/types/alert";
 import {
   saveAlertDraftToSupabase,
   publishAlertToSupabase,
+  publishSupabaseAlert,
+  archiveSupabaseAlert,
+  restoreSupabaseAlertAsDraft,
 } from "@/lib/supabaseAlertWrites";
 import {
   getAdminSupabaseAlerts,
@@ -185,6 +188,11 @@ export default function BuilderPage() {
   const [supabaseAlertsLoading, setSupabaseAlertsLoading] = useState(false);
   const [supabaseAlertsError, setSupabaseAlertsError] = useState<string | null>(null);
   const [supabaseLoadedMsg, setSupabaseLoadedMsg] = useState(false);
+  const [statusActionSlug, setStatusActionSlug] = useState<string | null>(null);
+  const [statusActionMsg, setStatusActionMsg] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
 
   useEffect(() => {
     setDrafts(loadDrafts());
@@ -342,6 +350,43 @@ export default function BuilderPage() {
     setSupabaseAlerts(alerts);
     setSupabaseAlertsError(error);
     setSupabaseAlertsLoading(false);
+  }
+
+  async function handleStatusAction(
+    slug: string,
+    action: "publish" | "archive" | "restore"
+  ) {
+    setStatusActionSlug(slug);
+    setStatusActionMsg(null);
+
+    let result: { ok: boolean; error?: string };
+    let successMsg: string;
+
+    if (action === "publish") {
+      result = await publishSupabaseAlert(slug);
+      successMsg = "Alert opublikowany.";
+    } else if (action === "archive") {
+      result = await archiveSupabaseAlert(slug);
+      successMsg = "Alert zarchiwizowany.";
+    } else {
+      result = await restoreSupabaseAlertAsDraft(slug);
+      successMsg = "Alert przywrócony jako draft.";
+    }
+
+    setStatusActionSlug(null);
+
+    if (result.ok) {
+      setStatusActionMsg({ type: "success", text: successMsg });
+      setTimeout(() => setStatusActionMsg(null), 4000);
+      await refreshSupabaseAlerts();
+    } else {
+      console.error("[Alertownik] Błąd zmiany statusu alertu:", result.error);
+      setStatusActionMsg({
+        type: "error",
+        text: "Nie udało się zmienić statusu alertu.",
+      });
+      setTimeout(() => setStatusActionMsg(null), 5000);
+    }
   }
 
   function validateForSupabase(): string | null {
@@ -934,6 +979,26 @@ export default function BuilderPage() {
           Alerty zapisane w prawdziwej bazie danych. Widoczne tylko dla zalogowanego administratora.
         </p>
 
+        {statusActionMsg && (
+          <div
+            className={`rounded-xl px-4 py-3 mb-4 ${
+              statusActionMsg.type === "success"
+                ? "bg-emerald-50 border border-emerald-200"
+                : "bg-red-50 border border-red-200"
+            }`}
+          >
+            <p
+              className={`text-sm font-medium ${
+                statusActionMsg.type === "success"
+                  ? "text-emerald-700"
+                  : "text-red-700"
+              }`}
+            >
+              {statusActionMsg.text}
+            </p>
+          </div>
+        )}
+
         {supabaseAlertsLoading && supabaseAlerts.length === 0 ? (
           <p className="text-sm text-slate-400">Pobieranie alertów z bazy danych…</p>
         ) : supabaseAlertsError ? (
@@ -987,17 +1052,48 @@ export default function BuilderPage() {
                   >
                     Wczytaj do edycji
                   </button>
-                  {a.status === "published" ? (
-                    <a
-                      href={`/alerts/${a.slug}`}
-                      className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-700 hover:bg-emerald-100 transition-colors"
+
+                  {a.status === "draft" && (
+                    <button
+                      onClick={() => handleStatusAction(a.slug, "publish")}
+                      disabled={statusActionSlug === a.slug}
+                      className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
-                      Otwórz alert
-                    </a>
-                  ) : (
-                    <span className="text-xs text-slate-400 italic">
-                      Niewidoczny publicznie
-                    </span>
+                      {statusActionSlug === a.slug ? "…" : "Opublikuj"}
+                    </button>
+                  )}
+
+                  {a.status === "published" && (
+                    <>
+                      <a
+                        href={`/alerts/${a.slug}`}
+                        className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-700 hover:bg-emerald-100 transition-colors"
+                      >
+                        Otwórz alert
+                      </a>
+                      <button
+                        onClick={() => handleStatusAction(a.slug, "archive")}
+                        disabled={statusActionSlug === a.slug}
+                        className="rounded-lg border border-amber-200 bg-white px-3 py-1.5 text-sm font-medium text-amber-700 hover:bg-amber-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {statusActionSlug === a.slug ? "…" : "Archiwizuj"}
+                      </button>
+                    </>
+                  )}
+
+                  {a.status === "archived" && (
+                    <>
+                      <button
+                        onClick={() => handleStatusAction(a.slug, "restore")}
+                        disabled={statusActionSlug === a.slug}
+                        className="rounded-lg border border-blue-200 bg-white px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {statusActionSlug === a.slug ? "…" : "Przywróć jako draft"}
+                      </button>
+                      <span className="text-xs text-slate-400 italic">
+                        Niewidoczny publicznie
+                      </span>
+                    </>
                   )}
                 </div>
               </div>
