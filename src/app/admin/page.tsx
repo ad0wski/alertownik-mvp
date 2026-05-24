@@ -241,7 +241,7 @@ export default function AdminPage() {
                 </div>
                 <div className="flex items-center gap-2 shrink-0 flex-wrap">
                   <Link
-                    href="/builder"
+                    href={`/builder?edit=${a.slug}`}
                     className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"
                   >
                     Edytuj w kreatorze

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, type ChangeEvent } from "react";
+import { useState, useEffect, useRef, type ChangeEvent } from "react";
 import { AlertCard } from "@/components/AlertCard";
 import { AuthGate } from "@/components/AuthGate";
 import type { Alert, AlertCategory, AlertSeverity } from "@/types/alert";
@@ -213,8 +213,14 @@ export default function BuilderPage() {
   const [adminSearchQuery, setAdminSearchQuery] = useState("");
   const [adminStatusFilter, setAdminStatusFilter] = useState<"all" | "draft" | "published" | "archived">("all");
   const [adminCategoryFilter, setAdminCategoryFilter] = useState<AlertCategory | "all">("all");
+  const [urlEditError, setUrlEditError] = useState<string | null>(null);
+  // Refs track URL-based edit loading: param is read once on mount, processed flag
+  // prevents re-loading when the Supabase list refreshes after saves.
+  const urlEditParamRef = useRef<string | null>(null);
+  const urlEditProcessedRef = useRef(false);
 
   useEffect(() => {
+    urlEditParamRef.current = new URLSearchParams(window.location.search).get("edit");
     setDrafts(loadDrafts());
     setPublishedAlerts(loadPublished());
     refreshSupabaseAlerts();
@@ -369,6 +375,10 @@ export default function BuilderPage() {
     setForm(initialForm);
     setSupabaseUpdateError(null);
     setSupabaseUpdateSuccess(false);
+    setUrlEditError(null);
+    if (window.location.search.includes("edit=")) {
+      window.history.replaceState({}, "", "/builder");
+    }
   }
 
   function clearAdminFilters() {
@@ -432,6 +442,20 @@ export default function BuilderPage() {
     setSupabaseAlerts(alerts);
     setSupabaseAlertsError(error);
     setSupabaseAlertsLoading(false);
+
+    // On the first fetch, check if the URL has ?edit=<slug-or-id> and auto-load that alert.
+    const editParam = urlEditParamRef.current;
+    if (editParam && !urlEditProcessedRef.current) {
+      urlEditProcessedRef.current = true;
+      const found =
+        alerts.find((a) => a.slug === editParam) ??
+        alerts.find((a) => a.id === editParam);
+      if (found) {
+        loadFromSupabaseAlert(found);
+      } else {
+        setUrlEditError("Nie znaleziono alertu do edycji.");
+      }
+    }
   }
 
   async function handleStatusAction(
@@ -683,6 +707,15 @@ export default function BuilderPage() {
             </p>
             <p className="text-xs text-amber-600">
               Status: {statusLabel(editingSupabaseAlert.status)}
+            </p>
+          </div>
+        )}
+
+        {urlEditError && (
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+            <p className="text-sm font-semibold text-red-700">{urlEditError}</p>
+            <p className="text-xs text-red-600 mt-1">
+              Sprawdź czy slug jest prawidłowy lub wybierz alert ręcznie z listy poniżej.
             </p>
           </div>
         )}
