@@ -164,6 +164,18 @@ function statusLabel(status: AdminAlert["status"]): string {
   return "Draft";
 }
 
+function matchesAdminSearch(a: AdminAlert, query: string): boolean {
+  const q = query.toLowerCase().trim();
+  if (!q) return true;
+  return (
+    a.title.toLowerCase().includes(q) ||
+    a.slug.toLowerCase().includes(q) ||
+    a.place.toLowerCase().includes(q) ||
+    a.change.toLowerCase().includes(q) ||
+    a.action.toLowerCase().includes(q)
+  );
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 
 type ImportStatus = "idle" | "success" | "error";
@@ -198,6 +210,9 @@ export default function BuilderPage() {
   const [supabaseUpdateSaving, setSupabaseUpdateSaving] = useState(false);
   const [supabaseUpdateSuccess, setSupabaseUpdateSuccess] = useState(false);
   const [supabaseUpdateError, setSupabaseUpdateError] = useState<string | null>(null);
+  const [adminSearchQuery, setAdminSearchQuery] = useState("");
+  const [adminStatusFilter, setAdminStatusFilter] = useState<"all" | "draft" | "published" | "archived">("all");
+  const [adminCategoryFilter, setAdminCategoryFilter] = useState<AlertCategory | "all">("all");
 
   useEffect(() => {
     setDrafts(loadDrafts());
@@ -354,6 +369,12 @@ export default function BuilderPage() {
     setForm(initialForm);
     setSupabaseUpdateError(null);
     setSupabaseUpdateSuccess(false);
+  }
+
+  function clearAdminFilters() {
+    setAdminSearchQuery("");
+    setAdminStatusFilter("all");
+    setAdminCategoryFilter("all");
   }
 
   function validateForUpdate(): string | null {
@@ -519,6 +540,18 @@ export default function BuilderPage() {
       setSupabaseError(result.error ?? "Nieznany błąd.");
     }
   }
+
+  // ── Admin list filter computations ──────────────────────────────────────
+
+  const filteredSupabaseAlerts = supabaseAlerts
+    .filter((a) => adminStatusFilter === "all" || a.status === adminStatusFilter)
+    .filter((a) => adminCategoryFilter === "all" || a.category === adminCategoryFilter)
+    .filter((a) => matchesAdminSearch(a, adminSearchQuery));
+
+  const hasAdminFilters =
+    adminSearchQuery.trim() !== "" ||
+    adminStatusFilter !== "all" ||
+    adminCategoryFilter !== "all";
 
   // ── Preview / output ─────────────────────────────────────────────────────
 
@@ -1089,6 +1122,97 @@ export default function BuilderPage() {
           Alerty zapisane w prawdziwej bazie danych. Widoczne tylko dla zalogowanego administratora.
         </p>
 
+        {/* Search + filters — only shown when alerts are loaded */}
+        {!supabaseAlertsLoading && !supabaseAlertsError && supabaseAlerts.length > 0 && (
+          <div className="flex flex-col gap-3 mb-4">
+            {/* Search input */}
+            <div className="relative">
+              <input
+                type="text"
+                value={adminSearchQuery}
+                onChange={(e) => setAdminSearchQuery(e.target.value)}
+                placeholder="Szukaj po tytule, slugu, lokalizacji..."
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 pr-20 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              {adminSearchQuery && (
+                <button
+                  onClick={() => setAdminSearchQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded px-2 py-1 text-xs font-medium text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                >
+                  Wyczyść
+                </button>
+              )}
+            </div>
+
+            {/* Status filter */}
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  { value: "all", label: "Wszystkie" },
+                  { value: "draft", label: "Drafty" },
+                  { value: "published", label: "Opublikowane" },
+                  { value: "archived", label: "Zarchiwizowane" },
+                ] as const
+              ).map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setAdminStatusFilter(opt.value)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                    adminStatusFilter === opt.value
+                      ? "bg-slate-700 text-white border-slate-700"
+                      : "bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:text-slate-900"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Category filter */}
+            <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+              <div className="flex gap-2 min-w-max sm:min-w-0 sm:flex-wrap pb-1 sm:pb-0">
+                {(
+                  [
+                    { value: "all", label: "Wszystkie kategorie" },
+                    ...categoryOptions,
+                  ] as { value: AlertCategory | "all"; label: string }[]
+                ).map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setAdminCategoryFilter(opt.value)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors whitespace-nowrap ${
+                      adminCategoryFilter === opt.value
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:text-slate-900"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Counter + clear */}
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm text-slate-500">
+                Wyświetlane alerty w Supabase:{" "}
+                <span className="font-semibold text-slate-700">
+                  {filteredSupabaseAlerts.length}
+                </span>{" "}
+                z {supabaseAlerts.length}
+              </p>
+              {hasAdminFilters && (
+                <button
+                  onClick={clearAdminFilters}
+                  className="text-xs font-medium text-slate-500 hover:text-slate-800 transition-colors"
+                >
+                  Wyczyść filtry
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         {statusActionMsg && (
           <div
             className={`rounded-xl px-4 py-3 mb-4 ${
@@ -1125,9 +1249,13 @@ export default function BuilderPage() {
           <p className="text-sm text-slate-400">
             Brak alertów w Supabase albo nie udało się ich pobrać.
           </p>
+        ) : filteredSupabaseAlerts.length === 0 ? (
+          <p className="text-sm text-slate-400">
+            Brak alertów pasujących do filtrów.
+          </p>
         ) : (
           <div className="flex flex-col gap-3">
-            {supabaseAlerts.map((a) => (
+            {filteredSupabaseAlerts.map((a) => (
               <div
                 key={a.id}
                 className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex flex-col sm:flex-row sm:items-start gap-3"
