@@ -1,11 +1,8 @@
-import { sampleAlerts } from "@/data/sampleAlerts";
 import { AlertDetailClient } from "@/components/AlertDetailClient";
 
+// dynamicParams = true means any slug is accepted and rendered on demand.
+// No static pre-generation — alert pages are served dynamically from Supabase.
 export const dynamicParams = true;
-
-export function generateStaticParams() {
-  return sampleAlerts.map((alert) => ({ slug: alert.slug }));
-}
 
 export default async function AlertDetailPage({
   params,

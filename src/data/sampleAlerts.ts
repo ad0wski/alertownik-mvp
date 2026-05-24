@@ -1,5 +1,9 @@
 import { Alert } from "@/types/alert";
 
+// DEV/DEMO DATA ONLY — these alerts are not shown on the public homepage.
+// The public list loads exclusively from Supabase (published status).
+// These are kept as a last-resort fallback in AlertDetailClient and as
+// reference data when working locally without a Supabase connection.
 export const sampleAlerts: Alert[] = [
   {
     id: "1",

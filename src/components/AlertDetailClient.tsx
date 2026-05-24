@@ -40,36 +40,35 @@ const severityConfig: Record<
 };
 
 export function AlertDetailClient({ slug }: { slug: string }) {
-  // Lazy initialisers run on the server too, so sample alerts render without flash
-  const [alert, setAlert] = useState<Alert | null>(
-    () => sampleAlerts.find((a) => a.slug === slug) ?? null
-  );
-  const [ready, setReady] = useState(
-    () => Boolean(sampleAlerts.find((a) => a.slug === slug))
-  );
+  const [alert, setAlert] = useState<Alert | null>(null);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    // 1. Sample alerts — resolved synchronously, no loading flash
-    if (sampleAlerts.find((a) => a.slug === slug)) {
-      setReady(true);
-      return;
-    }
-    // 2. Locally published alerts (localStorage)
-    try {
-      const raw = localStorage.getItem(PUBLISHED_KEY);
-      const locals: Alert[] = raw ? JSON.parse(raw) : [];
-      const localAlert = locals.find((a) => a.slug === slug);
-      if (localAlert) {
-        setAlert(localAlert);
+    // 1. Supabase — primary source of truth for public alerts
+    getSupabaseAlertBySlug(slug).then((found) => {
+      if (found) {
+        setAlert(found);
         setReady(true);
         return;
       }
-    } catch {
-      // localStorage unavailable — continue to Supabase
-    }
-    // 3. Supabase published alerts
-    getSupabaseAlertBySlug(slug).then((found) => {
-      setAlert(found);
+
+      // 2. localStorage — supports Builder local-publish workflow
+      try {
+        const raw = localStorage.getItem(PUBLISHED_KEY);
+        const locals: Alert[] = raw ? JSON.parse(raw) : [];
+        const localAlert = locals.find((a) => a.slug === slug);
+        if (localAlert) {
+          setAlert(localAlert);
+          setReady(true);
+          return;
+        }
+      } catch {
+        // localStorage unavailable
+      }
+
+      // 3. Sample alerts — dev/demo fallback only, not shown in production
+      const sample = sampleAlerts.find((a) => a.slug === slug) ?? null;
+      setAlert(sample);
       setReady(true);
     });
   }, [slug]);
