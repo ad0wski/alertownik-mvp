@@ -130,3 +130,36 @@ export async function restoreSupabaseAlertAsDraft(slug: string): Promise<SaveRes
   if (error) return { ok: false, error: error.message };
   return { ok: true };
 }
+
+export async function updateSupabaseAlert(
+  id: string,
+  alert: AlertFormData
+): Promise<SaveResult> {
+  if (!supabase) {
+    return { ok: false, error: "Brak połączenia z Supabase." };
+  }
+
+  const { error } = await supabase
+    .from("alerts")
+    .update({
+      slug: alert.slug,
+      category: toDbCategory(alert.category),
+      severity: alert.severity,
+      title: alert.title,
+      place: alert.place,
+      starts_at: alert.startsAt,
+      ends_at: alert.endsAt || null,
+      change: alert.change,
+      action: alert.action,
+      source_name: alert.sourceName,
+      source_url: alert.sourceUrl || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+
+  return { ok: true };
+}

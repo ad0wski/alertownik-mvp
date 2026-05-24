@@ -10,6 +10,7 @@ import {
   publishSupabaseAlert,
   archiveSupabaseAlert,
   restoreSupabaseAlertAsDraft,
+  updateSupabaseAlert,
 } from "@/lib/supabaseAlertWrites";
 import {
   getAdminSupabaseAlerts,
@@ -193,6 +194,10 @@ export default function BuilderPage() {
     type: "success" | "error";
     text: string;
   } | null>(null);
+  const [editingSupabaseAlert, setEditingSupabaseAlert] = useState<AdminAlert | null>(null);
+  const [supabaseUpdateSaving, setSupabaseUpdateSaving] = useState(false);
+  const [supabaseUpdateSuccess, setSupabaseUpdateSuccess] = useState(false);
+  const [supabaseUpdateError, setSupabaseUpdateError] = useState<string | null>(null);
 
   useEffect(() => {
     setDrafts(loadDrafts());
@@ -337,8 +342,64 @@ export default function BuilderPage() {
       sourceName: a.sourceName,
       sourceUrl: a.sourceUrl ?? "",
     });
+    setEditingSupabaseAlert(a);
+    setSupabaseUpdateError(null);
+    setSupabaseUpdateSuccess(false);
     setSupabaseLoadedMsg(true);
     setTimeout(() => setSupabaseLoadedMsg(false), 3000);
+  }
+
+  function cancelSupabaseEdit() {
+    setEditingSupabaseAlert(null);
+    setForm(initialForm);
+    setSupabaseUpdateError(null);
+    setSupabaseUpdateSuccess(false);
+  }
+
+  function validateForUpdate(): string | null {
+    if (!form.title.trim()) return "Uzupełnij wymagane pola przed zapisem.";
+    if (!form.slug.trim()) return "Uzupełnij wymagane pola przed zapisem.";
+    if (!form.category) return "Uzupełnij wymagane pola przed zapisem.";
+    if (!form.severity) return "Uzupełnij wymagane pola przed zapisem.";
+    if (!form.startsAt) return "Uzupełnij wymagane pola przed zapisem.";
+    return null;
+  }
+
+  async function handleUpdateSupabaseAlert() {
+    const err = validateForUpdate();
+    if (err) { setSupabaseUpdateError(err); return; }
+    if (!editingSupabaseAlert) return;
+
+    setSupabaseUpdateSaving(true);
+    setSupabaseUpdateError(null);
+    setSupabaseUpdateSuccess(false);
+
+    const result = await updateSupabaseAlert(editingSupabaseAlert.id, {
+      slug: form.slug.trim(),
+      category: form.category,
+      severity: form.severity,
+      title: form.title,
+      place: form.place,
+      startsAt: form.startsAt,
+      endsAt: form.endsAt || undefined,
+      change: form.change,
+      action: form.action,
+      sourceName: form.sourceName,
+      sourceUrl: form.sourceUrl || undefined,
+    });
+
+    setSupabaseUpdateSaving(false);
+
+    if (result.ok) {
+      setSupabaseUpdateSuccess(true);
+      setEditingSupabaseAlert((prev) =>
+        prev ? { ...prev, slug: form.slug.trim(), title: form.title } : null
+      );
+      setTimeout(() => setSupabaseUpdateSuccess(false), 5000);
+      await refreshSupabaseAlerts();
+    } else {
+      setSupabaseUpdateError(result.error ?? "Nieznany błąd.");
+    }
   }
 
   // ── Supabase actions ─────────────────────────────────────────────────────
@@ -581,6 +642,18 @@ export default function BuilderPage() {
 
       {/* ── Manual form ───────────────────────────────────────────────── */}
       <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-5 mb-6">
+
+        {editingSupabaseAlert && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 flex flex-col gap-0.5">
+            <p className="text-sm font-semibold text-amber-800">
+              Edytujesz alert z Supabase: {editingSupabaseAlert.title}
+            </p>
+            <p className="text-xs text-amber-600">
+              Status: {statusLabel(editingSupabaseAlert.status)}
+            </p>
+          </div>
+        )}
+
         <h2 className={sectionTitleClass}>Formularz alertu</h2>
 
         {/* Category + Severity */}
@@ -795,54 +868,91 @@ export default function BuilderPage() {
         )}
       </div>
 
-      {/* ── Supabase save ─────────────────────────────────────────────── */}
-      <section className="bg-blue-50 border border-blue-200 rounded-2xl p-6 flex flex-col gap-4 mb-10">
-        <div>
-          <h2 className="text-base font-semibold text-blue-900">Zapis do Supabase</h2>
-          <p className="text-sm text-blue-700 mt-1">
-            Zapisuje alert bezpośrednio w bazie danych. Wymaga zalogowania jako administrator.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            onClick={handleSaveDraftToSupabase}
-            disabled={supabaseSaving}
-            className="rounded-lg border border-blue-300 bg-white px-5 py-2.5 text-sm font-medium text-blue-700 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {supabaseSaving ? "Zapisywanie…" : "Zapisz jako draft w Supabase"}
-          </button>
-          <button
-            onClick={handlePublishToSupabase}
-            disabled={supabaseSaving}
-            className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {supabaseSaving ? "Publikowanie…" : "Opublikuj w Supabase"}
-          </button>
-        </div>
-
-        {supabaseError && (
-          <p className="text-sm font-medium text-red-700">Błąd: {supabaseError}</p>
-        )}
-        {supabaseSuccess === "draft" && (
-          <p className="text-sm font-medium text-emerald-700">
-            Draft zapisany w Supabase (slug: {supabaseSavedSlug}).
-          </p>
-        )}
-        {supabaseSuccess === "published" && (
-          <div className="flex flex-col gap-1">
-            <p className="text-sm font-medium text-emerald-700">
-              Alert opublikowany w Supabase.
+      {/* ── Supabase save / edit ──────────────────────────────────────── */}
+      {editingSupabaseAlert ? (
+        <section className="bg-amber-50 border border-amber-200 rounded-2xl p-6 flex flex-col gap-4 mb-10">
+          <div>
+            <h2 className="text-base font-semibold text-amber-900">Edycja alertu w Supabase</h2>
+            <p className="text-sm text-amber-700 mt-1">
+              Zmiany zostaną zapisane w istniejącym wierszu bazy danych. Status alertu pozostaje bez zmian.
             </p>
-            <a
-              href={`/alerts/${supabaseSavedSlug}`}
-              className="text-sm text-blue-700 underline hover:text-blue-900"
-            >
-              Otwórz alert → /alerts/{supabaseSavedSlug}
-            </a>
           </div>
-        )}
-      </section>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={handleUpdateSupabaseAlert}
+              disabled={supabaseUpdateSaving}
+              className="rounded-lg bg-amber-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {supabaseUpdateSaving ? "Zapisywanie…" : "Zapisz zmiany w Supabase"}
+            </button>
+            <button
+              onClick={cancelSupabaseEdit}
+              disabled={supabaseUpdateSaving}
+              className="rounded-lg border border-amber-300 bg-white px-5 py-2.5 text-sm font-medium text-amber-700 hover:bg-amber-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Anuluj edycję
+            </button>
+          </div>
+
+          {supabaseUpdateError && (
+            <p className="text-sm font-medium text-red-700">{supabaseUpdateError}</p>
+          )}
+          {supabaseUpdateSuccess && (
+            <p className="text-sm font-medium text-emerald-700">
+              Zmiany zapisane w Supabase.
+            </p>
+          )}
+        </section>
+      ) : (
+        <section className="bg-blue-50 border border-blue-200 rounded-2xl p-6 flex flex-col gap-4 mb-10">
+          <div>
+            <h2 className="text-base font-semibold text-blue-900">Zapis do Supabase</h2>
+            <p className="text-sm text-blue-700 mt-1">
+              Zapisuje alert bezpośrednio w bazie danych. Wymaga zalogowania jako administrator.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={handleSaveDraftToSupabase}
+              disabled={supabaseSaving}
+              className="rounded-lg border border-blue-300 bg-white px-5 py-2.5 text-sm font-medium text-blue-700 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {supabaseSaving ? "Zapisywanie…" : "Zapisz jako draft w Supabase"}
+            </button>
+            <button
+              onClick={handlePublishToSupabase}
+              disabled={supabaseSaving}
+              className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {supabaseSaving ? "Publikowanie…" : "Opublikuj w Supabase"}
+            </button>
+          </div>
+
+          {supabaseError && (
+            <p className="text-sm font-medium text-red-700">Błąd: {supabaseError}</p>
+          )}
+          {supabaseSuccess === "draft" && (
+            <p className="text-sm font-medium text-emerald-700">
+              Draft zapisany w Supabase (slug: {supabaseSavedSlug}).
+            </p>
+          )}
+          {supabaseSuccess === "published" && (
+            <div className="flex flex-col gap-1">
+              <p className="text-sm font-medium text-emerald-700">
+                Alert opublikowany w Supabase.
+              </p>
+              <a
+                href={`/alerts/${supabaseSavedSlug}`}
+                className="text-sm text-blue-700 underline hover:text-blue-900"
+              >
+                Otwórz alert → /alerts/{supabaseSavedSlug}
+              </a>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* ── Card preview ──────────────────────────────────────────────── */}
       <section className="mb-10">
