@@ -93,6 +93,18 @@ export function AppHeader() {
                   Admin
                 </span>
 
+                {/* Panel admina link */}
+                <Link
+                  href="/admin"
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    isActive("/admin")
+                      ? "bg-amber-50 text-amber-700"
+                      : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                  }`}
+                >
+                  Panel
+                </Link>
+
                 {/* Kreator link — shorter label on mobile */}
                 <Link
                   href="/builder"
