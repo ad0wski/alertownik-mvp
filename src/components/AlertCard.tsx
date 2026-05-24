@@ -4,6 +4,16 @@ import { useState } from "react";
 import Link from "next/link";
 import { Alert } from "@/types/alert";
 import { formatAlertRange } from "@/lib/formatAlertDate";
+import { getAlertTimeStatus, type AlertTimeStatus } from "@/lib/getAlertTimeStatus";
+
+const timeStatusConfig: Record<
+  Exclude<AlertTimeStatus, "unknown">,
+  { dot: string; text: string; label: string }
+> = {
+  active:    { dot: "bg-emerald-500", text: "text-emerald-700", label: "Trwa" },
+  upcoming:  { dot: "bg-blue-400",    text: "text-blue-600",    label: "Nadchodzące" },
+  ended:     { dot: "bg-slate-300",   text: "text-slate-400",   label: "Zakończone" },
+};
 
 const categoryLabels: Record<Alert["category"], string> = {
   transport: "Transport",
@@ -39,6 +49,8 @@ export function AlertCard({ alert, isPreview }: { alert: Alert; isPreview?: bool
   const [expanded, setExpanded] = useState(false);
   const severity = severityConfig[alert.severity];
   const isRealLink = Boolean(alert.sourceUrl && alert.sourceUrl !== "#");
+  const timeStatus = getAlertTimeStatus(alert.startsAt, alert.endsAt);
+  const timeCfg = timeStatus !== "unknown" ? timeStatusConfig[timeStatus] : null;
 
   return (
     <article
@@ -52,6 +64,12 @@ export function AlertCard({ alert, isPreview }: { alert: Alert; isPreview?: bool
         <span className={`text-xs font-semibold rounded-full px-2.5 py-1 ${severity.badge}`}>
           {severity.label}
         </span>
+        {timeCfg && (
+          <span className={`inline-flex items-center gap-1 text-xs font-medium ${timeCfg.text}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${timeCfg.dot} shrink-0`} aria-hidden="true" />
+            {timeCfg.label}
+          </span>
+        )}
       </div>
 
       {/* Title */}

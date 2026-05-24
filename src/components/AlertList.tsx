@@ -3,7 +3,30 @@
 import { useState, useEffect } from "react";
 import { AlertCard } from "@/components/AlertCard";
 import { getSupabaseAlerts } from "@/lib/getSupabaseAlerts";
+import { getAlertTimeStatus } from "@/lib/getAlertTimeStatus";
 import type { Alert, AlertCategory } from "@/types/alert";
+
+const STATUS_ORDER = { active: 0, upcoming: 1, ended: 2, unknown: 3 } as const;
+
+function sortAlerts(alerts: Alert[]): Alert[] {
+  return [...alerts].sort((a, b) => {
+    const sa = getAlertTimeStatus(a.startsAt, a.endsAt);
+    const sb = getAlertTimeStatus(b.startsAt, b.endsAt);
+    const diff = STATUS_ORDER[sa] - STATUS_ORDER[sb];
+    if (diff !== 0) return diff;
+    // active: newest start first
+    if (sa === "active") return b.startsAt.localeCompare(a.startsAt);
+    // upcoming: nearest start first
+    if (sa === "upcoming") return a.startsAt.localeCompare(b.startsAt);
+    // ended: most recently ended first
+    if (sa === "ended") {
+      const endA = a.endsAt ?? a.startsAt;
+      const endB = b.endsAt ?? b.startsAt;
+      return endB.localeCompare(endA);
+    }
+    return 0;
+  });
+}
 
 type FilterValue = AlertCategory | "all";
 
@@ -48,7 +71,7 @@ export function AlertList() {
 
   useEffect(() => {
     getSupabaseAlerts()
-      .then((data) => setAlerts(data))
+      .then((data) => setAlerts(sortAlerts(data)))
       .catch(() => setFetchError(true))
       .finally(() => setLoading(false));
   }, []);

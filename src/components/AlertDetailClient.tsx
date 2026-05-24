@@ -5,7 +5,17 @@ import Link from "next/link";
 import { sampleAlerts } from "@/data/sampleAlerts";
 import { getSupabaseAlertBySlug } from "@/lib/getSupabaseAlerts";
 import { formatAlertRange } from "@/lib/formatAlertDate";
+import { getAlertTimeStatus, type AlertTimeStatus } from "@/lib/getAlertTimeStatus";
 import type { Alert } from "@/types/alert";
+
+const timeStatusConfig: Record<
+  Exclude<AlertTimeStatus, "unknown">,
+  { dot: string; text: string; label: string }
+> = {
+  active:    { dot: "bg-emerald-500", text: "text-emerald-700", label: "Trwa" },
+  upcoming:  { dot: "bg-blue-400",    text: "text-blue-600",    label: "Nadchodzące" },
+  ended:     { dot: "bg-slate-300",   text: "text-slate-400",   label: "Zakończone" },
+};
 
 const PUBLISHED_KEY = "alertownik-published-alerts";
 
@@ -100,6 +110,8 @@ export function AlertDetailClient({ slug }: { slug: string }) {
 
   const severity = severityConfig[alert.severity];
   const isRealLink = Boolean(alert.sourceUrl && alert.sourceUrl !== "#");
+  const timeStatus = getAlertTimeStatus(alert.startsAt, alert.endsAt);
+  const timeCfg = timeStatus !== "unknown" ? timeStatusConfig[timeStatus] : null;
 
   return (
     <main className="max-w-3xl mx-auto w-full px-4 sm:px-6 py-8 sm:py-10">
@@ -124,6 +136,12 @@ export function AlertDetailClient({ slug }: { slug: string }) {
           >
             {severity.label}
           </span>
+          {timeCfg && (
+            <span className={`inline-flex items-center gap-1 text-xs font-medium ${timeCfg.text}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${timeCfg.dot} shrink-0`} aria-hidden="true" />
+              {timeCfg.label}
+            </span>
+          )}
         </div>
 
         {/* Title */}
