@@ -214,10 +214,12 @@ export default function BuilderPage() {
   const [adminStatusFilter, setAdminStatusFilter] = useState<"all" | "draft" | "published" | "archived">("all");
   const [adminCategoryFilter, setAdminCategoryFilter] = useState<AlertCategory | "all">("all");
   const [urlEditError, setUrlEditError] = useState<string | null>(null);
+  const [loadingSupabaseId, setLoadingSupabaseId] = useState<string | null>(null);
   // Refs track URL-based edit loading: param is read once on mount, processed flag
   // prevents re-loading when the Supabase list refreshes after saves.
   const urlEditParamRef = useRef<string | null>(null);
   const urlEditProcessedRef = useRef(false);
+  const formSectionRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     urlEditParamRef.current = new URLSearchParams(window.location.search).get("edit");
@@ -350,6 +352,7 @@ export default function BuilderPage() {
   }
 
   function loadFromSupabaseAlert(a: AdminAlert) {
+    setLoadingSupabaseId(a.id);
     setForm({
       category: a.category,
       severity: a.severity,
@@ -368,6 +371,11 @@ export default function BuilderPage() {
     setSupabaseUpdateSuccess(false);
     setSupabaseLoadedMsg(true);
     setTimeout(() => setSupabaseLoadedMsg(false), 3000);
+    setTimeout(() => setLoadingSupabaseId(null), 600);
+    // Scroll after React commits the state update so the edit banner is visible
+    requestAnimationFrame(() => {
+      formSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   }
 
   function cancelSupabaseEdit() {
@@ -698,14 +706,17 @@ export default function BuilderPage() {
       </section>
 
       {/* ── Manual form ───────────────────────────────────────────────── */}
-      <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-5 mb-6">
+      <section ref={formSectionRef} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-5 mb-6">
 
         {editingSupabaseAlert && (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 flex flex-col gap-0.5">
-            <p className="text-sm font-semibold text-amber-800">
+          <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3.5 flex flex-col gap-1">
+            <p className="text-sm font-bold text-amber-900">
               Edytujesz alert z Supabase: {editingSupabaseAlert.title}
             </p>
-            <p className="text-xs text-amber-600">
+            <p className="text-xs font-medium text-amber-700">
+              Po zmianach kliknij „Zapisz zmiany w Supabase".
+            </p>
+            <p className="text-xs text-amber-600 mt-0.5">
               Status: {statusLabel(editingSupabaseAlert.status)}
             </p>
           </div>
@@ -1319,9 +1330,10 @@ export default function BuilderPage() {
                 <div className="flex items-center gap-2 shrink-0 flex-wrap">
                   <button
                     onClick={() => loadFromSupabaseAlert(a)}
-                    className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"
+                    disabled={loadingSupabaseId === a.id}
+                    className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-60 transition-colors"
                   >
-                    Wczytaj do edycji
+                    {loadingSupabaseId === a.id ? "Wczytywanie…" : "Wczytaj do edycji"}
                   </button>
 
                   {a.status === "draft" && (
