@@ -103,44 +103,46 @@ export function AlertDetailClient({ slug }: { slug: string }) {
   const isRealLink = Boolean(alert.sourceUrl && alert.sourceUrl !== "#");
 
   return (
-    <main className="max-w-3xl mx-auto w-full px-4 sm:px-6 py-10">
+    <main className="max-w-3xl mx-auto w-full px-4 sm:px-6 py-8 sm:py-10">
       <Link
         href="/"
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-blue-700 transition-colors mb-6 group"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-blue-700 transition-colors mb-5 sm:mb-6 group"
       >
         <span className="group-hover:-translate-x-0.5 transition-transform inline-block">←</span>
         Wróć do listy alertów
       </Link>
 
       <article
-        className={`bg-white rounded-2xl border border-slate-200 shadow-md border-l-4 ${severity.accent} p-6 flex flex-col gap-4`}
+        className={`bg-white rounded-2xl border border-slate-200 shadow-md border-l-4 ${severity.accent} p-4 sm:p-6 flex flex-col gap-4`}
       >
         {/* Badges */}
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-medium text-slate-500 bg-slate-100 rounded-full px-2.5 py-0.5">
+          <span className="text-xs font-medium text-slate-500 bg-slate-100 rounded-full px-2.5 py-1">
             {categoryLabels[alert.category]}
           </span>
           <span
-            className={`text-xs font-semibold rounded-full px-2.5 py-0.5 ${severity.badge}`}
+            className={`text-xs font-semibold rounded-full px-2.5 py-1 ${severity.badge}`}
           >
             {severity.label}
           </span>
         </div>
 
         {/* Title */}
-        <h1 className="text-xl font-bold text-slate-900 leading-snug">
+        <h1 className="text-lg sm:text-xl font-bold text-slate-900 leading-snug">
           {alert.title}
         </h1>
 
         {/* Compact line */}
-        <p className="text-sm text-slate-500">
-          {alert.place} · {formatAlertRange(alert.startsAt, alert.endsAt)}
+        <p className="text-sm text-slate-500 leading-relaxed">
+          <span className="font-medium text-slate-600">{alert.place}</span>
+          {" · "}
+          {formatAlertRange(alert.startsAt, alert.endsAt)}
         </p>
 
-        {/* Detail rows */}
+        {/* Detail rows — always stacked vertically for clean mobile reading */}
         <dl className="border-t border-slate-100 pt-4 flex flex-col divide-y divide-slate-100">
-          <div className="flex flex-col sm:flex-row py-3.5 gap-1 sm:gap-6">
-            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400 sm:w-28 shrink-0 pt-px">
+          <div className="flex flex-col py-3 gap-1">
+            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400">
               Kiedy
             </dt>
             <dd className="text-sm text-slate-700 leading-relaxed">
@@ -148,32 +150,32 @@ export function AlertDetailClient({ slug }: { slug: string }) {
             </dd>
           </div>
 
-          <div className="flex flex-col sm:flex-row py-3.5 gap-1 sm:gap-6">
-            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400 sm:w-28 shrink-0 pt-px">
+          <div className="flex flex-col py-3 gap-1">
+            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400">
               Gdzie
             </dt>
             <dd className="text-sm text-slate-700 leading-relaxed">{alert.place}</dd>
           </div>
 
-          <div className="flex flex-col sm:flex-row py-3.5 gap-1 sm:gap-6">
-            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400 sm:w-28 shrink-0 pt-px">
+          <div className="flex flex-col py-3 gap-1">
+            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400">
               Co się zmienia
             </dt>
             <dd className="text-sm text-slate-700 leading-relaxed">{alert.change}</dd>
           </div>
 
-          <div className="flex flex-col sm:flex-row py-3.5 gap-1 sm:gap-6">
-            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400 sm:w-28 shrink-0 pt-px">
+          <div className="flex flex-col py-3 gap-1">
+            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400">
               Co zrobić
             </dt>
             <dd className="text-sm text-slate-700 leading-relaxed">{alert.action}</dd>
           </div>
 
-          <div className="flex flex-col sm:flex-row py-3.5 gap-1 sm:gap-6">
-            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400 sm:w-28 shrink-0 pt-px">
+          <div className="flex flex-col py-3 gap-1">
+            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400">
               Źródło
             </dt>
-            <dd className="text-sm text-slate-700 flex flex-wrap items-center gap-3">
+            <dd className="text-sm text-slate-700 flex flex-wrap items-center gap-3 mt-0.5">
               <span>{alert.sourceName}</span>
               {isRealLink ? (
                 <a
