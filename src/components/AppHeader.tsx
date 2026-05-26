@@ -130,6 +130,18 @@ export function AppHeader() {
                   AI Helper
                 </Link>
 
+                {/* Źródła link */}
+                <Link
+                  href="/admin/sources"
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    isActive("/admin/sources")
+                      ? "bg-amber-50 text-amber-700"
+                      : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                  }`}
+                >
+                  Źródła
+                </Link>
+
                 <span className="hidden sm:block w-px h-4 bg-slate-200 mx-1" aria-hidden="true" />
 
                 {/* Logout */}
