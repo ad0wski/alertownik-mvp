@@ -132,3 +132,22 @@ export async function toggleAlertSourceActive(
 
   return { ok: true };
 }
+
+export async function markAlertSourceChecked(id: string): Promise<SaveResult> {
+  if (!supabase) {
+    return { ok: false, error: "Brak połączenia z Supabase." };
+  }
+
+  const now = new Date().toISOString();
+  const { error } = await supabase
+    .from("alert_sources")
+    .update({ last_checked_at: now, updated_at: now })
+    .eq("id", id);
+
+  if (error) {
+    console.error("[Alertownik] markAlertSourceChecked error:", error.message);
+    return { ok: false, error: error.message };
+  }
+
+  return { ok: true };
+}

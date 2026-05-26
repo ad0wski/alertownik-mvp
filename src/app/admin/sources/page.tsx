@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import type { Session } from "@supabase/supabase-js";
 import type { AlertSource, AlertSourceInput, AlertSourceType } from "@/types/alertSource";
@@ -12,7 +13,12 @@ import {
   updateAlertSource,
   deleteAlertSource,
   toggleAlertSourceActive,
+  markAlertSourceChecked,
 } from "@/lib/supabaseSourceWrites";
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+const PENDING_SOURCE_KEY = "alertownik_pending_source_for_ai";
 
 // ── Labels ────────────────────────────────────────────────────────────────────
 
@@ -55,7 +61,18 @@ function emptyForm(): AlertSourceInput {
   return { name: "", url: "", category: "municipal", sourceType: "website", notes: "" };
 }
 
-// ── Sub-components ────────────────────────────────────────────────────────────
+function formatCheckedAt(iso: string): string {
+  return new Date(iso).toLocaleString("pl-PL", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Europe/Warsaw",
+  });
+}
+
+// ── SourceForm component ──────────────────────────────────────────────────────
 
 interface SourceFormProps {
   form: AlertSourceInput;
@@ -173,56 +190,71 @@ function SourceForm({
   );
 }
 
+// ── SourceCard component ──────────────────────────────────────────────────────
+
 interface SourceCardProps {
   source: AlertSource;
   onEdit: () => void;
   onToggle: () => void;
   onDelete: () => void;
+  onPrepareAlert: () => void;
+  onMarkChecked: () => void;
+  markingChecked: boolean;
 }
 
-function SourceCard({ source, onEdit, onToggle, onDelete }: SourceCardProps) {
+function SourceCard({
+  source,
+  onEdit,
+  onToggle,
+  onDelete,
+  onPrepareAlert,
+  onMarkChecked,
+  markingChecked,
+}: SourceCardProps) {
+  const inactive = !source.isActive;
+
   return (
     <div
-      className={`rounded-xl border bg-white p-4 transition-opacity ${
-        source.isActive ? "border-slate-200" : "border-slate-100 opacity-70"
+      className={`rounded-xl border p-4 transition-all ${
+        inactive
+          ? "bg-slate-50 border-slate-200 opacity-60"
+          : "bg-white border-slate-200 shadow-sm"
       }`}
     >
-      <div className="flex items-start justify-between gap-3">
+      {/* Top section: info + management buttons */}
+      <div className="flex items-start gap-3">
         {/* Source info */}
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-1">
-            <span className="font-semibold text-slate-900">{source.name}</span>
+            <span className={`font-semibold ${inactive ? "text-slate-500" : "text-slate-900"}`}>
+              {source.name}
+            </span>
             <span
               className={`text-xs font-medium px-2 py-0.5 rounded-full ${
                 source.isActive
                   ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
-                  : "bg-slate-100 text-slate-500 ring-1 ring-slate-200"
+                  : "bg-slate-100 text-slate-400 ring-1 ring-slate-200"
               }`}
             >
               {source.isActive ? "Aktywne" : "Nieaktywne"}
             </span>
-            <span className="text-xs text-slate-500 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-full">
+            <span className="text-xs text-slate-400 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-full">
               {categoryLabels[source.category]}
             </span>
             <span className="text-xs text-slate-400 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-full">
               {sourceTypeLabels[source.sourceType]}
             </span>
           </div>
-          <a
-            href={source.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm text-blue-600 hover:text-blue-800 hover:underline truncate block"
-          >
+          <span className="text-sm text-blue-600 truncate block">
             {source.url}
-          </a>
+          </span>
           {source.notes && (
             <p className="text-sm text-slate-500 mt-1">{source.notes}</p>
           )}
         </div>
 
-        {/* Action buttons */}
-        <div className="flex items-center gap-1 shrink-0 flex-wrap justify-end">
+        {/* Management buttons */}
+        <div className="flex items-center gap-1 shrink-0">
           <button
             onClick={onEdit}
             className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
@@ -247,6 +279,43 @@ function SourceCard({ source, onEdit, onToggle, onDelete }: SourceCardProps) {
           </button>
         </div>
       </div>
+
+      {/* Footer section: workflow actions + last checked */}
+      <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+        {/* Primary workflow */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onPrepareAlert}
+            className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Przygotuj alert
+          </button>
+          <a
+            href={source.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+          >
+            Otwórz źródło ↗
+          </a>
+        </div>
+
+        {/* Last checked + mark button */}
+        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+          <span>
+            {source.lastCheckedAt
+              ? `Ostatnio sprawdzono: ${formatCheckedAt(source.lastCheckedAt)}`
+              : "Jeszcze nie sprawdzano"}
+          </span>
+          <button
+            onClick={onMarkChecked}
+            disabled={markingChecked}
+            className="text-xs font-medium text-slate-500 hover:text-slate-800 hover:bg-slate-100 px-2 py-1 rounded-md transition-colors disabled:opacity-50"
+          >
+            {markingChecked ? "Oznaczanie…" : "Oznacz jako sprawdzone"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -256,6 +325,8 @@ function SourceCard({ source, onEdit, onToggle, onDelete }: SourceCardProps) {
 type StatusFilter = "all" | "active" | "inactive";
 
 export default function SourcesPage() {
+  const router = useRouter();
+
   const [session, setSession] = useState<Session | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
@@ -274,6 +345,10 @@ export default function SourcesPage() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const [markingCheckedId, setMarkingCheckedId] = useState<string | null>(null);
+  const [checkSuccess, setCheckSuccess] = useState<string | null>(null);
+  const [checkError, setCheckError] = useState<string | null>(null);
 
   // ── Auth ────────────────────────────────────────────────────────────────────
 
@@ -388,6 +463,36 @@ export default function SourcesPage() {
       return;
     }
     await loadSources();
+  }
+
+  // ── Prepare alert ───────────────────────────────────────────────────────────
+
+  function handlePrepareAlert(source: AlertSource) {
+    const data = {
+      sourceName: source.name,
+      sourceUrl: source.url,
+      suggestedCategory: source.category,
+      sourceId: source.id,
+    };
+    sessionStorage.setItem(PENDING_SOURCE_KEY, JSON.stringify(data));
+    router.push("/ai-helper");
+  }
+
+  // ── Mark checked ────────────────────────────────────────────────────────────
+
+  async function handleMarkChecked(id: string) {
+    setMarkingCheckedId(id);
+    setCheckSuccess(null);
+    setCheckError(null);
+    const result = await markAlertSourceChecked(id);
+    setMarkingCheckedId(null);
+    if (!result.ok) {
+      setCheckError(result.error || "Nie udało się oznaczyć źródła jako sprawdzone.");
+      return;
+    }
+    setCheckSuccess("Źródło oznaczone jako sprawdzone.");
+    await loadSources();
+    setTimeout(() => setCheckSuccess(null), 4000);
   }
 
   // ── Filtered list ───────────────────────────────────────────────────────────
@@ -506,14 +611,24 @@ export default function SourcesPage() {
         </select>
       </div>
 
-      {/* Load error */}
+      {/* Success message for mark-checked */}
+      {checkSuccess && (
+        <div className="rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm px-4 py-3 mb-4">
+          {checkSuccess}
+        </div>
+      )}
+
+      {/* Error messages */}
+      {checkError && (
+        <div className="rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 mb-4">
+          {checkError}
+        </div>
+      )}
       {loadState === "error" && (
         <div className="rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 mb-4">
           Nie udało się pobrać źródeł.
         </div>
       )}
-
-      {/* Delete error */}
       {deleteError && (
         <div className="rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 mb-4">
           {deleteError}
@@ -526,7 +641,7 @@ export default function SourcesPage() {
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="h-20 rounded-xl border border-slate-100 bg-slate-50 animate-pulse"
+              className="h-24 rounded-xl border border-slate-100 bg-slate-50 animate-pulse"
             />
           ))}
         </div>
@@ -538,7 +653,6 @@ export default function SourcesPage() {
           <p className="text-slate-400 text-sm mb-6">
             Nie dodano jeszcze żadnych źródeł.
           </p>
-          {/* Suggestions */}
           <div className="inline-block text-left rounded-xl border border-slate-200 bg-slate-50 px-6 py-5 max-w-sm">
             <p className="text-sm font-medium text-slate-600 mb-3">
               Przykładowe źródła do dodania:
@@ -597,6 +711,9 @@ export default function SourcesPage() {
                 onEdit={() => startEdit(source)}
                 onToggle={() => handleToggle(source.id, source.isActive)}
                 onDelete={() => handleDelete(source.id)}
+                onPrepareAlert={() => handlePrepareAlert(source)}
+                onMarkChecked={() => handleMarkChecked(source.id)}
+                markingChecked={markingCheckedId === source.id}
               />
             )
           )}

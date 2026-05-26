@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
 import type { AlertCategory } from "@/types/alert";
@@ -90,6 +90,14 @@ ${sourceLines || "Źródło: nieznane"}`;
 }
 
 const AI_PENDING_KEY = "alertownik_pending_ai_alert_json";
+const PENDING_SOURCE_KEY = "alertownik_pending_source_for_ai";
+
+interface PendingSourceData {
+  sourceName: string;
+  sourceUrl: string;
+  suggestedCategory: string;
+  sourceId: string;
+}
 
 const REQUIRED_FIELDS = [
   "category", "severity", "title", "startsAt", "change", "action", "sourceName",
@@ -121,6 +129,22 @@ export default function AiHelperPage() {
   const [copied, setCopied] = useState(false);
   const [aiJsonInput, setAiJsonInput] = useState("");
   const [aiJsonStatus, setAiJsonStatus] = useState<"idle" | "valid" | "error">("idle");
+  const [sourceLoaded, setSourceLoaded] = useState(false);
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(PENDING_SOURCE_KEY);
+      if (!raw) return;
+      const data: PendingSourceData = JSON.parse(raw);
+      if (data.sourceName) setSourceName(data.sourceName);
+      if (data.sourceUrl) setSourceUrl(data.sourceUrl);
+      if (data.suggestedCategory) setSuggestedCategory(data.suggestedCategory);
+      sessionStorage.removeItem(PENDING_SOURCE_KEY);
+      setSourceLoaded(true);
+    } catch {
+      // ignore malformed data
+    }
+  }, []);
 
   const prompt = buildPrompt(rawText, sourceName, sourceUrl, suggestedCategory);
 
@@ -168,6 +192,18 @@ export default function AiHelperPage() {
           żadnym API — generuje tekst do wklejenia w ChatGPT lub Claude.
         </p>
       </div>
+
+      {/* Source loaded banner */}
+      {sourceLoaded && (
+        <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-5 py-4 mb-6">
+          <p className="text-sm font-semibold text-emerald-800 mb-1">
+            Źródło zostało wczytane do AI Helpera.
+          </p>
+          <p className="text-sm text-emerald-700">
+            Teraz wklej komunikat z tego źródła, a potem skopiuj prompt do ChatGPT lub Claude.
+          </p>
+        </div>
+      )}
 
       {/* Input form */}
       <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-5 mb-6">
