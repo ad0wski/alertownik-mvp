@@ -42,7 +42,7 @@ const severityConfig: Record<
     badge: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
     accent: "border-l-amber-400",
   },
-  critical: {
+  urgent: {
     label: "Pilne",
     badge: "bg-red-50 text-red-700 ring-1 ring-red-200",
     accent: "border-l-red-500",

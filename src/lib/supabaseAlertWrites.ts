@@ -1,5 +1,6 @@
 import { supabase } from "./supabaseClient";
 import type { AlertCategory } from "@/types/alert";
+import { normalizeAlertSeverity } from "./normalizeAlert";
 
 // The Supabase table uses "announcement" where the app uses "municipal"
 function toDbCategory(category: AlertCategory): string {
@@ -32,13 +33,18 @@ export async function saveAlertDraftToSupabase(
     return { ok: false, error: "Brak połączenia z Supabase." };
   }
 
+  const severity = normalizeAlertSeverity(alert.severity);
+  if (!severity) {
+    return { ok: false, error: "Nieprawidłowy poziom ważności alertu." };
+  }
+
   const { error } = await supabase
     .from("alerts")
     .upsert(
       {
         slug: alert.slug,
         category: toDbCategory(alert.category),
-        severity: alert.severity,
+        severity,
         title: alert.title,
         place: alert.place,
         starts_at: alert.startsAt,
@@ -66,13 +72,18 @@ export async function publishAlertToSupabase(
     return { ok: false, error: "Brak połączenia z Supabase." };
   }
 
+  const severity = normalizeAlertSeverity(alert.severity);
+  if (!severity) {
+    return { ok: false, error: "Nieprawidłowy poziom ważności alertu." };
+  }
+
   const { error } = await supabase
     .from("alerts")
     .upsert(
       {
         slug: alert.slug,
         category: toDbCategory(alert.category),
-        severity: alert.severity,
+        severity,
         title: alert.title,
         place: alert.place,
         starts_at: alert.startsAt,
@@ -139,12 +150,17 @@ export async function updateSupabaseAlert(
     return { ok: false, error: "Brak połączenia z Supabase." };
   }
 
+  const severity = normalizeAlertSeverity(alert.severity);
+  if (!severity) {
+    return { ok: false, error: "Nieprawidłowy poziom ważności alertu." };
+  }
+
   const { error } = await supabase
     .from("alerts")
     .update({
       slug: alert.slug,
       category: toDbCategory(alert.category),
-      severity: alert.severity,
+      severity,
       title: alert.title,
       place: alert.place,
       starts_at: alert.startsAt,

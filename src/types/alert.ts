@@ -6,7 +6,7 @@ export type AlertCategory =
   | "roads"
   | "municipal";
 
-export type AlertSeverity = "info" | "warning" | "critical";
+export type AlertSeverity = "info" | "warning" | "urgent";
 
 export interface Alert {
   id: string;

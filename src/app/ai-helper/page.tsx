@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
 import type { AlertCategory } from "@/types/alert";
+import { normalizeAlertSeverity } from "@/lib/normalizeAlert";
 
 const categoryOptions: { value: AlertCategory | ""; label: string }[] = [
   { value: "", label: "AI dobierze automatycznie" },
@@ -50,7 +52,7 @@ Zwróć obiekt JSON z dokładnie tymi polami:
   "id": "wpisz-sam",
   "slug": "<unikalny-identyfikator-url-bez-polskich-liter>",
   "category": "transport" | "water" | "power" | "waste" | "roads" | "municipal",
-  "severity": "info" | "warning" | "critical",
+  "severity": "info" | "warning" | "urgent",
   "title": "<krótki tytuł, max 60 znaków>",
   "location": "<ogólna lokalizacja lub rejon, np. Komorów / Pruszków>",
   "place": "<dokładna lokalizacja z ulicą lub adresem>",
@@ -71,7 +73,7 @@ Zwróć obiekt JSON z dokładnie tymi polami:
 5. Pole "change": opisuje co konkretnie się zmienia lub dzieje (fakty).
 6. Pole "action": opisuje co mieszkaniec powinien zrobić w odpowiedzi na ten alert (zalecenie).
 7. Dobór severity:
-   - "critical" = pilna awaria lub zagrożenie zdrowia albo bezpieczeństwa
+   - "urgent" = pilna awaria lub zagrożenie zdrowia albo bezpieczeństwa
    - "warning" = planowane utrudnienie lub zmiana wymagająca przygotowania
    - "info" = informacja bez pilności
 8. Slug: małe litery, myślniki zamiast spacji i polskich liter, np. "przerwa-w-dostawie-wody-komorow".
@@ -87,12 +89,38 @@ ${categoryLine}
 ${sourceLines || "Źródło: nieznane"}`;
 }
 
+const AI_PENDING_KEY = "alertownik_pending_ai_alert_json";
+
+const REQUIRED_FIELDS = [
+  "category", "severity", "title", "startsAt", "change", "action", "sourceName",
+] as const;
+
+function validateAiJson(text: string): boolean {
+  try {
+    const data = JSON.parse(text.trim());
+    if (typeof data !== "object" || data === null || Array.isArray(data)) return false;
+    const hasPlace =
+      (typeof data.location === "string" && data.location.trim()) ||
+      (typeof data.place === "string" && data.place.trim());
+    if (!hasPlace) return false;
+    if (!normalizeAlertSeverity(data.severity)) return false;
+    return REQUIRED_FIELDS.every(
+      (f) => typeof data[f] === "string" && data[f].trim()
+    );
+  } catch {
+    return false;
+  }
+}
+
 export default function AiHelperPage() {
+  const router = useRouter();
   const [rawText, setRawText] = useState("");
   const [sourceName, setSourceName] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
   const [suggestedCategory, setSuggestedCategory] = useState("");
   const [copied, setCopied] = useState(false);
+  const [aiJsonInput, setAiJsonInput] = useState("");
+  const [aiJsonStatus, setAiJsonStatus] = useState<"idle" | "valid" | "error">("idle");
 
   const prompt = buildPrompt(rawText, sourceName, sourceUrl, suggestedCategory);
 
@@ -101,6 +129,24 @@ export default function AiHelperPage() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
+  }
+
+  function handleAiJsonChange(text: string) {
+    setAiJsonInput(text);
+    if (!text.trim()) {
+      setAiJsonStatus("idle");
+      return;
+    }
+    setAiJsonStatus(validateAiJson(text) ? "valid" : "error");
+  }
+
+  function sendToBuilder() {
+    if (!validateAiJson(aiJsonInput)) {
+      setAiJsonStatus("error");
+      return;
+    }
+    sessionStorage.setItem(AI_PENDING_KEY, aiJsonInput.trim());
+    router.push("/builder");
   }
 
   return (
@@ -232,6 +278,46 @@ export default function AiHelperPage() {
         <pre className="bg-slate-50 border border-slate-200 text-slate-700 rounded-2xl p-5 text-sm font-mono leading-relaxed overflow-x-auto whitespace-pre-wrap break-words">
           {prompt}
         </pre>
+      </section>
+
+      {/* AI response — paste JSON and send to Builder */}
+      <section className="mt-8">
+        <div className="mb-4">
+          <h2 className="text-base font-semibold text-slate-800">Odpowiedź AI</h2>
+          <p className="text-sm text-slate-500 mt-1">
+            Wklej tutaj JSON zwrócony przez ChatGPT lub Claude.
+          </p>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-4">
+          <textarea
+            value={aiJsonInput}
+            onChange={(e) => handleAiJsonChange(e.target.value)}
+            rows={8}
+            placeholder="Wklej gotowy JSON alertu..."
+            className={inputClass + " resize-y font-mono text-xs"}
+          />
+
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={sendToBuilder}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+            >
+              Wczytaj do Kreatora
+            </button>
+
+            {aiJsonStatus === "valid" && (
+              <span className="text-sm font-medium text-emerald-700">
+                JSON wygląda poprawnie.
+              </span>
+            )}
+            {aiJsonStatus === "error" && (
+              <span className="text-sm font-medium text-red-600">
+                Nie udało się odczytać JSON. Sprawdź, czy wkleiłeś sam obiekt JSON bez dodatkowego tekstu.
+              </span>
+            )}
+          </div>
+        </div>
       </section>
     </main>
     </AuthGate>

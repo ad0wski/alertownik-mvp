@@ -16,6 +16,7 @@ import {
   getAdminSupabaseAlerts,
   type AdminAlert,
 } from "@/lib/getAdminSupabaseAlerts";
+import { normalizeAlertSeverity } from "@/lib/normalizeAlert";
 
 const categoryOptions: { value: AlertCategory; label: string }[] = [
   { value: "transport", label: "Transport" },
@@ -29,7 +30,7 @@ const categoryOptions: { value: AlertCategory; label: string }[] = [
 const severityOptions: { value: AlertSeverity; label: string }[] = [
   { value: "info", label: "Informacja" },
   { value: "warning", label: "Uwaga" },
-  { value: "critical", label: "Pilne" },
+  { value: "urgent", label: "Pilne" },
 ];
 
 const inputClass =
@@ -58,7 +59,6 @@ const initialForm = {
 const VALID_CATEGORIES: AlertCategory[] = [
   "transport", "water", "power", "waste", "roads", "municipal",
 ];
-const VALID_SEVERITIES: AlertSeverity[] = ["info", "warning", "critical"];
 
 function stripCodeFences(text: string): string {
   const match = text.trim().match(/^```(?:json)?\s*\n?([\s\S]*?)\n?```$/);
@@ -215,6 +215,7 @@ export default function BuilderPage() {
   const [adminCategoryFilter, setAdminCategoryFilter] = useState<AlertCategory | "all">("all");
   const [urlEditError, setUrlEditError] = useState<string | null>(null);
   const [loadingSupabaseId, setLoadingSupabaseId] = useState<string | null>(null);
+  const [aiHelperLoadedMsg, setAiHelperLoadedMsg] = useState(false);
   // Refs track URL-based edit loading: param is read once on mount, processed flag
   // prevents re-loading when the Supabase list refreshes after saves.
   const urlEditParamRef = useRef<string | null>(null);
@@ -226,6 +227,34 @@ export default function BuilderPage() {
     setDrafts(loadDrafts());
     setPublishedAlerts(loadPublished());
     refreshSupabaseAlerts();
+
+    const pendingJson = sessionStorage.getItem("alertownik_pending_ai_alert_json");
+    if (pendingJson) {
+      sessionStorage.removeItem("alertownik_pending_ai_alert_json");
+      try {
+        const data = JSON.parse(stripCodeFences(pendingJson));
+        setForm({
+          category: VALID_CATEGORIES.includes(data.category) ? (data.category as AlertCategory) : "transport",
+          severity: normalizeAlertSeverity(data.severity) ?? "info",
+          title: stringField(data.title, ""),
+          slug: stringField(data.slug, ""),
+          place: pickPlace(data.place, data.location, ""),
+          startsAt: dateField(data.startsAt, ""),
+          endsAt: dateField(data.endsAt, ""),
+          change: stringField(data.change, ""),
+          action: stringField(data.action, ""),
+          sourceName: stringField(data.sourceName, ""),
+          sourceUrl: stringField(data.sourceUrl, ""),
+        });
+        setAiHelperLoadedMsg(true);
+        setTimeout(() => setAiHelperLoadedMsg(false), 4000);
+        requestAnimationFrame(() => {
+          formSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      } catch {
+        // silently ignore — malformed JSON from sessionStorage
+      }
+    }
   }, []);
 
   function handleChange(
@@ -249,9 +278,7 @@ export default function BuilderPage() {
         category: VALID_CATEGORIES.includes(data.category)
           ? (data.category as AlertCategory)
           : form.category,
-        severity: VALID_SEVERITIES.includes(data.severity)
-          ? (data.severity as AlertSeverity)
-          : form.severity,
+        severity: normalizeAlertSeverity(data.severity) ?? form.severity,
         title: stringField(data.title, form.title),
         slug: stringField(data.slug, form.slug),
         place: pickPlace(data.place, data.location, form.place),
@@ -399,19 +426,19 @@ export default function BuilderPage() {
     if (!form.title.trim()) return "Uzupełnij wymagane pola przed zapisem.";
     if (!form.slug.trim()) return "Uzupełnij wymagane pola przed zapisem.";
     if (!form.category) return "Uzupełnij wymagane pola przed zapisem.";
-    if (!form.severity) return "Uzupełnij wymagane pola przed zapisem.";
+    if (!normalizeAlertSeverity(form.severity)) return "Nieprawidłowy poziom ważności alertu.";
     if (!form.startsAt) return "Uzupełnij wymagane pola przed zapisem.";
     return null;
   }
 
   async function handleUpdateSupabaseAlert() {
+    setSupabaseUpdateError(null);
+    setSupabaseUpdateSuccess(false);
     const err = validateForUpdate();
     if (err) { setSupabaseUpdateError(err); return; }
     if (!editingSupabaseAlert) return;
 
     setSupabaseUpdateSaving(true);
-    setSupabaseUpdateError(null);
-    setSupabaseUpdateSuccess(false);
 
     const result = await updateSupabaseAlert(editingSupabaseAlert.id, {
       slug: form.slug.trim(),
@@ -506,18 +533,18 @@ export default function BuilderPage() {
   function validateForSupabase(): string | null {
     if (!form.title.trim()) return "Tytuł jest wymagany.";
     if (!form.category) return "Kategoria jest wymagana.";
-    if (!form.severity) return "Poziom ważności jest wymagany.";
+    if (!normalizeAlertSeverity(form.severity)) return "Nieprawidłowy poziom ważności alertu.";
     const slug = form.slug.trim() || generateSlug(form.title);
     if (!slug) return "Nie udało się wygenerować slugu. Wpisz tytuł lub slug ręcznie.";
     return null;
   }
 
   async function handleSaveDraftToSupabase() {
+    setSupabaseError(null);
+    setSupabaseSuccess("idle");
     const err = validateForSupabase();
     if (err) { setSupabaseError(err); return; }
     setSupabaseSaving(true);
-    setSupabaseError(null);
-    setSupabaseSuccess("idle");
     const slug = form.slug.trim() || generateSlug(form.title);
     if (!form.slug) setForm((prev) => ({ ...prev, slug }));
     const result = await saveAlertDraftToSupabase({
@@ -544,11 +571,11 @@ export default function BuilderPage() {
   }
 
   async function handlePublishToSupabase() {
+    setSupabaseError(null);
+    setSupabaseSuccess("idle");
     const err = validateForSupabase();
     if (err) { setSupabaseError(err); return; }
     setSupabaseSaving(true);
-    setSupabaseError(null);
-    setSupabaseSuccess("idle");
     const slug = form.slug.trim() || generateSlug(form.title);
     if (!form.slug) setForm((prev) => ({ ...prev, slug }));
     const result = await publishAlertToSupabase({
@@ -608,7 +635,7 @@ export default function BuilderPage() {
     id: "wpisz-sam",
     slug: form.slug || "wpisz-sam",
     category: form.category,
-    severity: form.severity,
+    severity: normalizeAlertSeverity(form.severity) ?? form.severity,
     title: form.title,
     place: form.place,
     startsAt: form.startsAt,
@@ -941,6 +968,11 @@ export default function BuilderPage() {
         {supabaseLoadedMsg && (
           <span className="text-sm font-medium text-blue-700">
             Alert z Supabase wczytany do edycji.
+          </span>
+        )}
+        {aiHelperLoadedMsg && (
+          <span className="text-sm font-medium text-blue-700">
+            Alert z AI Helpera został wczytany do formularza.
           </span>
         )}
       </div>

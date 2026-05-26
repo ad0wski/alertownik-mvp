@@ -25,7 +25,7 @@ export const sampleAlerts: Alert[] = [
     id: "2",
     slug: "przerwa-w-dostawie-wody-komorow",
     category: "water",
-    severity: "critical",
+    severity: "urgent",
     title: "Przerwa w dostawie wody",
     place: "Komorów, ul. Różana, Lipowa, Akacjowa",
     startsAt: "2026-05-18T07:00",
