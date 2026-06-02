@@ -136,6 +136,12 @@ export default function AdminPage() {
       border: "border-purple-200 hover:border-purple-300",
     },
     {
+      href: "/admin/sources",
+      title: "Źródła",
+      desc: "Zarządzaj źródłami komunikatów.",
+      border: "border-slate-200 hover:border-slate-300",
+    },
+    {
       href: "/",
       title: "Publiczna lista alertów",
       desc: "Sprawdź co widzą mieszkańcy.",
@@ -269,7 +275,7 @@ export default function AdminPage() {
       {/* ── Quick actions ─────────────────────────────────────────────────── */}
       <section>
         <h2 className="text-base font-semibold text-slate-800 mb-4">Szybkie akcje</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {quickActions.map((action) => (
             <Link
               key={action.href}

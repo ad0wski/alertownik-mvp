@@ -26,7 +26,7 @@ export function AppFooter() {
     <footer className="border-t border-slate-200 mt-auto">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-4">
         <p className="text-xs text-slate-400">
-          {session ? "Tryb admina — wersja demonstracyjna" : "Alertownik — wersja demonstracyjna"}
+          {session ? "Alertownik — panel admina" : "Alertownik — wersja pilotażowa"}
         </p>
 
         {!session && (

@@ -187,7 +187,7 @@ export function AlertList() {
               hasActiveFilters ? (
                 <div className="text-center py-16 bg-white rounded-2xl border border-slate-200">
                   <p className="text-base font-semibold text-slate-600">
-                    Brak alertów pasujących do filtrów.
+                    Brak alertów spełniających wybrane kryteria.
                   </p>
                   <p className="text-sm text-slate-400 mt-2">
                     Spróbuj zmienić kategorię albo wpisać inną lokalizację.

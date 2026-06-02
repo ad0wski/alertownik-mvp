@@ -189,13 +189,12 @@ export default function AiHelperPage() {
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
             AI Helper
           </h1>
-          <span className="inline-flex items-center text-xs font-medium text-slate-500 bg-slate-100 border border-slate-200 rounded-full px-2.5 py-0.5">
-            Narzędzie robocze MVP
+          <span className="inline-flex items-center text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-0.5">
+            Admin
           </span>
         </div>
         <p className="mt-1 text-sm text-slate-500 leading-relaxed">
-          Robocze narzędzie do przygotowania promptu dla AI. Nie łączy się z
-          żadnym API — generuje tekst do wklejenia w ChatGPT lub Claude.
+          Generuje gotowy prompt do wklejenia w ChatGPT lub Claude. Nie łączy się z żadnym API.
         </p>
       </div>
 

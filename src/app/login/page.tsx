@@ -41,7 +41,7 @@ export default function LoginPage() {
 
       <div className="mb-8 text-center">
         <h1 className="text-xl font-bold text-slate-900">Logowanie</h1>
-        <p className="text-sm text-slate-500 mt-1">Panel roboczy Alertownik</p>
+        <p className="text-sm text-slate-500 mt-1">Panel admina Alertownik</p>
       </div>
 
       <form

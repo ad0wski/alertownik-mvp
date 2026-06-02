@@ -689,8 +689,8 @@ export default function BuilderPage() {
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
             Kreator alertu
           </h1>
-          <span className="inline-flex items-center text-xs font-medium text-slate-500 bg-slate-100 border border-slate-200 rounded-full px-2.5 py-0.5">
-            Narzędzie robocze MVP
+          <span className="inline-flex items-center text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-0.5">
+            Admin
           </span>
         </div>
         <p className="mt-1 text-sm text-slate-500 leading-relaxed">
@@ -744,6 +744,22 @@ export default function BuilderPage() {
 
       {/* ── Manual form ───────────────────────────────────────────────── */}
       <section ref={formSectionRef} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-5 mb-6">
+
+        {aiHelperLoadedMsg && (
+          <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+            <p className="text-sm font-semibold text-blue-800">
+              Alert z AI Helpera wczytany do formularza.
+            </p>
+          </div>
+        )}
+
+        {supabaseLoadedMsg && !editingSupabaseAlert && (
+          <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+            <p className="text-sm font-semibold text-blue-800">
+              Alert wczytany do edycji.
+            </p>
+          </div>
+        )}
 
         {editingSupabaseAlert && (
           <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3.5 flex flex-col gap-1">
@@ -995,16 +1011,6 @@ export default function BuilderPage() {
             Alert usunięty z lokalnie opublikowanych.
           </span>
         )}
-        {supabaseLoadedMsg && (
-          <span className="text-sm font-medium text-blue-700">
-            Alert z Supabase wczytany do edycji.
-          </span>
-        )}
-        {aiHelperLoadedMsg && (
-          <span className="text-sm font-medium text-blue-700">
-            Alert z AI Helpera został wczytany do formularza.
-          </span>
-        )}
       </div>
 
       {/* ── Supabase save / edit ──────────────────────────────────────── */}
@@ -1115,10 +1121,7 @@ export default function BuilderPage() {
           </button>
         </div>
         <p className="text-sm text-slate-500 mb-3">
-          Skopiuj ten obiekt i wklej go do{" "}
-          <code className="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded">src/data/sampleAlerts.ts</code>.
-          Uzupełnij pola <code className="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded">id</code> i{" "}
-          <code className="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded">slug</code> ręcznie.
+          Podgląd JSON aktywnego alertu.
         </p>
         <pre className="bg-slate-50 border border-slate-200 text-slate-700 rounded-2xl p-5 text-sm font-mono leading-relaxed overflow-x-auto">
           {jsonOutput}

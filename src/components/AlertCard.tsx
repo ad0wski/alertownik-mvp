@@ -145,7 +145,7 @@ export function AlertCard({ alert, isPreview }: { alert: Alert; isPreview?: bool
               Źródło
             </dt>
             <dd className="text-sm text-slate-700 flex flex-wrap items-center gap-3 mt-0.5">
-              <span>{alert.sourceName}</span>
+              {alert.sourceName && <span>{alert.sourceName}</span>}
               {isRealLink ? (
                 <a
                   href={alert.sourceUrl}
@@ -155,9 +155,9 @@ export function AlertCard({ alert, isPreview }: { alert: Alert; isPreview?: bool
                 >
                   Zobacz źródło →
                 </a>
-              ) : (
-                <span className="text-xs text-slate-400">Źródło niedostępne</span>
-              )}
+              ) : !alert.sourceName ? (
+                <span className="text-xs text-slate-400">Brak informacji o źródle</span>
+              ) : null}
             </dd>
           </div>
         </dl>
