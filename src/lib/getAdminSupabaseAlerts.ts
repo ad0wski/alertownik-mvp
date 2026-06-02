@@ -16,6 +16,7 @@ export interface AdminAlert {
   action: string;
   sourceName: string;
   sourceUrl?: string;
+  sourceId?: string | null;
   status: AlertStatus;
   updatedAt: string;
 }
@@ -26,7 +27,7 @@ export interface AdminAlertsResult {
 }
 
 const ADMIN_SELECT =
-  "id, slug, category, severity, title, place, starts_at, ends_at, change, action, source_name, source_url, status, updated_at, created_at";
+  "id, slug, category, severity, title, place, starts_at, ends_at, change, action, source_name, source_url, source_id, status, updated_at, created_at";
 
 // The Supabase table stores "announcement" where the app uses "municipal"
 function toAppCategory(dbCategory: string): AlertCategory {
@@ -49,6 +50,7 @@ function mapAdminRow(row: any): AdminAlert {
     action: row.action,
     sourceName: row.source_name,
     sourceUrl: row.source_url ?? undefined,
+    sourceId: row.source_id ?? null,
     status: row.status as AlertStatus,
     // fall back to created_at when updated_at is not set
     updatedAt: row.updated_at ?? row.created_at ?? new Date().toISOString(),

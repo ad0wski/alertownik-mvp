@@ -19,6 +19,7 @@ export interface AlertFormData {
   action: string;
   sourceName: string;
   sourceUrl?: string;
+  sourceId?: string | null;
 }
 
 export interface SaveResult {
@@ -53,6 +54,7 @@ export async function saveAlertDraftToSupabase(
         action: alert.action,
         source_name: alert.sourceName,
         source_url: alert.sourceUrl || null,
+        source_id: alert.sourceId || null,
         status: "draft",
       },
       { onConflict: "slug" }
@@ -92,6 +94,7 @@ export async function publishAlertToSupabase(
         action: alert.action,
         source_name: alert.sourceName,
         source_url: alert.sourceUrl || null,
+        source_id: alert.sourceId || null,
         status: "published",
         published_at: new Date().toISOString(),
       },
@@ -169,6 +172,7 @@ export async function updateSupabaseAlert(
       action: alert.action,
       source_name: alert.sourceName,
       source_url: alert.sourceUrl || null,
+      source_id: alert.sourceId || null,
       updated_at: new Date().toISOString(),
     })
     .eq("id", id);

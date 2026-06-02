@@ -90,6 +90,7 @@ ${sourceLines || "Źródło: nieznane"}`;
 }
 
 const AI_PENDING_KEY = "alertownik_pending_ai_alert_json";
+const AI_PENDING_SOURCE_ID_KEY = "alertownik_pending_alert_source_id";
 const PENDING_SOURCE_KEY = "alertownik_pending_source_for_ai";
 
 interface PendingSourceData {
@@ -130,6 +131,7 @@ export default function AiHelperPage() {
   const [aiJsonInput, setAiJsonInput] = useState("");
   const [aiJsonStatus, setAiJsonStatus] = useState<"idle" | "valid" | "error">("idle");
   const [sourceLoaded, setSourceLoaded] = useState(false);
+  const [pendingSourceId, setPendingSourceId] = useState("");
 
   useEffect(() => {
     try {
@@ -139,6 +141,7 @@ export default function AiHelperPage() {
       if (data.sourceName) setSourceName(data.sourceName);
       if (data.sourceUrl) setSourceUrl(data.sourceUrl);
       if (data.suggestedCategory) setSuggestedCategory(data.suggestedCategory);
+      if (data.sourceId) setPendingSourceId(data.sourceId);
       sessionStorage.removeItem(PENDING_SOURCE_KEY);
       setSourceLoaded(true);
     } catch {
@@ -170,6 +173,9 @@ export default function AiHelperPage() {
       return;
     }
     sessionStorage.setItem(AI_PENDING_KEY, aiJsonInput.trim());
+    if (pendingSourceId) {
+      sessionStorage.setItem(AI_PENDING_SOURCE_ID_KEY, pendingSourceId);
+    }
     router.push("/builder");
   }
 

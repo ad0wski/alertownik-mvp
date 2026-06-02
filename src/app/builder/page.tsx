@@ -52,6 +52,7 @@ const initialForm = {
   action: "",
   sourceName: "",
   sourceUrl: "",
+  sourceId: "",
 };
 
 // ── JSON import helpers ──────────────────────────────────────────────────────
@@ -229,8 +230,10 @@ export default function BuilderPage() {
     refreshSupabaseAlerts();
 
     const pendingJson = sessionStorage.getItem("alertownik_pending_ai_alert_json");
+    const pendingSourceId = sessionStorage.getItem("alertownik_pending_alert_source_id") ?? "";
     if (pendingJson) {
       sessionStorage.removeItem("alertownik_pending_ai_alert_json");
+      sessionStorage.removeItem("alertownik_pending_alert_source_id");
       try {
         const data = JSON.parse(stripCodeFences(pendingJson));
         setForm({
@@ -245,6 +248,7 @@ export default function BuilderPage() {
           action: stringField(data.action, ""),
           sourceName: stringField(data.sourceName, ""),
           sourceUrl: stringField(data.sourceUrl, ""),
+          sourceId: pendingSourceId,
         });
         setAiHelperLoadedMsg(true);
         setTimeout(() => setAiHelperLoadedMsg(false), 4000);
@@ -288,6 +292,7 @@ export default function BuilderPage() {
         action: stringField(data.action, form.action),
         sourceName: stringField(data.sourceName, form.sourceName),
         sourceUrl: stringField(data.sourceUrl, form.sourceUrl),
+        sourceId: form.sourceId,
       });
 
       setImportStatus("success");
@@ -365,6 +370,7 @@ export default function BuilderPage() {
       action: pa.action,
       sourceName: pa.sourceName,
       sourceUrl: pa.sourceUrl ?? "",
+      sourceId: pa.sourceId ?? "",
     });
     setPublishStatus("loaded");
     setTimeout(() => setPublishStatus("idle"), 2500);
@@ -392,6 +398,7 @@ export default function BuilderPage() {
       action: a.action,
       sourceName: a.sourceName,
       sourceUrl: a.sourceUrl ?? "",
+      sourceId: a.sourceId ?? "",
     });
     setEditingSupabaseAlert(a);
     setSupabaseUpdateError(null);
@@ -452,6 +459,7 @@ export default function BuilderPage() {
       action: form.action,
       sourceName: form.sourceName,
       sourceUrl: form.sourceUrl || undefined,
+      sourceId: form.sourceId || null,
     });
 
     setSupabaseUpdateSaving(false);
@@ -559,6 +567,7 @@ export default function BuilderPage() {
       action: form.action,
       sourceName: form.sourceName,
       sourceUrl: form.sourceUrl || undefined,
+      sourceId: form.sourceId || null,
     });
     setSupabaseSaving(false);
     if (result.ok) {
@@ -590,6 +599,7 @@ export default function BuilderPage() {
       action: form.action,
       sourceName: form.sourceName,
       sourceUrl: form.sourceUrl || undefined,
+      sourceId: form.sourceId || null,
     });
     setSupabaseSaving(false);
     if (result.ok) {
@@ -759,6 +769,26 @@ export default function BuilderPage() {
         )}
 
         <h2 className={sectionTitleClass}>Formularz alertu</h2>
+
+        {/* Source info note — shown when alert is linked to a registered source */}
+        {form.sourceId && (
+          <div className="rounded-lg bg-blue-50 border border-blue-200 px-3 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <p className="text-sm text-blue-800">
+              <span className="font-medium">Źródło:</span>{" "}
+              {form.sourceName || "—"}
+            </p>
+            {form.sourceUrl && (
+              <a
+                href={form.sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-blue-600 hover:underline"
+              >
+                Otwórz źródło ↗
+              </a>
+            )}
+          </div>
+        )}
 
         {/* Category + Severity */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -21,4 +21,5 @@ export interface Alert {
   action: string;      // Co zrobić
   sourceName: string;  // Źródło – nazwa
   sourceUrl?: string;  // Źródło – link
+  sourceId?: string | null; // FK to alert_sources.id
 }

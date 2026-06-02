@@ -200,6 +200,7 @@ interface SourceCardProps {
   onPrepareAlert: () => void;
   onMarkChecked: () => void;
   markingChecked: boolean;
+  alertCount: number;
 }
 
 function SourceCard({
@@ -210,6 +211,7 @@ function SourceCard({
   onPrepareAlert,
   onMarkChecked,
   markingChecked,
+  alertCount,
 }: SourceCardProps) {
   const inactive = !source.isActive;
 
@@ -303,6 +305,10 @@ function SourceCard({
         {/* Last checked + mark button */}
         <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
           <span>
+            Alerty: {alertCount}
+          </span>
+          <span>·</span>
+          <span>
             {source.lastCheckedAt
               ? `Ostatnio sprawdzono: ${formatCheckedAt(source.lastCheckedAt)}`
               : "Jeszcze nie sprawdzano"}
@@ -349,6 +355,7 @@ export default function SourcesPage() {
   const [markingCheckedId, setMarkingCheckedId] = useState<string | null>(null);
   const [checkSuccess, setCheckSuccess] = useState<string | null>(null);
   const [checkError, setCheckError] = useState<string | null>(null);
+  const [alertCounts, setAlertCounts] = useState<Record<string, number>>({});
 
   // ── Auth ────────────────────────────────────────────────────────────────────
 
@@ -377,7 +384,22 @@ export default function SourcesPage() {
   useEffect(() => {
     if (!session) return;
     loadSources();
+    loadAlertCounts();
   }, [session]);
+
+  async function loadAlertCounts() {
+    if (!supabase) return;
+    const { data } = await supabase
+      .from("alerts")
+      .select("source_id")
+      .not("source_id", "is", null);
+    if (!data) return;
+    const counts: Record<string, number> = {};
+    for (const row of data as { source_id: string }[]) {
+      counts[row.source_id] = (counts[row.source_id] ?? 0) + 1;
+    }
+    setAlertCounts(counts);
+  }
 
   async function loadSources() {
     setLoadState("loading");
@@ -714,6 +736,7 @@ export default function SourcesPage() {
                 onPrepareAlert={() => handlePrepareAlert(source)}
                 onMarkChecked={() => handleMarkChecked(source.id)}
                 markingChecked={markingCheckedId === source.id}
+                alertCount={alertCounts[source.id] ?? 0}
               />
             )
           )}

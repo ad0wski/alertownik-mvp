@@ -231,6 +231,11 @@ export default function AdminPage() {
                     <span className="text-xs text-slate-400">
                       {categoryLabels[a.category] ?? a.category}
                     </span>
+                    {a.sourceName && (
+                      <span className="text-xs text-slate-400">
+                        · {a.sourceName}
+                      </span>
+                    )}
                   </div>
                   <p className="text-sm font-semibold text-slate-900 truncate">
                     {a.title || "Bez tytułu"}
