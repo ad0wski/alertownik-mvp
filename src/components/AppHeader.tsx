@@ -7,26 +7,35 @@ import { supabase } from "@/lib/supabaseClient";
 import { signOut } from "@/lib/auth";
 import type { Session } from "@supabase/supabase-js";
 
+const adminLinks = [
+  { href: "/admin",          label: "Panel" },
+  { href: "/builder",        label: "Kreator alertu" },
+  { href: "/ai-helper",      label: "AI Helper" },
+  { href: "/admin/sources",  label: "Źródła" },
+];
+
 export function AppHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!supabase) return;
-
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+      setSession(s);
     });
-
     return () => subscription.unsubscribe();
   }, []);
 
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
   async function handleLogout() {
+    setMenuOpen(false);
     await signOut();
     router.push("/");
   }
@@ -41,9 +50,8 @@ export function AppHeader() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
         <div className="flex items-center justify-between gap-3">
 
-          {/* Logo block */}
+          {/* Logo */}
           <div className="flex items-center gap-2.5 shrink-0">
-            {/* Brand icon — blue rounded square with white dot */}
             <span
               className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center shrink-0 shadow-sm"
               aria-hidden="true"
@@ -63,12 +71,11 @@ export function AppHeader() {
             </div>
           </div>
 
-          {/* Navigation */}
+          {/* ── Desktop nav (sm and up) ── */}
           <nav
-            className="flex flex-wrap items-center justify-end gap-x-1 gap-y-1"
+            className="hidden sm:flex flex-wrap items-center justify-end gap-x-1 gap-y-1"
             aria-label="Nawigacja"
           >
-            {/* Public link — always visible */}
             <Link
               href="/"
               className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
@@ -80,71 +87,32 @@ export function AppHeader() {
               Alerty
             </Link>
 
-            {/* Admin tools — only when logged in */}
             {session && (
               <>
-                <span className="hidden sm:block w-px h-4 bg-slate-200 mx-2" aria-hidden="true" />
-
-                {/* Admin badge */}
+                <span className="w-px h-4 bg-slate-200 mx-2" aria-hidden="true" />
                 <span
-                  className="hidden sm:block text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5 select-none cursor-default"
+                  className="text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5 select-none cursor-default"
                   aria-label="Tryb admina"
                 >
                   Admin
                 </span>
 
-                {/* Panel admina link */}
-                <Link
-                  href="/admin"
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    isActive("/admin")
-                      ? "bg-amber-50 text-amber-700"
-                      : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-                  }`}
-                >
-                  Panel
-                </Link>
+                {adminLinks.map((l) => (
+                  <Link
+                    key={l.href}
+                    href={l.href}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                      isActive(l.href)
+                        ? "bg-amber-50 text-amber-700"
+                        : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                    }`}
+                  >
+                    {l.label}
+                  </Link>
+                ))}
 
-                {/* Kreator link — shorter label on mobile */}
-                <Link
-                  href="/builder"
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    isActive("/builder")
-                      ? "bg-amber-50 text-amber-700"
-                      : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-                  }`}
-                >
-                  <span className="sm:hidden">Kreator</span>
-                  <span className="hidden sm:inline">Kreator alertu</span>
-                </Link>
+                <span className="w-px h-4 bg-slate-200 mx-1" aria-hidden="true" />
 
-                {/* AI Helper link */}
-                <Link
-                  href="/ai-helper"
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    isActive("/ai-helper")
-                      ? "bg-amber-50 text-amber-700"
-                      : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-                  }`}
-                >
-                  AI Helper
-                </Link>
-
-                {/* Źródła link */}
-                <Link
-                  href="/admin/sources"
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    isActive("/admin/sources")
-                      ? "bg-amber-50 text-amber-700"
-                      : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-                  }`}
-                >
-                  Źródła
-                </Link>
-
-                <span className="hidden sm:block w-px h-4 bg-slate-200 mx-1" aria-hidden="true" />
-
-                {/* Logout */}
                 <button
                   onClick={handleLogout}
                   className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors"
@@ -154,8 +122,93 @@ export function AppHeader() {
               </>
             )}
           </nav>
+
+          {/* ── Mobile nav (below sm) ── */}
+          <div className="flex sm:hidden items-center gap-1">
+            <Link
+              href="/"
+              className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                isActive("/")
+                  ? "bg-blue-50 text-blue-700"
+                  : "text-slate-700 hover:text-slate-900 hover:bg-slate-100"
+              }`}
+            >
+              Alerty
+            </Link>
+
+            {session && (
+              <button
+                onClick={() => setMenuOpen((v) => !v)}
+                aria-expanded={menuOpen}
+                aria-label="Menu admina"
+                className="p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+              >
+                {menuOpen ? (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="22"
+                    height="22"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    aria-hidden="true"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                ) : (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="22"
+                    height="22"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    aria-hidden="true"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                )}
+              </button>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Mobile dropdown menu — admin only */}
+      {session && menuOpen && (
+        <div className="sm:hidden border-t border-slate-100 bg-white px-4 pt-3 pb-4 flex flex-col gap-1 shadow-md">
+          <div className="flex items-center gap-2 px-1 mb-2">
+            <span className="text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-0.5">
+              Admin
+            </span>
+          </div>
+
+          {adminLinks.map((l) => (
+            <Link
+              key={l.href}
+              href={l.href}
+              className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                isActive(l.href)
+                  ? "bg-amber-50 text-amber-700"
+                  : "text-slate-700 hover:text-slate-900 hover:bg-slate-100"
+              }`}
+            >
+              {l.label}
+            </Link>
+          ))}
+
+          <div className="border-t border-slate-100 mt-2 pt-2">
+            <button
+              onClick={handleLogout}
+              className="w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+            >
+              Wyloguj
+            </button>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

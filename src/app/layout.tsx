@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AppHeader } from "@/components/AppHeader";
@@ -14,9 +14,22 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+export const viewport: Viewport = {
+  themeColor: "#2563eb",
+  width: "device-width",
+  initialScale: 1,
+  minimumScale: 1,
+};
+
 export const metadata: Metadata = {
   title: "Alertownik",
   description: "Lokalne alerty w jednym miejscu",
+  applicationName: "Alertownik",
+  appleWebApp: {
+    capable: true,
+    title: "Alertownik",
+    statusBarStyle: "default",
+  },
 };
 
 export default function RootLayout({
