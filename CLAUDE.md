@@ -137,11 +137,13 @@ Only the **anon key** is used. The service_role key is never used in any fronten
 ## Build & Dev Commands
 
 ```bash
-npm run dev        # Start dev server (Turbopack, port 3000)
-npm run typecheck  # Fast TypeScript-only check (no build output)
-npm run lint       # ESLint on src/ — warnings are OK, errors must be zero
-npm run build      # Full production build including TypeScript check
-npm run check      # typecheck + lint + build — run this before every commit
+npm run dev          # Start dev server (Turbopack, port 3000)
+npm run typecheck    # Fast TypeScript-only check (no build output)
+npm run lint         # ESLint on src/ — warnings are OK, errors must be zero
+npm run build        # Full production build including TypeScript check
+npm run check        # typecheck + lint + build — run this before every commit
+npm run test:e2e     # Playwright smoke tests (requires dev server or starts one)
+npm run test:e2e:ui  # Playwright interactive UI mode
 ```
 
 **Rule:** Before considering any coding task complete, run `npm run check`. If it fails:
@@ -150,7 +152,9 @@ npm run check      # typecheck + lint + build — run this before every commit
 3. Run `npm run check` again
 4. Do not tell the user the task is complete until `npm run check` passes with zero errors
 
-One known warning in `builder/page.tsx` (`react-hooks/exhaustive-deps`) is expected and accepted — it is a warning, not an error, and does not fail the check.
+`npm run check` currently passes with zero errors and zero warnings.
+
+For UI or routing changes, also run `npm run test:e2e` after `npm run check`.
 
 See `docs/AUTOMATED_CHECKS.md` for what each command checks and what it does NOT cover.
 

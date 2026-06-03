@@ -34,7 +34,7 @@ Produces warnings (expected) and errors (must be zero before committing).
 npm run lint
 ```
 
-A single warning about `react-hooks/exhaustive-deps` in `builder/page.tsx` is currently known and expected. It is a warning (exit code 0), not an error.
+There are currently no known warnings. ESLint exits 0 (success) when there are zero errors, even with warnings present.
 
 ---
 
@@ -64,6 +64,50 @@ npm run check
 This is the single command to run before every commit and before considering any coding task complete.
 
 If any step fails, the sequence stops and prints the error. Fix the error, then run `npm run check` again.
+
+---
+
+### `npm run test:e2e`
+
+Runs Playwright smoke tests in headless Chromium.
+
+```bash
+npm run test:e2e
+```
+
+The tests live in `tests/e2e/`. Playwright starts the dev server automatically if one isn't running on port 3000 (using `webServer` in `playwright.config.ts`). If the dev server is already running, it reuses it.
+
+**What these tests cover:**
+- Public homepage loads with correct heading
+- Search input exists and accepts text
+- Category filter buttons are present and clickable
+- Alert card expands to show detail labels (Kiedy, Co się zmienia)
+- Opening an alert detail page does not crash the app
+- `/admin`, `/builder`, `/ai-helper`, `/admin/sources` all show the auth gate ("Zaloguj się, aby kontynuować.") to unauthenticated visitors
+
+**What these tests do NOT cover:**
+- Admin login flow (no credentials used)
+- Creating, editing, publishing, or archiving alerts
+- Source monitoring or check history
+- Any write to Supabase — all tests are read-only or UI-only
+- Mobile viewport sizes
+- Specific alert content (tests handle the case where no alerts are published)
+
+**Warning:** Tests interact with the live local app backed by the real Supabase project. They do not modify any data.
+
+Run for UI or routing changes, in addition to `npm run check`.
+
+---
+
+### `npm run test:e2e:ui`
+
+Opens Playwright's interactive UI mode — lets you step through tests visually and see the browser.
+
+```bash
+npm run test:e2e:ui
+```
+
+Use this when debugging a failing test.
 
 ---
 
@@ -130,8 +174,6 @@ These rules were deliberately disabled, not silently suppressed. Do not re-enabl
 
 ## Known Warnings
 
-| File | Warning | Status |
-|---|---|---|
-| `src/app/builder/page.tsx:262` | `react-hooks/exhaustive-deps` — `refreshSupabaseAlerts` missing from `useEffect` dependency array | Accepted — adding it would require `useCallback` refactor and risks render loops; the current behavior is correct |
+None. `npm run check` currently passes with zero errors and zero warnings.
 
 Warnings do not fail the build or the `npm run check` command.
