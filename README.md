@@ -63,6 +63,7 @@ Open [http://localhost:3000](http://localhost:3000).
 |---|---|
 | [CLAUDE.md](CLAUDE.md) | Claude Code operating system — read before writing any code |
 | [docs/AI_WORKFLOW.md](docs/AI_WORKFLOW.md) | How to work with Claude Code safely |
+| [docs/AUTOMATED_CHECKS.md](docs/AUTOMATED_CHECKS.md) | `npm run check` — what it does, what it doesn't cover |
 | [docs/QA_MANUAL_CHECKLIST.md](docs/QA_MANUAL_CHECKLIST.md) | Manual QA checklist for every sprint |
 | [docs/NEXT_MILESTONES.md](docs/NEXT_MILESTONES.md) | Product milestone roadmap |
 | [docs/SUPABASE_SETUP_CHECKLIST.md](docs/SUPABASE_SETUP_CHECKLIST.md) | Supabase project setup guide |

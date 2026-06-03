@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, type ChangeEvent } from "react";
+import { useState, useEffect, useRef, useCallback, type ChangeEvent } from "react";
 import { AlertCard } from "@/components/AlertCard";
 import { AuthGate } from "@/components/AuthGate";
 import type { Alert, AlertCategory, AlertSeverity } from "@/types/alert";
@@ -223,6 +223,57 @@ export default function BuilderPage() {
   const urlEditProcessedRef = useRef(false);
   const formSectionRef = useRef<HTMLElement>(null);
 
+  const loadFromSupabaseAlert = useCallback(function(a: AdminAlert) {
+    setLoadingSupabaseId(a.id);
+    setForm({
+      category: a.category,
+      severity: a.severity,
+      title: a.title,
+      slug: a.slug,
+      place: a.place,
+      startsAt: a.startsAt.split("T")[0],
+      endsAt: a.endsAt ? a.endsAt.split("T")[0] : "",
+      change: a.change,
+      action: a.action,
+      sourceName: a.sourceName,
+      sourceUrl: a.sourceUrl ?? "",
+      sourceId: a.sourceId ?? "",
+    });
+    setEditingSupabaseAlert(a);
+    setSupabaseUpdateError(null);
+    setSupabaseUpdateSuccess(false);
+    setSupabaseLoadedMsg(true);
+    setTimeout(() => setSupabaseLoadedMsg(false), 3000);
+    setTimeout(() => setLoadingSupabaseId(null), 600);
+    // Scroll after React commits the state update so the edit banner is visible
+    requestAnimationFrame(() => {
+      formSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, []);
+
+  const refreshSupabaseAlerts = useCallback(async function() {
+    setSupabaseAlertsLoading(true);
+    setSupabaseAlertsError(null);
+    const { alerts, error } = await getAdminSupabaseAlerts();
+    setSupabaseAlerts(alerts);
+    setSupabaseAlertsError(error);
+    setSupabaseAlertsLoading(false);
+
+    // On the first fetch, check if the URL has ?edit=<slug-or-id> and auto-load that alert.
+    const editParam = urlEditParamRef.current;
+    if (editParam && !urlEditProcessedRef.current) {
+      urlEditProcessedRef.current = true;
+      const found =
+        alerts.find((a) => a.slug === editParam) ??
+        alerts.find((a) => a.id === editParam);
+      if (found) {
+        loadFromSupabaseAlert(found);
+      } else {
+        setUrlEditError("Nie znaleziono alertu do edycji.");
+      }
+    }
+  }, [loadFromSupabaseAlert]);
+
   useEffect(() => {
     urlEditParamRef.current = new URLSearchParams(window.location.search).get("edit");
     setDrafts(loadDrafts());
@@ -259,7 +310,7 @@ export default function BuilderPage() {
         // silently ignore — malformed JSON from sessionStorage
       }
     }
-  }, []);
+  }, [refreshSupabaseAlerts]);
 
   function handleChange(
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -384,34 +435,6 @@ export default function BuilderPage() {
     setTimeout(() => setPublishStatus("idle"), 2500);
   }
 
-  function loadFromSupabaseAlert(a: AdminAlert) {
-    setLoadingSupabaseId(a.id);
-    setForm({
-      category: a.category,
-      severity: a.severity,
-      title: a.title,
-      slug: a.slug,
-      place: a.place,
-      startsAt: a.startsAt.split("T")[0],
-      endsAt: a.endsAt ? a.endsAt.split("T")[0] : "",
-      change: a.change,
-      action: a.action,
-      sourceName: a.sourceName,
-      sourceUrl: a.sourceUrl ?? "",
-      sourceId: a.sourceId ?? "",
-    });
-    setEditingSupabaseAlert(a);
-    setSupabaseUpdateError(null);
-    setSupabaseUpdateSuccess(false);
-    setSupabaseLoadedMsg(true);
-    setTimeout(() => setSupabaseLoadedMsg(false), 3000);
-    setTimeout(() => setLoadingSupabaseId(null), 600);
-    // Scroll after React commits the state update so the edit banner is visible
-    requestAnimationFrame(() => {
-      formSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-  }
-
   function cancelSupabaseEdit() {
     setEditingSupabaseAlert(null);
     setForm(initialForm);
@@ -477,29 +500,6 @@ export default function BuilderPage() {
   }
 
   // ── Supabase actions ─────────────────────────────────────────────────────
-
-  async function refreshSupabaseAlerts() {
-    setSupabaseAlertsLoading(true);
-    setSupabaseAlertsError(null);
-    const { alerts, error } = await getAdminSupabaseAlerts();
-    setSupabaseAlerts(alerts);
-    setSupabaseAlertsError(error);
-    setSupabaseAlertsLoading(false);
-
-    // On the first fetch, check if the URL has ?edit=<slug-or-id> and auto-load that alert.
-    const editParam = urlEditParamRef.current;
-    if (editParam && !urlEditProcessedRef.current) {
-      urlEditProcessedRef.current = true;
-      const found =
-        alerts.find((a) => a.slug === editParam) ??
-        alerts.find((a) => a.id === editParam);
-      if (found) {
-        loadFromSupabaseAlert(found);
-      } else {
-        setUrlEditError("Nie znaleziono alertu do edycji.");
-      }
-    }
-  }
 
   async function handleStatusAction(
     slug: string,

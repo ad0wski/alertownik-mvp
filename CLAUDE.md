@@ -137,14 +137,24 @@ Only the **anon key** is used. The service_role key is never used in any fronten
 ## Build & Dev Commands
 
 ```bash
-npm run dev       # Start dev server (Turbopack, port 3000)
-npm run build     # Production build + TypeScript check — must pass before every commit
-npm run lint      # ESLint check
+npm run dev        # Start dev server (Turbopack, port 3000)
+npm run typecheck  # Fast TypeScript-only check (no build output)
+npm run lint       # ESLint on src/ — warnings are OK, errors must be zero
+npm run build      # Full production build including TypeScript check
+npm run check      # typecheck + lint + build — run this before every commit
 ```
 
-**Rule:** `npm run build` must pass with zero TypeScript errors before any commit. If the build fails, fix the error before doing anything else.
+**Rule:** Before considering any coding task complete, run `npm run check`. If it fails:
+1. Read the error output
+2. Fix the problem in the source file
+3. Run `npm run check` again
+4. Do not tell the user the task is complete until `npm run check` passes with zero errors
 
-Check Next.js docs at `node_modules/next/dist/docs/` for current API conventions — this project uses Next.js 16 which differs from training data.
+One known warning in `builder/page.tsx` (`react-hooks/exhaustive-deps`) is expected and accepted — it is a warning, not an error, and does not fail the check.
+
+See `docs/AUTOMATED_CHECKS.md` for what each command checks and what it does NOT cover.
+
+Check Next.js docs at `node_modules/next/dist/docs/` for current API conventions — this project uses Next.js 16 which differs from training data. Note: `next lint` was removed from the Next.js 16 CLI; use `npm run lint` instead.
 
 ---
 
@@ -153,7 +163,7 @@ Check Next.js docs at `node_modules/next/dist/docs/` for current API conventions
 1. User describes a sprint goal
 2. Claude reads the relevant source files before writing any code
 3. Claude implements changes in the smallest reasonable set of files
-4. Claude runs `npm run build` and fixes any TypeScript errors
+4. Claude runs `npm run check` and fixes any errors before reporting completion
 5. Claude reports what changed, what SQL (if any) needs to be run manually, and what to test
 6. User tests manually and commits
 
@@ -200,7 +210,7 @@ See `docs/NEXT_MILESTONES.md` for the milestone roadmap.
 
 A task is complete when all of the following are true:
 
-1. `npm run build` passes with zero TypeScript errors
+1. `npm run check` passes with zero errors (`typecheck` + `lint` + `build`)
 2. No new warnings in the build output
 3. The public homepage still works (alert list loads, filters work)
 4. Admin login still works

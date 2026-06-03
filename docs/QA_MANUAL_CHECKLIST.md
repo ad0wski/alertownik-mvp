@@ -5,6 +5,22 @@ Mark each item as you go. The app UI is in Polish — labels below match the act
 
 ---
 
+## 0. Automated Pre-Check
+
+Run this first. It must pass before doing any manual testing.
+
+```bash
+npm run check
+```
+
+This runs `typecheck → lint → build` in sequence. If any step fails, fix the error before continuing.
+
+One known warning (`react-hooks/exhaustive-deps` in `builder/page.tsx`) is expected — it is not an error and does not fail the check.
+
+See `docs/AUTOMATED_CHECKS.md` for details on what each step covers and what it does not test.
+
+---
+
 ## 1. Public Homepage (`/`)
 
 - [ ] Page loads without console errors (DevTools → Console)
