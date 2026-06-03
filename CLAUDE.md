@@ -79,6 +79,29 @@ All admin tables use `auth.role() = 'authenticated'` for full access. Public has
 
 ---
 
+## Supabase MCP
+
+A local MCP server named `supabase-alertownik` may be available in this Claude Code session. It connects to the live Alertownik Supabase project and is configured in read-only mode.
+
+### When to use MCP
+
+Use MCP tools to:
+- Inspect table structure (`list_tables`) before coding a feature
+- Verify column names and types when writing queries or type definitions
+- Confirm a SQL migration was applied correctly after the user runs it manually
+
+Always run `npm run check` and `npm run test:e2e` after any coding changes, regardless of what MCP inspection revealed.
+
+### MCP rules — never violate
+
+1. **Read-only by default.** Use MCP only to inspect tables, columns, and data. Never insert, update, delete, or truncate rows unless the user explicitly approves the specific operation in this session.
+2. **Never run destructive operations.** Never execute `DROP`, `TRUNCATE`, `DELETE`, or schema-altering SQL via MCP tools.
+3. **Never use service_role credentials.** Do not attempt to escalate or switch to a service_role key via MCP.
+4. **Schema and RLS changes still require explicit user confirmation.** Even if MCP tools allow it, never alter tables, columns, indexes, or RLS policies without the user requesting it first — write the SQL to a file in `docs/` for manual execution.
+5. **MCP config stays local.** Never commit `.mcp.json` or any MCP credentials to the repository.
+
+---
+
 ## Environment Variables
 
 Defined in `.env.local` (never commit this file):
@@ -128,7 +151,8 @@ Only the **anon key** is used. The service_role key is never used in any fronten
 - Change the public UI language (must stay Polish)
 - Expose source registry or check history to public users
 - Store real user PII
-- Run destructive SQL (DROP, TRUNCATE) in any automated way
+- Run destructive SQL (DROP, TRUNCATE) in any automated way — including via Supabase MCP tools
+- Use Supabase MCP to write, update, or delete data without explicit user approval in the current session
 - Push to the remote repository
 - Auto-commit changes
 

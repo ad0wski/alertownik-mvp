@@ -132,6 +132,18 @@ Always use `auth.role() = 'authenticated'` for admin-only tables (same pattern a
 
 Never use the service_role key. The anon key is sufficient for all operations when RLS is configured correctly.
 
+### Using the Supabase MCP
+
+A local MCP server (`supabase-alertownik`) may be available during a Claude Code session. It connects to the live project in read-only mode and is useful for inspecting tables and column definitions before coding.
+
+**Allowed:** `list_tables`, checking column names and types, verifying a migration was applied.
+
+**Not allowed without explicit user approval in the current session:** Any write, update, delete, or schema change via MCP tools.
+
+Claude must never run `DROP`, `TRUNCATE`, `DELETE`, or schema-altering SQL via MCP. Schema and RLS changes still require explicit user confirmation and a manual SQL file in `docs/` — MCP does not bypass this rule. MCP configuration is local only; never commit `.mcp.json` or any MCP credentials to the repository.
+
+After any coding session that used MCP for inspection, run `npm run check` and `npm run test:e2e` before considering the task complete.
+
 ### Checking what's in the database
 
 Use the Supabase Table Editor (web UI) to verify rows were created. Do not rely solely on the app UI to confirm database state.
