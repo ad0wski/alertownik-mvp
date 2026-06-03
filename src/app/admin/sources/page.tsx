@@ -24,30 +24,60 @@ const PENDING_SOURCE_KEY = "alertownik_pending_source_for_ai";
 
 const categoryLabels: Record<AlertCategory, string> = {
   transport: "Transport",
-  water: "Woda",
-  power: "Prąd",
-  waste: "Odpady",
-  roads: "Drogi",
+  water:     "Woda",
+  power:     "Prąd",
+  waste:     "Odpady",
+  roads:     "Drogi",
   municipal: "Komunikaty",
 };
 
 const sourceTypeLabels: Record<AlertSourceType, string> = {
   website: "Strona WWW",
-  pdf: "PDF",
-  rss: "RSS/Feed",
-  other: "Inne",
+  pdf:     "PDF",
+  rss:     "RSS/Feed",
+  other:   "Inne",
 };
 
 const CATEGORIES: AlertCategory[] = [
-  "transport",
-  "water",
-  "power",
-  "waste",
-  "roads",
-  "municipal",
+  "transport", "water", "power", "waste", "roads", "municipal",
 ];
 
 const SOURCE_TYPES: AlertSourceType[] = ["website", "pdf", "rss", "other"];
+
+// ── Monitoring status ─────────────────────────────────────────────────────────
+
+type MonitoringStatus =
+  | "do_sprawdzenia"
+  | "sprawdzone_dzis"
+  | "ostatnio_sprawdzone"
+  | "nieaktywne";
+
+const monitoringConfig: Record<
+  MonitoringStatus,
+  { label: string; badge: string }
+> = {
+  do_sprawdzenia:      { label: "Do sprawdzenia",    badge: "bg-amber-50 text-amber-700 ring-1 ring-amber-200" },
+  sprawdzone_dzis:     { label: "Sprawdzone dziś",   badge: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200" },
+  ostatnio_sprawdzone: { label: "Ostatnio sprawdzone", badge: "bg-slate-100 text-slate-500 ring-1 ring-slate-200" },
+  nieaktywne:          { label: "Nieaktywne",        badge: "bg-slate-50 text-slate-400 ring-1 ring-slate-200" },
+};
+
+function todayString(): string {
+  return new Date().toISOString().split("T")[0];
+}
+
+function getMonitoringStatus(source: AlertSource): MonitoringStatus {
+  if (!source.isActive) return "nieaktywne";
+  if (!source.lastCheckedAt) return "do_sprawdzenia";
+  const checkedDate = source.lastCheckedAt.split("T")[0];
+  return checkedDate === todayString() ? "sprawdzone_dzis" : "ostatnio_sprawdzone";
+}
+
+function needsChecking(source: AlertSource): boolean {
+  if (!source.isActive) return false;
+  if (!source.lastCheckedAt) return true;
+  return source.lastCheckedAt.split("T")[0] !== todayString();
+}
 
 // ── Shared styles ─────────────────────────────────────────────────────────────
 
@@ -63,13 +93,48 @@ function emptyForm(): AlertSourceInput {
 
 function formatCheckedAt(iso: string): string {
   return new Date(iso).toLocaleString("pl-PL", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
+    day:      "numeric",
+    month:    "short",
+    year:     "numeric",
+    hour:     "2-digit",
+    minute:   "2-digit",
     timeZone: "Europe/Warsaw",
   });
+}
+
+function matchesSearch(source: AlertSource, query: string): boolean {
+  const q = query.toLowerCase().trim();
+  if (!q) return true;
+  return (
+    source.name.toLowerCase().includes(q) ||
+    source.url.toLowerCase().includes(q) ||
+    (source.notes ?? "").toLowerCase().includes(q) ||
+    categoryLabels[source.category].toLowerCase().includes(q)
+  );
+}
+
+// ── Status filter ─────────────────────────────────────────────────────────────
+
+type StatusFilter = "all" | "active" | "inactive" | "do_sprawdzenia" | "sprawdzone_dzis";
+
+const statusFilterOptions: { value: StatusFilter; label: string }[] = [
+  { value: "all",             label: "Wszystkie" },
+  { value: "active",          label: "Aktywne" },
+  { value: "inactive",        label: "Nieaktywne" },
+  { value: "do_sprawdzenia",  label: "Do sprawdzenia" },
+  { value: "sprawdzone_dzis", label: "Sprawdzone dziś" },
+];
+
+function matchesStatusFilter(source: AlertSource, filter: StatusFilter): boolean {
+  if (filter === "all") return true;
+  if (filter === "active") return source.isActive;
+  if (filter === "inactive") return !source.isActive;
+  if (filter === "do_sprawdzenia") return needsChecking(source);
+  if (filter === "sprawdzone_dzis") {
+    if (!source.lastCheckedAt) return false;
+    return source.lastCheckedAt.split("T")[0] === todayString();
+  }
+  return true;
 }
 
 // ── SourceForm component ──────────────────────────────────────────────────────
@@ -85,13 +150,7 @@ interface SourceFormProps {
 }
 
 function SourceForm({
-  form,
-  onChange,
-  onSubmit,
-  saving,
-  saveError,
-  submitLabel,
-  onCancel,
+  form, onChange, onSubmit, saving, saveError, submitLabel, onCancel,
 }: SourceFormProps) {
   return (
     <form
@@ -125,14 +184,10 @@ function SourceForm({
           <select
             className={inputClass}
             value={form.category}
-            onChange={(e) =>
-              onChange({ ...form, category: e.target.value as AlertCategory })
-            }
+            onChange={(e) => onChange({ ...form, category: e.target.value as AlertCategory })}
           >
             {CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {categoryLabels[c]}
-              </option>
+              <option key={c} value={c}>{categoryLabels[c]}</option>
             ))}
           </select>
         </div>
@@ -141,14 +196,10 @@ function SourceForm({
           <select
             className={inputClass}
             value={form.sourceType}
-            onChange={(e) =>
-              onChange({ ...form, sourceType: e.target.value as AlertSourceType })
-            }
+            onChange={(e) => onChange({ ...form, sourceType: e.target.value as AlertSourceType })}
           >
             {SOURCE_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {sourceTypeLabels[t]}
-              </option>
+              <option key={t} value={t}>{sourceTypeLabels[t]}</option>
             ))}
           </select>
         </div>
@@ -204,55 +255,67 @@ interface SourceCardProps {
 }
 
 function SourceCard({
-  source,
-  onEdit,
-  onToggle,
-  onDelete,
-  onPrepareAlert,
-  onMarkChecked,
-  markingChecked,
-  alertCount,
+  source, onEdit, onToggle, onDelete, onPrepareAlert, onMarkChecked,
+  markingChecked, alertCount,
 }: SourceCardProps) {
-  const inactive = !source.isActive;
+  const inactive   = !source.isActive;
+  const monStatus  = getMonitoringStatus(source);
+  const monCfg     = monitoringConfig[monStatus];
 
   return (
     <div
       className={`rounded-xl border p-4 transition-all ${
         inactive
-          ? "bg-slate-50 border-slate-200 opacity-60"
+          ? "bg-slate-50 border-slate-200 opacity-70"
           : "bg-white border-slate-200 shadow-sm"
       }`}
     >
-      {/* Top section: info + management buttons */}
+      {/* ── Top: info + management buttons ─────────────────────────── */}
       <div className="flex items-start gap-3">
+
         {/* Source info */}
         <div className="flex-1 min-w-0">
-          <div className="flex flex-wrap items-center gap-2 mb-1">
-            <span className={`font-semibold ${inactive ? "text-slate-500" : "text-slate-900"}`}>
+          {/* Badges row */}
+          <div className="flex flex-wrap items-center gap-2 mb-1.5">
+            <span className={`font-semibold text-sm ${inactive ? "text-slate-500" : "text-slate-900"}`}>
               {source.name}
             </span>
-            <span
-              className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                source.isActive
-                  ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
-                  : "bg-slate-100 text-slate-400 ring-1 ring-slate-200"
-              }`}
-            >
-              {source.isActive ? "Aktywne" : "Nieaktywne"}
+
+            {/* Monitoring status */}
+            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${monCfg.badge}`}>
+              {monCfg.label}
             </span>
+
             <span className="text-xs text-slate-400 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-full">
               {categoryLabels[source.category]}
             </span>
+
             <span className="text-xs text-slate-400 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-full">
               {sourceTypeLabels[source.sourceType]}
             </span>
           </div>
-          <span className="text-sm text-blue-600 truncate block">
+
+          {/* URL */}
+          <a
+            href={source.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-blue-600 hover:text-blue-800 hover:underline truncate block"
+          >
             {source.url}
-          </span>
+          </a>
+
+          {/* Notes */}
           {source.notes && (
             <p className="text-sm text-slate-500 mt-1">{source.notes}</p>
           )}
+
+          {/* Last checked */}
+          <p className="text-xs text-slate-400 mt-1.5">
+            {source.lastCheckedAt
+              ? `Ostatnio sprawdzono: ${formatCheckedAt(source.lastCheckedAt)}`
+              : "Jeszcze nie sprawdzano"}
+          </p>
         </div>
 
         {/* Management buttons */}
@@ -282,7 +345,7 @@ function SourceCard({
         </div>
       </div>
 
-      {/* Footer section: workflow actions + last checked */}
+      {/* ── Footer: workflow actions ────────────────────────────────── */}
       <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
         {/* Primary workflow */}
         <div className="flex items-center gap-2">
@@ -300,27 +363,23 @@ function SourceCard({
           >
             Otwórz źródło ↗
           </a>
-        </div>
-
-        {/* Last checked + mark button */}
-        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
-          <span>
-            Alerty: {alertCount}
-          </span>
-          <span>·</span>
-          <span>
-            {source.lastCheckedAt
-              ? `Ostatnio sprawdzono: ${formatCheckedAt(source.lastCheckedAt)}`
-              : "Jeszcze nie sprawdzano"}
-          </span>
           <button
             onClick={onMarkChecked}
             disabled={markingChecked}
-            className="text-xs font-medium text-slate-500 hover:text-slate-800 hover:bg-slate-100 px-2 py-1 rounded-md transition-colors disabled:opacity-50"
+            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors disabled:opacity-50 ${
+              monStatus === "sprawdzone_dzis"
+                ? "text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50"
+                : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"
+            }`}
           >
             {markingChecked ? "Oznaczanie…" : "Oznacz jako sprawdzone"}
           </button>
         </div>
+
+        {/* Alert count */}
+        <span className="text-xs text-slate-400">
+          Alerty: {alertCount}
+        </span>
       </div>
     </div>
   );
@@ -328,53 +387,51 @@ function SourceCard({
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-type StatusFilter = "all" | "active" | "inactive";
-
 export default function SourcesPage() {
   const router = useRouter();
 
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession]         = useState<Session | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
-  const [sources, setSources] = useState<AlertSource[]>([]);
+  const [sources, setSources]     = useState<AlertSource[]>([]);
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
 
-  const [filter, setFilter] = useState<StatusFilter>("all");
+  // Filters
+  const [filter, setFilter]               = useState<StatusFilter>("all");
   const [categoryFilter, setCategoryFilter] = useState<AlertCategory | "all">("all");
+  const [searchQuery, setSearchQuery]     = useState("");
 
+  // Add form
   const [showAddForm, setShowAddForm] = useState(false);
-  const [addForm, setAddForm] = useState<AlertSourceInput>(emptyForm());
+  const [addForm, setAddForm]         = useState<AlertSourceInput>(emptyForm());
 
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<AlertSourceInput>(emptyForm());
+  // Edit form
+  const [editingId, setEditingId]   = useState<string | null>(null);
+  const [editForm, setEditForm]     = useState<AlertSourceInput>(emptyForm());
 
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  // Action state
+  const [saving, setSaving]           = useState(false);
+  const [saveError, setSaveError]     = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const [markingCheckedId, setMarkingCheckedId] = useState<string | null>(null);
-  const [checkSuccess, setCheckSuccess] = useState<string | null>(null);
-  const [checkError, setCheckError] = useState<string | null>(null);
-  const [alertCounts, setAlertCounts] = useState<Record<string, number>>({});
+  const [markingCheckedId, setMarkingCheckedId]   = useState<string | null>(null);
+  const [checkSuccess, setCheckSuccess]           = useState<string | null>(null);
+  const [checkError, setCheckError]               = useState<string | null>(null);
+  const [alertCounts, setAlertCounts]             = useState<Record<string, number>>({});
 
   // ── Auth ────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    if (!supabase) {
-      setAuthLoading(false);
-      return;
-    }
+    if (!supabase) { setAuthLoading(false); return; }
 
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       setAuthLoading(false);
     });
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession);
-    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, newSession) => setSession(newSession)
+    );
 
     return () => subscription.unsubscribe();
   }, []);
@@ -404,10 +461,7 @@ export default function SourcesPage() {
   async function loadSources() {
     setLoadState("loading");
     const result = await getAlertSources();
-    if (result.error) {
-      setLoadState("error");
-      return;
-    }
+    if (result.error) { setLoadState("error"); return; }
     setSources(result.sources);
     setLoadState("ready");
   }
@@ -416,16 +470,11 @@ export default function SourcesPage() {
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
-    setSaving(true);
-    setSaveError(null);
+    setSaving(true); setSaveError(null);
     const result = await createAlertSource(addForm);
     setSaving(false);
-    if (!result.ok) {
-      setSaveError(result.error || "Nie udało się zapisać źródła.");
-      return;
-    }
-    setAddForm(emptyForm());
-    setShowAddForm(false);
+    if (!result.ok) { setSaveError(result.error || "Nie udało się zapisać źródła."); return; }
+    setAddForm(emptyForm()); setShowAddForm(false);
     await loadSources();
   }
 
@@ -433,32 +482,19 @@ export default function SourcesPage() {
 
   function startEdit(source: AlertSource) {
     setEditingId(source.id);
-    setEditForm({
-      name: source.name,
-      url: source.url,
-      category: source.category,
-      sourceType: source.sourceType,
-      notes: source.notes ?? "",
-    });
+    setEditForm({ name: source.name, url: source.url, category: source.category, sourceType: source.sourceType, notes: source.notes ?? "" });
     setSaveError(null);
   }
 
-  function cancelEdit() {
-    setEditingId(null);
-    setSaveError(null);
-  }
+  function cancelEdit() { setEditingId(null); setSaveError(null); }
 
   async function handleEdit(e: React.FormEvent) {
     e.preventDefault();
     if (!editingId) return;
-    setSaving(true);
-    setSaveError(null);
+    setSaving(true); setSaveError(null);
     const result = await updateAlertSource(editingId, editForm);
     setSaving(false);
-    if (!result.ok) {
-      setSaveError(result.error || "Nie udało się zapisać źródła.");
-      return;
-    }
+    if (!result.ok) { setSaveError(result.error || "Nie udało się zapisać źródła."); return; }
     setEditingId(null);
     await loadSources();
   }
@@ -467,45 +503,34 @@ export default function SourcesPage() {
 
   async function handleToggle(id: string, currentlyActive: boolean) {
     const result = await toggleAlertSourceActive(id, !currentlyActive);
-    if (!result.ok) {
-      setSaveError(result.error || "Nie udało się zmienić statusu źródła.");
-      return;
-    }
+    if (!result.ok) { setSaveError(result.error || "Nie udało się zmienić statusu źródła."); return; }
     await loadSources();
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Czy na pewno chcesz usunąć to źródło? Tej operacji nie można cofnąć.")) {
-      return;
-    }
+    if (!confirm("Czy na pewno chcesz usunąć to źródło? Tej operacji nie można cofnąć.")) return;
     setDeleteError(null);
     const result = await deleteAlertSource(id);
-    if (!result.ok) {
-      setDeleteError(result.error || "Nie udało się usunąć źródła.");
-      return;
-    }
+    if (!result.ok) { setDeleteError(result.error || "Nie udało się usunąć źródła."); return; }
     await loadSources();
   }
 
   // ── Prepare alert ───────────────────────────────────────────────────────────
 
   function handlePrepareAlert(source: AlertSource) {
-    const data = {
-      sourceName: source.name,
-      sourceUrl: source.url,
+    sessionStorage.setItem(PENDING_SOURCE_KEY, JSON.stringify({
+      sourceName:        source.name,
+      sourceUrl:         source.url,
       suggestedCategory: source.category,
-      sourceId: source.id,
-    };
-    sessionStorage.setItem(PENDING_SOURCE_KEY, JSON.stringify(data));
+      sourceId:          source.id,
+    }));
     router.push("/ai-helper");
   }
 
   // ── Mark checked ────────────────────────────────────────────────────────────
 
   async function handleMarkChecked(id: string) {
-    setMarkingCheckedId(id);
-    setCheckSuccess(null);
-    setCheckError(null);
+    setMarkingCheckedId(id); setCheckSuccess(null); setCheckError(null);
     const result = await markAlertSourceChecked(id);
     setMarkingCheckedId(null);
     if (!result.ok) {
@@ -520,9 +545,9 @@ export default function SourcesPage() {
   // ── Filtered list ───────────────────────────────────────────────────────────
 
   const filtered = sources.filter((s) => {
-    if (filter === "active" && !s.isActive) return false;
-    if (filter === "inactive" && s.isActive) return false;
+    if (!matchesStatusFilter(s, filter)) return false;
     if (categoryFilter !== "all" && s.category !== categoryFilter) return false;
+    if (!matchesSearch(s, searchQuery)) return false;
     return true;
   });
 
@@ -552,6 +577,8 @@ export default function SourcesPage() {
 
   // ── Main view ───────────────────────────────────────────────────────────────
 
+  const toCheckCount = sources.filter(needsChecking).length;
+
   return (
     <main className="max-w-4xl mx-auto w-full px-4 sm:px-6 py-10">
 
@@ -562,6 +589,11 @@ export default function SourcesPage() {
           <span className="inline-flex items-center text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-0.5">
             Admin
           </span>
+          {toCheckCount > 0 && (
+            <span className="inline-flex items-center text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-300 rounded-full px-2.5 py-0.5">
+              {toCheckCount} do sprawdzenia
+            </span>
+          )}
         </div>
         <p className="text-sm text-slate-500 leading-relaxed">
           Lista stron i miejsc, z których Alertownik może w przyszłości pobierać komunikaty.
@@ -571,11 +603,7 @@ export default function SourcesPage() {
       {/* Add button */}
       <div className="mb-5">
         <button
-          onClick={() => {
-            setShowAddForm(!showAddForm);
-            setSaveError(null);
-            setAddForm(emptyForm());
-          }}
+          onClick={() => { setShowAddForm(!showAddForm); setSaveError(null); setAddForm(emptyForm()); }}
           className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
         >
           {showAddForm ? "Anuluj dodawanie" : "+ Dodaj źródło"}
@@ -592,55 +620,74 @@ export default function SourcesPage() {
             saving={saving}
             saveError={saveError}
             submitLabel="Dodaj źródło"
-            onCancel={() => {
-              setShowAddForm(false);
-              setAddForm(emptyForm());
-              setSaveError(null);
-            }}
+            onCancel={() => { setShowAddForm(false); setAddForm(emptyForm()); setSaveError(null); }}
           />
         </div>
       )}
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-2 mb-5">
-        {(["all", "active", "inactive"] as StatusFilter[]).map((f) => (
+      {/* ── Search input ─────────────────────────────────────────────── */}
+      <div className="relative mb-4">
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Szukaj po nazwie, linku albo notatkach..."
+          className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 pr-20 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+        />
+        {searchQuery && (
           <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`px-3 py-1 text-sm rounded-full font-medium transition-colors ${
-              filter === f
+            onClick={() => setSearchQuery("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 rounded px-2 py-1 text-xs font-medium text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+            aria-label="Wyczyść wyszukiwanie"
+          >
+            Wyczyść
+          </button>
+        )}
+      </div>
+
+      {/* ── Filters ──────────────────────────────────────────────────── */}
+      <div className="flex flex-wrap items-center gap-2 mb-3">
+        {statusFilterOptions.map((opt) => (
+          <button
+            key={opt.value}
+            onClick={() => setFilter(opt.value)}
+            className={`px-3 py-1.5 text-sm rounded-full font-medium transition-colors ${
+              filter === opt.value
                 ? "bg-slate-800 text-white"
                 : "bg-slate-100 text-slate-600 hover:bg-slate-200"
             }`}
           >
-            {f === "all" ? "Wszystkie" : f === "active" ? "Aktywne" : "Nieaktywne"}
+            {opt.label}
           </button>
         ))}
         <span className="hidden sm:block w-px h-4 bg-slate-200 mx-1" aria-hidden="true" />
         <select
           value={categoryFilter}
-          onChange={(e) =>
-            setCategoryFilter(e.target.value as AlertCategory | "all")
-          }
-          className="text-sm border border-slate-300 rounded-lg px-2.5 py-1 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          onChange={(e) => setCategoryFilter(e.target.value as AlertCategory | "all")}
+          className="text-sm border border-slate-300 rounded-lg px-2.5 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="all">Wszystkie kategorie</option>
           {CATEGORIES.map((c) => (
-            <option key={c} value={c}>
-              {categoryLabels[c]}
-            </option>
+            <option key={c} value={c}>{categoryLabels[c]}</option>
           ))}
         </select>
       </div>
 
-      {/* Success message for mark-checked */}
+      {/* ── Result counter ───────────────────────────────────────────── */}
+      {loadState === "ready" && sources.length > 0 && (
+        <p className="text-xs text-slate-400 mb-4">
+          Wyświetlane źródła:{" "}
+          <span className="font-semibold text-slate-600">{filtered.length}</span>{" "}
+          z {sources.length}
+        </p>
+      )}
+
+      {/* ── Feedback messages ─────────────────────────────────────────── */}
       {checkSuccess && (
         <div className="rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm px-4 py-3 mb-4">
           {checkSuccess}
         </div>
       )}
-
-      {/* Error messages */}
       {checkError && (
         <div className="rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 mb-4">
           {checkError}
@@ -657,54 +704,41 @@ export default function SourcesPage() {
         </div>
       )}
 
-      {/* Loading skeleton */}
+      {/* ── Loading skeleton ──────────────────────────────────────────── */}
       {loadState === "loading" && (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="h-24 rounded-xl border border-slate-100 bg-slate-50 animate-pulse"
+              className="h-28 rounded-xl border border-slate-100 bg-slate-50 animate-pulse"
             />
           ))}
         </div>
       )}
 
-      {/* Empty state */}
+      {/* ── Empty state ───────────────────────────────────────────────── */}
       {loadState === "ready" && sources.length === 0 && (
         <div className="text-center py-16">
-          <p className="text-slate-400 text-sm mb-6">
-            Nie dodano jeszcze żadnych źródeł.
-          </p>
+          <p className="text-slate-400 text-sm mb-6">Nie dodano jeszcze żadnych źródeł.</p>
           <div className="inline-block text-left rounded-xl border border-slate-200 bg-slate-50 px-6 py-5 max-w-sm">
-            <p className="text-sm font-medium text-slate-600 mb-3">
-              Przykładowe źródła do dodania:
-            </p>
+            <p className="text-sm font-medium text-slate-600 mb-3">Przykładowe źródła do dodania:</p>
             <ul className="text-sm text-slate-500 space-y-2">
-              <li>
-                <span className="font-medium text-slate-700">WKD</span>
-                {" — "}komunikaty o zakłóceniach ruchu
-              </li>
-              <li>
-                <span className="font-medium text-slate-700">Gmina Michałowice</span>
-                {" — "}aktualności i komunikaty urzędu
-              </li>
-              <li>
-                <span className="font-medium text-slate-700">PGE</span>
-                {" — "}planowane wyłączenia prądu
-              </li>
+              <li><span className="font-medium text-slate-700">WKD</span>{" — "}komunikaty o zakłóceniach ruchu</li>
+              <li><span className="font-medium text-slate-700">Gmina Michałowice</span>{" — "}aktualności i komunikaty urzędu</li>
+              <li><span className="font-medium text-slate-700">PGE</span>{" — "}planowane wyłączenia prądu</li>
             </ul>
           </div>
         </div>
       )}
 
-      {/* No results after filter */}
+      {/* ── No results after filter ───────────────────────────────────── */}
       {loadState === "ready" && sources.length > 0 && filtered.length === 0 && (
         <div className="text-center py-12 text-slate-400 text-sm">
           Brak źródeł pasujących do wybranych filtrów.
         </div>
       )}
 
-      {/* Sources list */}
+      {/* ── Sources list ──────────────────────────────────────────────── */}
       {loadState === "ready" && filtered.length > 0 && (
         <div className="space-y-3">
           {filtered.map((source) =>
@@ -746,11 +780,8 @@ export default function SourcesPage() {
       {/* Source count summary */}
       {loadState === "ready" && sources.length > 0 && (
         <p className="text-xs text-slate-400 text-right mt-5">
-          {sources.length === 1
-            ? "1 źródło łącznie"
-            : `${sources.length} źródeł łącznie`}
-          {filtered.length !== sources.length &&
-            ` · ${filtered.length} po filtrowaniu`}
+          {sources.length === 1 ? "1 źródło łącznie" : `${sources.length} źródeł łącznie`}
+          {filtered.length !== sources.length && ` · ${filtered.length} po filtrowaniu`}
         </p>
       )}
 

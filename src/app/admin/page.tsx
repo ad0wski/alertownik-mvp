@@ -7,14 +7,17 @@ import {
   getAdminSupabaseAlerts,
   type AdminAlert,
 } from "@/lib/getAdminSupabaseAlerts";
+import { getAlertSources } from "@/lib/supabaseSourceWrites";
 import type { Session } from "@supabase/supabase-js";
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 const categoryLabels: Record<string, string> = {
   transport: "Transport",
-  water: "Woda",
-  power: "Prąd",
-  waste: "Odpady",
-  roads: "Drogi",
+  water:     "Woda",
+  power:     "Prąd",
+  waste:     "Odpady",
+  roads:     "Drogi",
   municipal: "Komunikaty",
 };
 
@@ -28,56 +31,76 @@ function statusBadgeClass(status: AdminAlert["status"]): string {
 
 function statusLabel(status: AdminAlert["status"]): string {
   if (status === "published") return "Opublikowany";
-  if (status === "archived") return "Zarchiwizowany";
+  if (status === "archived")  return "Zarchiwizowany";
   return "Draft";
 }
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleString("pl-PL", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
+    day:    "2-digit",
+    month:  "2-digit",
+    year:   "numeric",
+    hour:   "2-digit",
     minute: "2-digit",
   });
 }
 
+function sourceNeedsChecking(lastCheckedAt: string | undefined, isActive: boolean): boolean {
+  if (!isActive) return false;
+  if (!lastCheckedAt) return true;
+  const today = new Date().toISOString().split("T")[0];
+  return lastCheckedAt.split("T")[0] !== today;
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+
 export default function AdminPage() {
-  const [session, setSession] = useState<Session | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
-  const [alerts, setAlerts] = useState<AdminAlert[]>([]);
+  const [session, setSession]           = useState<Session | null>(null);
+  const [authLoading, setAuthLoading]   = useState(true);
+
+  const [alerts, setAlerts]             = useState<AdminAlert[]>([]);
   const [alertsLoading, setAlertsLoading] = useState(false);
 
+  const [sourcesToCheck, setSourcesToCheck]   = useState(0);
+  const [sourcesLoading, setSourcesLoading]   = useState(false);
+
   useEffect(() => {
-    if (!supabase) {
-      setAuthLoading(false);
-      return;
-    }
+    if (!supabase) { setAuthLoading(false); return; }
 
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       setAuthLoading(false);
     });
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession);
-    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, newSession) => setSession(newSession)
+    );
 
     return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
     if (!session) return;
+
+    // Load alerts
     setAlertsLoading(true);
     getAdminSupabaseAlerts().then(({ alerts: loaded }) => {
       setAlerts(loaded);
       setAlertsLoading(false);
     });
+
+    // Load sources-to-check count
+    setSourcesLoading(true);
+    getAlertSources().then(({ sources }) => {
+      const count = sources.filter((s) =>
+        sourceNeedsChecking(s.lastCheckedAt, s.isActive)
+      ).length;
+      setSourcesToCheck(count);
+      setSourcesLoading(false);
+    });
   }, [session]);
 
-  // ── Auth states ────────────────────────────────────────────────────────────
+  // ── Auth states ───────────────────────────────────────────────────────────
 
   if (authLoading) {
     return <main className="max-w-4xl mx-auto w-full px-4 sm:px-6 py-10" />;
@@ -104,12 +127,12 @@ export default function AdminPage() {
     );
   }
 
-  // ── Stats (computed from loaded alerts) ───────────────────────────────────
+  // ── Stats ────────────────────────────────────────────────────────────────
 
-  const total = alerts.length;
+  const total          = alerts.length;
   const publishedCount = alerts.filter((a) => a.status === "published").length;
-  const draftCount = alerts.filter((a) => a.status === "draft").length;
-  const archivedCount = alerts.filter((a) => a.status === "archived").length;
+  const draftCount     = alerts.filter((a) => a.status === "draft").length;
+  const archivedCount  = alerts.filter((a) => a.status === "archived").length;
 
   const recent = [...alerts]
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
@@ -123,30 +146,10 @@ export default function AdminPage() {
   ];
 
   const quickActions = [
-    {
-      href: "/builder",
-      title: "Kreator alertu",
-      desc: "Twórz, edytuj i publikuj alerty w Supabase.",
-      border: "border-amber-200 hover:border-amber-300",
-    },
-    {
-      href: "/ai-helper",
-      title: "AI Helper",
-      desc: "Przygotuj treść alertu z pomocą AI.",
-      border: "border-purple-200 hover:border-purple-300",
-    },
-    {
-      href: "/admin/sources",
-      title: "Źródła",
-      desc: "Zarządzaj źródłami komunikatów.",
-      border: "border-slate-200 hover:border-slate-300",
-    },
-    {
-      href: "/",
-      title: "Publiczna lista alertów",
-      desc: "Sprawdź co widzą mieszkańcy.",
-      border: "border-blue-200 hover:border-blue-300",
-    },
+    { href: "/builder",       title: "Kreator alertu",      desc: "Twórz, edytuj i publikuj alerty w Supabase.",    border: "border-amber-200 hover:border-amber-300" },
+    { href: "/ai-helper",     title: "AI Helper",           desc: "Przygotuj treść alertu z pomocą AI.",             border: "border-purple-200 hover:border-purple-300" },
+    { href: "/admin/sources", title: "Źródła",              desc: "Zarządzaj źródłami komunikatów.",                border: "border-slate-200 hover:border-slate-300" },
+    { href: "/",              title: "Publiczna lista alertów", desc: "Sprawdź co widzą mieszkańcy.",               border: "border-blue-200 hover:border-blue-300" },
   ];
 
   return (
@@ -155,9 +158,7 @@ export default function AdminPage() {
       {/* Page header */}
       <div className="mb-8">
         <div className="flex flex-wrap items-center gap-2.5 mb-1">
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-            Panel admina
-          </h1>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Panel admina</h1>
           <span className="inline-flex items-center text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-0.5">
             Admin
           </span>
@@ -167,17 +168,14 @@ export default function AdminPage() {
         </p>
       </div>
 
-      {/* ── Stats cards ───────────────────────────────────────────────────── */}
-      <section className="mb-10">
-        <h2 className="text-base font-semibold text-slate-800 mb-4">Statystyki</h2>
+      {/* ── Alert stats cards ──────────────────────────────────────────── */}
+      <section className="mb-8">
+        <h2 className="text-base font-semibold text-slate-800 mb-4">Statystyki alertów</h2>
 
         {alertsLoading ? (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[1, 2, 3, 4].map((i) => (
-              <div
-                key={i}
-                className="bg-white rounded-2xl border border-slate-200 p-4 animate-pulse"
-              >
+              <div key={i} className="bg-white rounded-2xl border border-slate-200 p-4 animate-pulse">
                 <div className="h-7 w-10 bg-slate-100 rounded mb-2" />
                 <div className="h-3 w-20 bg-slate-100 rounded" />
               </div>
@@ -186,10 +184,7 @@ export default function AdminPage() {
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {stats.map((s) => (
-              <div
-                key={s.label}
-                className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4"
-              >
+              <div key={s.label} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
                 <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
                 <p className="text-xs text-slate-500 mt-1 leading-snug">{s.label}</p>
               </div>
@@ -198,19 +193,53 @@ export default function AdminPage() {
         )}
       </section>
 
-      {/* ── Recent alerts ─────────────────────────────────────────────────── */}
+      {/* ── Sources to check ──────────────────────────────────────────── */}
+      <section className="mb-8">
+        <h2 className="text-base font-semibold text-slate-800 mb-4">Źródła do sprawdzenia</h2>
+
+        {sourcesLoading ? (
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 animate-pulse">
+            <div className="h-8 w-12 bg-slate-100 rounded mb-2" />
+            <div className="h-3 w-48 bg-slate-100 rounded" />
+          </div>
+        ) : (
+          <div
+            className={`bg-white rounded-2xl border shadow-sm p-5 flex flex-col sm:flex-row sm:items-center gap-4 ${
+              sourcesToCheck > 0 ? "border-amber-200" : "border-slate-200"
+            }`}
+          >
+            <div className="flex-1">
+              <p
+                className={`text-3xl font-bold ${
+                  sourcesToCheck > 0 ? "text-amber-600" : "text-emerald-600"
+                }`}
+              >
+                {sourcesToCheck}
+              </p>
+              <p className="text-sm text-slate-500 mt-1 leading-snug">
+                {sourcesToCheck > 0
+                  ? "aktywnych źródeł nie sprawdzonych dziś"
+                  : "Wszystkie aktywne źródła sprawdzone dziś"}
+              </p>
+            </div>
+            <Link
+              href="/admin/sources"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors shrink-0"
+            >
+              Przejdź do źródeł →
+            </Link>
+          </div>
+        )}
+      </section>
+
+      {/* ── Recent alerts ─────────────────────────────────────────────── */}
       <section className="mb-10">
-        <h2 className="text-base font-semibold text-slate-800 mb-4">
-          Ostatnio zmienione alerty
-        </h2>
+        <h2 className="text-base font-semibold text-slate-800 mb-4">Ostatnio zmienione alerty</h2>
 
         {alertsLoading ? (
           <div className="flex flex-col gap-3">
             {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="bg-white rounded-2xl border border-slate-200 p-4 animate-pulse"
-              >
+              <div key={i} className="bg-white rounded-2xl border border-slate-200 p-4 animate-pulse">
                 <div className="flex gap-2 mb-2">
                   <div className="h-5 w-20 bg-slate-100 rounded-full" />
                   <div className="h-5 w-14 bg-slate-100 rounded-full" />
@@ -231,16 +260,10 @@ export default function AdminPage() {
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2 mb-1">
-                    <span className={statusBadgeClass(a.status)}>
-                      {statusLabel(a.status)}
-                    </span>
-                    <span className="text-xs text-slate-400">
-                      {categoryLabels[a.category] ?? a.category}
-                    </span>
+                    <span className={statusBadgeClass(a.status)}>{statusLabel(a.status)}</span>
+                    <span className="text-xs text-slate-400">{categoryLabels[a.category] ?? a.category}</span>
                     {a.sourceName && (
-                      <span className="text-xs text-slate-400">
-                        · {a.sourceName}
-                      </span>
+                      <span className="text-xs text-slate-400">· {a.sourceName}</span>
                     )}
                   </div>
                   <p className="text-sm font-semibold text-slate-900 truncate">
@@ -272,7 +295,7 @@ export default function AdminPage() {
         )}
       </section>
 
-      {/* ── Quick actions ─────────────────────────────────────────────────── */}
+      {/* ── Quick actions ──────────────────────────────────────────────── */}
       <section>
         <h2 className="text-base font-semibold text-slate-800 mb-4">Szybkie akcje</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
