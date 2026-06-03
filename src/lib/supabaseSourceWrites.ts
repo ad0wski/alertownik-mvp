@@ -1,5 +1,11 @@
 import { supabase } from "./supabaseClient";
-import type { AlertSource, AlertSourceInput } from "@/types/alertSource";
+import type {
+  AlertSource,
+  AlertSourceInput,
+  SourceCheck,
+  SourceCheckInput,
+  SourceCheckResult,
+} from "@/types/alertSource";
 import type { AlertCategory } from "@/types/alert";
 
 export interface SourcesResult {
@@ -134,18 +140,131 @@ export async function toggleAlertSourceActive(
 }
 
 export async function markAlertSourceChecked(id: string): Promise<SaveResult> {
+  return createSourceCheck({ sourceId: id, result: "no_changes" });
+}
+
+// ── Source check history ──────────────────────────────────────────────────────
+
+export interface SourceChecksResult {
+  checks: SourceCheck[];
+  error?: string;
+}
+
+export interface RecentSourceCheck {
+  id: string;
+  sourceId: string;
+  sourceName: string;
+  checkedAt: string;
+  result: SourceCheckResult;
+  notes?: string;
+}
+
+function rowToSourceCheck(row: Record<string, unknown>): SourceCheck {
+  return {
+    id: row.id as string,
+    sourceId: row.source_id as string,
+    checkedAt: row.checked_at as string,
+    result: row.result as SourceCheckResult,
+    notes: (row.notes as string) || undefined,
+    relatedAlertId: (row.related_alert_id as string) || undefined,
+    createdBy: (row.created_by as string) || undefined,
+    createdAt: row.created_at as string,
+  };
+}
+
+export async function getSourceChecks(sourceId?: string, limit = 200): Promise<SourceChecksResult> {
+  if (!supabase) {
+    return { checks: [], error: "Brak połączenia z Supabase." };
+  }
+
+  let query = supabase
+    .from("source_checks")
+    .select("*")
+    .order("checked_at", { ascending: false })
+    .limit(limit);
+
+  if (sourceId) {
+    query = query.eq("source_id", sourceId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error("[Alertownik] getSourceChecks error:", error.message);
+    return { checks: [], error: error.message };
+  }
+
+  return { checks: (data ?? []).map(rowToSourceCheck) };
+}
+
+export async function getRecentSourceChecks(limit = 3): Promise<{ checks: RecentSourceCheck[]; error?: string }> {
+  if (!supabase) {
+    return { checks: [], error: "Brak połączenia z Supabase." };
+  }
+
+  const { data, error } = await supabase
+    .from("source_checks")
+    .select("id, source_id, checked_at, result, notes, alert_sources(name)")
+    .order("checked_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("[Alertownik] getRecentSourceChecks error:", error.message);
+    return { checks: [], error: error.message };
+  }
+
+  return {
+    checks: (data ?? []).map((row) => ({
+      id: row.id as string,
+      sourceId: row.source_id as string,
+      sourceName: ((row.alert_sources as unknown as { name: string } | null)?.name) ?? "Nieznane źródło",
+      checkedAt: row.checked_at as string,
+      result: row.result as SourceCheckResult,
+      notes: (row.notes as string) || undefined,
+    })),
+  };
+}
+
+export async function createSourceCheck(input: SourceCheckInput): Promise<SaveResult> {
   if (!supabase) {
     return { ok: false, error: "Brak połączenia z Supabase." };
   }
 
+  const { data: { user } } = await supabase.auth.getUser();
   const now = new Date().toISOString();
-  const { error } = await supabase
+
+  const { error: insertError } = await supabase.from("source_checks").insert({
+    source_id: input.sourceId,
+    result: input.result,
+    notes: input.notes?.trim() || null,
+    related_alert_id: input.relatedAlertId ?? null,
+    created_by: user?.id ?? null,
+    checked_at: now,
+  });
+
+  if (insertError) {
+    console.error("[Alertownik] createSourceCheck error:", insertError.message);
+    return { ok: false, error: insertError.message };
+  }
+
+  // Update last_checked_at on the source — best effort, don't fail if this errors
+  await supabase
     .from("alert_sources")
     .update({ last_checked_at: now, updated_at: now })
-    .eq("id", id);
+    .eq("id", input.sourceId);
+
+  return { ok: true };
+}
+
+export async function deleteSourceCheck(id: string): Promise<SaveResult> {
+  if (!supabase) {
+    return { ok: false, error: "Brak połączenia z Supabase." };
+  }
+
+  const { error } = await supabase.from("source_checks").delete().eq("id", id);
 
   if (error) {
-    console.error("[Alertownik] markAlertSourceChecked error:", error.message);
+    console.error("[Alertownik] deleteSourceCheck error:", error.message);
     return { ok: false, error: error.message };
   }
 

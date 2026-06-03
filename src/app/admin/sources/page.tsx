@@ -5,7 +5,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import type { Session } from "@supabase/supabase-js";
-import type { AlertSource, AlertSourceInput, AlertSourceType } from "@/types/alertSource";
+import type {
+  AlertSource,
+  AlertSourceInput,
+  AlertSourceType,
+  SourceCheck,
+  SourceCheckResult,
+} from "@/types/alertSource";
 import type { AlertCategory } from "@/types/alert";
 import {
   getAlertSources,
@@ -14,6 +20,8 @@ import {
   deleteAlertSource,
   toggleAlertSourceActive,
   markAlertSourceChecked,
+  getSourceChecks,
+  createSourceCheck,
 } from "@/lib/supabaseSourceWrites";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -137,6 +145,22 @@ function matchesStatusFilter(source: AlertSource, filter: StatusFilter): boolean
   return true;
 }
 
+// ── Check result config ───────────────────────────────────────────────────────
+
+const CHECK_RESULT_OPTIONS: { value: SourceCheckResult; label: string }[] = [
+  { value: "no_changes",     label: "Brak zmian" },
+  { value: "found_notice",   label: "Znaleziono komunikat" },
+  { value: "alert_created",  label: "Przygotowano alert" },
+  { value: "needs_followup", label: "Wymaga sprawdzenia" },
+];
+
+const resultConfig: Record<SourceCheckResult, { label: string; color: string }> = {
+  no_changes:     { label: "Brak zmian",            color: "text-slate-600" },
+  found_notice:   { label: "Znaleziono komunikat",  color: "text-blue-600" },
+  alert_created:  { label: "Przygotowano alert",    color: "text-emerald-600" },
+  needs_followup: { label: "Wymaga sprawdzenia",    color: "text-amber-600" },
+};
+
 // ── SourceForm component ──────────────────────────────────────────────────────
 
 interface SourceFormProps {
@@ -252,15 +276,42 @@ interface SourceCardProps {
   onMarkChecked: () => void;
   markingChecked: boolean;
   alertCount: number;
+  checks: SourceCheck[];
+  onCheckSaved: () => void;
 }
 
 function SourceCard({
   source, onEdit, onToggle, onDelete, onPrepareAlert, onMarkChecked,
-  markingChecked, alertCount,
+  markingChecked, alertCount, checks, onCheckSaved,
 }: SourceCardProps) {
-  const inactive   = !source.isActive;
-  const monStatus  = getMonitoringStatus(source);
-  const monCfg     = monitoringConfig[monStatus];
+  const inactive  = !source.isActive;
+  const monStatus = getMonitoringStatus(source);
+  const monCfg    = monitoringConfig[monStatus];
+
+  const [showPanel,   setShowPanel]   = useState(false);
+  const [formResult,  setFormResult]  = useState<SourceCheckResult>("no_changes");
+  const [formNotes,   setFormNotes]   = useState("");
+  const [savingCheck, setSavingCheck] = useState(false);
+  const [checkMsg,    setCheckMsg]    = useState<{ ok: boolean; text: string } | null>(null);
+
+  async function handleSaveCheck() {
+    setSavingCheck(true);
+    setCheckMsg(null);
+    const res = await createSourceCheck({
+      sourceId: source.id,
+      result: formResult,
+      notes: formNotes || undefined,
+    });
+    setSavingCheck(false);
+    if (!res.ok) {
+      setCheckMsg({ ok: false, text: "Nie udało się zapisać wyniku sprawdzenia." });
+      return;
+    }
+    setFormNotes("");
+    setCheckMsg({ ok: true, text: "Wynik sprawdzenia zapisany." });
+    onCheckSaved();
+    setTimeout(() => setCheckMsg(null), 4000);
+  }
 
   return (
     <div
@@ -275,27 +326,21 @@ function SourceCard({
 
         {/* Source info */}
         <div className="flex-1 min-w-0">
-          {/* Badges row */}
           <div className="flex flex-wrap items-center gap-2 mb-1.5">
             <span className={`font-semibold text-sm ${inactive ? "text-slate-500" : "text-slate-900"}`}>
               {source.name}
             </span>
-
-            {/* Monitoring status */}
             <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${monCfg.badge}`}>
               {monCfg.label}
             </span>
-
             <span className="text-xs text-slate-400 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-full">
               {categoryLabels[source.category]}
             </span>
-
             <span className="text-xs text-slate-400 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-full">
               {sourceTypeLabels[source.sourceType]}
             </span>
           </div>
 
-          {/* URL */}
           <a
             href={source.url}
             target="_blank"
@@ -305,12 +350,10 @@ function SourceCard({
             {source.url}
           </a>
 
-          {/* Notes */}
           {source.notes && (
             <p className="text-sm text-slate-500 mt-1">{source.notes}</p>
           )}
 
-          {/* Last checked */}
           <p className="text-xs text-slate-400 mt-1.5">
             {source.lastCheckedAt
               ? `Ostatnio sprawdzono: ${formatCheckedAt(source.lastCheckedAt)}`
@@ -347,8 +390,7 @@ function SourceCard({
 
       {/* ── Footer: workflow actions ────────────────────────────────── */}
       <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
-        {/* Primary workflow */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={onPrepareAlert}
             className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors"
@@ -374,13 +416,75 @@ function SourceCard({
           >
             {markingChecked ? "Oznaczanie…" : "Oznacz jako sprawdzone"}
           </button>
+          <button
+            onClick={() => setShowPanel(!showPanel)}
+            className="px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+          >
+            Historia{checks.length > 0 ? ` (${checks.length})` : ""} {showPanel ? "↑" : "↓"}
+          </button>
         </div>
-
-        {/* Alert count */}
-        <span className="text-xs text-slate-400">
-          Alerty: {alertCount}
-        </span>
+        <span className="text-xs text-slate-400">Alerty: {alertCount}</span>
       </div>
+
+      {/* ── Check history panel ─────────────────────────────────────── */}
+      {showPanel && (
+        <div className="mt-3 pt-3 border-t border-slate-100">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
+            Historia sprawdzeń
+          </p>
+
+          {/* Check form */}
+          <div className="bg-slate-50 rounded-xl p-3 mb-4 space-y-2.5">
+            <select
+              value={formResult}
+              onChange={(e) => setFormResult(e.target.value as SourceCheckResult)}
+              className="w-full sm:w-auto text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {CHECK_RESULT_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+            <textarea
+              value={formNotes}
+              onChange={(e) => setFormNotes(e.target.value)}
+              rows={2}
+              placeholder="Notatka ze sprawdzenia (opcjonalna)..."
+              className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            />
+            {checkMsg && (
+              <p className={`text-xs font-medium ${checkMsg.ok ? "text-emerald-700" : "text-red-600"}`}>
+                {checkMsg.text}
+              </p>
+            )}
+            <button
+              onClick={handleSaveCheck}
+              disabled={savingCheck}
+              className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            >
+              {savingCheck ? "Zapisywanie…" : "Zapisz wynik sprawdzenia"}
+            </button>
+          </div>
+
+          {/* History list */}
+          {checks.length === 0 ? (
+            <p className="text-xs text-slate-400">Brak historii sprawdzeń.</p>
+          ) : (
+            <div className="space-y-2">
+              {checks.map((check) => (
+                <div key={check.id} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs">
+                  <span className={`font-medium shrink-0 ${resultConfig[check.result].color}`}>
+                    {resultConfig[check.result].label}
+                  </span>
+                  <span className="text-slate-400 shrink-0">{formatCheckedAt(check.checkedAt)}</span>
+                  {check.notes && (
+                    <span className="text-slate-500">— {check.notes}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -418,6 +522,7 @@ export default function SourcesPage() {
   const [checkSuccess, setCheckSuccess]           = useState<string | null>(null);
   const [checkError, setCheckError]               = useState<string | null>(null);
   const [alertCounts, setAlertCounts]             = useState<Record<string, number>>({});
+  const [sourceChecks, setSourceChecks]           = useState<Record<string, SourceCheck[]>>({});
 
   // ── Auth ────────────────────────────────────────────────────────────────────
 
@@ -442,6 +547,7 @@ export default function SourcesPage() {
     if (!session) return;
     loadSources();
     loadAlertCounts();
+    loadChecks();
   }, [session]);
 
   async function loadAlertCounts() {
@@ -464,6 +570,23 @@ export default function SourcesPage() {
     if (result.error) { setLoadState("error"); return; }
     setSources(result.sources);
     setLoadState("ready");
+  }
+
+  async function loadChecks() {
+    const result = await getSourceChecks();
+    if (result.error) return;
+    // Group by sourceId, keep the 3 most recent per source
+    // getSourceChecks returns rows ordered by checked_at DESC, so first 3 per source = most recent
+    const grouped: Record<string, SourceCheck[]> = {};
+    for (const check of result.checks) {
+      if (!grouped[check.sourceId]) grouped[check.sourceId] = [];
+      if (grouped[check.sourceId].length < 3) grouped[check.sourceId].push(check);
+    }
+    setSourceChecks(grouped);
+  }
+
+  async function handleCheckSaved() {
+    await Promise.all([loadSources(), loadChecks()]);
   }
 
   // ── Add form ────────────────────────────────────────────────────────────────
@@ -538,7 +661,7 @@ export default function SourcesPage() {
       return;
     }
     setCheckSuccess("Źródło oznaczone jako sprawdzone.");
-    await loadSources();
+    await Promise.all([loadSources(), loadChecks()]);
     setTimeout(() => setCheckSuccess(null), 4000);
   }
 
@@ -771,6 +894,8 @@ export default function SourcesPage() {
                 onMarkChecked={() => handleMarkChecked(source.id)}
                 markingChecked={markingCheckedId === source.id}
                 alertCount={alertCounts[source.id] ?? 0}
+                checks={sourceChecks[source.id] ?? []}
+                onCheckSaved={handleCheckSaved}
               />
             )
           )}
