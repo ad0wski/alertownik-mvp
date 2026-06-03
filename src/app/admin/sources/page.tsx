@@ -151,15 +151,21 @@ const CHECK_RESULT_OPTIONS: { value: SourceCheckResult; label: string }[] = [
   { value: "no_changes",     label: "Brak zmian" },
   { value: "found_notice",   label: "Znaleziono komunikat" },
   { value: "alert_created",  label: "Przygotowano alert" },
-  { value: "needs_followup", label: "Wymaga sprawdzenia" },
+  { value: "needs_followup", label: "Wymaga późniejszego sprawdzenia" },
 ];
 
 const resultConfig: Record<SourceCheckResult, { label: string; color: string }> = {
-  no_changes:     { label: "Brak zmian",            color: "text-slate-600" },
-  found_notice:   { label: "Znaleziono komunikat",  color: "text-blue-600" },
-  alert_created:  { label: "Przygotowano alert",    color: "text-emerald-600" },
-  needs_followup: { label: "Wymaga sprawdzenia",    color: "text-amber-600" },
+  no_changes:     { label: "Brak zmian",                     color: "text-slate-600" },
+  found_notice:   { label: "Znaleziono komunikat",           color: "text-blue-600" },
+  alert_created:  { label: "Przygotowano alert",             color: "text-emerald-600" },
+  needs_followup: { label: "Wymaga późniejszego sprawdzenia", color: "text-amber-600" },
 };
+
+// Results that warrant showing the notice text field
+const NOTICE_RESULTS: SourceCheckResult[] = ["found_notice", "alert_created", "needs_followup"];
+
+// Results that show the "Przygotuj alert" shortcut in history
+const ALERT_SHORTCUT_RESULTS: SourceCheckResult[] = ["found_notice", "needs_followup"];
 
 // ── SourceForm component ──────────────────────────────────────────────────────
 
@@ -284,33 +290,65 @@ function SourceCard({
   source, onEdit, onToggle, onDelete, onPrepareAlert, onMarkChecked,
   markingChecked, alertCount, checks, onCheckSaved,
 }: SourceCardProps) {
+  const router    = useRouter();
   const inactive  = !source.isActive;
   const monStatus = getMonitoringStatus(source);
   const monCfg    = monitoringConfig[monStatus];
 
-  const [showPanel,   setShowPanel]   = useState(false);
-  const [formResult,  setFormResult]  = useState<SourceCheckResult>("no_changes");
-  const [formNotes,   setFormNotes]   = useState("");
-  const [savingCheck, setSavingCheck] = useState(false);
-  const [checkMsg,    setCheckMsg]    = useState<{ ok: boolean; text: string } | null>(null);
+  const [showPanel,        setShowPanel]        = useState(false);
+  const [formResult,       setFormResult]       = useState<SourceCheckResult>("no_changes");
+  const [formNotes,        setFormNotes]        = useState("");
+  const [formNoticeText,   setFormNoticeText]   = useState("");
+  const [savingCheck,      setSavingCheck]      = useState(false);
+  const [checkMsg,         setCheckMsg]         = useState<{ ok: boolean; text: string } | null>(null);
+  const [savedCheckResult, setSavedCheckResult] = useState<SourceCheckResult | null>(null);
+  const [savedCheckNotes,  setSavedCheckNotes]  = useState("");
+
+  const showNoticeField = NOTICE_RESULTS.includes(formResult);
+
+  function handleResultChange(newResult: SourceCheckResult) {
+    setFormResult(newResult);
+    setSavedCheckResult(null);
+    setFormNoticeText("");
+  }
+
+  function handlePrepareAlertFromCheck(checkNotes?: string) {
+    sessionStorage.setItem(PENDING_SOURCE_KEY, JSON.stringify({
+      sourceId:          source.id,
+      sourceName:        source.name,
+      sourceUrl:         source.url,
+      suggestedCategory: source.category,
+      checkNotes:        checkNotes ?? "",
+    }));
+    router.push("/ai-helper");
+  }
 
   async function handleSaveCheck() {
     setSavingCheck(true);
     setCheckMsg(null);
+    setSavedCheckResult(null);
+
+    const noticeText  = formNoticeText.trim();
+    const generalNote = formNotes.trim();
+    const combinedNotes = [noticeText, generalNote].filter(Boolean).join("\n---\n");
+
     const res = await createSourceCheck({
       sourceId: source.id,
-      result: formResult,
-      notes: formNotes || undefined,
+      result:   formResult,
+      notes:    combinedNotes || undefined,
     });
     setSavingCheck(false);
     if (!res.ok) {
       setCheckMsg({ ok: false, text: "Nie udało się zapisać wyniku sprawdzenia." });
       return;
     }
+    setSavedCheckResult(formResult);
+    setSavedCheckNotes(combinedNotes);
+    setFormNoticeText("");
     setFormNotes("");
     setCheckMsg({ ok: true, text: "Wynik sprawdzenia zapisany." });
     onCheckSaved();
-    setTimeout(() => setCheckMsg(null), 4000);
+    setTimeout(() => setCheckMsg(null), 5000);
   }
 
   return (
@@ -437,13 +475,30 @@ function SourceCard({
           <div className="bg-slate-50 rounded-xl p-3 mb-4 space-y-2.5">
             <select
               value={formResult}
-              onChange={(e) => setFormResult(e.target.value as SourceCheckResult)}
+              onChange={(e) => handleResultChange(e.target.value as SourceCheckResult)}
               className="w-full sm:w-auto text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {CHECK_RESULT_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
+
+            {/* Notice text — shown when admin found something */}
+            {showNoticeField && (
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">
+                  Treść komunikatu lub link do komunikatu
+                </label>
+                <textarea
+                  value={formNoticeText}
+                  onChange={(e) => setFormNoticeText(e.target.value)}
+                  rows={3}
+                  placeholder="Wklej fragment komunikatu, link do strony albo krótką notatkę, którą chcesz potem przerobić na alert..."
+                  className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                />
+              </div>
+            )}
+
             <textarea
               value={formNotes}
               onChange={(e) => setFormNotes(e.target.value)}
@@ -451,33 +506,56 @@ function SourceCard({
               placeholder="Notatka ze sprawdzenia (opcjonalna)..."
               className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
             />
-            {checkMsg && (
-              <p className={`text-xs font-medium ${checkMsg.ok ? "text-emerald-700" : "text-red-600"}`}>
-                {checkMsg.text}
-              </p>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={handleSaveCheck}
+                disabled={savingCheck}
+                className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              >
+                {savingCheck ? "Zapisywanie…" : "Zapisz wynik sprawdzenia"}
+              </button>
+              {checkMsg && (
+                <p className={`text-xs font-medium ${checkMsg.ok ? "text-emerald-700" : "text-red-600"}`}>
+                  {checkMsg.text}
+                </p>
+              )}
+            </div>
+
+            {/* Post-save shortcut to AI Helper */}
+            {savedCheckResult === "found_notice" && (
+              <button
+                onClick={() => handlePrepareAlertFromCheck(savedCheckNotes)}
+                className="w-full sm:w-auto px-3 py-2 bg-emerald-600 text-white text-xs font-semibold rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-1.5"
+              >
+                Przygotuj alert w AI Helperze →
+              </button>
             )}
-            <button
-              onClick={handleSaveCheck}
-              disabled={savingCheck}
-              className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-            >
-              {savingCheck ? "Zapisywanie…" : "Zapisz wynik sprawdzenia"}
-            </button>
           </div>
 
           {/* History list */}
           {checks.length === 0 ? (
             <p className="text-xs text-slate-400">Brak historii sprawdzeń.</p>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {checks.map((check) => (
-                <div key={check.id} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs">
-                  <span className={`font-medium shrink-0 ${resultConfig[check.result].color}`}>
-                    {resultConfig[check.result].label}
-                  </span>
-                  <span className="text-slate-400 shrink-0">{formatCheckedAt(check.checkedAt)}</span>
-                  {check.notes && (
-                    <span className="text-slate-500">— {check.notes}</span>
+                <div key={check.id} className="text-xs">
+                  <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                    <span className={`font-medium shrink-0 ${resultConfig[check.result].color}`}>
+                      {resultConfig[check.result].label}
+                    </span>
+                    <span className="text-slate-400 shrink-0">{formatCheckedAt(check.checkedAt)}</span>
+                    {check.notes && (
+                      <span className="text-slate-500 line-clamp-1">— {check.notes}</span>
+                    )}
+                  </div>
+                  {ALERT_SHORTCUT_RESULTS.includes(check.result) && (
+                    <button
+                      onClick={() => handlePrepareAlertFromCheck(check.notes)}
+                      className="mt-0.5 text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                    >
+                      Przygotuj alert →
+                    </button>
                   )}
                 </div>
               ))}

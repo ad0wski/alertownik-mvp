@@ -46,10 +46,10 @@ function formatDate(iso: string): string {
 }
 
 const CHECK_RESULT_LABELS: Record<string, { label: string; color: string }> = {
-  no_changes:     { label: "Brak zmian",            color: "text-slate-600" },
-  found_notice:   { label: "Znaleziono komunikat",  color: "text-blue-600" },
-  alert_created:  { label: "Przygotowano alert",    color: "text-emerald-600" },
-  needs_followup: { label: "Wymaga sprawdzenia",    color: "text-amber-600" },
+  no_changes:     { label: "Brak zmian",                     color: "text-slate-600" },
+  found_notice:   { label: "Znaleziono komunikat",           color: "text-blue-600" },
+  alert_created:  { label: "Przygotowano alert",             color: "text-emerald-600" },
+  needs_followup: { label: "Wymaga późniejszego sprawdzenia", color: "text-amber-600" },
 };
 
 function sourceNeedsChecking(lastCheckedAt: string | undefined, isActive: boolean): boolean {

@@ -98,6 +98,7 @@ interface PendingSourceData {
   sourceUrl: string;
   suggestedCategory: string;
   sourceId: string;
+  checkNotes?: string;
 }
 
 const REQUIRED_FIELDS = [
@@ -130,7 +131,7 @@ export default function AiHelperPage() {
   const [copied, setCopied] = useState(false);
   const [aiJsonInput, setAiJsonInput] = useState("");
   const [aiJsonStatus, setAiJsonStatus] = useState<"idle" | "valid" | "error">("idle");
-  const [sourceLoaded, setSourceLoaded] = useState(false);
+  const [loadedFrom, setLoadedFrom] = useState<"source" | "check" | null>(null);
   const [pendingSourceId, setPendingSourceId] = useState("");
 
   useEffect(() => {
@@ -138,12 +139,17 @@ export default function AiHelperPage() {
       const raw = sessionStorage.getItem(PENDING_SOURCE_KEY);
       if (!raw) return;
       const data: PendingSourceData = JSON.parse(raw);
-      if (data.sourceName) setSourceName(data.sourceName);
-      if (data.sourceUrl) setSourceUrl(data.sourceUrl);
+      if (data.sourceName)        setSourceName(data.sourceName);
+      if (data.sourceUrl)         setSourceUrl(data.sourceUrl);
       if (data.suggestedCategory) setSuggestedCategory(data.suggestedCategory);
-      if (data.sourceId) setPendingSourceId(data.sourceId);
+      if (data.sourceId)          setPendingSourceId(data.sourceId);
       sessionStorage.removeItem(PENDING_SOURCE_KEY);
-      setSourceLoaded(true);
+      if (data.checkNotes) {
+        setRawText(data.checkNotes);
+        setLoadedFrom("check");
+      } else {
+        setLoadedFrom("source");
+      }
     } catch {
       // ignore malformed data
     }
@@ -199,13 +205,23 @@ export default function AiHelperPage() {
       </div>
 
       {/* Source loaded banner */}
-      {sourceLoaded && (
+      {loadedFrom === "source" && (
         <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-5 py-4 mb-6">
           <p className="text-sm font-semibold text-emerald-800 mb-1">
             Źródło zostało wczytane do AI Helpera.
           </p>
           <p className="text-sm text-emerald-700">
             Teraz wklej komunikat z tego źródła, a potem skopiuj prompt do ChatGPT lub Claude.
+          </p>
+        </div>
+      )}
+      {loadedFrom === "check" && (
+        <div className="rounded-xl bg-blue-50 border border-blue-200 px-5 py-4 mb-6">
+          <p className="text-sm font-semibold text-blue-800 mb-1">
+            Komunikat ze sprawdzenia źródła został wczytany do AI Helpera.
+          </p>
+          <p className="text-sm text-blue-700">
+            Treść komunikatu jest już wklejona w polu poniżej. Sprawdź, uzupełnij jeśli potrzeba, i skopiuj prompt do ChatGPT lub Claude.
           </p>
         </div>
       )}
