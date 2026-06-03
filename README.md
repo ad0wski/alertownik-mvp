@@ -1,105 +1,83 @@
 # Alertownik
 
-**Alertownik** is a local civic alerts web app that helps residents quickly understand nearby disruptions — transport delays, water outages, power cuts, road works, and municipal announcements.
+**Alertownik** is a Polish local civic alerts web app. It helps residents quickly understand nearby disruptions — transport delays, water outages, power cuts, road works, and municipal announcements.
 
-The app presents alerts in plain, scannable language: what's happening, where, when, and what to do. Each alert links back to the original official source.
+Each alert has a fixed structure: what's happening, where, when, and what to do. Every alert links back to the original official source.
 
-> This is an early-stage MVP built for learning and product validation. No real user data is stored or included in this repository.
+**Live:** [https://alertownik-mvp.vercel.app/](https://alertownik-mvp.vercel.app/)
 
-**Live demo:** [https://alertownik-mvp.vercel.app/](https://alertownik-mvp.vercel.app/)
-
----
-
-## Problem
-
-Local official announcements — from train operators, municipalities, water utilities — are often:
-- published in bureaucratic language that is hard to scan quickly
-- scattered across multiple websites with inconsistent formatting
-- not optimized for mobile reading
-
-Residents often miss important information that directly affects their day.
-
-## What Alertownik Does
-
-Alertownik provides a single, consistent view of local alerts in a clean, readable format. Each alert has a fixed structure:
-
-- **What's changing** — a factual description
-- **What to do** — a clear resident-facing action
-- **When and where** — a precise time and location
-- **Source** — a link to the original official announcement
-
----
-
-## Current Features (MVP)
-
-- Homepage with alert list and category filters (Transport, Water, Power, Waste, Roads, Municipal)
-- Expandable alert cards with full details
-- Dedicated detail pages at `/alerts/[slug]`
-- Alert Builder — a form to create new alerts manually
-- JSON Import — paste a JSON alert object directly into the builder
-- AI Helper — generates a structured prompt for ChatGPT or Claude to convert a raw announcement into the Alertownik alert format (no API key required)
-- Local draft saving (localStorage)
-- Local alert publishing (localStorage — alerts appear in the list without a backend)
-- Realistic sample alerts included for demonstration
+> Early-stage MVP built for learning and product validation. No real user PII is stored or included in this repository.
 
 ---
 
 ## Tech Stack
 
-| Layer       | Technology                        |
-|-------------|-----------------------------------|
-| Framework   | Next.js 16 (App Router)           |
-| Language    | TypeScript 5                      |
-| UI          | React 19                          |
-| Styling     | Tailwind CSS v4                   |
-| Storage     | localStorage (no database)        |
-| Hosting     | Vercel — [alertownik-mvp.vercel.app](https://alertownik-mvp.vercel.app/) |
-| Font        | Geist (via Next.js font system)   |
-
-No external APIs, no authentication, no database yet. Supabase integration is planned — see [docs/BACKEND_DECISION.md](docs/BACKEND_DECISION.md).
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 16 (App Router, Turbopack) |
+| Language | TypeScript 5 |
+| UI | React 19 |
+| Styling | Tailwind CSS v4 |
+| Database | Supabase (PostgreSQL + Auth + RLS) |
+| Hosting | Vercel |
 
 ---
 
 ## Run Locally
 
-**Prerequisites:** Node.js 18+
+**Prerequisites:** Node.js 18+, a Supabase project (see `docs/SUPABASE_SETUP_CHECKLIST.md`)
 
 ```bash
 git clone <repo-url>
 cd alertownik-mvp
 npm install
+# Copy .env.local with your Supabase URL and anon key
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3000](http://localhost:3000).
 
 ---
 
-## Project Status
+## What Works
 
-Early MVP — deployed publicly on Vercel with sample data.
+| Feature | Location |
+|---|---|
+| Public alert list, search, category filters | `/` |
+| "Moje alerty" user preferences (localStorage) | `/` |
+| Alert detail pages | `/alerts/[slug]` |
+| Admin login (Supabase Auth) | `/login` |
+| Admin dashboard with stats and source overview | `/admin` |
+| Alert Builder — create, edit, publish, archive | `/builder` |
+| AI Helper — manual prompt → ChatGPT/Claude → JSON | `/ai-helper` |
+| Source registry — add, edit, monitor sources | `/admin/sources` |
+| Manual source monitoring and check history | `/admin/sources` |
+| Source check → AI Helper shortcut | `/admin/sources` → `/ai-helper` |
+| PWA manifest + mobile-friendly header | all pages |
+
+---
+
+## Key Documents
 
 | Document | Purpose |
-|----------|---------|
-| [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) | What works and what's intentionally out of scope |
-| [docs/LIMITATIONS.md](docs/LIMITATIONS.md) | Honest breakdown of current constraints |
-| [docs/DEMO_GUIDE.md](docs/DEMO_GUIDE.md) | How to present and explain the demo |
-| [docs/QA_CHECKLIST.md](docs/QA_CHECKLIST.md) | Pre-demo and pre-deploy checklist |
-| [docs/BACKEND_DECISION.md](docs/BACKEND_DECISION.md) | Backend options analysis and Supabase recommendation |
-| [docs/SUPABASE_SETUP_CHECKLIST.md](docs/SUPABASE_SETUP_CHECKLIST.md) | Step-by-step Supabase setup guide and pre-connection checklist |
-
----
-
-## Roadmap
-
-See [docs/ROADMAP.md](docs/ROADMAP.md) for planned stages: backend, real AI integration, source monitoring, and notifications.
+|---|---|
+| [CLAUDE.md](CLAUDE.md) | Claude Code operating system — read before writing any code |
+| [docs/AI_WORKFLOW.md](docs/AI_WORKFLOW.md) | How to work with Claude Code safely |
+| [docs/QA_MANUAL_CHECKLIST.md](docs/QA_MANUAL_CHECKLIST.md) | Manual QA checklist for every sprint |
+| [docs/NEXT_MILESTONES.md](docs/NEXT_MILESTONES.md) | Product milestone roadmap |
+| [docs/SUPABASE_SETUP_CHECKLIST.md](docs/SUPABASE_SETUP_CHECKLIST.md) | Supabase project setup guide |
+| [docs/supabase_source_checks.sql](docs/supabase_source_checks.sql) | SQL migration: source_checks table (Sprint 49) |
+| [docs/supabase_sources_schema.sql](docs/supabase_sources_schema.sql) | SQL migration: alert_sources table |
+| [docs/supabase_alerts_source_id.sql](docs/supabase_alerts_source_id.sql) | SQL migration: source_id FK on alerts |
+| [docs/PRODUCT_NOTES.md](docs/PRODUCT_NOTES.md) | Product thinking and design principles |
+| [docs/DEMO_GUIDE.md](docs/DEMO_GUIDE.md) | How to demo the app |
+| [docs/LIMITATIONS.md](docs/LIMITATIONS.md) | Honest current constraints |
 
 ---
 
 ## Notes
 
-- The app UI is in **Polish** (target users are Polish-speaking local residents).
-- No real user data, survey results, or private contact information is included in this repository.
-- WKD (a Warsaw suburban railway) is used as the first test case for alert sourcing; the product is not limited to WKD.
-
-See [docs/PRODUCT_NOTES.md](docs/PRODUCT_NOTES.md) for product thinking and design principles.
+- The app UI is in **Polish** — target users are Polish-speaking local residents.
+- The service_role Supabase key is never used in frontend code — only the anon key.
+- `.env.local` is in `.gitignore` and must never be committed.
+- `npm run build` must pass before every commit.
