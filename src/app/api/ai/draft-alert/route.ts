@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import Anthropic from "@anthropic-ai/sdk";
 import type { AlertCategory, AlertSeverity } from "@/types/alert";
+import { normalizeAlertSeverity } from "@/lib/normalizeAlert";
 
 // ── Public types ─────────────────────────────────────────────────────────────
 
@@ -19,8 +21,41 @@ export interface AlertDraft {
 }
 
 export type DraftAlertResponse =
-  | { ok: true;  draft: AlertDraft; mock: true }
+  | { ok: true;  draft: AlertDraft; mode: "mock" | "anthropic" }
   | { ok: false; error: string };
+
+// ── AI config ─────────────────────────────────────────────────────────────────
+// Server-only: process.env.ANTHROPIC_API_KEY is never exposed to the browser.
+// Do NOT rename to NEXT_PUBLIC_ANTHROPIC_API_KEY — that would expose it client-side.
+
+const AI_DRAFT_MODEL = "claude-haiku-4-5-20251001";
+
+const AI_SYSTEM_PROMPT = `Jesteś asystentem aplikacji Alertownik — lokalnego serwisu z alertami dla mieszkańców Polski.
+Przekształcasz komunikaty urzędowe i lokalne w ustrukturyzowany alert JSON.
+
+Zwróć TYLKO obiekt JSON. Bez komentarzy, bez markdown, bez żadnego tekstu przed ani po JSON.
+
+Schemat wyjściowy:
+{
+  "category": "transport" | "water" | "power" | "waste" | "roads" | "municipal",
+  "severity": "info" | "warning" | "urgent",
+  "title": "<krótki tytuł po polsku, max 60 znaków>",
+  "slug": "<url-slug: małe litery ASCII, myślniki zamiast spacji i polskich liter>",
+  "place": "<dokładna lokalizacja z ulicą lub rejonem — jeśli brak w komunikacie: zostaw pusty string \"\">",
+  "startsAt": "<data YYYY-MM-DD — jeśli brak w komunikacie: użyj podanej dzisiejszej daty>",
+  "endsAt": "<data YYYY-MM-DD — jeśli brak w komunikacie: null>",
+  "change": "<co dokładnie się zmienia — 1–3 zdania po polsku>",
+  "action": "<co mieszkaniec powinien zrobić — 1–2 zdania po polsku>",
+  "sourceName": "<nazwa instytucji lub źródła>",
+  "sourceUrl": "<URL lub null>"
+}
+
+Zasady:
+1. Pisz prostym językiem zrozumiałym dla mieszkańca.
+2. severity: "urgent" = awaria lub zagrożenie bezpieczeństwa; "warning" = planowane utrudnienie lub zmiana; "info" = informacja bez pilności.
+3. Nie wymyślaj faktów. Jeśli data nie jest podana, użyj dzisiejszej daty dla startsAt i null dla endsAt.
+4. Nie dodawaj pola sourceId — jest uzupełniane przez aplikację.
+5. Nie zwracaj żadnych dodatkowych pól poza wymienionym schematem.`;
 
 // ── Category detection ───────────────────────────────────────────────────────
 
@@ -74,6 +109,14 @@ function detectCategory(text: string, suggested?: string): AlertCategory {
   for (const { category, keywords } of CATEGORY_KEYWORDS) {
     if (keywords.some((k) => lower.includes(k))) return category;
   }
+  return "municipal";
+}
+
+// Normalize a raw category string from AI output
+function normalizeCategory(raw: unknown, suggested: string | undefined): AlertCategory {
+  const lower = typeof raw === "string" ? raw.toLowerCase().trim() : "";
+  if ((VALID_CATEGORIES as string[]).includes(lower)) return lower as AlertCategory;
+  if (suggested && (VALID_CATEGORIES as string[]).includes(suggested)) return suggested as AlertCategory;
   return "municipal";
 }
 
@@ -151,6 +194,68 @@ const CATEGORY_ACTIONS: Record<AlertCategory, string> = {
     "i stosuj się do zaleceń.",
 };
 
+// ── AI response helpers ───────────────────────────────────────────────────────
+
+// Strip markdown code fences if the model wrapped its JSON
+function extractJson(text: string): string {
+  const match = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (match) return match[1].trim();
+  return text.trim();
+}
+
+// Sanitize and normalize a raw object from the AI into a valid AlertDraft.
+// Returns null if the draft is missing required content.
+function buildAiDraft(
+  raw: Record<string, unknown>,
+  fallbackSourceName: string,
+  fallbackSourceUrl: string | null,
+  suggestedCategory: string | undefined,
+  today: string,
+): AlertDraft | null {
+  const category = normalizeCategory(raw.category, suggestedCategory);
+
+  const rawSeverity = normalizeAlertSeverity(raw.severity);
+  const severity: AlertSeverity = rawSeverity ?? detectSeverity(
+    [raw.change, raw.title].filter((v) => typeof v === "string").join(" ")
+  );
+
+  const title = typeof raw.title === "string" && raw.title.trim()
+    ? trimAtWord(raw.title.trim(), 80)
+    : "Alert lokalny";
+
+  const rawSlug = typeof raw.slug === "string" ? raw.slug.trim().toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "") : "";
+  const slug = rawSlug || toSlug(title);
+
+  const place = typeof raw.place === "string" ? raw.place.trim() : "";
+
+  const startsAt = typeof raw.startsAt === "string" && /^\d{4}-\d{2}-\d{2}/.test(raw.startsAt)
+    ? raw.startsAt.slice(0, 10)
+    : today;
+
+  const endsAt = typeof raw.endsAt === "string" && /^\d{4}-\d{2}-\d{2}/.test(raw.endsAt)
+    ? raw.endsAt.slice(0, 10)
+    : null;
+
+  const change = typeof raw.change === "string" && raw.change.trim()
+    ? raw.change.trim()
+    : "";
+  if (!change) return null; // change is required
+
+  const action = typeof raw.action === "string" && raw.action.trim()
+    ? raw.action.trim()
+    : CATEGORY_ACTIONS[category];
+
+  const sourceName = typeof raw.sourceName === "string" && raw.sourceName.trim()
+    ? raw.sourceName.trim()
+    : fallbackSourceName;
+
+  const sourceUrl = typeof raw.sourceUrl === "string" && raw.sourceUrl.trim()
+    ? raw.sourceUrl.trim()
+    : fallbackSourceUrl;
+
+  return { category, severity, title, slug, place, startsAt, endsAt, change, action, sourceName, sourceUrl };
+}
+
 // ── Route handler ────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest): Promise<NextResponse<DraftAlertResponse>> {
@@ -178,7 +283,55 @@ export async function POST(req: NextRequest): Promise<NextResponse<DraftAlertRes
     typeof body.sourceName === "string" ? body.sourceName.trim() : "";
   const sourceUrl =
     typeof body.sourceUrl === "string" ? body.sourceUrl.trim() : "";
+  const today = new Date().toISOString().split("T")[0];
 
+  // ── Real AI mode (requires ANTHROPIC_API_KEY in server environment) ──────
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (apiKey) {
+    try {
+      const client = new Anthropic({ apiKey });
+
+      const parts: string[] = [`Komunikat źródłowy:\n${sourceText}`];
+      if (sourceName) parts.push(`Nazwa źródła: ${sourceName}`);
+      if (sourceUrl)  parts.push(`URL źródła: ${sourceUrl}`);
+      if (suggestedCategory) parts.push(`Sugerowana kategoria: ${suggestedCategory}`);
+      parts.push(`Dzisiejsza data: ${today}`);
+
+      const message = await client.messages.create({
+        model: AI_DRAFT_MODEL,
+        max_tokens: 1024,
+        system: AI_SYSTEM_PROMPT,
+        messages: [{ role: "user", content: parts.join("\n") }],
+      });
+
+      const firstBlock = message.content[0];
+      const responseText =
+        firstBlock !== undefined && firstBlock.type === "text" ? firstBlock.text : "";
+
+      const jsonText = extractJson(responseText);
+      let parsed: Record<string, unknown>;
+      try {
+        parsed = JSON.parse(jsonText);
+      } catch {
+        return NextResponse.json({ ok: false, error: "AI zwróciło nieprawidłowy format draftu." });
+      }
+
+      const draft = buildAiDraft(parsed, sourceName, sourceUrl || null, suggestedCategory, today);
+      if (!draft) {
+        return NextResponse.json({ ok: false, error: "AI zwróciło nieprawidłowy format draftu." });
+      }
+
+      return NextResponse.json({ ok: true, draft, mode: "anthropic" });
+    } catch (err) {
+      console.error("[ai/draft-alert] Anthropic API error:", err);
+      return NextResponse.json({
+        ok: false,
+        error: "Nie udało się połączyć z API AI. Spróbuj ponownie lub użyj ręcznego promptu.",
+      });
+    }
+  }
+
+  // ── Mock mode (no API key configured) ────────────────────────────────────
   const category = detectCategory(sourceText, suggestedCategory);
   const severity  = detectSeverity(sourceText);
   const title     = extractTitle(sourceText);
@@ -189,7 +342,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<DraftAlertRes
     title,
     slug:       toSlug(title),
     place:      "",
-    startsAt:   new Date().toISOString().split("T")[0],
+    startsAt:   today,
     endsAt:     null,
     change:     trimAtWord(sourceText, 200),
     action:     CATEGORY_ACTIONS[category],
@@ -197,5 +350,5 @@ export async function POST(req: NextRequest): Promise<NextResponse<DraftAlertRes
     sourceUrl:  sourceUrl || null,
   };
 
-  return NextResponse.json({ ok: true, draft, mock: true });
+  return NextResponse.json({ ok: true, draft, mode: "mock" });
 }

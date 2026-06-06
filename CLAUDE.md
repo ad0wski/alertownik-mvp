@@ -139,12 +139,15 @@ Only the **anon key** is used. The service_role key is never used in any fronten
 5. **Never change the Supabase schema** (add/drop tables or columns, change constraints) without the user explicitly requesting it. When a schema change is needed, write a SQL file in `docs/` for the user to run manually — never execute SQL automatically.
 6. **Never add, remove, or upgrade npm packages** without the user confirming the dependency is needed.
 7. **Never modify `.env.local`**.
+8. **Never use `NEXT_PUBLIC_` prefix for AI API keys.** The `NEXT_PUBLIC_` prefix exposes env vars to the browser. AI keys (`ANTHROPIC_API_KEY`, etc.) must be server-only, accessed only in route handlers or server components — never in `src/app/**/page.tsx` client components.
+9. **Never call external AI APIs from client-side code.** All calls to Anthropic, OpenAI, or any AI API must go through a server-side route handler (e.g. `/api/ai/draft-alert`). The API key must never leave the server.
+10. **Never publish AI-generated drafts automatically.** AI output is always loaded into Builder for admin review. Admin must explicitly click "Opublikuj w Supabase" — no auto-publish path exists.
 
 ---
 
 ## What Claude Must Never Do (Without Explicit Permission)
 
-- Add AI API keys or call LLM APIs from server or client code
+- Add new AI API keys or call LLM APIs from client-side code (server-side via `/api/ai/*` routes is allowed with explicit user approval)
 - Add web scraping or automated source monitoring
 - Add cron jobs or background tasks
 - Add push notifications or email sending

@@ -143,6 +143,7 @@ export default function AiHelperPage() {
   const [aiDraftResult, setAiDraftResult] = useState<string | null>(null);
   const [aiDraftError, setAiDraftError] = useState<string | null>(null);
   const [aiDraftSent, setAiDraftSent] = useState(false);
+  const [aiDraftMode, setAiDraftMode] = useState<"mock" | "anthropic" | null>(null);
 
   useEffect(() => {
     try {
@@ -205,6 +206,7 @@ export default function AiHelperPage() {
     setAiDraftResult(null);
     setAiDraftError(null);
     setAiDraftSent(false);
+    setAiDraftMode(null);
     try {
       const res = await fetch("/api/ai/draft-alert", {
         method: "POST",
@@ -222,6 +224,7 @@ export default function AiHelperPage() {
         setAiDraftStatus("error");
       } else {
         setAiDraftResult(JSON.stringify(data.draft, null, 2));
+        setAiDraftMode(data.mode ?? "mock");
         setAiDraftStatus("success");
       }
     } catch {
@@ -255,7 +258,7 @@ export default function AiHelperPage() {
           </span>
         </div>
         <p className="mt-1 text-sm text-slate-500 leading-relaxed">
-          Generuje gotowy prompt do wklejenia w ChatGPT lub Claude. Nie łączy się z żadnym API.
+          Wygeneruj szkic alertu przez AI lub przygotuj prompt do ChatGPT / Claude.
         </p>
       </div>
 
@@ -360,7 +363,7 @@ export default function AiHelperPage() {
             Przed wysłaniem do Kreatora sprawdź i popraw lokalizację, daty i treść.
           </p>
           <p className="text-xs text-blue-500 mt-1.5 italic">
-            Generator działa teraz w trybie testowym — w kolejnym kroku podłączymy prawdziwe API AI.
+            Draft AI zawsze wymaga sprawdzenia przed publikacją — uzupełnij lokalizację, daty i treść.
           </p>
         </div>
 
@@ -383,9 +386,20 @@ export default function AiHelperPage() {
         {aiDraftStatus === "success" && aiDraftResult && (
           <div className="flex flex-col gap-3">
             <div>
-              <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-2">
-                Wygenerowany szkic alertu
-              </p>
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">
+                  Wygenerowany szkic alertu
+                </p>
+                {aiDraftMode === "anthropic" ? (
+                  <span className="inline-flex items-center text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
+                    Tryb: Claude API
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center text-xs font-medium text-slate-500 bg-slate-100 border border-slate-200 rounded-full px-2 py-0.5">
+                    Tryb: testowy
+                  </span>
+                )}
+              </div>
               <pre className="bg-white border border-blue-200 text-slate-700 rounded-xl p-4 text-xs font-mono leading-relaxed overflow-x-auto whitespace-pre-wrap break-words">
                 {aiDraftResult}
               </pre>
@@ -398,8 +412,8 @@ export default function AiHelperPage() {
               >
                 {aiDraftSent ? "Wysłano do Kreatora ✓" : "Wczytaj draft do Kreatora →"}
               </button>
-              <span className="text-xs text-blue-600">
-                Pamiętaj, żeby uzupełnić lokalizację i sprawdzić daty.
+              <span className="text-xs text-blue-600 font-medium">
+                Draft AI zawsze wymaga sprawdzenia przed publikacją.
               </span>
             </div>
           </div>

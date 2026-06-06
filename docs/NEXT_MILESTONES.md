@@ -4,7 +4,7 @@ This document describes the next meaningful product milestones, not individual s
 Each milestone is a coherent capability the product gains. Milestones can be broken into
 sprints during active development.
 
-Last updated: June 2026 — Sprint 57: API route + mock generator added, Milestone B active
+Last updated: June 2026 — Sprint 58: real Anthropic API mode added, mock fallback preserved
 
 ---
 
