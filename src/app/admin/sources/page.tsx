@@ -797,7 +797,8 @@ export default function SourcesPage() {
           )}
         </div>
         <p className="text-sm text-slate-500 leading-relaxed">
-          Lista stron i miejsc, z których Alertownik może w przyszłości pobierać komunikaty.
+          Miejsca, w których mogą pojawiać się komunikaty do przetworzenia na alerty.
+          Sprawdzanie odbywa się ręcznie — kliknij „Sprawdź" przy wybranym źródle, aby zapisać wynik.
         </p>
       </div>
 

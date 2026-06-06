@@ -95,7 +95,7 @@ export function AlertCard({ alert, isPreview }: { alert: Alert; isPreview?: bool
         </button>
         {isPreview ? (
           <span className="text-xs text-slate-400 italic">
-            Podgląd roboczy — alert nie ma jeszcze własnej strony.
+            Podgląd — alert nie jest jeszcze opublikowany w bazie.
           </span>
         ) : (
           <Link

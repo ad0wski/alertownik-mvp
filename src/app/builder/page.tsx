@@ -694,9 +694,8 @@ export default function BuilderPage() {
           </span>
         </div>
         <p className="mt-1 text-sm text-slate-500 leading-relaxed">
-          Robocze narzędzie do przygotowywania i zapisywania nowych alertów.
-          Umożliwia zapis lokalny (w przeglądarce) oraz bezpośredni zapis do Supabase.
-          Widoczne tylko dla zalogowanego administratora.
+          Przygotuj nowy alert, uzupełnij formularz i opublikuj go w bazie danych.
+          Możesz też zapisać lokalny szkic lub wczytać alert z AI Helpera.
         </p>
       </div>
 
@@ -966,7 +965,7 @@ export default function BuilderPage() {
       </section>
 
       {/* ── Form actions (lokalne) ────────────────────────────────────── */}
-      <p className="text-xs text-slate-400 mb-2">Zapis lokalny (tylko w przeglądarce):</p>
+      <p className="text-xs text-slate-400 mb-2">Zapis lokalny — tylko w tej przeglądarce, niewidoczny dla innych:</p>
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <button
           onClick={saveDraft}

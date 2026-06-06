@@ -176,7 +176,7 @@ export default function AdminPage() {
           </span>
         </div>
         <p className="mt-1 text-sm text-slate-500 leading-relaxed">
-          Szybki podgląd alertów i narzędzi roboczych Alertownika.
+          Przegląd alertów, źródeł do sprawdzenia i ostatnich działań.
         </p>
       </div>
 
