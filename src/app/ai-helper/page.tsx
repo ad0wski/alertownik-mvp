@@ -122,6 +122,10 @@ function validateAiJson(text: string): boolean {
   }
 }
 
+// ── AI draft generator state types ───────────────────────────────────────────
+
+type AiDraftStatus = "idle" | "loading" | "success" | "error";
+
 export default function AiHelperPage() {
   const router = useRouter();
   const [rawText, setRawText] = useState("");
@@ -133,6 +137,12 @@ export default function AiHelperPage() {
   const [aiJsonStatus, setAiJsonStatus] = useState<"idle" | "valid" | "error">("idle");
   const [loadedFrom, setLoadedFrom] = useState<"source" | "check" | null>(null);
   const [pendingSourceId, setPendingSourceId] = useState("");
+
+  // AI draft generator
+  const [aiDraftStatus, setAiDraftStatus] = useState<AiDraftStatus>("idle");
+  const [aiDraftResult, setAiDraftResult] = useState<string | null>(null);
+  const [aiDraftError, setAiDraftError] = useState<string | null>(null);
+  const [aiDraftSent, setAiDraftSent] = useState(false);
 
   useEffect(() => {
     try {
@@ -182,6 +192,51 @@ export default function AiHelperPage() {
     if (pendingSourceId) {
       sessionStorage.setItem(AI_PENDING_SOURCE_ID_KEY, pendingSourceId);
     }
+    router.push("/builder");
+  }
+
+  async function generateDraft() {
+    if (!rawText.trim()) {
+      setAiDraftError("Wklej komunikat źródłowy, zanim wygenerujesz draft.");
+      setAiDraftStatus("error");
+      return;
+    }
+    setAiDraftStatus("loading");
+    setAiDraftResult(null);
+    setAiDraftError(null);
+    setAiDraftSent(false);
+    try {
+      const res = await fetch("/api/ai/draft-alert", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sourceText: rawText,
+          sourceName:        sourceName || undefined,
+          sourceUrl:         sourceUrl  || undefined,
+          suggestedCategory: suggestedCategory || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!data.ok) {
+        setAiDraftError(data.error ?? "Nie udało się wygenerować draftu.");
+        setAiDraftStatus("error");
+      } else {
+        setAiDraftResult(JSON.stringify(data.draft, null, 2));
+        setAiDraftStatus("success");
+      }
+    } catch {
+      setAiDraftError("Błąd połączenia z serwerem. Spróbuj ponownie.");
+      setAiDraftStatus("error");
+    }
+  }
+
+  function sendDraftToBuilder() {
+    if (!aiDraftResult) return;
+    sessionStorage.setItem(AI_PENDING_KEY, aiDraftResult);
+    if (pendingSourceId) {
+      sessionStorage.setItem(AI_PENDING_SOURCE_ID_KEY, pendingSourceId);
+    }
+    setAiDraftSent(true);
     router.push("/builder");
   }
 
@@ -294,11 +349,68 @@ export default function AiHelperPage() {
         </div>
       </section>
 
+      {/* ── AI draft generator ────────────────────────────────────────── */}
+      <section className="bg-blue-50 border border-blue-200 rounded-2xl p-6 flex flex-col gap-4 mb-6">
+        <div>
+          <h2 className="text-base font-semibold text-blue-900">
+            Generator draftu AI
+          </h2>
+          <p className="text-sm text-blue-700 mt-1">
+            Kliknij poniżej, aby automatycznie wygenerować szkic alertu z wklejonego komunikatu.
+            Przed wysłaniem do Kreatora sprawdź i popraw lokalizację, daty i treść.
+          </p>
+          <p className="text-xs text-blue-500 mt-1.5 italic">
+            Generator działa teraz w trybie testowym — w kolejnym kroku podłączymy prawdziwe API AI.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={generateDraft}
+            disabled={aiDraftStatus === "loading"}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {aiDraftStatus === "loading" ? "Generuję draft…" : "Wygeneruj draft AI"}
+          </button>
+
+          {aiDraftStatus === "error" && (
+            <span className="text-sm font-medium text-red-600">
+              {aiDraftError}
+            </span>
+          )}
+        </div>
+
+        {aiDraftStatus === "success" && aiDraftResult && (
+          <div className="flex flex-col gap-3">
+            <div>
+              <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-2">
+                Wygenerowany szkic alertu
+              </p>
+              <pre className="bg-white border border-blue-200 text-slate-700 rounded-xl p-4 text-xs font-mono leading-relaxed overflow-x-auto whitespace-pre-wrap break-words">
+                {aiDraftResult}
+              </pre>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                onClick={sendDraftToBuilder}
+                disabled={aiDraftSent}
+                className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {aiDraftSent ? "Wysłano do Kreatora ✓" : "Wczytaj draft do Kreatora →"}
+              </button>
+              <span className="text-xs text-blue-600">
+                Pamiętaj, żeby uzupełnić lokalizację i sprawdzić daty.
+              </span>
+            </div>
+          </div>
+        )}
+      </section>
+
       {/* Prompt preview */}
       <section>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-semibold text-slate-800">
-            Wygenerowany prompt
+            Ręczny workflow: prompt do ChatGPT / Claude
           </h2>
           <button
             onClick={copyPrompt}

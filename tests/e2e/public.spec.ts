@@ -64,8 +64,8 @@ test.describe("Public homepage", () => {
     }
 
     await openLink.click();
-    // Should navigate away from the homepage
-    await expect(page).not.toHaveURL("/");
+    // Should navigate away from the homepage — allow extra time for dev-server SSR of the dynamic route
+    await expect(page).not.toHaveURL("/", { timeout: 15_000 });
     // Should not show a Next.js or React application error
     await expect(page.locator("body")).not.toContainText("Application error");
   });
