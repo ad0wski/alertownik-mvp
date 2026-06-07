@@ -21,7 +21,7 @@ export interface AlertDraft {
 }
 
 export type DraftAlertResponse =
-  | { ok: true;  draft: AlertDraft; mode: "mock" | "anthropic" }
+  | { ok: true;  draft: AlertDraft; mode: "mock" | "anthropic"; warnings: string[] }
   | { ok: false; error: string };
 
 // ── AI config ─────────────────────────────────────────────────────────────────
@@ -41,21 +41,25 @@ Schemat wyjściowy:
   "severity": "info" | "warning" | "urgent",
   "title": "<krótki tytuł po polsku, max 60 znaków>",
   "slug": "<url-slug: małe litery ASCII, myślniki zamiast spacji i polskich liter>",
-  "place": "<dokładna lokalizacja z ulicą lub rejonem — jeśli brak w komunikacie: zostaw pusty string \"\">",
-  "startsAt": "<data YYYY-MM-DD — jeśli brak w komunikacie: użyj podanej dzisiejszej daty>",
-  "endsAt": "<data YYYY-MM-DD — jeśli brak w komunikacie: null>",
-  "change": "<co dokładnie się zmienia — 1–3 zdania po polsku>",
-  "action": "<co mieszkaniec powinien zrobić — 1–2 zdania po polsku>",
-  "sourceName": "<nazwa instytucji lub źródła>",
-  "sourceUrl": "<URL lub null>"
+  "place": "<dokładna lokalizacja z ulicą lub rejonem — jeśli brak w komunikacie: pusty string \"\">",
+  "startsAt": "<data YYYY-MM-DD — jeśli data nie jest podana w komunikacie: null>",
+  "endsAt": "<data YYYY-MM-DD — jeśli data zakończenia nie jest podana: null>",
+  "change": "<co dokładnie się zmienia — 1–3 krótkie zdania po polsku>",
+  "action": "<co mieszkaniec powinien zrobić — 1–2 krótkie zdania po polsku>",
+  "sourceName": "<nazwa instytucji lub źródła — użyj nazwy z metadanych jeśli podana>",
+  "sourceUrl": "<URL źródła — użyj URL z metadanych jeśli podany, w przeciwnym razie null>"
 }
 
 Zasady:
-1. Pisz prostym językiem zrozumiałym dla mieszkańca.
-2. severity: "urgent" = awaria lub zagrożenie bezpieczeństwa; "warning" = planowane utrudnienie lub zmiana; "info" = informacja bez pilności.
-3. Nie wymyślaj faktów. Jeśli data nie jest podana, użyj dzisiejszej daty dla startsAt i null dla endsAt.
-4. Nie dodawaj pola sourceId — jest uzupełniane przez aplikację.
-5. Nie zwracaj żadnych dodatkowych pól poza wymienionym schematem.`;
+1. Pisz prostym językiem dla mieszkańca — krótkie zdania, zero urzędowego stylu. Piszesz dla kogoś czytającego na telefonie, nie dla urzędu.
+2. severity: "urgent" = awaria lub zagrożenie bezpieczeństwa; "warning" = planowane utrudnienie lub zmiana wymagająca przygotowania; "info" = informacja bez pilności.
+3. Nie wymyślaj faktów. Używaj tylko informacji z komunikatu źródłowego.
+4. startsAt: jeśli data nie jest podana w komunikacie, wpisz null — nie wpisuj dzisiejszej daty jako domysłu.
+5. place: jeśli lokalizacja nie jest podana w komunikacie, zostaw pusty string "" — nie zgaduj adresu.
+6. Pole "change": opisuje co konkretnie się zmienia lub dzieje (fakty, nie oceny).
+7. Pole "action": opisuje co mieszkaniec powinien zrobić w odpowiedzi (zalecenie praktyczne).
+8. Nie dodawaj pola sourceId — jest uzupełniane przez aplikację.
+9. Nie zwracaj żadnych dodatkowych pól poza wymienionym schematem.`;
 
 // ── Category detection ───────────────────────────────────────────────────────
 
@@ -196,11 +200,22 @@ const CATEGORY_ACTIONS: Record<AlertCategory, string> = {
 
 // ── AI response helpers ───────────────────────────────────────────────────────
 
-// Strip markdown code fences if the model wrapped its JSON
+// Strip markdown code fences if the model accidentally wrapped its JSON
 function extractJson(text: string): string {
   const match = text.match(/```(?:json)?\s*([\s\S]*?)```/);
   if (match) return match[1].trim();
+  // Also strip leading/trailing non-JSON text before the first {
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start !== -1 && end !== -1 && end > start) return text.slice(start, end + 1);
   return text.trim();
+}
+
+// Build result type — tracks what the AI actually provided vs what was filled in
+interface BuildResult {
+  draft: AlertDraft;
+  dateFromAi: boolean;
+  placeFromAi: boolean;
 }
 
 // Sanitize and normalize a raw object from the AI into a valid AlertDraft.
@@ -211,7 +226,7 @@ function buildAiDraft(
   fallbackSourceUrl: string | null,
   suggestedCategory: string | undefined,
   today: string,
-): AlertDraft | null {
+): BuildResult | null {
   const category = normalizeCategory(raw.category, suggestedCategory);
 
   const rawSeverity = normalizeAlertSeverity(raw.severity);
@@ -226,20 +241,27 @@ function buildAiDraft(
   const rawSlug = typeof raw.slug === "string" ? raw.slug.trim().toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "") : "";
   const slug = rawSlug || toSlug(title);
 
-  const place = typeof raw.place === "string" ? raw.place.trim() : "";
+  const rawPlace = typeof raw.place === "string" ? raw.place.trim() : "";
+  const place = rawPlace;
+  const placeFromAi = rawPlace.length > 0;
 
-  const startsAt = typeof raw.startsAt === "string" && /^\d{4}-\d{2}-\d{2}/.test(raw.startsAt)
-    ? raw.startsAt.slice(0, 10)
-    : today;
+  // Accept null from the improved prompt — startsAt null means date unknown
+  const rawStartsAt = raw.startsAt;
+  const startsAtIsValid =
+    typeof rawStartsAt === "string" &&
+    rawStartsAt !== "null" &&
+    /^\d{4}-\d{2}-\d{2}/.test(rawStartsAt);
+  const startsAt = startsAtIsValid ? (rawStartsAt as string).slice(0, 10) : today;
+  const dateFromAi = startsAtIsValid;
 
-  const endsAt = typeof raw.endsAt === "string" && /^\d{4}-\d{2}-\d{2}/.test(raw.endsAt)
+  const endsAt = typeof raw.endsAt === "string" && raw.endsAt !== "null" && /^\d{4}-\d{2}-\d{2}/.test(raw.endsAt)
     ? raw.endsAt.slice(0, 10)
     : null;
 
   const change = typeof raw.change === "string" && raw.change.trim()
     ? raw.change.trim()
     : "";
-  if (!change) return null; // change is required
+  if (!change) return null; // change is required — without it the draft is unusable
 
   const action = typeof raw.action === "string" && raw.action.trim()
     ? raw.action.trim()
@@ -249,11 +271,38 @@ function buildAiDraft(
     ? raw.sourceName.trim()
     : fallbackSourceName;
 
-  const sourceUrl = typeof raw.sourceUrl === "string" && raw.sourceUrl.trim()
+  const sourceUrl = typeof raw.sourceUrl === "string" && raw.sourceUrl.trim() && raw.sourceUrl !== "null"
     ? raw.sourceUrl.trim()
     : fallbackSourceUrl;
 
-  return { category, severity, title, slug, place, startsAt, endsAt, change, action, sourceName, sourceUrl };
+  const draft: AlertDraft = {
+    category, severity, title, slug, place, startsAt, endsAt, change, action, sourceName, sourceUrl,
+  };
+
+  return { draft, dateFromAi, placeFromAi };
+}
+
+// Generate admin warnings for fields that are missing or need manual verification
+function computeWarnings(
+  category: AlertCategory,
+  dateFromAi: boolean,
+  placeFromAi: boolean,
+  sourceName: string,
+): string[] {
+  const warnings: string[] = [];
+  if (!dateFromAi) {
+    warnings.push("Brakuje dokładnej daty — uzupełnij datę w Kreatorze przed publikacją.");
+  }
+  if (!placeFromAi) {
+    warnings.push("Brakuje dokładnej lokalizacji — uzupełnij miejsce w Kreatorze.");
+  }
+  if (category === "transport") {
+    warnings.push("Sprawdź, czy trasa i kierunek przejazdu są poprawne.");
+  }
+  if (!sourceName) {
+    warnings.push("Brakuje nazwy źródła — uzupełnij je w Kreatorze przed publikacją.");
+  }
+  return warnings;
 }
 
 // ── Route handler ────────────────────────────────────────────────────────────
@@ -295,7 +344,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<DraftAlertRes
       if (sourceName) parts.push(`Nazwa źródła: ${sourceName}`);
       if (sourceUrl)  parts.push(`URL źródła: ${sourceUrl}`);
       if (suggestedCategory) parts.push(`Sugerowana kategoria: ${suggestedCategory}`);
-      parts.push(`Dzisiejsza data: ${today}`);
+      parts.push(`Dzisiejsza data (tylko dla orientacji, nie używaj jako daty startsAt jeśli komunikat nie podaje daty): ${today}`);
 
       const message = await client.messages.create({
         model: AI_DRAFT_MODEL,
@@ -313,15 +362,18 @@ export async function POST(req: NextRequest): Promise<NextResponse<DraftAlertRes
       try {
         parsed = JSON.parse(jsonText);
       } catch {
-        return NextResponse.json({ ok: false, error: "AI zwróciło nieprawidłowy format draftu." });
+        return NextResponse.json({ ok: false, error: "AI zwróciło draft w nieprawidłowym formacie." });
       }
 
-      const draft = buildAiDraft(parsed, sourceName, sourceUrl || null, suggestedCategory, today);
-      if (!draft) {
-        return NextResponse.json({ ok: false, error: "AI zwróciło nieprawidłowy format draftu." });
+      const result = buildAiDraft(parsed, sourceName, sourceUrl || null, suggestedCategory, today);
+      if (!result) {
+        return NextResponse.json({ ok: false, error: "AI zwróciło draft w nieprawidłowym formacie." });
       }
 
-      return NextResponse.json({ ok: true, draft, mode: "anthropic" });
+      const { draft, dateFromAi, placeFromAi } = result;
+      const warnings = computeWarnings(draft.category, dateFromAi, placeFromAi, draft.sourceName);
+
+      return NextResponse.json({ ok: true, draft, mode: "anthropic", warnings });
     } catch (err) {
       console.error("[ai/draft-alert] Anthropic API error:", err);
       return NextResponse.json({
@@ -350,5 +402,5 @@ export async function POST(req: NextRequest): Promise<NextResponse<DraftAlertRes
     sourceUrl:  sourceUrl || null,
   };
 
-  return NextResponse.json({ ok: true, draft, mode: "mock" });
+  return NextResponse.json({ ok: true, draft, mode: "mock", warnings: [] });
 }

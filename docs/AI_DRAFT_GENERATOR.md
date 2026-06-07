@@ -2,7 +2,7 @@
 
 Ten dokument opisuje architekturę i zasady działania generatora draftu alertu.
 
-Last updated: June 2026 — Sprint 58: real Anthropic API mode added
+Last updated: June 2026 — Sprint 60: improved prompt, warnings, admin review UI
 
 ---
 
@@ -32,6 +32,7 @@ Zamiast tego stosuje deterministyczne reguły:
 4. Ustawia datę `startsAt` na dzisiaj, `endsAt` na null
 5. Kopiuje pierwsze ~200 znaków komunikatu jako pole `change`
 6. Dobiera generyczne pole `action` odpowiednie do kategorii
+7. Zwraca `warnings: []` (w trybie mock nie generuje ostrzeżeń)
 
 Aktywny gdy `ANTHROPIC_API_KEY` nie jest ustawiony w środowisku serwera.
 
@@ -51,11 +52,83 @@ Dostaje komunikat źródłowy + systemowy prompt z instrukcjami.
 Zwraca obiekt JSON w schemacie `AlertDraft`.
 Route waliduje wynik i normalizuje pola (kategoria, severity, daty) przed zwróceniem do UI.
 
+### Jakość promptu (Sprint 60)
+
+System prompt instruuje model, aby:
+- Pisał prostym językiem dla mieszkańca, bez urzędowego stylu
+- Zwracał `null` dla `startsAt`, jeśli data nie jest podana w komunikacie (nie zgadywał)
+- Zwracał pusty string `""` dla `place`, jeśli lokalizacja nie jest podana (nie zgadywał)
+- Używał `sourceName` i `sourceUrl` z metadanych wejściowych jeśli podane
+- Nie wymyślał faktów
+
 ### Obsługa błędów
 
-- Jeśli model zwróci JSON owiniętym w markdown — route go wyodrębni
-- Jeśli JSON jest niepoprawny lub brakuje pola `change` — route zwraca `{ ok: false, error: "AI zwróciło nieprawidłowy format draftu." }`
+- Jeśli model zwróci JSON owinięty w markdown — route go wyodrębni
+- Jeśli przed `{` lub po `}` jest tekst — route go przytnie
+- Jeśli JSON jest niepoprawny lub brakuje pola `change` — route zwraca `{ ok: false, error: "AI zwróciło draft w nieprawidłowym formacie." }`
 - Jeśli Anthropic API niedostępne — route zwraca przyjazny komunikat błędu i sugeruje ręczny prompt
+
+---
+
+## Walidacja i normalizacja
+
+Po odebraniu odpowiedzi z AI route wykonuje:
+
+1. **Ekstrakcja JSON** — usuwa markdown code fences i/lub otaczający tekst
+2. **Parse JSON** — `JSON.parse()` w bloku try/catch
+3. **Normalizacja kategorii** — jeśli AI podał nieprawidłową wartość, używa sugerowanej lub "municipal"
+4. **Normalizacja severity** — mapuje aliasy ("critical" → "urgent", "uwaga" → "warning") via `normalizeAlertSeverity()`; jeśli nierozpoznane, używa wykrywania słów kluczowych
+5. **Sanityzacja pól tekstowych** — trim, max długość tytułu, fallback dla pustych pól
+6. **Walidacja wymaganych pól** — `change` jest jedynym polem powodującym twardy błąd jeśli puste
+7. **Generowanie ostrzeżeń** — sprawdza co wymagało wypełnienia przez system a nie AI
+
+Wymagane pola w drafcie (brak powoduje twardy błąd):
+- `change` — bez opisu zmiany draft jest bezużyteczny
+
+Pola z fallbackiem (brak nie powoduje błędu, ale może wygenerować ostrzeżenie):
+- `category` → "municipal"
+- `severity` → wykrywanie słów kluczowych
+- `title` → "Alert lokalny"
+- `action` → domyślna wskazówka dla kategorii
+- `sourceName` → wartość z danych wejściowych lub pusty string + ostrzeżenie
+- `startsAt` → dzisiejsza data + ostrzeżenie
+- `place` → pusty string + ostrzeżenie
+
+---
+
+## Ostrzeżenia (warnings)
+
+Po wygenerowaniu draftu route zwraca tablicę `warnings: string[]`.
+Ostrzeżenia informują admina, które pola wymagają ręcznej weryfikacji.
+
+Ostrzeżenia są generowane gdy:
+
+| Warunek | Ostrzeżenie |
+|---------|-------------|
+| AI nie podało daty `startsAt` | "Brakuje dokładnej daty — uzupełnij datę w Kreatorze przed publikacją." |
+| AI nie podało lokalizacji `place` | "Brakuje dokładnej lokalizacji — uzupełnij miejsce w Kreatorze." |
+| Kategoria to `transport` | "Sprawdź, czy trasa i kierunek przejazdu są poprawne." |
+| Brak `sourceName` po fallbacku | "Brakuje nazwy źródła — uzupełnij je w Kreatorze przed publikacją." |
+
+Ostrzeżenia nie blokują generowania draftu — admin może go wysłać do Kreatora.
+W trybie mock ostrzeżenia nie są generowane (`warnings: []`).
+
+---
+
+## Admin review flow
+
+Po wygenerowaniu draftu UI wyświetla:
+
+1. **Badge trybu** — "Tryb: Claude API" lub "Tryb: testowy"
+2. **Raw JSON** — pełny wygenerowany draft z przyciskiem "Kopiuj JSON"
+3. **Podgląd alertu** — czytelna karta z polami: Tytuł, Kategoria, Ważność, Kiedy, Gdzie, Co się zmienia, Co zrobić, Źródło
+4. **Ostrzeżenia** (jeśli są) — lista "Do sprawdzenia przed publikacją"
+5. **Przycisk "Wczytaj draft do Kreatora"** — przekazuje draft do Buildera przez sessionStorage
+
+Admin musi w Kreatorze:
+- Uzupełnić brakujące daty i lokalizacje
+- Zweryfikować treść względem oryginalnego komunikatu
+- Kliknąć "Opublikuj w Supabase" — alert nie publikuje się automatycznie
 
 ---
 
@@ -87,14 +160,15 @@ src/app/api/ai/draft-alert/route.ts
       "title":      "string (max ~60 znaków)",
       "slug":       "string",
       "place":      "string (może być pusty — admin musi uzupełnić)",
-      "startsAt":   "YYYY-MM-DD",
+      "startsAt":   "YYYY-MM-DD (fallback: dzisiaj jeśli AI nie podało)",
       "endsAt":     "YYYY-MM-DD | null",
       "change":     "string",
       "action":     "string",
       "sourceName": "string",
       "sourceUrl":  "string | null"
     },
-    "mode": "mock | anthropic"
+    "mode": "mock | anthropic",
+    "warnings": ["string", "..."]
   }
   ```
 - Wyjście (błąd):
@@ -110,10 +184,10 @@ AI Helper (formularz)
 API route (server-side)
   ↓  jeśli ANTHROPIC_API_KEY: wywołanie Anthropic API
   ↓  jeśli brak klucza: mock
-  ↓  JSON draft + mode
-AI Helper (wyświetla draft + badge trybu, przycisk "Wczytaj draft do Kreatora")
+  ↓  JSON draft + mode + warnings[]
+AI Helper (wyświetla: badge trybu, JSON, podgląd, ostrzeżenia, przycisk "Wczytaj")
   ↓  sessionStorage["alertownik_pending_ai_alert_json"]
-Builder (wczytuje formularz z sessionStorage, admin edytuje)
+Builder (wczytuje formularz z sessionStorage, admin edytuje i weryfikuje)
   ↓  admin klika "Opublikuj w Supabase"
 Supabase (alert publikowany)
 ```
@@ -147,11 +221,11 @@ ANTHROPIC_API_KEY=sk-ant-...
 ## Zasady bezpieczeństwa
 
 1. **Admin zawsze weryfikuje draft przed publikacją** — nie ma przycisku „Generuj i publikuj od razu".
-2. **Klucze API nigdy nie trafiają na frontend** — wszystkie wywołania Anthropic są wyłącznie server-side.
-3. **Nie używaj `NEXT_PUBLIC_ANTHROPIC_API_KEY`** — ten prefiks eksponuje zmienną do przeglądarki.
-4. **Route `/api/ai/draft-alert` nie wymaga auth** w obecnej wersji (nie wywołuje nic kosztownego bez klucza).
+2. **Nie publikuj automatycznie** — Builder wymaga jawnego kliknięcia „Opublikuj w Supabase".
+3. **Klucze API nigdy nie trafiają na frontend** — wszystkie wywołania Anthropic są wyłącznie server-side.
+4. **Nie używaj `NEXT_PUBLIC_ANTHROPIC_API_KEY`** — ten prefiks eksponuje zmienną do przeglądarki.
+5. **Route `/api/ai/draft-alert` nie wymaga auth** w obecnej wersji (nie wywołuje nic kosztownego bez klucza).
    Gdy API key jest aktywny w produkcji, warto dodać weryfikację sesji Supabase w handlerze.
-5. **Nie publikuj draftu automatycznie** — Builder wymaga jawnego kliknięcia „Opublikuj w Supabase".
 
 ---
 

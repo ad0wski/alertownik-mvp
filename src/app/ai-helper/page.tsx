@@ -16,6 +16,21 @@ const categoryOptions: { value: AlertCategory | ""; label: string }[] = [
   { value: "municipal", label: "Komunikaty" },
 ];
 
+const CATEGORY_LABELS: Record<string, string> = {
+  transport: "Transport",
+  water: "Woda",
+  power: "Prąd",
+  waste: "Odpady",
+  roads: "Drogi",
+  municipal: "Komunikaty",
+};
+
+const SEVERITY_META: Record<string, { label: string; color: string }> = {
+  info:    { label: "Info",  color: "text-blue-700 bg-blue-50 border-blue-200" },
+  warning: { label: "Uwaga", color: "text-amber-700 bg-amber-50 border-amber-200" },
+  urgent:  { label: "Pilne", color: "text-red-700 bg-red-50 border-red-200" },
+};
+
 const inputClass =
   "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500";
 
@@ -101,6 +116,19 @@ interface PendingSourceData {
   checkNotes?: string;
 }
 
+// Minimal shape for displaying the AI draft preview
+interface DraftPreview {
+  title?: string;
+  category?: string;
+  severity?: string;
+  startsAt?: string;
+  endsAt?: string | null;
+  place?: string;
+  change?: string;
+  action?: string;
+  sourceName?: string;
+}
+
 const REQUIRED_FIELDS = [
   "category", "severity", "title", "startsAt", "change", "action", "sourceName",
 ] as const;
@@ -144,6 +172,8 @@ export default function AiHelperPage() {
   const [aiDraftError, setAiDraftError] = useState<string | null>(null);
   const [aiDraftSent, setAiDraftSent] = useState(false);
   const [aiDraftMode, setAiDraftMode] = useState<"mock" | "anthropic" | null>(null);
+  const [aiDraftWarnings, setAiDraftWarnings] = useState<string[]>([]);
+  const [jsonCopied, setJsonCopied] = useState(false);
 
   useEffect(() => {
     try {
@@ -168,10 +198,24 @@ export default function AiHelperPage() {
 
   const prompt = buildPrompt(rawText, sourceName, sourceUrl, suggestedCategory);
 
+  // Parse the JSON string for the human preview card
+  const aiDraftParsed: DraftPreview | null = (() => {
+    if (!aiDraftResult) return null;
+    try { return JSON.parse(aiDraftResult) as DraftPreview; } catch { return null; }
+  })();
+
   function copyPrompt() {
     navigator.clipboard.writeText(prompt).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  function copyDraftJson() {
+    if (!aiDraftResult) return;
+    navigator.clipboard.writeText(aiDraftResult).then(() => {
+      setJsonCopied(true);
+      setTimeout(() => setJsonCopied(false), 2000);
     });
   }
 
@@ -207,6 +251,8 @@ export default function AiHelperPage() {
     setAiDraftError(null);
     setAiDraftSent(false);
     setAiDraftMode(null);
+    setAiDraftWarnings([]);
+    setJsonCopied(false);
     try {
       const res = await fetch("/api/ai/draft-alert", {
         method: "POST",
@@ -225,6 +271,7 @@ export default function AiHelperPage() {
       } else {
         setAiDraftResult(JSON.stringify(data.draft, null, 2));
         setAiDraftMode(data.mode ?? "mock");
+        setAiDraftWarnings(Array.isArray(data.warnings) ? data.warnings : []);
         setAiDraftStatus("success");
       }
     } catch {
@@ -259,6 +306,7 @@ export default function AiHelperPage() {
         </div>
         <p className="mt-1 text-sm text-slate-500 leading-relaxed">
           Wygeneruj szkic alertu przez AI lub przygotuj prompt do ChatGPT / Claude.
+          AI tworzy tylko wstępny draft — przed publikacją zawsze sprawdź daty, lokalizację i treść w źródle.
         </p>
       </div>
 
@@ -360,11 +408,12 @@ export default function AiHelperPage() {
           </h2>
           <p className="text-sm text-blue-700 mt-1">
             Kliknij poniżej, aby automatycznie wygenerować szkic alertu z wklejonego komunikatu.
-            Przed wysłaniem do Kreatora sprawdź i popraw lokalizację, daty i treść.
           </p>
-          <p className="text-xs text-blue-500 mt-1.5 italic">
-            Draft AI zawsze wymaga sprawdzenia przed publikacją — uzupełnij lokalizację, daty i treść.
-          </p>
+          <ul className="mt-2 text-xs text-blue-600 space-y-1 list-none">
+            <li>· AI tworzy tylko wstępny draft — nie publikuje alertu automatycznie.</li>
+            <li>· Przed wysłaniem do Kreatora zawsze zweryfikuj daty, trasę i lokalizację w oryginalnym źródle.</li>
+            <li>· Pola oznaczone ostrzeżeniem wymagają ręcznego uzupełnienia przez admina.</li>
+          </ul>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -384,26 +433,113 @@ export default function AiHelperPage() {
         </div>
 
         {aiDraftStatus === "success" && aiDraftResult && (
-          <div className="flex flex-col gap-3">
-            <div>
-              <div className="flex flex-wrap items-center gap-2 mb-2">
-                <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">
-                  Wygenerowany szkic alertu
-                </p>
-                {aiDraftMode === "anthropic" ? (
-                  <span className="inline-flex items-center text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
-                    Tryb: Claude API
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center text-xs font-medium text-slate-500 bg-slate-100 border border-slate-200 rounded-full px-2 py-0.5">
-                    Tryb: testowy
-                  </span>
-                )}
-              </div>
-              <pre className="bg-white border border-blue-200 text-slate-700 rounded-xl p-4 text-xs font-mono leading-relaxed overflow-x-auto whitespace-pre-wrap break-words">
-                {aiDraftResult}
-              </pre>
+          <div className="flex flex-col gap-4">
+
+            {/* Header: label + mode badge + copy JSON */}
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide flex-1">
+                Wygenerowany szkic alertu
+              </p>
+              {aiDraftMode === "anthropic" ? (
+                <span className="inline-flex items-center text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
+                  Tryb: Claude API
+                </span>
+              ) : (
+                <span className="inline-flex items-center text-xs font-medium text-slate-500 bg-slate-100 border border-slate-200 rounded-full px-2 py-0.5">
+                  Tryb: testowy
+                </span>
+              )}
+              <button
+                onClick={copyDraftJson}
+                className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors ${
+                  jsonCopied
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                    : "border-blue-200 bg-white text-blue-600 hover:bg-blue-100"
+                }`}
+              >
+                {jsonCopied ? "Skopiowano ✓" : "Kopiuj JSON"}
+              </button>
             </div>
+
+            {/* Raw JSON */}
+            <pre className="bg-white border border-blue-200 text-slate-700 rounded-xl p-4 text-xs font-mono leading-relaxed overflow-x-auto whitespace-pre-wrap break-words">
+              {aiDraftResult}
+            </pre>
+
+            {/* Human preview card */}
+            {aiDraftParsed && (
+              <div className="bg-white rounded-xl border border-blue-100 p-4">
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">
+                  Podgląd alertu
+                </p>
+                <dl className="grid grid-cols-[7rem_1fr] gap-x-3 gap-y-2 text-sm">
+                  <dt className="font-medium text-slate-500 pt-0.5">Tytuł</dt>
+                  <dd className="text-slate-900 font-medium pt-0.5">{aiDraftParsed.title || "—"}</dd>
+
+                  <dt className="font-medium text-slate-500 pt-0.5">Kategoria</dt>
+                  <dd className="text-slate-800 pt-0.5">
+                    {aiDraftParsed.category ? (CATEGORY_LABELS[aiDraftParsed.category] ?? aiDraftParsed.category) : "—"}
+                  </dd>
+
+                  <dt className="font-medium text-slate-500 pt-0.5">Ważność</dt>
+                  <dd className="pt-0.5">
+                    {aiDraftParsed.severity && SEVERITY_META[aiDraftParsed.severity] ? (
+                      <span className={`inline-flex items-center text-xs font-medium border rounded-full px-2 py-0.5 ${SEVERITY_META[aiDraftParsed.severity].color}`}>
+                        {SEVERITY_META[aiDraftParsed.severity].label}
+                      </span>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
+                  </dd>
+
+                  <dt className="font-medium text-slate-500 pt-0.5">Kiedy</dt>
+                  <dd className="text-slate-800 pt-0.5">
+                    {aiDraftParsed.startsAt
+                      ? aiDraftParsed.endsAt
+                        ? `${aiDraftParsed.startsAt} – ${aiDraftParsed.endsAt}`
+                        : aiDraftParsed.startsAt
+                      : <span className="text-amber-600 font-medium">Nieznana data</span>}
+                  </dd>
+
+                  <dt className="font-medium text-slate-500 pt-0.5">Gdzie</dt>
+                  <dd className="text-slate-800 pt-0.5">
+                    {aiDraftParsed.place && aiDraftParsed.place.trim()
+                      ? aiDraftParsed.place
+                      : <span className="text-amber-600 font-medium">Nieznana lokalizacja</span>}
+                  </dd>
+
+                  <dt className="font-medium text-slate-500 pt-1">Co się zmienia</dt>
+                  <dd className="text-slate-800 pt-1 leading-relaxed">{aiDraftParsed.change || "—"}</dd>
+
+                  <dt className="font-medium text-slate-500 pt-1">Co zrobić</dt>
+                  <dd className="text-slate-800 pt-1 leading-relaxed">{aiDraftParsed.action || "—"}</dd>
+
+                  <dt className="font-medium text-slate-500 pt-0.5">Źródło</dt>
+                  <dd className="text-slate-800 pt-0.5">
+                    {aiDraftParsed.sourceName || <span className="text-amber-600 font-medium">Brak nazwy źródła</span>}
+                  </dd>
+                </dl>
+              </div>
+            )}
+
+            {/* Warnings */}
+            {aiDraftWarnings.length > 0 && (
+              <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
+                <p className="text-sm font-semibold text-amber-800 mb-2">
+                  Do sprawdzenia przed publikacją
+                </p>
+                <ul className="space-y-1">
+                  {aiDraftWarnings.map((w, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-amber-700">
+                      <span className="mt-0.5 shrink-0">⚠</span>
+                      <span>{w}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Action buttons */}
             <div className="flex flex-wrap items-center gap-3">
               <button
                 onClick={sendDraftToBuilder}
@@ -413,7 +549,7 @@ export default function AiHelperPage() {
                 {aiDraftSent ? "Wysłano do Kreatora ✓" : "Wczytaj draft do Kreatora →"}
               </button>
               <span className="text-xs text-blue-600 font-medium">
-                Draft AI zawsze wymaga sprawdzenia przed publikacją.
+                Admin musi zweryfikować i zatwierdzić przed publikacją.
               </span>
             </div>
           </div>
@@ -456,7 +592,7 @@ export default function AiHelperPage() {
           >
             Claude
           </a>
-          .
+          . Wynik wklej w sekcji poniżej.
         </p>
         <pre className="bg-slate-50 border border-slate-200 text-slate-700 rounded-2xl p-5 text-sm font-mono leading-relaxed overflow-x-auto whitespace-pre-wrap break-words">
           {prompt}
@@ -469,6 +605,7 @@ export default function AiHelperPage() {
           <h2 className="text-base font-semibold text-slate-800">Odpowiedź AI</h2>
           <p className="text-sm text-slate-500 mt-1">
             Wklej tutaj JSON zwrócony przez ChatGPT lub Claude.
+            Sprawdź dane i kliknij „Wczytaj do Kreatora" — nie publikuj bez weryfikacji źródła.
           </p>
         </div>
 
