@@ -52,6 +52,20 @@ const CATEGORIES: AlertCategory[] = [
 
 const SOURCE_TYPES: AlertSourceType[] = ["website", "pdf", "rss", "other"];
 
+// ── Source preview types (fetch-preview result, ephemeral UI only) ─────────────
+
+interface SourcePreviewCandidate {
+  heading?: string;
+  text: string;
+}
+
+interface SourcePreviewData {
+  pageTitle: string;
+  fetchedAt: string;
+  candidates: SourcePreviewCandidate[];
+  rawText: string;
+}
+
 // ── Monitoring status ─────────────────────────────────────────────────────────
 
 type MonitoringStatus =
@@ -304,6 +318,11 @@ function SourceCard({
   const [savedCheckResult, setSavedCheckResult] = useState<SourceCheckResult | null>(null);
   const [savedCheckNotes,  setSavedCheckNotes]  = useState("");
 
+  // Source preview (fetch-preview API — ephemeral, not stored in DB)
+  const [previewStatus, setPreviewStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [previewData,   setPreviewData]   = useState<SourcePreviewData | null>(null);
+  const [previewError,  setPreviewError]  = useState<string | null>(null);
+
   const showNoticeField = NOTICE_RESULTS.includes(formResult);
 
   function handleResultChange(newResult: SourceCheckResult) {
@@ -349,6 +368,36 @@ function SourceCard({
     setCheckMsg({ ok: true, text: "Wynik sprawdzenia zapisany." });
     onCheckSaved();
     setTimeout(() => setCheckMsg(null), 5000);
+  }
+
+  async function fetchPreview() {
+    if (previewStatus === "loading") return;
+    // Second click closes the panel
+    if (previewStatus === "success") {
+      setPreviewStatus("idle");
+      setPreviewData(null);
+      return;
+    }
+    setPreviewStatus("loading");
+    setPreviewError(null);
+    try {
+      const res = await fetch("/api/sources/fetch-preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: source.url }),
+      });
+      const data = await res.json();
+      if (!data.ok) {
+        setPreviewError(data.error ?? "Nie udalo sie pobrac podgladu.");
+        setPreviewStatus("error");
+      } else {
+        setPreviewData(data as SourcePreviewData);
+        setPreviewStatus("success");
+      }
+    } catch {
+      setPreviewError("Blad polaczenia z serwerem. Sprobuj ponownie.");
+      setPreviewStatus("error");
+    }
   }
 
   return (
@@ -435,6 +484,17 @@ function SourceCard({
           >
             Przygotuj alert
           </button>
+          <button
+            onClick={fetchPreview}
+            disabled={previewStatus === "loading"}
+            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors disabled:opacity-50 ${
+              previewStatus === "success"
+                ? "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"
+            }`}
+          >
+            {previewStatus === "loading" ? "Pobieranie…" : previewStatus === "success" ? "Podgląd ↑" : "Sprawdź stronę"}
+          </button>
           <a
             href={source.url}
             target="_blank"
@@ -463,6 +523,88 @@ function SourceCard({
         </div>
         <span className="text-xs text-slate-400">Alerty: {alertCount}</span>
       </div>
+
+      {/* ── Source preview panel ─────────────────────────────────────── */}
+      {(previewStatus === "success" || previewStatus === "error") && (
+        <div className="mt-3 pt-3 border-t border-slate-100">
+          {previewStatus === "error" && (
+            <div className="flex items-start gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5">
+              <span className="font-medium shrink-0">Nie udało się pobrać:</span>
+              <span className="flex-1">{previewError}</span>
+              <button
+                onClick={() => setPreviewStatus("idle")}
+                className="shrink-0 text-red-400 hover:text-red-600 font-bold leading-none"
+                aria-label="Zamknij"
+              >
+                ×
+              </button>
+            </div>
+          )}
+
+          {previewStatus === "success" && previewData && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  Podgląd strony
+                </p>
+                <button
+                  onClick={() => { setPreviewStatus("idle"); setPreviewData(null); }}
+                  className="text-xs text-slate-400 hover:text-slate-600 px-1 py-0.5"
+                  aria-label="Zamknij podgląd"
+                >
+                  Zamknij ×
+                </button>
+              </div>
+
+              {previewData.pageTitle && (
+                <p className="text-xs text-slate-500 mb-3 truncate">
+                  <span className="font-medium text-slate-700">{previewData.pageTitle}</span>
+                  {" — "}pobrano {formatCheckedAt(previewData.fetchedAt)}
+                </p>
+              )}
+
+              {previewData.candidates.length === 0 ? (
+                <p className="text-xs text-slate-400 mb-2">
+                  Nie znaleziono czytelnych fragmentów tekstu. Otwórz stronę i skopiuj treść ręcznie do AI Helpera.
+                </p>
+              ) : (
+                <div className="space-y-2 mb-3">
+                  <p className="text-xs text-slate-400 mb-1">
+                    Znalezione fragmenty ({previewData.candidates.length}) — wybierz fragment do wysłania do AI Helpera:
+                  </p>
+                  {previewData.candidates.map((c, i) => (
+                    <div key={i} className="bg-white border border-slate-200 rounded-lg p-3">
+                      {c.heading && (
+                        <p className="text-xs font-semibold text-slate-800 mb-1 truncate">{c.heading}</p>
+                      )}
+                      <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">{c.text}</p>
+                      <button
+                        onClick={() =>
+                          handlePrepareAlertFromCheck(
+                            (c.heading ? c.heading + "\n\n" : "") + c.text
+                          )
+                        }
+                        className="mt-2 text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                      >
+                        Wyślij do AI Helpera →
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {previewData.rawText && (
+                <button
+                  onClick={() => handlePrepareAlertFromCheck(previewData.rawText.slice(0, 3000))}
+                  className="text-xs text-slate-500 hover:text-slate-700 hover:underline font-medium"
+                >
+                  Wyślij całą treść strony do AI Helpera →
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Check history panel ─────────────────────────────────────── */}
       {showPanel && (
