@@ -26,7 +26,9 @@ import {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const PENDING_SOURCE_KEY = "alertownik_pending_source_for_ai";
+const PENDING_SOURCE_KEY      = "alertownik_pending_source_for_ai";
+const AI_PENDING_KEY          = "alertownik_pending_ai_alert_json";
+const AI_PENDING_SOURCE_ID_KEY = "alertownik_pending_alert_source_id";
 
 // ── Labels ────────────────────────────────────────────────────────────────────
 
@@ -65,6 +67,26 @@ interface SourcePreviewData {
   candidates: SourcePreviewCandidate[];
   rawText: string;
 }
+
+// ── Inline AI draft (generated in-card from preview content) ─────────────────
+
+interface InlineDraftData {
+  title: string;
+  category: string;
+  severity: string;
+  startsAt: string | null;
+  endsAt: string | null;
+  place: string;
+  change: string;
+  action: string;
+  sourceName: string;
+}
+
+type InlineDraftState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "success"; draft: InlineDraftData; rawJson: string; warnings: string[]; mode: "mock" | "anthropic"; sourceText: string }
+  | { status: "error"; error: string };
 
 // ── Monitoring status ─────────────────────────────────────────────────────────
 
@@ -173,6 +195,12 @@ const resultConfig: Record<SourceCheckResult, { label: string; color: string }> 
   found_notice:   { label: "Znaleziono komunikat",           color: "text-blue-600" },
   alert_created:  { label: "Przygotowano alert",             color: "text-emerald-600" },
   needs_followup: { label: "Wymaga późniejszego sprawdzenia", color: "text-amber-600" },
+};
+
+const severityConfig: Record<string, { label: string; color: string }> = {
+  info:    { label: "Info",  color: "text-blue-700 bg-blue-50 border-blue-200" },
+  warning: { label: "Uwaga", color: "text-amber-700 bg-amber-50 border-amber-200" },
+  urgent:  { label: "Pilne", color: "text-red-700 bg-red-50 border-red-200" },
 };
 
 // Results that warrant showing the notice text field
@@ -323,6 +351,10 @@ function SourceCard({
   const [previewData,   setPreviewData]   = useState<SourcePreviewData | null>(null);
   const [previewError,  setPreviewError]  = useState<string | null>(null);
 
+  // Inline AI draft (generated directly from preview content without leaving the page)
+  const [inlineDraft,     setInlineDraft]     = useState<InlineDraftState>({ status: "idle" });
+  const [inlineDraftSent, setInlineDraftSent] = useState(false);
+
   const showNoticeField = NOTICE_RESULTS.includes(formResult);
 
   function handleResultChange(newResult: SourceCheckResult) {
@@ -376,10 +408,14 @@ function SourceCard({
     if (previewStatus === "success") {
       setPreviewStatus("idle");
       setPreviewData(null);
+      setInlineDraft({ status: "idle" });
+      setInlineDraftSent(false);
       return;
     }
     setPreviewStatus("loading");
     setPreviewError(null);
+    setInlineDraft({ status: "idle" });
+    setInlineDraftSent(false);
     try {
       const res = await fetch("/api/sources/fetch-preview", {
         method: "POST",
@@ -388,16 +424,57 @@ function SourceCard({
       });
       const data = await res.json();
       if (!data.ok) {
-        setPreviewError(data.error ?? "Nie udalo sie pobrac podgladu.");
+        setPreviewError(data.error ?? "Nie udało się pobrać podglądu.");
         setPreviewStatus("error");
       } else {
         setPreviewData(data as SourcePreviewData);
         setPreviewStatus("success");
       }
     } catch {
-      setPreviewError("Blad polaczenia z serwerem. Sprobuj ponownie.");
+      setPreviewError("Błąd połączenia z serwerem. Spróbuj ponownie.");
       setPreviewStatus("error");
     }
+  }
+
+  async function generateInlineDraft(sourceText: string) {
+    if (inlineDraft.status === "loading") return;
+    setInlineDraft({ status: "loading" });
+    setInlineDraftSent(false);
+    try {
+      const res = await fetch("/api/ai/draft-alert", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sourceText,
+          sourceName:        source.name,
+          sourceUrl:         source.url || undefined,
+          suggestedCategory: source.category,
+        }),
+      });
+      const data = await res.json();
+      if (!data.ok) {
+        setInlineDraft({ status: "error", error: data.error ?? "Nie udało się wygenerować draftu." });
+      } else {
+        setInlineDraft({
+          status:     "success",
+          draft:      data.draft as InlineDraftData,
+          rawJson:    JSON.stringify(data.draft, null, 2),
+          warnings:   Array.isArray(data.warnings) ? data.warnings : [],
+          mode:       data.mode ?? "mock",
+          sourceText,
+        });
+      }
+    } catch {
+      setInlineDraft({ status: "error", error: "Błąd połączenia z serwerem." });
+    }
+  }
+
+  function sendInlineDraftToBuilder() {
+    if (inlineDraft.status !== "success") return;
+    sessionStorage.setItem(AI_PENDING_KEY, inlineDraft.rawJson);
+    sessionStorage.setItem(AI_PENDING_SOURCE_ID_KEY, source.id);
+    setInlineDraftSent(true);
+    router.push("/builder");
   }
 
   return (
@@ -441,11 +518,18 @@ function SourceCard({
             <p className="text-sm text-slate-500 mt-1">{source.notes}</p>
           )}
 
-          <p className="text-xs text-slate-400 mt-1.5">
-            {source.lastCheckedAt
-              ? `Ostatnio sprawdzono: ${formatCheckedAt(source.lastCheckedAt)}`
-              : "Jeszcze nie sprawdzano"}
-          </p>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1.5">
+            <p className="text-xs text-slate-400">
+              {source.lastCheckedAt
+                ? `Ostatnio sprawdzono: ${formatCheckedAt(source.lastCheckedAt)}`
+                : "Jeszcze nie sprawdzano"}
+            </p>
+            {checks[0] && (
+              <span className={`text-xs font-medium ${resultConfig[checks[0].result].color}`}>
+                · {resultConfig[checks[0].result].label}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Management buttons */}
@@ -548,7 +632,12 @@ function SourceCard({
                   Podgląd strony
                 </p>
                 <button
-                  onClick={() => { setPreviewStatus("idle"); setPreviewData(null); }}
+                  onClick={() => {
+                    setPreviewStatus("idle");
+                    setPreviewData(null);
+                    setInlineDraft({ status: "idle" });
+                    setInlineDraftSent(false);
+                  }}
                   className="text-xs text-slate-400 hover:text-slate-600 px-1 py-0.5"
                   aria-label="Zamknij podgląd"
                 >
@@ -570,36 +659,142 @@ function SourceCard({
               ) : (
                 <div className="space-y-2 mb-3">
                   <p className="text-xs text-slate-400 mb-1">
-                    Znalezione fragmenty ({previewData.candidates.length}) — wybierz fragment do wysłania do AI Helpera:
+                    Znalezione fragmenty ({previewData.candidates.length}) — wybierz fragment do przetworzenia:
                   </p>
-                  {previewData.candidates.map((c, i) => (
-                    <div key={i} className="bg-white border border-slate-200 rounded-lg p-3">
-                      {c.heading && (
-                        <p className="text-xs font-semibold text-slate-800 mb-1 truncate">{c.heading}</p>
-                      )}
-                      <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">{c.text}</p>
-                      <button
-                        onClick={() =>
-                          handlePrepareAlertFromCheck(
-                            (c.heading ? c.heading + "\n\n" : "") + c.text
-                          )
-                        }
-                        className="mt-2 text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline"
-                      >
-                        Wyślij do AI Helpera →
-                      </button>
-                    </div>
-                  ))}
+                  {previewData.candidates.map((c, i) => {
+                    const candidateText = (c.heading ? c.heading + "\n\n" : "") + c.text;
+                    return (
+                      <div key={i} className="bg-white border border-slate-200 rounded-lg p-3">
+                        {c.heading && (
+                          <p className="text-xs font-semibold text-slate-800 mb-1 truncate">{c.heading}</p>
+                        )}
+                        <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">{c.text}</p>
+                        <div className="mt-2 flex flex-wrap gap-3">
+                          <button
+                            onClick={() => generateInlineDraft(candidateText)}
+                            disabled={inlineDraft.status === "loading"}
+                            className="text-xs font-medium text-emerald-600 hover:text-emerald-800 hover:underline disabled:opacity-50"
+                          >
+                            {inlineDraft.status === "loading" ? "Generowanie…" : "Generuj draft AI →"}
+                          </button>
+                          <button
+                            onClick={() => handlePrepareAlertFromCheck(candidateText)}
+                            className="text-xs font-medium text-blue-500 hover:text-blue-700 hover:underline"
+                          >
+                            Wyślij do AI Helpera →
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 
               {previewData.rawText && (
-                <button
-                  onClick={() => handlePrepareAlertFromCheck(previewData.rawText.slice(0, 3000))}
-                  className="text-xs text-slate-500 hover:text-slate-700 hover:underline font-medium"
-                >
-                  Wyślij całą treść strony do AI Helpera →
-                </button>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    onClick={() => {
+                      const text = previewData?.rawText;
+                      if (text) generateInlineDraft(text.slice(0, 3000));
+                    }}
+                    disabled={inlineDraft.status === "loading"}
+                    className="text-xs text-slate-500 hover:text-slate-700 hover:underline font-medium disabled:opacity-50"
+                  >
+                    {inlineDraft.status === "loading" ? "Generowanie…" : "Generuj draft AI z całej treści →"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      const text = previewData?.rawText;
+                      if (text) handlePrepareAlertFromCheck(text.slice(0, 3000));
+                    }}
+                    className="text-xs text-slate-400 hover:text-slate-600 hover:underline"
+                  >
+                    Wyślij do AI Helpera →
+                  </button>
+                </div>
+              )}
+
+              {/* Inline AI draft result */}
+              {inlineDraft.status === "error" && (
+                <div className="mt-3 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-600">
+                  {inlineDraft.error}
+                </div>
+              )}
+
+              {inlineDraft.status === "success" && (
+                <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50 p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Draft AI</span>
+                    <div className="flex items-center gap-2">
+                      {inlineDraft.mode === "anthropic" ? (
+                        <span className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
+                          Claude API
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-500 bg-slate-100 border border-slate-200 rounded-full px-2 py-0.5">
+                          Tryb testowy
+                        </span>
+                      )}
+                      <button
+                        onClick={() => { setInlineDraft({ status: "idle" }); setInlineDraftSent(false); }}
+                        className="text-xs text-slate-400 hover:text-slate-600 font-bold leading-none"
+                        aria-label="Usuń draft"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-sm font-semibold text-slate-900 mb-1.5">{inlineDraft.draft.title}</p>
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    <span className="text-xs text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full">
+                      {categoryLabels[inlineDraft.draft.category as AlertCategory] ?? inlineDraft.draft.category}
+                    </span>
+                    {inlineDraft.draft.severity && severityConfig[inlineDraft.draft.severity] && (
+                      <span className={`text-xs font-medium border rounded-full px-2 py-0.5 ${severityConfig[inlineDraft.draft.severity].color}`}>
+                        {severityConfig[inlineDraft.draft.severity].label}
+                      </span>
+                    )}
+                    {inlineDraft.draft.startsAt ? (
+                      <span className="text-xs text-slate-500">{inlineDraft.draft.startsAt}</span>
+                    ) : (
+                      <span className="text-xs text-amber-600 font-medium">Nieznana data</span>
+                    )}
+                    {inlineDraft.draft.place ? (
+                      <span className="text-xs text-slate-600">{inlineDraft.draft.place}</span>
+                    ) : (
+                      <span className="text-xs text-amber-600 font-medium">Nieznana lokalizacja</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-600 leading-relaxed mb-2.5">{inlineDraft.draft.change}</p>
+                  {inlineDraft.warnings.length > 0 && (
+                    <div className="mb-2.5 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2">
+                      <ul className="space-y-0.5">
+                        {inlineDraft.warnings.map((w, wi) => (
+                          <li key={wi} className="text-xs text-amber-700">⚠ {w}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={sendInlineDraftToBuilder}
+                      disabled={inlineDraftSent}
+                      className="px-3 py-1.5 bg-emerald-600 text-white text-xs font-semibold rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                    >
+                      {inlineDraftSent ? "Wysłano do Kreatora ✓" : "Wczytaj do Kreatora →"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (inlineDraft.status === "success") {
+                          handlePrepareAlertFromCheck(inlineDraft.sourceText);
+                        }
+                      }}
+                      className="px-3 py-1.5 text-xs font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded-lg transition-colors"
+                    >
+                      Otwórz w AI Helperze →
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
           )}
@@ -681,20 +876,20 @@ function SourceCard({
           ) : (
             <div className="space-y-3">
               {checks.map((check) => (
-                <div key={check.id} className="text-xs">
+                <div key={check.id} className="text-xs border-b border-slate-100 pb-2.5 last:border-0 last:pb-0">
                   <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
                     <span className={`font-medium shrink-0 ${resultConfig[check.result].color}`}>
                       {resultConfig[check.result].label}
                     </span>
                     <span className="text-slate-400 shrink-0">{formatCheckedAt(check.checkedAt)}</span>
-                    {check.notes && (
-                      <span className="text-slate-500 line-clamp-1">— {check.notes}</span>
-                    )}
                   </div>
+                  {check.notes && (
+                    <p className="mt-1 text-xs text-slate-500 whitespace-pre-wrap leading-relaxed">{check.notes}</p>
+                  )}
                   {ALERT_SHORTCUT_RESULTS.includes(check.result) && (
                     <button
                       onClick={() => handlePrepareAlertFromCheck(check.notes)}
-                      className="mt-0.5 text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                      className="mt-1 text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline"
                     >
                       Przygotuj alert →
                     </button>
@@ -1062,15 +1257,39 @@ export default function SourcesPage() {
 
       {/* ── Empty state ───────────────────────────────────────────────── */}
       {loadState === "ready" && sources.length === 0 && (
-        <div className="text-center py-16">
-          <p className="text-slate-400 text-sm mb-6">Nie dodano jeszcze żadnych źródeł.</p>
-          <div className="inline-block text-left rounded-xl border border-slate-200 bg-slate-50 px-6 py-5 max-w-sm">
-            <p className="text-sm font-medium text-slate-600 mb-3">Przykładowe źródła do dodania:</p>
-            <ul className="text-sm text-slate-500 space-y-2">
-              <li><span className="font-medium text-slate-700">WKD</span>{" — "}komunikaty o zakłóceniach ruchu</li>
-              <li><span className="font-medium text-slate-700">Gmina Michałowice</span>{" — "}aktualności i komunikaty urzędu</li>
-              <li><span className="font-medium text-slate-700">PGE</span>{" — "}planowane wyłączenia prądu</li>
+        <div className="py-12">
+          <p className="text-slate-600 text-sm font-medium mb-1">Nie dodano jeszcze żadnych źródeł.</p>
+          <p className="text-slate-400 text-sm mb-6">
+            Kliknij „+ Dodaj źródło" powyżej, aby dodać pierwsze źródło do monitorowania.
+          </p>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-6 py-5 max-w-lg">
+            <p className="text-sm font-semibold text-slate-700 mb-3">Przykładowe źródła do monitorowania:</p>
+            <ul className="text-sm text-slate-500 space-y-3">
+              <li>
+                <span className="font-medium text-slate-700">WKD</span>
+                <span className="text-xs text-slate-400 mx-1">· Transport</span>
+                <span>— komunikaty o zakłóceniach i zmianach rozkładu</span>
+              </li>
+              <li>
+                <span className="font-medium text-slate-700">Urząd Gminy</span>
+                <span className="text-xs text-slate-400 mx-1">· Komunikaty</span>
+                <span>— aktualności i komunikaty dla mieszkańców</span>
+              </li>
+              <li>
+                <span className="font-medium text-slate-700">PGE / Tauron / Energa</span>
+                <span className="text-xs text-slate-400 mx-1">· Prąd</span>
+                <span>— planowane wyłączenia prądu w rejonie</span>
+              </li>
+              <li>
+                <span className="font-medium text-slate-700">Zakład Wodociągów</span>
+                <span className="text-xs text-slate-400 mx-1">· Woda</span>
+                <span>— przerwy i awarie w dostawie wody</span>
+              </li>
             </ul>
+            <p className="text-xs text-slate-400 mt-4 border-t border-slate-200 pt-4">
+              Po dodaniu źródła użyj „Sprawdź stronę", aby pobrać treść i wygenerować draft alertu.
+              Wynik sprawdzenia możesz zapisać w historii — zostanie powiązany ze źródłem.
+            </p>
           </div>
         </div>
       )}
