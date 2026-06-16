@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { sampleAlerts } from "@/data/sampleAlerts";
 import { getSupabaseAlertBySlug } from "@/lib/getSupabaseAlerts";
-import { formatAlertRange } from "@/lib/formatAlertDate";
+import { formatAlertRange, formatAlertDateTime } from "@/lib/formatAlertDate";
 import { getAlertTimeStatus, type AlertTimeStatus } from "@/lib/getAlertTimeStatus";
 import type { Alert } from "@/types/alert";
 
@@ -208,7 +208,25 @@ export function AlertDetailClient({ slug }: { slug: string }) {
               ) : null}
             </dd>
           </div>
+
+          {(alert.publishedAt || alert.updatedAt) && (
+            <div className="flex flex-col py-3 gap-1">
+              <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                Aktualizacja
+              </dt>
+              <dd className="text-sm text-slate-700 leading-relaxed">
+                {alert.updatedAt
+                  ? `ostatnio zmieniono ${formatAlertDateTime(alert.updatedAt)}`
+                  : `opublikowano ${formatAlertDateTime(alert.publishedAt as string)}`}
+              </dd>
+            </div>
+          )}
         </dl>
+
+        <p className="text-xs text-slate-400 leading-relaxed border-t border-slate-100 pt-3 mt-1">
+          Alertownik pomaga szybko zorientować się w sytuacji, ale nie zastępuje
+          oficjalnych komunikatów — w razie wątpliwości sprawdź źródło powyżej.
+        </p>
       </article>
     </main>
   );

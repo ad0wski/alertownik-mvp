@@ -57,6 +57,7 @@ export function PreferencesSection({ savedPrefs, onSave, onClear }: Props) {
         <h2 className="text-base font-semibold text-slate-900">Moje alerty</h2>
         <p className="text-sm text-slate-500 mt-0.5 leading-relaxed">
           Dostosuj widok do swojej okolicy i kategorii, które Cię interesują.
+          Nie wymaga konta — preferencje zapisują się tylko na tym urządzeniu.
         </p>
       </div>
 

@@ -2,7 +2,7 @@ import { supabase } from "@/lib/supabaseClient";
 import type { Alert } from "@/types/alert";
 
 const SELECT_FIELDS =
-  "id, slug, category, severity, title, place, starts_at, ends_at, change, action, source_name, source_url, source_id";
+  "id, slug, category, severity, title, place, starts_at, ends_at, change, action, source_name, source_url, source_id, published_at, updated_at";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapRow(row: any): Alert {
@@ -20,6 +20,8 @@ function mapRow(row: any): Alert {
     sourceName: row.source_name,
     sourceUrl: row.source_url ?? undefined,
     sourceId: row.source_id ?? null,
+    publishedAt: row.published_at ?? null,
+    updatedAt: row.updated_at ?? undefined,
   };
 }
 

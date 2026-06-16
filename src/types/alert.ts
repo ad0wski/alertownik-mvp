@@ -22,4 +22,6 @@ export interface Alert {
   sourceName: string;  // Źródło – nazwa
   sourceUrl?: string;  // Źródło – link
   sourceId?: string | null; // FK to alert_sources.id
+  publishedAt?: string | null;
+  updatedAt?: string;
 }

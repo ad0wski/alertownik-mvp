@@ -45,6 +45,13 @@ export function AppHeader() {
     return pathname === href;
   }
 
+  const publicNavLinkClass = (href: string) =>
+    `px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
+      isActive(href)
+        ? "bg-blue-50 text-blue-700"
+        : "text-slate-700 hover:text-slate-900 hover:bg-slate-100"
+    }`;
+
   return (
     <header className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
@@ -76,15 +83,11 @@ export function AppHeader() {
             className="hidden sm:flex flex-wrap items-center justify-end gap-x-1 gap-y-1"
             aria-label="Nawigacja"
           >
-            <Link
-              href="/"
-              className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
-                isActive("/")
-                  ? "bg-blue-50 text-blue-700"
-                  : "text-slate-700 hover:text-slate-900 hover:bg-slate-100"
-              }`}
-            >
+            <Link href="/" className={publicNavLinkClass("/")}>
               Alerty
+            </Link>
+            <Link href="/about" className={publicNavLinkClass("/about")}>
+              O projekcie
             </Link>
 
             {session && (
@@ -125,15 +128,11 @@ export function AppHeader() {
 
           {/* ── Mobile nav (below sm) ── */}
           <div className="flex sm:hidden items-center gap-1">
-            <Link
-              href="/"
-              className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                isActive("/")
-                  ? "bg-blue-50 text-blue-700"
-                  : "text-slate-700 hover:text-slate-900 hover:bg-slate-100"
-              }`}
-            >
+            <Link href="/" className={publicNavLinkClass("/")}>
               Alerty
+            </Link>
+            <Link href="/about" className={publicNavLinkClass("/about")}>
+              O projekcie
             </Link>
 
             {session && (

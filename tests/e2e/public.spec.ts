@@ -69,4 +69,16 @@ test.describe("Public homepage", () => {
     // Should not show a Next.js or React application error
     await expect(page.locator("body")).not.toContainText("Application error");
   });
+
+  test("about page loads with project info and feedback link", async ({ page }) => {
+    await page.goto("/about");
+    await expect(page.locator("h1")).toContainText("O projekcie");
+    await expect(page.getByRole("link", { name: /Napisz do nas/ })).toBeVisible();
+  });
+
+  test("homepage links to the about page", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("link", { name: "O projekcie" }).first().click();
+    await expect(page).toHaveURL(/\/about$/);
+  });
 });
