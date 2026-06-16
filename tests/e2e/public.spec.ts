@@ -100,6 +100,17 @@ test.describe("Public homepage", () => {
     await expect(page.getByRole("link", { name: /Chcę testować/ })).toBeVisible();
   });
 
+  test("about page lists known limitations", async ({ page }) => {
+    await page.goto("/about");
+    await expect(page.getByText("Znane ograniczenia")).toBeVisible();
+  });
+
+  test("My Alerty toggle opens the local preferences panel", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Moje alerty" }).click();
+    await expect(page.getByText(/preferencje|okolic/i).first()).toBeVisible();
+  });
+
   test("homepage links to the about page", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("link", { name: "O projekcie" }).first().click();

@@ -85,6 +85,19 @@ export default function AboutPage() {
           </p>
         </section>
 
+        <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
+          <h2 className="text-base font-semibold text-slate-900 mb-2">
+            Znane ograniczenia
+          </h2>
+          <ul className="text-sm text-slate-600 space-y-1.5 list-disc list-inside leading-relaxed">
+            <li>To wczesny pilotaż — funkcje i wygląd mogą się jeszcze zmieniać.</li>
+            <li>Nie wszystkie lokalne źródła są jeszcze monitorowane — część okolic i kategorii (np. drogi) ma na razie mniej alertów.</li>
+            <li>Alerty są przygotowywane i zatwierdzane ręcznie przez admina, nie w czasie rzeczywistym.</li>
+            <li>AI pomaga przygotować szkic alertu, ale nigdy nie publikuje go samodzielnie.</li>
+            <li>Oficjalne źródła pozostają ostatecznym potwierdzeniem informacji — Alertownik je tylko ułatwia znaleźć.</li>
+          </ul>
+        </section>
+
         <section id="chce-testowac" className="bg-emerald-50 rounded-2xl border border-emerald-200 shadow-sm p-4 sm:p-5">
           <h2 className="text-base font-semibold text-slate-900 mb-2">
             Chcesz testować z nami?
