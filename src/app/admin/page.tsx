@@ -59,6 +59,15 @@ function sourceNeedsChecking(lastCheckedAt: string | undefined, isActive: boolea
   return lastCheckedAt.split("T")[0] !== today;
 }
 
+const DAILY_WORKFLOW_STEPS: { label: string; note: string; href?: string }[] = [
+  { label: "Sprawdź źródła priorytetowe",  note: "Zacznij od źródeł oznaczonych „Do sprawdzenia”.", href: "/admin/sources" },
+  { label: "Przejrzyj treść źródła",       note: "Użyj „Sprawdź stronę”, by pobrać podgląd i kandydatów na komunikaty.", href: "/admin/sources" },
+  { label: "Wygeneruj draft AI (opcjonalnie)", note: "Z karty źródła albo w AI Helperze — jeśli komunikat jest na to gotowy.", href: "/ai-helper" },
+  { label: "Edytuj w Kreatorze",           note: "Popraw daty, lokalizację i treść przed publikacją.", href: "/builder" },
+  { label: "Zatwierdź i opublikuj ręcznie", note: "AI nigdy nie publikuje samodzielnie — to zawsze robi admin." },
+  { label: "Sprawdź alert publicznie",     note: "Zerknij na stronę główną, żeby zobaczyć to, co zobaczy mieszkaniec.", href: "/" },
+];
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AdminPage() {
@@ -150,6 +159,11 @@ export default function AdminPage() {
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
     .slice(0, 5);
 
+  const draftAlerts = alerts
+    .filter((a) => a.status === "draft")
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+    .slice(0, 5);
+
   const stats = [
     { label: "Wszystkie alerty", value: total,          color: "text-slate-900" },
     { label: "Opublikowane",     value: publishedCount, color: "text-emerald-700" },
@@ -180,6 +194,34 @@ export default function AdminPage() {
         </p>
       </div>
 
+      {/* ── Daily operations checklist ────────────────────────────────── */}
+      <section className="mb-8">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+          <h2 className="text-base font-semibold text-slate-800 mb-3">
+            Codzienny workflow admina
+          </h2>
+          <ol className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {DAILY_WORKFLOW_STEPS.map((step, i) => (
+              <li key={step.label} className="flex items-start gap-2.5">
+                <span className="shrink-0 w-5 h-5 rounded-full bg-slate-100 text-slate-500 text-xs font-semibold flex items-center justify-center mt-0.5">
+                  {i + 1}
+                </span>
+                <div className="min-w-0">
+                  {step.href ? (
+                    <Link href={step.href} className="text-sm font-medium text-blue-700 hover:text-blue-900 hover:underline">
+                      {step.label}
+                    </Link>
+                  ) : (
+                    <span className="text-sm font-medium text-slate-800">{step.label}</span>
+                  )}
+                  <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">{step.note}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
       {/* ── Alert stats cards ──────────────────────────────────────────── */}
       <section className="mb-8">
         <h2 className="text-base font-semibold text-slate-800 mb-4">Statystyki alertów</h2>
@@ -201,6 +243,58 @@ export default function AdminPage() {
                 <p className="text-xs text-slate-500 mt-1 leading-snug">{s.label}</p>
               </div>
             ))}
+          </div>
+        )}
+      </section>
+
+      {/* ── Drafts needing attention ──────────────────────────────────── */}
+      <section className="mb-8">
+        <h2 className="text-base font-semibold text-slate-800 mb-4">Wymaga uwagi</h2>
+
+        {alertsLoading ? (
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 animate-pulse">
+            <div className="h-4 w-48 bg-slate-100 rounded" />
+          </div>
+        ) : draftAlerts.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-slate-200 p-5">
+            <p className="text-sm text-emerald-700 font-medium">
+              Brak draftów czekających na dokończenie.
+            </p>
+          </div>
+        ) : (
+          <div
+            className={`bg-white rounded-2xl border shadow-sm p-5 ${
+              draftAlerts.length > 0 ? "border-amber-200" : "border-slate-200"
+            }`}
+          >
+            <p className="text-sm text-amber-700 font-medium mb-3">
+              {draftAlerts.length === 1
+                ? "1 draft czeka na dokończenie"
+                : `${draftAlerts.length} drafty czekają na dokończenie`}
+            </p>
+            <div className="flex flex-col gap-2.5">
+              {draftAlerts.map((a) => (
+                <div
+                  key={a.id}
+                  className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-2.5 first:border-0 first:pt-0"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-slate-800 truncate">
+                      {a.title || "Bez tytułu"}
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      {categoryLabels[a.category] ?? a.category} · zmieniono {formatDate(a.updatedAt)}
+                    </p>
+                  </div>
+                  <Link
+                    href={`/builder?edit=${a.slug}`}
+                    className="shrink-0 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-700 hover:bg-amber-100 transition-colors"
+                  >
+                    Dokończ w kreatorze
+                  </Link>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </section>
