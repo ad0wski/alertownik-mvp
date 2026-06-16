@@ -1,15 +1,22 @@
 import { supabase } from "@/lib/supabaseClient";
-import type { Alert } from "@/types/alert";
+import type { Alert, AlertCategory } from "@/types/alert";
 
 const SELECT_FIELDS =
   "id, slug, category, severity, title, place, starts_at, ends_at, change, action, source_name, source_url, source_id, published_at, updated_at";
+
+// The Supabase table stores "announcement" where the app uses "municipal"
+// (same mapping as getAdminSupabaseAlerts.ts — must stay in sync).
+function toAppCategory(dbCategory: string): AlertCategory {
+  if (dbCategory === "announcement") return "municipal";
+  return dbCategory as AlertCategory;
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapRow(row: any): Alert {
   return {
     id: String(row.id),
     slug: row.slug,
-    category: row.category,
+    category: toAppCategory(row.category),
     severity: row.severity,
     title: row.title,
     place: row.place,
@@ -25,8 +32,15 @@ function mapRow(row: any): Alert {
   };
 }
 
-export async function getSupabaseAlerts(): Promise<Alert[]> {
-  if (!supabase) return [];
+export interface SupabaseAlertsResult {
+  alerts: Alert[];
+  error: string | null;
+}
+
+export async function getSupabaseAlerts(): Promise<SupabaseAlertsResult> {
+  if (!supabase) {
+    return { alerts: [], error: "Brak połączenia z Supabase." };
+  }
 
   try {
     const { data, error } = await supabase
@@ -37,13 +51,14 @@ export async function getSupabaseAlerts(): Promise<Alert[]> {
 
     if (error) {
       console.error("[Alertownik] Błąd Supabase:", error.message);
-      return [];
+      return { alerts: [], error: error.message };
     }
 
-    return (data ?? []).map(mapRow);
+    return { alerts: (data ?? []).map(mapRow), error: null };
   } catch (err) {
+    const msg = err instanceof Error ? err.message : "Nieznany błąd.";
     console.error("[Alertownik] Nie udało się pobrać alertów z bazy danych:", err);
-    return [];
+    return { alerts: [], error: msg };
   }
 }
 

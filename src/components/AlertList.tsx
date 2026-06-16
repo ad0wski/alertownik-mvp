@@ -71,7 +71,7 @@ function matchesSearch(alert: Alert, query: string): boolean {
     alert.place.toLowerCase().includes(q) ||
     alert.change.toLowerCase().includes(q) ||
     alert.action.toLowerCase().includes(q) ||
-    categoryLabels[alert.category].includes(q)
+    (categoryLabels[alert.category] ?? "").includes(q)
   );
 }
 
@@ -118,7 +118,10 @@ export function AlertList() {
   useEffect(() => {
     // Fetch alerts
     getSupabaseAlerts()
-      .then((data) => setAlerts(sortAlerts(data)))
+      .then(({ alerts: data, error }) => {
+        setAlerts(sortAlerts(data));
+        if (error) setFetchError(true);
+      })
       .catch(() => setFetchError(true))
       .finally(() => setLoading(false));
 
@@ -231,8 +234,10 @@ export function AlertList() {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Szukaj po miejscowości, ulicy albo tytule..."
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 pr-20 text-sm text-slate-800 placeholder:text-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              placeholder="Szukaj po miejscowości lub tytule..."
+              className={`w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                hasQuery ? "pr-20" : ""
+              }`}
             />
             {hasQuery && (
               <button

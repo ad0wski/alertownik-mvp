@@ -76,6 +76,7 @@ export default function AdminPage() {
 
   const [alerts, setAlerts]             = useState<AdminAlert[]>([]);
   const [alertsLoading, setAlertsLoading] = useState(false);
+  const [alertsError, setAlertsError]   = useState<string | null>(null);
 
   const [sourcesToCheck, setSourcesToCheck]   = useState(0);
   const [sourcesLoading, setSourcesLoading]   = useState(false);
@@ -101,8 +102,9 @@ export default function AdminPage() {
 
     // Load alerts
     setAlertsLoading(true);
-    getAdminSupabaseAlerts().then(({ alerts: loaded }) => {
+    getAdminSupabaseAlerts().then(({ alerts: loaded, error }) => {
       setAlerts(loaded);
+      setAlertsError(error);
       setAlertsLoading(false);
     });
 
@@ -193,6 +195,15 @@ export default function AdminPage() {
           Przegląd alertów, źródeł do sprawdzenia i ostatnich działań.
         </p>
       </div>
+
+      {alertsError && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 mb-6">
+          <p className="text-sm font-medium text-red-700">
+            Nie udało się pobrać alertów z Supabase. Statystyki i listy poniżej mogą być niepełne.
+          </p>
+          <p className="text-xs text-red-500 mt-1 font-mono">{alertsError}</p>
+        </div>
+      )}
 
       {/* ── Daily operations checklist ────────────────────────────────── */}
       <section className="mb-8">

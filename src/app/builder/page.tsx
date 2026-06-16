@@ -544,6 +544,10 @@ export default function BuilderPage() {
     if (!normalizeAlertSeverity(form.severity)) return "Nieprawidłowy poziom ważności alertu.";
     const slug = form.slug.trim() || generateSlug(form.title);
     if (!slug) return "Nie udało się wygenerować slugu. Wpisz tytuł lub slug ręcznie.";
+    // Zapis (nie edycja) z istniejącym slugiem nadpisałby inny alert (upsert po slug).
+    if (!editingSupabaseAlert && supabaseAlerts.some((a) => a.slug === slug)) {
+      return `Slug „${slug}" jest już użyty przez inny alert. Zmień slug albo wczytaj ten alert do edycji z listy poniżej.`;
+    }
     return null;
   }
 
@@ -1388,7 +1392,7 @@ export default function BuilderPage() {
                     {a.slug}
                   </p>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    dodano {formatItemDate(a.updatedAt)}
+                    zmieniono {formatItemDate(a.updatedAt)}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0 flex-wrap">

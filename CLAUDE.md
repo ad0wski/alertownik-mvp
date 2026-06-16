@@ -108,10 +108,10 @@ Defined in `.env.local` (never commit this file):
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...
 ```
 
-Only the **anon key** is used. The service_role key is never used in any frontend code. `.env.local` is in `.gitignore`.
+Only the **anon/publishable key** is used (named `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in this codebase — see `docs/SUPABASE_SETUP_CHECKLIST.md` for the naming note). The service_role key is never used in any frontend code. `.env.local` is in `.gitignore`.
 
 ---
 
@@ -132,7 +132,7 @@ Only the **anon key** is used. The service_role key is never used in any fronten
 
 ## Security Rules — Never Violate
 
-1. **Never use the Supabase service_role key** in any frontend or client-side code. It must never appear in any file under `src/`. Only the anon key (`NEXT_PUBLIC_SUPABASE_ANON_KEY`) is allowed.
+1. **Never use the Supabase service_role key** in any frontend or client-side code. It must never appear in any file under `src/`. Only the anon key (`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`) is allowed.
 2. **Never commit `.env.local`**. It is in `.gitignore`. Do not hardcode env values in source files.
 3. **Never expose admin tools to public users.** Admin pages use `AuthGate` or explicit session checks. Public users must not see `/admin`, `/builder`, `/ai-helper`, or `/admin/sources`.
 4. **Never modify RLS policies without explicit user confirmation.** RLS is the security boundary between public and admin data.

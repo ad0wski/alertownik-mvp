@@ -117,7 +117,7 @@ Last updated: June 2026
 
 - [ ] Aplikacja działa na https://alertownik-mvp.vercel.app/
 - [ ] Brak błędów 500 w logach Vercel
-- [ ] Zmienne środowiskowe (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`) są ustawione w Vercel
+- [ ] Zmienne środowiskowe (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`) są ustawione w Vercel
 - [ ] Ostatni deploy jest z aktualnego kodu na gałęzi `main`
 
 ---
