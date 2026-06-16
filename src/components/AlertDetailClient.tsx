@@ -223,10 +223,20 @@ export function AlertDetailClient({ slug }: { slug: string }) {
           )}
         </dl>
 
-        <p className="text-xs text-slate-400 leading-relaxed border-t border-slate-100 pt-3 mt-1">
-          Alertownik pomaga szybko zorientować się w sytuacji, ale nie zastępuje
-          oficjalnych komunikatów — w razie wątpliwości sprawdź źródło powyżej.
-        </p>
+        <div className="text-xs text-slate-400 leading-relaxed border-t border-slate-100 pt-3 mt-1">
+          <p>
+            Alertownik pomaga szybko zorientować się w sytuacji, ale nie zastępuje
+            oficjalnych komunikatów — w razie wątpliwości sprawdź źródło powyżej.
+          </p>
+          <a
+            href={`mailto:ak.jurkowski@gmail.com?subject=${encodeURIComponent(
+              `Alertownik — zgłoszenie: ${alert.title}`
+            )}`}
+            className="inline-block mt-1.5 font-medium text-slate-500 hover:text-blue-700 hover:underline"
+          >
+            Ten alert jest nieaktualny albo błędny? Zgłoś →
+          </a>
+        </div>
       </article>
     </main>
   );

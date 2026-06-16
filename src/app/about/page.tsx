@@ -41,6 +41,24 @@ export default function AboutPage() {
           </p>
         </section>
 
+        <section id="co-testujemy" className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
+          <h2 className="text-base font-semibold text-slate-900 mb-2">
+            Co testujemy i gdzie
+          </h2>
+          <p className="text-sm text-slate-600 leading-relaxed mb-2">
+            Pierwsza wersja pilotażu skupia się na okolicach WKD, Komorowa i
+            Pruszkowa — to tam admin na bieżąco sprawdza źródła i przygotowuje
+            alerty. Sprawdzamy, czy taki serwis realnie pomaga szybciej
+            zrozumieć lokalne zmiany niż czytanie oficjalnych komunikatów.
+          </p>
+          <p className="text-sm text-slate-600 leading-relaxed">
+            Najbardziej pomocny feedback to: zgłoszenie alertu, który jest
+            nieaktualny albo błędny, informacja o ważnym komunikacie, którego
+            nie zauważyliśmy, oraz sugestie nowych okolic lub źródeł do
+            monitorowania.
+          </p>
+        </section>
+
         <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
           <h2 className="text-base font-semibold text-slate-900 mb-2">
             Kto przygotowuje alerty
@@ -67,13 +85,32 @@ export default function AboutPage() {
           </p>
         </section>
 
+        <section id="chce-testowac" className="bg-emerald-50 rounded-2xl border border-emerald-200 shadow-sm p-4 sm:p-5">
+          <h2 className="text-base font-semibold text-slate-900 mb-2">
+            Chcesz testować z nami?
+          </h2>
+          <p className="text-sm text-slate-600 leading-relaxed mb-3">
+            Szukamy pierwszych testerów z okolic objętych pilotażem (WKD,
+            Komorów, Pruszków i sąsiednie miejscowości). Napisz krótko, gdzie
+            mieszkasz albo dojeżdżasz — odpiszemy z informacją, jak możesz
+            pomóc.
+          </p>
+          <a
+            href={`mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent("Alertownik — chcę testować")}`}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 transition-colors"
+          >
+            Chcę testować →
+          </a>
+        </section>
+
         <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
           <h2 className="text-base font-semibold text-slate-900 mb-2">
             Masz uwagi albo pytania?
           </h2>
           <p className="text-sm text-slate-600 leading-relaxed mb-3">
-            To wczesna wersja serwisu — chętnie usłyszymy, co działa dobrze, a co
-            warto poprawić.
+            To wczesna wersja serwisu — chętnie usłyszymy, co działa dobrze, co
+            warto poprawić, albo zgłosisz alert, który jest nieaktualny lub
+            błędny.
           </p>
           <a
             href={`mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent("Alertownik — opinia o pilotażu")}`}

@@ -95,9 +95,38 @@ test.describe("Public homepage", () => {
     await expect(page.getByRole("link", { name: /Napisz do nas/ })).toBeVisible();
   });
 
+  test("about page has a tester-interest CTA", async ({ page }) => {
+    await page.goto("/about");
+    await expect(page.getByRole("link", { name: /Chcę testować/ })).toBeVisible();
+  });
+
   test("homepage links to the about page", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("link", { name: "O projekcie" }).first().click();
     await expect(page).toHaveURL(/\/about$/);
+  });
+
+  test("homepage links to the tester-interest section", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("link", { name: /zgłoś się jako tester/ }).click();
+    await expect(page).toHaveURL(/\/about#chce-testowac$/);
+  });
+
+  test("alert detail page offers a way to report a wrong/outdated alert", async ({ page }) => {
+    await page.goto("/");
+
+    await expect(
+      page.getByText(/Wszystkich alertów|Brak aktualnych alertów/)
+    ).toBeVisible({ timeout: 15_000 });
+
+    const openLink = page.getByRole("link", { name: /Otwórz alert/ }).first();
+    if (!(await openLink.isVisible())) {
+      // No published alerts — nothing to navigate to
+      return;
+    }
+
+    await openLink.click();
+    await expect(page).not.toHaveURL("/", { timeout: 15_000 });
+    await expect(page.getByRole("link", { name: /Zgłoś/ })).toBeVisible();
   });
 });

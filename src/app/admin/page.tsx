@@ -454,6 +454,31 @@ export default function AdminPage() {
         </div>
       </section>
 
+      {/* ── Pilot feedback & observations ───────────────────────────────── */}
+      <section className="mt-8">
+        <div className="bg-slate-50 rounded-2xl border border-slate-200 p-5">
+          <h2 className="text-base font-semibold text-slate-800 mb-1">
+            Pilotaż — feedback i obserwacje
+          </h2>
+          <p className="text-sm text-slate-500 mb-3 leading-relaxed">
+            Feedback od mieszkańców i testerów przychodzi mailem (link „Napisz do
+            nas” / „Chcę testować” na stronie{" "}
+            <Link href="/about" className="font-medium text-blue-600 hover:underline">
+              O projekcie
+            </Link>
+            ) — nie ma jeszcze panelu zgłoszeń w aplikacji. Podczas pilotażu pamiętaj o:
+          </p>
+          <ul className="text-sm text-slate-600 space-y-1.5 list-disc list-inside">
+            <li>regularnym sprawdzaniu skrzynki z feedbackiem,</li>
+            <li>ocenie jakości i aktualności źródeł (czy nic nie umyka),</li>
+            <li>notowaniu okolic/źródeł, o które proszą mieszkańcy, a których jeszcze nie monitorujemy,</li>
+            <li>
+              zapisywaniu ważniejszych obserwacji w Obsidian (Research / Decisions), żeby nie zgubić kontekstu między sesjami.
+            </li>
+          </ul>
+        </div>
+      </section>
+
     </main>
   );
 }

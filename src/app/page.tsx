@@ -34,6 +34,10 @@ export default function Home() {
           <Link href="/about" className="font-medium text-slate-500 hover:text-blue-700 underline">
             sprawdź jak to działa
           </Link>
+          {" "}albo{" "}
+          <Link href="/about#chce-testowac" className="font-medium text-emerald-600 hover:text-emerald-800 underline">
+            zgłoś się jako tester
+          </Link>
           .
         </p>
       </div>
