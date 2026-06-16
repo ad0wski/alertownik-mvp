@@ -48,6 +48,7 @@ test.describe("Public homepage", () => {
     await detailsBtn.click();
     await expect(page.getByText("Kiedy")).toBeVisible();
     await expect(page.getByText("Co się zmienia")).toBeVisible();
+    await expect(page.getByText("Źródło")).toBeVisible();
   });
 
   test("opening alert detail page does not crash the app", async ({ page }) => {
@@ -68,6 +69,24 @@ test.describe("Public homepage", () => {
     await expect(page).not.toHaveURL("/", { timeout: 15_000 });
     // Should not show a Next.js or React application error
     await expect(page.locator("body")).not.toContainText("Application error");
+  });
+
+  test("alert detail page shows the official-source trust disclaimer", async ({ page }) => {
+    await page.goto("/");
+
+    await expect(
+      page.getByText(/Wszystkich alertów|Brak aktualnych alertów/)
+    ).toBeVisible({ timeout: 15_000 });
+
+    const openLink = page.getByRole("link", { name: /Otwórz alert/ }).first();
+    if (!(await openLink.isVisible())) {
+      // No published alerts — nothing to navigate to
+      return;
+    }
+
+    await openLink.click();
+    await expect(page).not.toHaveURL("/", { timeout: 15_000 });
+    await expect(page.getByText(/nie zastępuje/)).toBeVisible();
   });
 
   test("about page loads with project info and feedback link", async ({ page }) => {

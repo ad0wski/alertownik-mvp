@@ -54,6 +54,66 @@ const CATEGORIES: AlertCategory[] = [
 
 const SOURCE_TYPES: AlertSourceType[] = ["website", "pdf", "rss", "other"];
 
+// ── Pilot source suggestions ─────────────────────────────────────────────────
+// Real, verified pilot targets for the WKD / Komorów / Pruszków area (Sprint 64).
+// "Wypełnij formularz" only pre-fills the add-source form — admin still reviews
+// and clicks "Dodaj źródło" themselves before anything is saved to Supabase.
+
+interface PilotSourceSuggestion extends AlertSourceInput {
+  id: string;
+}
+
+const PILOT_SOURCE_SUGGESTIONS: PilotSourceSuggestion[] = [
+  {
+    id: "wkd",
+    name: "WKD — aktualności",
+    url: "https://wkd.com.pl/aktualnosci",
+    category: "transport",
+    sourceType: "website",
+    notes: "Komunikaty o zmianach rozkładu i utrudnieniach na liniach WKD.",
+  },
+  {
+    id: "michalowice",
+    name: "Gmina Michałowice — komunikaty",
+    url: "https://www.michalowice.pl/dzieje-sie/aktualnosci/komunikaty",
+    category: "municipal",
+    sourceType: "website",
+    notes: "Komunikaty gminne dla Komorowa i okolic (gmina Michałowice).",
+  },
+  {
+    id: "pruszkow",
+    name: "Miasto Pruszków — aktualności dla mieszkańców",
+    url: "https://www.pruszkow.pl/mieszkancy/aktualnosci-mieszkaniec/",
+    category: "municipal",
+    sourceType: "website",
+    notes: "Aktualności i ogłoszenia urzędu miasta Pruszków.",
+  },
+  {
+    id: "pge",
+    name: "PGE Dystrybucja — planowane wyłączenia",
+    url: "https://pgedystrybucja.pl/wylaczenia",
+    category: "power",
+    sourceType: "website",
+    notes: "Planowane wyłączenia prądu w regionie (wybierz odpowiedni rejon na stronie).",
+  },
+  {
+    id: "wodociagi-michalowice",
+    name: "Wodociągi Michałowice",
+    url: "https://wodociagimichalowice.pl/",
+    category: "water",
+    sourceType: "website",
+    notes: "Przerwy i awarie w dostawie wody w gminie Michałowice.",
+  },
+  {
+    id: "mzo-pruszkow",
+    name: "Pruszków — terminy odbioru odpadów",
+    url: "https://www.pruszkow.pl/mieszkancy/terminy-odbioru-odpadow/",
+    category: "waste",
+    sourceType: "website",
+    notes: "Harmonogram odbioru odpadów komunalnych w Pruszkowie (MZO Pruszków).",
+  },
+];
+
 // ── Source preview types (fetch-preview result, ephemeral UI only) ─────────────
 
 interface SourcePreviewCandidate {
@@ -208,6 +268,58 @@ const NOTICE_RESULTS: SourceCheckResult[] = ["found_notice", "alert_created", "n
 
 // Results that show the "Przygotuj alert" shortcut in history
 const ALERT_SHORTCUT_RESULTS: SourceCheckResult[] = ["found_notice", "needs_followup"];
+
+// ── PilotSourceSuggestions component ──────────────────────────────────────────
+
+interface PilotSourceSuggestionsProps {
+  existingUrls: Set<string>;
+  onFillForm: (suggestion: PilotSourceSuggestion) => void;
+}
+
+function PilotSourceSuggestions({ existingUrls, onFillForm }: PilotSourceSuggestionsProps) {
+  return (
+    <div className="rounded-xl border border-blue-200 bg-blue-50/40 p-4 mb-5">
+      <p className="text-sm font-semibold text-slate-800 mb-1">
+        Pilotażowe źródła — WKD / Komorów / Pruszków
+      </p>
+      <p className="text-xs text-slate-500 mb-3 leading-relaxed">
+        Sprawdzone real adresy dla pierwszego pilotu. „Wypełnij formularz" tylko
+        przygotowuje formularz dodawania — źródło zapisuje się dopiero po Twojej
+        weryfikacji i kliknięciu „Dodaj źródło".
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+        {PILOT_SOURCE_SUGGESTIONS.map((s) => {
+          const added = existingUrls.has(s.url);
+          return (
+            <div
+              key={s.id}
+              className={`rounded-lg border p-3 ${added ? "border-emerald-200 bg-emerald-50/50" : "border-slate-200 bg-white"}`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-slate-800 truncate">{s.name}</p>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    {categoryLabels[s.category]} · {sourceTypeLabels[s.sourceType]}
+                  </p>
+                </div>
+                {added ? (
+                  <span className="shrink-0 text-xs font-medium text-emerald-700">Dodano ✓</span>
+                ) : (
+                  <button
+                    onClick={() => onFillForm(s)}
+                    className="shrink-0 text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                  >
+                    Wypełnij formularz →
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 // ── SourceForm component ──────────────────────────────────────────────────────
 
@@ -924,6 +1036,9 @@ export default function SourcesPage() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [addForm, setAddForm]         = useState<AlertSourceInput>(emptyForm());
 
+  // Pilot source suggestions
+  const [showPilotSuggestions, setShowPilotSuggestions] = useState(false);
+
   // Edit form
   const [editingId, setEditingId]   = useState<string | null>(null);
   const [editForm, setEditForm]     = useState<AlertSourceInput>(emptyForm());
@@ -1014,6 +1129,18 @@ export default function SourcesPage() {
     if (!result.ok) { setSaveError(result.error || "Nie udało się zapisać źródła."); return; }
     setAddForm(emptyForm()); setShowAddForm(false);
     await loadSources();
+  }
+
+  function handleFillFromSuggestion(suggestion: PilotSourceSuggestion) {
+    setAddForm({
+      name: suggestion.name,
+      url: suggestion.url,
+      category: suggestion.category,
+      sourceType: suggestion.sourceType,
+      notes: suggestion.notes,
+    });
+    setShowAddForm(true);
+    setSaveError(null);
   }
 
   // ── Edit form ───────────────────────────────────────────────────────────────
@@ -1139,15 +1266,29 @@ export default function SourcesPage() {
         </p>
       </div>
 
-      {/* Add button */}
-      <div className="mb-5">
+      {/* Add button + pilot suggestions toggle */}
+      <div className="mb-5 flex flex-wrap items-center gap-2">
         <button
           onClick={() => { setShowAddForm(!showAddForm); setSaveError(null); setAddForm(emptyForm()); }}
           className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
         >
           {showAddForm ? "Anuluj dodawanie" : "+ Dodaj źródło"}
         </button>
+        <button
+          onClick={() => setShowPilotSuggestions(!showPilotSuggestions)}
+          className="px-4 py-2 border border-blue-200 text-blue-700 bg-white text-sm font-medium rounded-lg hover:bg-blue-50 transition-colors"
+        >
+          {showPilotSuggestions ? "Ukryj pilotażowe źródła" : "Pilotażowe źródła →"}
+        </button>
       </div>
+
+      {/* Pilot source suggestions */}
+      {showPilotSuggestions && (
+        <PilotSourceSuggestions
+          existingUrls={new Set(sources.map((s) => s.url))}
+          onFillForm={handleFillFromSuggestion}
+        />
+      )}
 
       {/* Add form */}
       {showAddForm && (
@@ -1260,37 +1401,19 @@ export default function SourcesPage() {
         <div className="py-12">
           <p className="text-slate-600 text-sm font-medium mb-1">Nie dodano jeszcze żadnych źródeł.</p>
           <p className="text-slate-400 text-sm mb-6">
-            Kliknij „+ Dodaj źródło" powyżej, aby dodać pierwsze źródło do monitorowania.
+            Kliknij „+ Dodaj źródło" powyżej, aby dodać własne źródło, albo otwórz{" "}
+            <button
+              onClick={() => setShowPilotSuggestions(true)}
+              className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
+            >
+              „Pilotażowe źródła"
+            </button>{" "}
+            i wypełnij formularz jednym z gotowych, sprawdzonych adresów dla WKD / Komorowa / Pruszkowa.
           </p>
-          <div className="rounded-xl border border-slate-200 bg-slate-50 px-6 py-5 max-w-lg">
-            <p className="text-sm font-semibold text-slate-700 mb-3">Przykładowe źródła do monitorowania:</p>
-            <ul className="text-sm text-slate-500 space-y-3">
-              <li>
-                <span className="font-medium text-slate-700">WKD</span>
-                <span className="text-xs text-slate-400 mx-1">· Transport</span>
-                <span>— komunikaty o zakłóceniach i zmianach rozkładu</span>
-              </li>
-              <li>
-                <span className="font-medium text-slate-700">Urząd Gminy</span>
-                <span className="text-xs text-slate-400 mx-1">· Komunikaty</span>
-                <span>— aktualności i komunikaty dla mieszkańców</span>
-              </li>
-              <li>
-                <span className="font-medium text-slate-700">PGE / Tauron / Energa</span>
-                <span className="text-xs text-slate-400 mx-1">· Prąd</span>
-                <span>— planowane wyłączenia prądu w rejonie</span>
-              </li>
-              <li>
-                <span className="font-medium text-slate-700">Zakład Wodociągów</span>
-                <span className="text-xs text-slate-400 mx-1">· Woda</span>
-                <span>— przerwy i awarie w dostawie wody</span>
-              </li>
-            </ul>
-            <p className="text-xs text-slate-400 mt-4 border-t border-slate-200 pt-4">
-              Po dodaniu źródła użyj „Sprawdź stronę", aby pobrać treść i wygenerować draft alertu.
-              Wynik sprawdzenia możesz zapisać w historii — zostanie powiązany ze źródłem.
-            </p>
-          </div>
+          <p className="text-xs text-slate-400 max-w-lg border-t border-slate-200 pt-4">
+            Po dodaniu źródła użyj „Sprawdź stronę", aby pobrać treść i wygenerować draft alertu.
+            Wynik sprawdzenia możesz zapisać w historii — zostanie powiązany ze źródłem.
+          </p>
         </div>
       )}
 
