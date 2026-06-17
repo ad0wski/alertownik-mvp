@@ -76,8 +76,13 @@ export function AlertDetailClient({ slug }: { slug: string }) {
         // localStorage unavailable
       }
 
-      // 3. Sample alerts — dev/demo fallback only, not shown in production
-      const sample = sampleAlerts.find((a) => a.slug === slug) ?? null;
+      // 3. Sample alerts — local dev convenience only (e.g. no .env.local configured
+      // yet). Gated out of production so a guessed/old sample slug can never render
+      // fabricated content as if it were a real published alert.
+      const sample =
+        process.env.NODE_ENV !== "production"
+          ? sampleAlerts.find((a) => a.slug === slug) ?? null
+          : null;
       setAlert(sample);
       setReady(true);
     });
@@ -151,7 +156,11 @@ export function AlertDetailClient({ slug }: { slug: string }) {
 
         {/* Compact line */}
         <p className="text-sm text-slate-500 leading-relaxed">
-          <span className="font-medium text-slate-600">{alert.place}</span>
+          {alert.place ? (
+            <span className="font-medium text-slate-600">{alert.place}</span>
+          ) : (
+            <span className="italic text-slate-400">Brak informacji o lokalizacji</span>
+          )}
           {" · "}
           {formatAlertRange(alert.startsAt, alert.endsAt)}
         </p>
@@ -171,21 +180,27 @@ export function AlertDetailClient({ slug }: { slug: string }) {
             <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400">
               Gdzie
             </dt>
-            <dd className="text-sm text-slate-700 leading-relaxed">{alert.place}</dd>
+            <dd className="text-sm text-slate-700 leading-relaxed">
+              {alert.place || <span className="italic text-slate-400">Brak informacji o lokalizacji</span>}
+            </dd>
           </div>
 
           <div className="flex flex-col py-3 gap-1">
             <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400">
               Co się zmienia
             </dt>
-            <dd className="text-sm text-slate-700 leading-relaxed">{alert.change}</dd>
+            <dd className="text-sm text-slate-700 leading-relaxed">
+              {alert.change || <span className="italic text-slate-400">Brak szczegółów.</span>}
+            </dd>
           </div>
 
           <div className="flex flex-col py-3 gap-1">
             <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400">
               Co zrobić
             </dt>
-            <dd className="text-sm text-slate-700 leading-relaxed">{alert.action}</dd>
+            <dd className="text-sm text-slate-700 leading-relaxed">
+              {alert.action || <span className="italic text-slate-400">Brak zalecanego działania.</span>}
+            </dd>
           </div>
 
           <div className="flex flex-col py-3 gap-1">

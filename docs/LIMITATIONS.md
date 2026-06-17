@@ -1,99 +1,59 @@
 # Current Limitations
 
-This document describes what Alertownik does not yet do. It is intended to be read alongside the demo guide and project status, and to support honest communication with reviewers and collaborators.
+This document describes what Alertownik does not yet do. It is intended to be read alongside the demo guide and project status, and to support honest communication with reviewers, collaborators, and pilot testers.
 
 These are not design failures — they are intentional deferrals. Each limitation reflects a deliberate choice to keep the MVP scope small while validating the core idea.
 
----
-
-## No Backend
-
-The app is a fully static Next.js site. There are no API routes, no server-side data processing, and no external services called at runtime. All logic runs in the browser.
-
-**Consequence:** Alerts cannot be published or managed from a server. Creating an alert in the Builder saves it only to the local browser.
-
----
-
-## No Database
-
-There is no database of any kind — no SQL, no document store, no hosted storage. Alert data exists in two places only:
-
-1. **Hardcoded in the source code** — the 6 sample alerts in `src/data/sampleAlerts.ts`
-2. **Browser localStorage** — drafts and locally published alerts created via the Builder
-
-**Consequence:** There is no persistent, shared, or backed-up store of alerts. Clearing the browser removes all locally created content.
-
----
-
-## No Authentication
-
-There are no user accounts, login flows, or role-based permissions. The Builder and AI Helper are accessible to anyone who knows the URL.
-
-**Consequence:** In its current form, the app is not suitable for a real editorial workflow where access needs to be controlled.
-
----
-
-## No Real AI Integration
-
-The AI Helper generates a structured prompt for pasting into an external AI assistant (ChatGPT, Claude, etc.). It does not call any AI API and does not process or return any AI-generated content automatically.
-
-**Consequence:** Converting a raw announcement to an alert still requires a manual step: copy the prompt → paste into an AI tool → copy the JSON response → paste it into the Builder.
+**Updated June 2026 (Sprint 70)** — the sections below previously described a pre-Supabase, localStorage-only version of the app (no backend, no auth, sample data on the homepage). That version no longer exists; this rewrite reflects what's actually deployed today.
 
 ---
 
 ## No Automatic Source Monitoring
 
-There is no mechanism to watch, scrape, or subscribe to official announcement sources. New alerts cannot be discovered automatically.
+There is no mechanism to watch, scrape, or subscribe to official announcement sources. New alerts cannot be discovered automatically — an admin opens `/admin/sources`, clicks "Sprawdź stronę" on a source, and decides by hand whether anything is worth turning into an alert.
 
-**Consequence:** Finding relevant announcements, deciding they are worth publishing, and entering them into the Builder is entirely manual.
-
----
-
-## LocalStorage Is Per-Browser and Ephemeral
-
-Locally published alerts and saved drafts are stored in `localStorage` under the keys:
-
-- `alertownik-published-alerts`
-- `alertownik-drafts`
-
-This data is:
-- **Not shared** across browsers or devices
-- **Not backed up** anywhere
-- **Lost permanently** if the user clears their browser data or uses a private/incognito window
-
-**Consequence:** The Builder workflow is useful for preparing and previewing alerts, but it is not a durable editorial system.
+**Consequence:** Finding relevant announcements and deciding they're worth publishing is entirely manual. Coverage is only as good as how often the admin checks.
 
 ---
 
-## Public Alerts Are Sample Data
+## AI Drafts Are Never Published Automatically
 
-The alerts visible on the homepage are demo/sample alerts included in the source code. They are realistic in format but:
+The AI Helper and source-card "Generuj draft AI" can call the Claude API (when `ANTHROPIC_API_KEY` is configured server-side) to turn a pasted notice into a structured draft. This draft is never written to the database automatically — it only prefills the Builder form, and an admin must review it and explicitly click "Zapisz jako draft w Supabase" or "Opublikuj w Supabase".
 
-- Not sourced from real-time official feeds
-- Not verified against actual current events
-- Not automatically updated
-- May become outdated over time
-
-**Consequence:** The app demonstrates what real alerts would look like, but does not currently surface real alerts.
+**Consequence:** Every published alert has had a human look at it. The AI can get dates, places, or category wrong — the Builder does not currently force every field to be filled in before saving as a draft (Sprint 70 added a confirmation prompt before *publishing* if location, "what's changing," "what to do," or source are still empty, but it doesn't block the action).
 
 ---
 
-## No Multi-User Support
+## Single Admin Role
 
-Because all data is browser-local and there is no backend, the app has no concept of multiple editors, shared queues, or collaborative workflows.
+Supabase Auth gates `/admin`, `/admin/sources`, `/ai-helper`, and `/builder`, but there is no role system — any authenticated user has full admin access (create, edit, publish, archive, delete sources and alerts). There's no separate "editor" vs "approver" role, and no audit trail of who changed what.
 
-**Consequence:** Two people cannot collaborate on creating alerts in the current version.
+**Consequence:** Fine for a single-admin pilot. Would need a real role system before handing edit access to more than one trusted person.
 
 ---
 
-## No Search
+## No Real-Time or Push Notifications
 
-Alerts can be filtered by category only. There is no keyword search, location search, or date range filter.
+Residents have to open the app to see new alerts. There's no email, SMS, or push notification when something new is published.
+
+**Consequence:** A resident only learns about a new alert by checking the homepage themselves, or via "Moje alerty" filtering down what they see once they do check.
+
+---
+
+## "Moje alerty" Preferences Are Local-Only
+
+Category and location-keyword preferences set in "Moje alerty" are saved in the browser's `localStorage`, not in an account.
+
+**Consequence:** Preferences don't sync across devices and are lost if the user clears browser data or switches browsers/phones. There's no account system to fix this — by design, for now (no login required for residents).
+
+---
+
+## No Search Beyond Keyword Matching
+
+The homepage search box matches title, place, "co się zmienia," "co zrobić," and category label as plain substrings. There's no fuzzy matching, no date-range filter beyond the category buttons, and no geographic/map-based search.
 
 ---
 
 ## This Is Early-Stage Software
 
-Alertownik is an MVP built for concept validation, not production use. It has not been tested under real usage conditions and is not suitable as a primary information source for residents at this stage.
-
-See [ROADMAP.md](ROADMAP.md) for the planned path toward a backend, real AI integration, source monitoring, and multi-user support.
+Alertownik is a pilot-stage MVP, not a mature product. It has had QA passes (see [[Sprint Log]] Sprint 68 in Obsidian) and is now being prepared for its first real testers, but it has not yet been validated under real, sustained usage. See `docs/NEXT_MILESTONES.md` for the planned path (richer source monitoring, notifications, multi-role admin).

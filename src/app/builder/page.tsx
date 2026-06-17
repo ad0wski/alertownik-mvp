@@ -165,6 +165,24 @@ function statusLabel(status: AdminAlert["status"]): string {
   return "Draft";
 }
 
+// Fields a resident actually reads on the public alert — flagged before publish
+// so an admin doesn't accidentally ship an alert that looks broken/empty.
+function getIncompleteFields(f: { place: string; change: string; action: string; sourceName: string }): string[] {
+  const missing: string[] = [];
+  if (!f.place.trim()) missing.push("Lokalizacja");
+  if (!f.change.trim()) missing.push("Co się zmienia");
+  if (!f.action.trim()) missing.push("Co zrobić");
+  if (!f.sourceName.trim()) missing.push("Źródło");
+  return missing;
+}
+
+function confirmIncompletePublish(missing: string[]): boolean {
+  if (missing.length === 0) return true;
+  return confirm(
+    `Ten alert nie ma wypełnionych pól: ${missing.join(", ")}. Mieszkańcy zobaczą to jako „Brak informacji". Opublikować mimo to?`
+  );
+}
+
 function matchesAdminSearch(a: AdminAlert, query: string): boolean {
   const q = query.toLowerCase().trim();
   if (!q) return true;
@@ -588,6 +606,7 @@ export default function BuilderPage() {
     setSupabaseSuccess("idle");
     const err = validateForSupabase();
     if (err) { setSupabaseError(err); return; }
+    if (!confirmIncompletePublish(getIncompleteFields(form))) return;
     setSupabaseSaving(true);
     const slug = form.slug.trim() || generateSlug(form.title);
     if (!form.slug) setForm((prev) => ({ ...prev, slug }));
@@ -1406,7 +1425,10 @@ export default function BuilderPage() {
 
                   {a.status === "draft" && (
                     <button
-                      onClick={() => handleStatusAction(a.slug, "publish")}
+                      onClick={() => {
+                        if (!confirmIncompletePublish(getIncompleteFields(a))) return;
+                        handleStatusAction(a.slug, "publish");
+                      }}
                       disabled={statusActionSlug === a.slug}
                       className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >

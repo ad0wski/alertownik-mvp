@@ -79,7 +79,11 @@ export function AlertCard({ alert, isPreview }: { alert: Alert; isPreview?: bool
 
       {/* Place · date */}
       <p className="text-sm text-slate-500 leading-relaxed">
-        <span className="font-medium text-slate-600">{alert.place}</span>
+        {alert.place ? (
+          <span className="font-medium text-slate-600">{alert.place}</span>
+        ) : (
+          <span className="italic text-slate-400">Brak informacji o lokalizacji</span>
+        )}
         {" · "}
         {formatAlertRange(alert.startsAt, alert.endsAt)}
       </p>
@@ -123,21 +127,27 @@ export function AlertCard({ alert, isPreview }: { alert: Alert; isPreview?: bool
             <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400 pt-0.5">
               Gdzie
             </dt>
-            <dd className="text-sm text-slate-700 leading-relaxed">{alert.place}</dd>
+            <dd className="text-sm text-slate-700 leading-relaxed">
+              {alert.place || <span className="italic text-slate-400">Brak informacji o lokalizacji</span>}
+            </dd>
           </div>
 
           <div className="flex flex-col py-3 gap-1">
             <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400 pt-0.5">
               Co się zmienia
             </dt>
-            <dd className="text-sm text-slate-700 leading-relaxed">{alert.change}</dd>
+            <dd className="text-sm text-slate-700 leading-relaxed">
+              {alert.change || <span className="italic text-slate-400">Brak szczegółów.</span>}
+            </dd>
           </div>
 
           <div className="flex flex-col py-3 gap-1">
             <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400 pt-0.5">
               Co zrobić
             </dt>
-            <dd className="text-sm text-slate-700 leading-relaxed">{alert.action}</dd>
+            <dd className="text-sm text-slate-700 leading-relaxed">
+              {alert.action || <span className="italic text-slate-400">Brak zalecanego działania.</span>}
+            </dd>
           </div>
 
           <div className="flex flex-col py-3 gap-1">

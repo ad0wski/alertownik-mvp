@@ -1,9 +1,10 @@
 import { Alert } from "@/types/alert";
 
-// DEV/DEMO DATA ONLY — these alerts are not shown on the public homepage.
-// The public list loads exclusively from Supabase (published status).
-// These are kept as a last-resort fallback in AlertDetailClient and as
-// reference data when working locally without a Supabase connection.
+// DEV/DEMO DATA ONLY — these alerts are not shown on the public homepage,
+// and AlertDetailClient only falls back to them outside production (see the
+// NODE_ENV check there), so a guessed/old sample slug can never render fake
+// content as a real alert on the live site. Kept as a local dev convenience
+// for previewing the alert detail page without a Supabase connection.
 export const sampleAlerts: Alert[] = [
   {
     id: "1",
