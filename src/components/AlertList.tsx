@@ -171,6 +171,13 @@ export function AlertList() {
   const showMyAlertsEmptyState = mode === "my" && prefsSet && filtered.length === 0 && !loading;
   const showGenericEmptyState  = filtered.length === 0 && !loading && !showMyAlertsEmptyState;
 
+  // Separate current/upcoming alerts from ended ones so stale content never
+  // looks as prominent as live content — order within each group is already
+  // correct from sortAlerts(), this just splits the already-sorted list.
+  const liveFiltered  = filtered.filter((a) => getAlertTimeStatus(a.startsAt, a.endsAt) !== "ended");
+  const endedFiltered = filtered.filter((a) => getAlertTimeStatus(a.startsAt, a.endsAt) === "ended");
+  const showAllEndedNotice = filtered.length > 0 && liveFiltered.length === 0 && endedFiltered.length > 0;
+
   return (
     <>
       {/* ── Mode toggle ─────────────────────────────────────────────────── */}
@@ -358,10 +365,40 @@ export function AlertList() {
                   )
                 )}
 
-                {/* Alert cards */}
-                {filtered.map((alert) => (
+                {/* Notice: only ended alerts match — make this explicit instead of
+                    silently showing stale content as if it were current */}
+                {showAllEndedNotice && (
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <p className="text-sm text-slate-600">
+                      Brak aktualnych alertów — poniżej mogą być widoczne zakończone
+                      przykłady lub poprzednie komunikaty.
+                    </p>
+                  </div>
+                )}
+
+                {/* Current/upcoming alerts — full prominence */}
+                {liveFiltered.map((alert) => (
                   <AlertCard key={alert.id} alert={alert} />
                 ))}
+
+                {/* Ended alerts — visually de-emphasized, shown for reference only */}
+                {endedFiltered.length > 0 && (
+                  <div className="flex flex-col gap-4">
+                    {liveFiltered.length > 0 && (
+                      <div className="flex items-center gap-2 pt-2">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                          Zakończone
+                        </span>
+                        <span className="text-xs text-slate-400">— pokazane pomocniczo</span>
+                      </div>
+                    )}
+                    {endedFiltered.map((alert) => (
+                      <div key={alert.id} className="opacity-60">
+                        <AlertCard alert={alert} />
+                      </div>
+                    ))}
+                  </div>
+                )}
               </section>
             </>
           )}

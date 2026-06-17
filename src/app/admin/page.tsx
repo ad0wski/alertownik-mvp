@@ -59,6 +59,14 @@ function sourceNeedsChecking(lastCheckedAt: string | undefined, isActive: boolea
   return lastCheckedAt.split("T")[0] !== today;
 }
 
+// Heuristic only — flags likely test/placeholder content for a human to verify,
+// never auto-archives or hides anything.
+const SUSPICIOUS_TITLE_PATTERNS = [/test/i, /aaaa/i, /asdf/i, /lorem/i, /placeholder/i, /\bxxx\b/i];
+
+function looksLikeTestContent(title: string): boolean {
+  return SUSPICIOUS_TITLE_PATTERNS.some((re) => re.test(title));
+}
+
 const DAILY_WORKFLOW_STEPS: { label: string; note: string; href?: string }[] = [
   { label: "Sprawdź źródła priorytetowe",  note: "Zacznij od źródeł oznaczonych „Do sprawdzenia”.", href: "/admin/sources" },
   { label: "Przejrzyj treść źródła",       note: "Użyj „Sprawdź stronę”, by pobrać podgląd i kandydatów na komunikaty.", href: "/admin/sources" },
@@ -166,6 +174,10 @@ export default function AdminPage() {
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
     .slice(0, 5);
 
+  const suspiciousPublished = alerts.filter(
+    (a) => a.status === "published" && looksLikeTestContent(a.title || "")
+  );
+
   const stats = [
     { label: "Wszystkie alerty", value: total,          color: "text-slate-900" },
     { label: "Opublikowane",     value: publishedCount, color: "text-emerald-700" },
@@ -204,6 +216,70 @@ export default function AdminPage() {
           <p className="text-xs text-red-500 mt-1 font-mono">{alertsError}</p>
         </div>
       )}
+
+      {/* ── Pre-launch content hygiene ────────────────────────────────── */}
+      <section className="mb-8">
+        <div
+          className={`rounded-2xl border shadow-sm p-5 ${
+            suspiciousPublished.length > 0
+              ? "border-red-300 bg-red-50"
+              : "border-slate-200 bg-white"
+          }`}
+        >
+          <h2
+            className={`text-base font-semibold mb-1 ${
+              suspiciousPublished.length > 0 ? "text-red-800" : "text-slate-800"
+            }`}
+          >
+            Przed wysłaniem linku testerom
+          </h2>
+
+          {!alertsLoading && suspiciousPublished.length > 0 ? (
+            <>
+              <p className="text-sm font-medium text-red-700 mt-2 mb-2">
+                {suspiciousPublished.length === 1
+                  ? "Wykryto 1 opublikowany alert, który wygląda na dane testowe:"
+                  : `Wykryto ${suspiciousPublished.length} opublikowane alerty, które wyglądają na dane testowe:`}
+              </p>
+              <ul className="text-sm text-red-700 space-y-1 mb-3 list-disc list-inside">
+                {suspiciousPublished.map((a) => (
+                  <li key={a.id}>
+                    „{a.title || "Bez tytułu"}" ({categoryLabels[a.category] ?? a.category})
+                    {" — "}
+                    <Link
+                      href={`/builder?edit=${a.slug}`}
+                      className="font-medium underline hover:text-red-900"
+                    >
+                      otwórz w Kreatorze, by zarchiwizować
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs text-red-600 mb-3">
+                Wykryte po słowach w tytule (np. „test", „AAAAAA", „placeholder") — to
+                tylko podejrzenie, zweryfikuj ręcznie przed decyzją.
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-emerald-700 font-medium mt-2 mb-3">
+              Nie wykryto opublikowanych alertów z podejrzanymi tytułami (test/placeholder).
+            </p>
+          )}
+
+          <ul className="text-sm text-slate-600 space-y-1.5 list-disc list-inside">
+            <li>Zarchiwizuj wszystkie alerty testowe (status → Zarchiwizowany) — nie usuwaj danych.</li>
+            <li>Nie publikuj alertów z tytułami typu „test", „AAAAAA" albo innym placeholderem.</li>
+            <li>Upewnij się, że publiczne alerty są aktualne albo jasno oznaczone jako pilotażowe/demo.</li>
+            <li>
+              Sprawdź publiczną listę w oknie incognito albo wylogowany —{" "}
+              <Link href="/" className="font-medium text-blue-600 hover:underline">
+                zobacz stronę główną
+              </Link>{" "}
+              tak, jak zobaczy ją tester.
+            </li>
+          </ul>
+        </div>
+      </section>
 
       {/* ── Daily operations checklist ────────────────────────────────── */}
       <section className="mb-8">
