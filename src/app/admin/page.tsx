@@ -477,16 +477,14 @@ export default function AdminPage() {
             <Link href="/about" className="font-medium text-blue-600 hover:underline">
               O projekcie
             </Link>
-            ) — nie ma jeszcze panelu zgłoszeń w aplikacji. Podczas pilotażu pamiętaj o:
+            ) — nie ma jeszcze panelu zgłoszeń w aplikacji. Dla każdego zgłoszenia:
           </p>
-          <ul className="text-sm text-slate-600 space-y-1.5 list-disc list-inside">
-            <li>regularnym sprawdzaniu skrzynki z feedbackiem,</li>
-            <li>ocenie jakości i aktualności źródeł (czy nic nie umyka),</li>
-            <li>notowaniu okolic/źródeł, o które proszą mieszkańcy, a których jeszcze nie monitorujemy,</li>
-            <li>
-              zapisywaniu ważniejszych obserwacji w Obsidian (Research / Decisions), żeby nie zgubić kontekstu między sesjami.
-            </li>
-          </ul>
+          <ol className="text-sm text-slate-600 space-y-1.5 list-decimal list-inside">
+            <li>zapisz je w tablicy Pilot Feedback Board (Obsidian),</li>
+            <li>oznacz priorytet: krytyczne / ważne / później / ignorować,</li>
+            <li>krytyczne błędy napraw przed wysłaniem linku kolejnym testerom,</li>
+            <li>większe wnioski przenieś do Roadmap / Decisions, żeby wpłynęły na kolejny sprint.</li>
+          </ol>
         </div>
       </section>
 
