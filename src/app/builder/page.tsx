@@ -84,6 +84,33 @@ function pickPlace(place: unknown, location: unknown, fallback: string): string 
   return fallback;
 }
 
+function normalizeCategory(value: unknown): AlertCategory | null {
+  if (typeof value !== "string") return null;
+  const v = value.toLowerCase().trim();
+  return (VALID_CATEGORIES as string[]).includes(v) ? (v as AlertCategory) : null;
+}
+
+// Builds a complete, blank-defaulted form from imported JSON — every field is
+// either the value from `data` or an explicit blank/default, never a leftover
+// from whatever was previously loaded. Used by both the JSON-paste import and
+// the AI Helper sessionStorage handoff so the two can't drift out of sync.
+function buildFormFromJson(data: Record<string, unknown>, sourceId: string): typeof initialForm {
+  return {
+    category: normalizeCategory(data.category) ?? "transport",
+    severity: normalizeAlertSeverity(data.severity) ?? "info",
+    title: stringField(data.title, ""),
+    slug: stringField(data.slug, ""),
+    place: pickPlace(data.place, data.location, ""),
+    startsAt: dateField(data.startsAt, ""),
+    endsAt: dateField(data.endsAt, ""),
+    change: stringField(data.change, ""),
+    action: stringField(data.action, ""),
+    sourceName: stringField(data.sourceName, ""),
+    sourceUrl: stringField(data.sourceUrl, ""),
+    sourceId,
+  };
+}
+
 // ── Draft helpers ────────────────────────────────────────────────────────────
 
 const DRAFTS_KEY = "alertownik-drafts";
@@ -216,6 +243,12 @@ export default function BuilderPage() {
   >("idle");
   const [supabaseError, setSupabaseError] = useState<string | null>(null);
   const [supabaseSavedSlug, setSupabaseSavedSlug] = useState("");
+  // Snapshot of what was actually saved, captured before the form resets —
+  // lets the success message show slug/title/category to verify against,
+  // even after the form itself goes blank for the next entry.
+  const [lastSavedAlert, setLastSavedAlert] = useState<
+    { slug: string; title: string; category: AlertCategory } | null
+  >(null);
   const [supabaseAlerts, setSupabaseAlerts] = useState<AdminAlert[]>([]);
   const [supabaseAlertsLoading, setSupabaseAlertsLoading] = useState(false);
   const [supabaseAlertsError, setSupabaseAlertsError] = useState<string | null>(null);
@@ -305,20 +338,7 @@ export default function BuilderPage() {
       sessionStorage.removeItem("alertownik_pending_alert_source_id");
       try {
         const data = JSON.parse(stripCodeFences(pendingJson));
-        setForm({
-          category: VALID_CATEGORIES.includes(data.category) ? (data.category as AlertCategory) : "transport",
-          severity: normalizeAlertSeverity(data.severity) ?? "info",
-          title: stringField(data.title, ""),
-          slug: stringField(data.slug, ""),
-          place: pickPlace(data.place, data.location, ""),
-          startsAt: dateField(data.startsAt, ""),
-          endsAt: dateField(data.endsAt, ""),
-          change: stringField(data.change, ""),
-          action: stringField(data.action, ""),
-          sourceName: stringField(data.sourceName, ""),
-          sourceUrl: stringField(data.sourceUrl, ""),
-          sourceId: pendingSourceId,
-        });
+        setForm(buildFormFromJson(data, pendingSourceId));
         setAiHelperLoadedMsg(true);
         setTimeout(() => setAiHelperLoadedMsg(false), 4000);
         requestAnimationFrame(() => {
@@ -346,24 +366,11 @@ export default function BuilderPage() {
   function importFromJson() {
     try {
       const data = JSON.parse(stripCodeFences(jsonInput));
-
-      setForm({
-        category: VALID_CATEGORIES.includes(data.category)
-          ? (data.category as AlertCategory)
-          : form.category,
-        severity: normalizeAlertSeverity(data.severity) ?? form.severity,
-        title: stringField(data.title, form.title),
-        slug: stringField(data.slug, form.slug),
-        place: pickPlace(data.place, data.location, form.place),
-        startsAt: dateField(data.startsAt, form.startsAt),
-        endsAt: dateField(data.endsAt, form.endsAt),
-        change: stringField(data.change, form.change),
-        action: stringField(data.action, form.action),
-        sourceName: stringField(data.sourceName, form.sourceName),
-        sourceUrl: stringField(data.sourceUrl, form.sourceUrl),
-        sourceId: form.sourceId,
-      });
-
+      // Full replace, never merge with whatever was previously loaded — a
+      // field missing from this JSON must come out blank, not inherit the
+      // last alert's value (see Sprint 73 fix: this used to fall back to
+      // `form.X`, which silently mixed fields between consecutive imports).
+      setForm(buildFormFromJson(data, ""));
       setImportStatus("success");
     } catch {
       setImportStatus("error");
@@ -593,8 +600,15 @@ export default function BuilderPage() {
     });
     setSupabaseSaving(false);
     if (result.ok) {
+      setLastSavedAlert({ slug, title: form.title, category: form.category });
       setSupabaseSavedSlug(slug);
       setSupabaseSuccess("draft");
+      // Reset for the next alert — without this, an import missing a field
+      // would silently inherit this alert's leftover value (Sprint 73 fix).
+      setForm(initialForm);
+      setJsonInput("");
+      setImportStatus("idle");
+      await refreshSupabaseAlerts(); // so the duplicate-slug check sees this alert
       setTimeout(() => setSupabaseSuccess("idle"), 5000);
     } else {
       setSupabaseError(result.error ?? "Nieznany błąd.");
@@ -626,8 +640,15 @@ export default function BuilderPage() {
     });
     setSupabaseSaving(false);
     if (result.ok) {
+      setLastSavedAlert({ slug, title: form.title, category: form.category });
       setSupabaseSavedSlug(slug);
       setSupabaseSuccess("published");
+      // Reset for the next alert — without this, an import missing a field
+      // would silently inherit this alert's leftover value (Sprint 73 fix).
+      setForm(initialForm);
+      setJsonInput("");
+      setImportStatus("idle");
+      await refreshSupabaseAlerts(); // so the duplicate-slug check sees this alert
     } else {
       setSupabaseError(result.error ?? "Nieznany błąd.");
     }
@@ -1080,6 +1101,12 @@ export default function BuilderPage() {
             </p>
           </div>
 
+          <p className="text-xs text-blue-600">
+            Tworzysz kilka alertów pod rząd? Sprawdź w podglądzie karty poniżej, że
+            slug, tytuł i kategoria należą do TEGO alertu, zwłaszcza po wczytaniu
+            kolejnego JSON.
+          </p>
+
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={handleSaveDraftToSupabase}
@@ -1100,15 +1127,19 @@ export default function BuilderPage() {
           {supabaseError && (
             <p className="text-sm font-medium text-red-700">Błąd: {supabaseError}</p>
           )}
-          {supabaseSuccess === "draft" && (
+          {supabaseSuccess === "draft" && lastSavedAlert && (
             <p className="text-sm font-medium text-emerald-700">
-              Draft zapisany w Supabase (slug: {supabaseSavedSlug}).
+              Draft zapisany: „{lastSavedAlert.title || "Bez tytułu"}" (
+              {categoryOptions.find((o) => o.value === lastSavedAlert.category)?.label ?? lastSavedAlert.category},
+              slug: {lastSavedAlert.slug}). Formularz jest teraz czysty — gotowy na kolejny alert.
             </p>
           )}
-          {supabaseSuccess === "published" && (
+          {supabaseSuccess === "published" && lastSavedAlert && (
             <div className="flex flex-col gap-1">
               <p className="text-sm font-medium text-emerald-700">
-                Alert opublikowany w Supabase.
+                Opublikowano: „{lastSavedAlert.title || "Bez tytułu"}" (
+                {categoryOptions.find((o) => o.value === lastSavedAlert.category)?.label ?? lastSavedAlert.category},
+                slug: {lastSavedAlert.slug}). Formularz jest teraz czysty — gotowy na kolejny alert.
               </p>
               <a
                 href={`/alerts/${supabaseSavedSlug}`}
