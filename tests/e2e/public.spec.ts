@@ -105,6 +105,11 @@ test.describe("Public homepage", () => {
     await expect(page.getByText("Znane ograniczenia")).toBeVisible();
   });
 
+  test("about page has tester instructions", async ({ page }) => {
+    await page.goto("/about");
+    await expect(page.getByText("Jak testować")).toBeVisible();
+  });
+
   test("My Alerty toggle opens the local preferences panel", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("button", { name: "Moje alerty" }).click();

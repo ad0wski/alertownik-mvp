@@ -98,6 +98,23 @@ export default function AboutPage() {
           </ul>
         </section>
 
+        <section id="jak-testowac" className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
+          <h2 className="text-base font-semibold text-slate-900 mb-2">
+            Jak testować
+          </h2>
+          <p className="text-sm text-slate-600 leading-relaxed mb-2">
+            Jeśli zgodziłeś/zgodziłaś się przetestować Alertownik, oto na co warto zwrócić uwagę:
+          </p>
+          <ol className="text-sm text-slate-600 space-y-1.5 list-decimal list-inside leading-relaxed">
+            <li>Otwórz aplikację i przejrzyj listę alertów.</li>
+            <li>Wejdź w szczegóły wybranego alertu.</li>
+            <li>Sprawdź, skąd pochodzi informacja (sekcja „Źródło").</li>
+            <li>Spróbuj „Moje alerty" — wpisz swoją okolicę albo zaznacz kategorie.</li>
+            <li>Wyślij feedback — co działa, co nie, co było niejasne.</li>
+            <li>Zgłoś, jeśli czegoś brakowało albo coś wydawało się błędne lub nieaktualne.</li>
+          </ol>
+        </section>
+
         <section id="chce-testowac" className="bg-emerald-50 rounded-2xl border border-emerald-200 shadow-sm p-4 sm:p-5">
           <h2 className="text-base font-semibold text-slate-900 mb-2">
             Chcesz testować z nami?
