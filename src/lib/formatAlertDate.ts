@@ -51,6 +51,7 @@ function polishDate(isoDate: string): string {
 
 // Formats a single timestamp: "19.05.2026" or "19.05.2026, 09:00"
 export function formatAlertDateTime(iso: string): string {
+  if (!iso) return "Data nieznana";
   const { date, hhmm } = parse(iso);
   if (!hhmm) return polishDate(date);
   return `${polishDate(date)}, ${hhmm}`;

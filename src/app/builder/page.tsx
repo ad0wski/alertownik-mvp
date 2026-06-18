@@ -463,6 +463,8 @@ export default function BuilderPage() {
   function cancelSupabaseEdit() {
     setEditingSupabaseAlert(null);
     setForm(initialForm);
+    setJsonInput("");
+    setImportStatus("idle");
     setSupabaseUpdateError(null);
     setSupabaseUpdateSuccess(false);
     setUrlEditError(null);
@@ -567,6 +569,7 @@ export default function BuilderPage() {
     if (!form.title.trim()) return "Tytuł jest wymagany.";
     if (!form.category) return "Kategoria jest wymagana.";
     if (!normalizeAlertSeverity(form.severity)) return "Nieprawidłowy poziom ważności alertu.";
+    if (!form.startsAt) return "Data od jest wymagana.";
     const slug = form.slug.trim() || generateSlug(form.title);
     if (!slug) return "Nie udało się wygenerować slugu. Wpisz tytuł lub slug ręcznie.";
     // Zapis (nie edycja) z istniejącym slugiem nadpisałby inny alert (upsert po slug).

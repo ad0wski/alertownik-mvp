@@ -48,7 +48,7 @@ test.describe("Public homepage", () => {
     await detailsBtn.click();
     await expect(page.getByText("Kiedy")).toBeVisible();
     await expect(page.getByText("Co się zmienia")).toBeVisible();
-    await expect(page.getByText("Źródło")).toBeVisible();
+    await expect(page.getByText("Źródło", { exact: true })).toBeVisible();
   });
 
   test("opening alert detail page does not crash the app", async ({ page }) => {
