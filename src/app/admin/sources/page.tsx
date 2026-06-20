@@ -387,6 +387,9 @@ function SourceForm({
               <option key={t} value={t}>{sourceTypeLabels[t]}</option>
             ))}
           </select>
+          <p className="text-xs text-slate-400 mt-1">
+            Jeśli źródło ma kanał RSS, oznacz „RSS/Feed" — ułatwi to przyszłą automatyzację.
+          </p>
         </div>
       </div>
       <div>

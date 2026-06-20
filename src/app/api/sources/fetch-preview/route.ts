@@ -191,6 +191,13 @@ export async function POST(req: NextRequest): Promise<NextResponse<FetchPreviewR
     });
     clearTimeout(timeoutId);
 
+    if (!response.ok) {
+      return NextResponse.json({
+        ok: false,
+        error: `Strona zwróciła błąd HTTP ${response.status}. Sprawdź, czy adres URL jest poprawny (np. czy nie zawiera nieprawidłowo zakodowanych znaków) — otwórz go ręcznie w przeglądarce, żeby się przekonać.`,
+      });
+    }
+
     const contentType = response.headers.get("content-type") ?? "";
     if (!contentType.includes("html")) {
       const typeName = contentType.split(";")[0].trim() || "nieznany";

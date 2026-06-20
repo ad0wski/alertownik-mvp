@@ -7,7 +7,12 @@ import {
   getAdminSupabaseAlerts,
   type AdminAlert,
 } from "@/lib/getAdminSupabaseAlerts";
-import { getAlertSources, getRecentSourceChecks, type RecentSourceCheck } from "@/lib/supabaseSourceWrites";
+import {
+  getAlertSources,
+  getRecentSourceChecks,
+  getSourceCandidates,
+  type RecentSourceCheck,
+} from "@/lib/supabaseSourceWrites";
 import type { Session } from "@supabase/supabase-js";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -89,6 +94,7 @@ export default function AdminPage() {
   const [sourcesToCheck, setSourcesToCheck]   = useState(0);
   const [sourcesLoading, setSourcesLoading]   = useState(false);
   const [recentChecks, setRecentChecks]       = useState<RecentSourceCheck[]>([]);
+  const [pendingCandidates, setPendingCandidates] = useState(0);
 
   useEffect(() => {
     if (!supabase) { setAuthLoading(false); return; }
@@ -116,17 +122,21 @@ export default function AdminPage() {
       setAlertsLoading(false);
     });
 
-    // Load sources-to-check count and recent check history
+    // Load sources-to-check count, recent check history, and pending candidates
     setSourcesLoading(true);
     Promise.all([
       getAlertSources(),
       getRecentSourceChecks(3),
-    ]).then(([sourcesResult, checksResult]) => {
+      getSourceCandidates(100),
+    ]).then(([sourcesResult, checksResult, candidatesResult]) => {
       const count = sourcesResult.sources.filter((s) =>
         sourceNeedsChecking(s.lastCheckedAt, s.isActive)
       ).length;
       setSourcesToCheck(count);
       setRecentChecks(checksResult.checks);
+      setPendingCandidates(
+        candidatesResult.candidates.filter((c) => !c.relatedAlertId).length
+      );
       setSourcesLoading(false);
     });
   }, [session]);
@@ -189,6 +199,7 @@ export default function AdminPage() {
     { href: "/builder",       title: "Kreator alertu",      desc: "Twórz, edytuj i publikuj alerty w Supabase.",    border: "border-amber-200 hover:border-amber-300" },
     { href: "/ai-helper",     title: "AI Helper",           desc: "Przygotuj treść alertu z pomocą AI.",             border: "border-purple-200 hover:border-purple-300" },
     { href: "/admin/sources", title: "Źródła",              desc: "Zarządzaj źródłami komunikatów.",                border: "border-slate-200 hover:border-slate-300" },
+    { href: "/admin/queue",   title: "Kandydaci na alerty", desc: "Przejrzyj znalezione komunikaty czekające na decyzję.", border: "border-purple-200 hover:border-purple-300" },
     { href: "/",              title: "Publiczna lista alertów", desc: "Sprawdź co widzą mieszkańcy.",               border: "border-blue-200 hover:border-blue-300" },
   ];
 
@@ -456,6 +467,41 @@ export default function AdminPage() {
                 </div>
               </>
             )}
+          </div>
+        )}
+      </section>
+
+      {/* ── Source candidates ──────────────────────────────────────────── */}
+      <section className="mb-8">
+        <h2 className="text-base font-semibold text-slate-800 mb-4">Kandydaci na alerty</h2>
+
+        {sourcesLoading ? (
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 animate-pulse">
+            <div className="h-8 w-12 bg-slate-100 rounded mb-2" />
+            <div className="h-3 w-48 bg-slate-100 rounded" />
+          </div>
+        ) : (
+          <div
+            className={`bg-white rounded-2xl border shadow-sm p-5 flex flex-col sm:flex-row sm:items-center gap-4 ${
+              pendingCandidates > 0 ? "border-purple-200" : "border-slate-200"
+            }`}
+          >
+            <div className="flex-1">
+              <p className={`text-3xl font-bold ${pendingCandidates > 0 ? "text-purple-600" : "text-emerald-600"}`}>
+                {pendingCandidates}
+              </p>
+              <p className="text-sm text-slate-500 mt-1 leading-snug">
+                {pendingCandidates > 0
+                  ? "komunikatów czeka na przygotowanie alertu"
+                  : "Brak kandydatów czekających na decyzję"}
+              </p>
+            </div>
+            <Link
+              href="/admin/queue"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors shrink-0"
+            >
+              Przejdź do kandydatów →
+            </Link>
           </div>
         )}
       </section>

@@ -12,6 +12,7 @@ const adminLinks = [
   { href: "/builder",        label: "Kreator alertu" },
   { href: "/ai-helper",      label: "AI Helper" },
   { href: "/admin/sources",  label: "Źródła" },
+  { href: "/admin/queue",    label: "Kandydaci" },
 ];
 
 export function AppHeader() {

@@ -256,6 +256,70 @@ export async function createSourceCheck(input: SourceCheckInput): Promise<SaveRe
   return { ok: true };
 }
 
+// ── Candidate queue (V0 — built on source_checks, no schema change) ───────────
+// "Candidates" are source_checks the admin marked as having found something
+// worth turning into an alert. There is no persisted title/url/excerpt or
+// ignore/archive status yet — see docs/supabase_source_notice_candidates.sql
+// for the proposed table that would add those. Until that's applied, status
+// is derived: a candidate with no relatedAlertId is "pending", one with a
+// relatedAlertId is "converted" (resolve the alert separately to display it).
+
+const CANDIDATE_RESULTS: SourceCheckResult[] = ["found_notice", "needs_followup"];
+
+export interface SourceCandidate {
+  id: string;
+  sourceId: string;
+  sourceName: string;
+  sourceUrl: string;
+  sourceCategory: AlertCategory;
+  checkedAt: string;
+  result: SourceCheckResult;
+  notes?: string;
+  relatedAlertId?: string;
+}
+
+export interface SourceCandidatesResult {
+  candidates: SourceCandidate[];
+  error?: string;
+}
+
+export async function getSourceCandidates(limit = 100): Promise<SourceCandidatesResult> {
+  if (!supabase) {
+    return { candidates: [], error: "Brak połączenia z Supabase." };
+  }
+
+  const { data, error } = await supabase
+    .from("source_checks")
+    .select("id, source_id, checked_at, result, notes, related_alert_id, alert_sources(name, url, category)")
+    .in("result", CANDIDATE_RESULTS)
+    .order("checked_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("[Alertownik] getSourceCandidates error:", error.message);
+    return { candidates: [], error: error.message };
+  }
+
+  return {
+    candidates: (data ?? []).map((row) => {
+      const src = row.alert_sources as unknown as
+        | { name: string; url: string; category: AlertCategory }
+        | null;
+      return {
+        id: row.id as string,
+        sourceId: row.source_id as string,
+        sourceName: src?.name ?? "Nieznane źródło",
+        sourceUrl: src?.url ?? "",
+        sourceCategory: src?.category ?? "municipal",
+        checkedAt: row.checked_at as string,
+        result: row.result as SourceCheckResult,
+        notes: (row.notes as string) || undefined,
+        relatedAlertId: (row.related_alert_id as string) || undefined,
+      };
+    }),
+  };
+}
+
 export async function deleteSourceCheck(id: string): Promise<SaveResult> {
   if (!supabase) {
     return { ok: false, error: "Brak połączenia z Supabase." };
