@@ -22,7 +22,13 @@ import {
   markAlertSourceChecked,
   getSourceChecks,
   createSourceCheck,
+  getSourceCandidates,
 } from "@/lib/supabaseSourceWrites";
+import {
+  detectParserStrategy,
+  PARSER_STRATEGY_LABELS,
+  getPdfManualInstructions,
+} from "@/lib/sourceParsers";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -442,13 +448,14 @@ interface SourceCardProps {
   onMarkChecked: () => void;
   markingChecked: boolean;
   alertCount: number;
+  pendingCandidateCount: number;
   checks: SourceCheck[];
   onCheckSaved: () => void;
 }
 
 function SourceCard({
   source, onEdit, onToggle, onDelete, onPrepareAlert, onMarkChecked,
-  markingChecked, alertCount, checks, onCheckSaved,
+  markingChecked, alertCount, pendingCandidateCount, checks, onCheckSaved,
 }: SourceCardProps) {
   const router    = useRouter();
   const inactive  = !source.isActive;
@@ -465,7 +472,7 @@ function SourceCard({
   const [savedCheckNotes,  setSavedCheckNotes]  = useState("");
 
   // Source preview (fetch-preview API — ephemeral, not stored in DB)
-  const [previewStatus, setPreviewStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [previewStatus, setPreviewStatus] = useState<"idle" | "loading" | "success" | "error" | "pdf_manual">("idle");
   const [previewData,   setPreviewData]   = useState<SourcePreviewData | null>(null);
   const [previewError,  setPreviewError]  = useState<string | null>(null);
 
@@ -523,11 +530,18 @@ function SourceCard({
   async function fetchPreview() {
     if (previewStatus === "loading") return;
     // Second click closes the panel
-    if (previewStatus === "success") {
+    if (previewStatus === "success" || previewStatus === "pdf_manual") {
       setPreviewStatus("idle");
       setPreviewData(null);
       setInlineDraft({ status: "idle" });
       setInlineDraftSent(false);
+      return;
+    }
+    // PDF/manual sources aren't HTML pages — skip the fetch entirely and
+    // show the manual-fallback instructions directly (see
+    // src/lib/sourceParsers/pdfParser.ts).
+    if (source.sourceType === "pdf") {
+      setPreviewStatus("pdf_manual");
       return;
     }
     setPreviewStatus("loading");
@@ -621,6 +635,9 @@ function SourceCard({
             <span className="text-xs text-slate-400 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-full">
               {sourceTypeLabels[source.sourceType]}
             </span>
+            <span className="text-xs text-indigo-500 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full">
+              {PARSER_STRATEGY_LABELS[detectParserStrategy(source.sourceType)]}
+            </span>
           </div>
 
           <a
@@ -690,12 +707,18 @@ function SourceCard({
             onClick={fetchPreview}
             disabled={previewStatus === "loading"}
             className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors disabled:opacity-50 ${
-              previewStatus === "success"
+              previewStatus === "success" || previewStatus === "pdf_manual"
                 ? "bg-slate-100 text-slate-700 hover:bg-slate-200"
                 : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"
             }`}
           >
-            {previewStatus === "loading" ? "Pobieranie…" : previewStatus === "success" ? "Podgląd ↑" : "Sprawdź stronę"}
+            {previewStatus === "loading"
+              ? "Pobieranie…"
+              : previewStatus === "success" || previewStatus === "pdf_manual"
+                ? "Podgląd ↑"
+                : source.sourceType === "pdf"
+                  ? "Instrukcja PDF"
+                  : "Sprawdź stronę"}
           </button>
           <a
             href={source.url}
@@ -729,11 +752,21 @@ function SourceCard({
             Historia{checks.length > 0 ? ` (${checks.length})` : ""} {showPanel ? "↑" : "↓"}
           </button>
         </div>
-        <span className="text-xs text-slate-400">Alerty: {alertCount}</span>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-xs text-slate-400">Alerty: {alertCount}</span>
+          <Link
+            href={`/admin/queue?source=${source.id}`}
+            className={`text-xs font-medium ${
+              pendingCandidateCount > 0 ? "text-purple-600 hover:text-purple-800" : "text-slate-400 hover:text-slate-600"
+            } hover:underline`}
+          >
+            Kandydaci: {pendingCandidateCount} →
+          </Link>
+        </div>
       </div>
 
       {/* ── Source preview panel ─────────────────────────────────────── */}
-      {(previewStatus === "success" || previewStatus === "error") && (
+      {(previewStatus === "success" || previewStatus === "error" || previewStatus === "pdf_manual") && (
         <div className="mt-3 pt-3 border-t border-slate-100">
           {previewStatus === "error" && (
             <div className="flex items-start gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5">
@@ -742,6 +775,19 @@ function SourceCard({
               <button
                 onClick={() => setPreviewStatus("idle")}
                 className="shrink-0 text-red-400 hover:text-red-600 font-bold leading-none"
+                aria-label="Zamknij"
+              >
+                ×
+              </button>
+            </div>
+          )}
+
+          {previewStatus === "pdf_manual" && (
+            <div className="flex items-start gap-2 text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5">
+              <span className="flex-1">{getPdfManualInstructions(source.url).instructions}</span>
+              <button
+                onClick={() => setPreviewStatus("idle")}
+                className="shrink-0 text-slate-400 hover:text-slate-600 font-bold leading-none"
                 aria-label="Zamknij"
               >
                 ×
@@ -810,11 +856,18 @@ function SourceCard({
                           <p className="text-xs font-semibold text-slate-800 mb-1 truncate">{c.heading}</p>
                         )}
                         <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">{c.text}</p>
-                        {c.hasDate && (
-                          <span className="inline-flex items-center gap-1 text-xs text-blue-600 mt-1">
-                            📅 wykryto datę
-                          </span>
-                        )}
+                        <div className="flex flex-wrap gap-3 mt-1">
+                          {c.hasDate && (
+                            <span className="inline-flex items-center gap-1 text-xs text-blue-600">
+                              📅 wykryto datę
+                            </span>
+                          )}
+                          {!c.heading && !c.hasDate && c.text.length < 150 && (
+                            <span className="inline-flex items-center gap-1 text-xs text-amber-600">
+                              ⚠ mało konkretnej treści — sprawdź ręcznie
+                            </span>
+                          )}
+                        </div>
                         <div className="mt-2 flex flex-wrap gap-3">
                           <button
                             onClick={() => generateInlineDraft(candidateText)}
@@ -1100,6 +1153,7 @@ export default function SourcesPage() {
   const [checkSuccess, setCheckSuccess]           = useState<string | null>(null);
   const [checkError, setCheckError]               = useState<string | null>(null);
   const [alertCounts, setAlertCounts]             = useState<Record<string, number>>({});
+  const [candidateCounts, setCandidateCounts]     = useState<Record<string, number>>({});
   const [sourceChecks, setSourceChecks]           = useState<Record<string, SourceCheck[]>>({});
 
   // ── Auth ────────────────────────────────────────────────────────────────────
@@ -1126,6 +1180,7 @@ export default function SourcesPage() {
     loadSources();
     loadAlertCounts();
     loadChecks();
+    loadCandidateCounts();
   }, [session]);
 
   async function loadAlertCounts() {
@@ -1140,6 +1195,17 @@ export default function SourcesPage() {
       counts[row.source_id] = (counts[row.source_id] ?? 0) + 1;
     }
     setAlertCounts(counts);
+  }
+
+  async function loadCandidateCounts() {
+    const result = await getSourceCandidates(100);
+    if (result.error) return;
+    const counts: Record<string, number> = {};
+    for (const c of result.candidates) {
+      if (c.relatedAlertId) continue; // only count still-pending candidates
+      counts[c.sourceId] = (counts[c.sourceId] ?? 0) + 1;
+    }
+    setCandidateCounts(counts);
   }
 
   async function loadSources() {
@@ -1164,7 +1230,7 @@ export default function SourcesPage() {
   }
 
   async function handleCheckSaved() {
-    await Promise.all([loadSources(), loadChecks()]);
+    await Promise.all([loadSources(), loadChecks(), loadCandidateCounts()]);
   }
 
   // ── Add form ────────────────────────────────────────────────────────────────
@@ -1505,6 +1571,7 @@ export default function SourcesPage() {
                 onMarkChecked={() => handleMarkChecked(source.id)}
                 markingChecked={markingCheckedId === source.id}
                 alertCount={alertCounts[source.id] ?? 0}
+                pendingCandidateCount={candidateCounts[source.id] ?? 0}
                 checks={sourceChecks[source.id] ?? []}
                 onCheckSaved={handleCheckSaved}
               />

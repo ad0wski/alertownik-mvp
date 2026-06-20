@@ -77,8 +77,13 @@ function QueueContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sentId, setSentId] = useState<string | null>(null);
+  // Same window.location.search pattern builder.tsx already uses for its
+  // ?edit= param — avoids the Suspense-boundary requirement of useSearchParams().
+  const [sourceFilter, setSourceFilter] = useState<string | null>(null);
 
   useEffect(() => {
+    setSourceFilter(new URLSearchParams(window.location.search).get("source"));
+
     Promise.all([getSourceCandidates(100), getAdminSupabaseAlerts(), getSourceChecks()]).then(
       ([candidatesResult, alertsResult, checksResult]) => {
         setCandidates(candidatesResult.candidates);
@@ -89,6 +94,11 @@ function QueueContent() {
       }
     );
   }, []);
+
+  function clearSourceFilter() {
+    setSourceFilter(null);
+    router.push("/admin/queue");
+  }
 
   function alertFor(id?: string): AdminAlert | null {
     if (!id) return null;
@@ -146,8 +156,12 @@ function QueueContent() {
     router.push("/builder");
   }
 
-  const pending = candidates.filter((c) => !c.relatedAlertId);
-  const converted = candidates.filter((c) => c.relatedAlertId);
+  const bySource = sourceFilter
+    ? candidates.filter((c) => c.sourceId === sourceFilter)
+    : candidates;
+  const pending = bySource.filter((c) => !c.relatedAlertId);
+  const converted = bySource.filter((c) => c.relatedAlertId);
+  const filteredSourceName = sourceFilter ? bySource[0]?.sourceName : undefined;
 
   return (
     <main className="max-w-4xl mx-auto w-full px-4 sm:px-6 py-10">
@@ -191,6 +205,20 @@ function QueueContent() {
             Nie udało się pobrać kandydatów z Supabase.
           </p>
           <p className="text-xs text-red-500 mt-1 font-mono">{error}</p>
+        </div>
+      )}
+
+      {sourceFilter && (
+        <div className="rounded-xl border border-purple-200 bg-purple-50 px-4 py-3 mb-6 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm text-purple-800">
+            Filtr: {filteredSourceName ? <strong className="font-semibold">{filteredSourceName}</strong> : "jedno źródło"}
+          </p>
+          <button
+            onClick={clearSourceFilter}
+            className="text-xs font-medium text-purple-700 hover:text-purple-900 hover:underline"
+          >
+            Wyczyść filtr ×
+          </button>
         </div>
       )}
 
