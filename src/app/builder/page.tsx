@@ -1007,6 +1007,16 @@ export default function BuilderPage() {
               placeholder="https://..."
               className={inputClass}
             />
+            {form.sourceUrl && (
+              <a
+                href={form.sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline self-start"
+              >
+                Sprawdź ten link →
+              </a>
+            )}
           </div>
         </div>
       </section>

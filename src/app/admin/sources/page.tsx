@@ -140,6 +140,7 @@ interface InlineDraftData {
   change: string;
   action: string;
   sourceName: string;
+  sourceUrl?: string | null;
 }
 
 type InlineDraftState =
@@ -878,6 +879,20 @@ function SourceCard({
                     )}
                   </div>
                   <p className="text-xs text-slate-600 leading-relaxed mb-2.5">{inlineDraft.draft.change}</p>
+                  <p className="text-xs mb-2.5">
+                    {inlineDraft.draft.sourceUrl ? (
+                      <a
+                        href={inlineDraft.draft.sourceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                      >
+                        Sprawdź link źródła →
+                      </a>
+                    ) : (
+                      <span className="text-amber-600 font-medium">Brak linku źródła</span>
+                    )}
+                  </p>
                   {inlineDraft.warnings.length > 0 && (
                     <div className="mb-2.5 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2">
                       <ul className="space-y-0.5">

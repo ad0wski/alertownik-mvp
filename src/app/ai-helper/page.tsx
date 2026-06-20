@@ -127,6 +127,7 @@ interface DraftPreview {
   change?: string;
   action?: string;
   sourceName?: string;
+  sourceUrl?: string | null;
 }
 
 const REQUIRED_FIELDS = [
@@ -515,8 +516,22 @@ export default function AiHelperPage() {
                   <dd className="text-slate-800 pt-1 leading-relaxed">{aiDraftParsed.action || "—"}</dd>
 
                   <dt className="font-medium text-slate-500 pt-0.5">Źródło</dt>
-                  <dd className="text-slate-800 pt-0.5">
-                    {aiDraftParsed.sourceName || <span className="text-amber-600 font-medium">Brak nazwy źródła</span>}
+                  <dd className="text-slate-800 pt-0.5 flex flex-wrap items-center gap-3">
+                    <span>
+                      {aiDraftParsed.sourceName || <span className="text-amber-600 font-medium">Brak nazwy źródła</span>}
+                    </span>
+                    {aiDraftParsed.sourceUrl ? (
+                      <a
+                        href={aiDraftParsed.sourceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                      >
+                        Sprawdź link →
+                      </a>
+                    ) : (
+                      <span className="text-xs text-amber-600 font-medium">Brak linku źródła</span>
+                    )}
                   </dd>
                 </dl>
               </div>
