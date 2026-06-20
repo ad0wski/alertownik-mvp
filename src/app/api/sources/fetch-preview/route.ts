@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { detectDateInText } from "@/lib/candidateWarnings";
 
 // ── Public types ──────────────────────────────────────────────────────────────
 
 export interface SourceCandidate {
   heading?: string;
   text: string;
+  hasDate: boolean;
 }
 
 export type FetchPreviewResponse =
@@ -15,6 +17,10 @@ export type FetchPreviewResponse =
       fetchedAt: string;
       candidates: SourceCandidate[];
       rawText: string;
+      /** Detected via <link rel="alternate" type="application/rss|atom+xml">
+       *  in the page's own <head> — lightweight discovery only, no feed is
+       *  ever fetched or parsed here. */
+      feedUrl?: string;
     }
   | { ok: false; error: string };
 
@@ -91,9 +97,11 @@ function buildCandidates(blocks: Block[]): SourceCandidate[] {
         j++;
       }
       if (paras.length > 0) {
+        const text = paras.join("\n\n");
         candidates.push({
           heading: b.text.slice(0, 120),
-          text: paras.join("\n\n"),
+          text,
+          hasDate: detectDateInText(b.text) || detectDateInText(text),
         });
         i = j;
         continue;
@@ -101,7 +109,8 @@ function buildCandidates(blocks: Block[]): SourceCandidate[] {
       i++;
     } else {
       if (b.text.length > 80) {
-        candidates.push({ text: b.text.slice(0, 800) });
+        const text = b.text.slice(0, 800);
+        candidates.push({ text, hasDate: detectDateInText(text) });
       }
       i++;
     }
@@ -110,13 +119,39 @@ function buildCandidates(blocks: Block[]): SourceCandidate[] {
   return candidates;
 }
 
-function parseHtml(html: string): {
+// Lightweight RSS/Atom autodiscovery — only looks at the page's own <head>
+// <link> tags already present in the HTML we already fetched. Never
+// fetches or parses the feed itself.
+function findFeedUrl(html: string, baseUrl: string): string | undefined {
+  const headMatch = html.match(/<head[^>]*>([\s\S]*?)<\/head>/i);
+  const head = headMatch ? headMatch[1] : html.slice(0, 5000);
+
+  const linkRx = /<link\b[^>]*>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = linkRx.exec(head)) !== null) {
+    const tag = m[0];
+    const isFeed = /type=["'](application\/rss\+xml|application\/atom\+xml)["']/i.test(tag);
+    if (!isFeed) continue;
+    const hrefMatch = tag.match(/href=["']([^"']+)["']/i);
+    if (!hrefMatch) continue;
+    try {
+      return new URL(hrefMatch[1], baseUrl).toString();
+    } catch {
+      continue;
+    }
+  }
+  return undefined;
+}
+
+function parseHtml(html: string, baseUrl: string): {
   title: string;
   candidates: SourceCandidate[];
   rawText: string;
+  feedUrl?: string;
 } {
   const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
   const title = titleMatch ? stripTags(titleMatch[1]).trim().slice(0, 120) : "";
+  const feedUrl = findFeedUrl(html, baseUrl);
 
   // Remove boilerplate sections before extracting content
   const stripped = html
@@ -145,7 +180,7 @@ function parseHtml(html: string): {
     .slice(0, 5000)
     .trim();
 
-  return { title, candidates, rawText };
+  return { title, candidates, rawText, feedUrl };
 }
 
 // ── Route handler ─────────────────────────────────────────────────────────────
@@ -224,7 +259,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<FetchPreviewR
     });
   }
 
-  const { title, candidates, rawText } = parseHtml(html);
+  const { title, candidates, rawText, feedUrl } = parseHtml(html, url);
 
   return NextResponse.json({
     ok: true,
@@ -233,5 +268,6 @@ export async function POST(req: NextRequest): Promise<NextResponse<FetchPreviewR
     fetchedAt: new Date().toISOString(),
     candidates,
     rawText,
+    feedUrl,
   });
 }

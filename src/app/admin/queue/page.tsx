@@ -6,9 +6,12 @@ import { useRouter } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
 import {
   getSourceCandidates,
+  getSourceChecks,
   type SourceCandidate,
 } from "@/lib/supabaseSourceWrites";
 import { getAdminSupabaseAlerts, type AdminAlert } from "@/lib/getAdminSupabaseAlerts";
+import { getCandidateWarnings } from "@/lib/candidateWarnings";
+import type { SourceCheck } from "@/types/alertSource";
 import type { AlertCategory } from "@/types/alert";
 
 // ── Constants — same sessionStorage contracts already used by /admin/sources
@@ -70,16 +73,18 @@ function QueueContent() {
   const router = useRouter();
   const [candidates, setCandidates] = useState<SourceCandidate[]>([]);
   const [alerts, setAlerts] = useState<AdminAlert[]>([]);
+  const [allChecks, setAllChecks] = useState<SourceCheck[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sentId, setSentId] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([getSourceCandidates(100), getAdminSupabaseAlerts()]).then(
-      ([candidatesResult, alertsResult]) => {
+    Promise.all([getSourceCandidates(100), getAdminSupabaseAlerts(), getSourceChecks()]).then(
+      ([candidatesResult, alertsResult, checksResult]) => {
         setCandidates(candidatesResult.candidates);
         setError(candidatesResult.error ?? null);
         setAlerts(alertsResult.alerts);
+        setAllChecks(checksResult.checks);
         setLoading(false);
       }
     );
@@ -88,6 +93,21 @@ function QueueContent() {
   function alertFor(id?: string): AdminAlert | null {
     if (!id) return null;
     return alerts.find((a) => a.id === id) ?? null;
+  }
+
+  // Lightweight, schema-free duplicate/stale detection — see
+  // src/lib/candidateWarnings.ts. Compares against the chronologically
+  // previous check of the same source (allChecks is already sorted
+  // checked_at desc by getSourceChecks()) and against known alert titles.
+  function warningsFor(c: SourceCandidate): string[] {
+    const sourceHistory = allChecks.filter((chk) => chk.sourceId === c.sourceId);
+    const idx = sourceHistory.findIndex((chk) => chk.id === c.id);
+    const previousCheckNotes = idx >= 0 ? sourceHistory[idx + 1]?.notes : undefined;
+
+    return getCandidateWarnings(
+      { sourceUrl: c.sourceUrl, notes: c.notes },
+      { previousCheckNotes, alertTitles: alerts.map((a) => a.title) }
+    );
   }
 
   function sendToAiHelper(c: SourceCandidate) {
@@ -206,6 +226,7 @@ function QueueContent() {
             {pending.map((c) => {
               const cfg = resultLabels[c.result] ?? { label: c.result, color: "text-slate-600 bg-slate-50 border-slate-200" };
               const isRealLink = Boolean(c.sourceUrl);
+              const warnings = warningsFor(c);
               return (
                 <div key={c.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 flex flex-col gap-3">
                   <div className="flex flex-wrap items-center gap-2">
@@ -224,6 +245,16 @@ function QueueContent() {
                     <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">{c.notes}</p>
                   ) : (
                     <p className="text-sm text-slate-400 italic">Brak zapisanej notatki z tego sprawdzenia.</p>
+                  )}
+
+                  {warnings.length > 0 && (
+                    <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2">
+                      <ul className="space-y-0.5">
+                        {warnings.map((w, wi) => (
+                          <li key={wi} className="text-xs text-amber-700">⚠ {w}</li>
+                        ))}
+                      </ul>
+                    </div>
                   )}
 
                   <div className="flex flex-wrap items-center gap-2 pt-0.5">

@@ -119,6 +119,7 @@ const PILOT_SOURCE_SUGGESTIONS: PilotSourceSuggestion[] = [
 interface SourcePreviewCandidate {
   heading?: string;
   text: string;
+  hasDate?: boolean;
 }
 
 interface SourcePreviewData {
@@ -126,6 +127,7 @@ interface SourcePreviewData {
   fetchedAt: string;
   candidates: SourcePreviewCandidate[];
   rawText: string;
+  feedUrl?: string;
 }
 
 // ── Inline AI draft (generated in-card from preview content) ─────────────────
@@ -703,6 +705,12 @@ function SourceCard({
           >
             Otwórz źródło ↗
           </a>
+          <Link
+            href="/builder"
+            className="px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+          >
+            Otwórz Kreator →
+          </Link>
           <button
             onClick={onMarkChecked}
             disabled={markingChecked}
@@ -768,6 +776,23 @@ function SourceCard({
                 </p>
               )}
 
+              {previewData.feedUrl && (
+                <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 mb-3">
+                  <p className="text-xs text-emerald-800">
+                    Wykryto możliwy kanał RSS:{" "}
+                    <a
+                      href={previewData.feedUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium underline hover:text-emerald-900"
+                    >
+                      {previewData.feedUrl}
+                    </a>
+                    . Rozważ ustawienie „Typ źródła" na „RSS/Feed" dla tego źródła.
+                  </p>
+                </div>
+              )}
+
               {previewData.candidates.length === 0 ? (
                 <p className="text-xs text-slate-400 mb-2">
                   Nie znaleziono czytelnych fragmentów tekstu. Otwórz stronę i skopiuj treść ręcznie do AI Helpera.
@@ -785,6 +810,11 @@ function SourceCard({
                           <p className="text-xs font-semibold text-slate-800 mb-1 truncate">{c.heading}</p>
                         )}
                         <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">{c.text}</p>
+                        {c.hasDate && (
+                          <span className="inline-flex items-center gap-1 text-xs text-blue-600 mt-1">
+                            📅 wykryto datę
+                          </span>
+                        )}
                         <div className="mt-2 flex flex-wrap gap-3">
                           <button
                             onClick={() => generateInlineDraft(candidateText)}

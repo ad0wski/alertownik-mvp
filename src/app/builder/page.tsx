@@ -340,7 +340,7 @@ export default function BuilderPage() {
         const data = JSON.parse(stripCodeFences(pendingJson));
         setForm(buildFormFromJson(data, pendingSourceId));
         setAiHelperLoadedMsg(true);
-        setTimeout(() => setAiHelperLoadedMsg(false), 4000);
+        setTimeout(() => setAiHelperLoadedMsg(false), 6000);
         requestAnimationFrame(() => {
           formSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
         });
@@ -795,6 +795,10 @@ export default function BuilderPage() {
           <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
             <p className="text-sm font-semibold text-blue-800">
               Alert z AI Helpera wczytany do formularza.
+            </p>
+            <p className="text-xs text-blue-700 mt-1">
+              To wciąż tylko propozycja — zweryfikuj daty, lokalizację i link do źródła
+              przed publikacją.
             </p>
           </div>
         )}
