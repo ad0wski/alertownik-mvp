@@ -587,8 +587,7 @@ export default function AdminPage() {
               <span className="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded">
                 docs/supabase_waste_schedule_items.sql
               </span>{" "}
-              w Supabase SQL Editor, żeby zacząć dodawać terminy odbioru (na razie
-              ręcznie przez Table Editor — formularz w panelu admina jeszcze nie istnieje).{" "}
+              w Supabase SQL Editor, żeby zacząć dodawać terminy odbioru.{" "}
               <Link href="/odpady" className="font-medium text-blue-600 hover:underline">
                 Zobacz publiczną stronę „Odpady" →
               </Link>
@@ -606,12 +605,20 @@ export default function AdminPage() {
                   : "nadchodzących terminów odbioru zapisanych"}
               </p>
             </div>
-            <Link
-              href="/odpady"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors shrink-0"
-            >
-              Zobacz publiczną stronę →
-            </Link>
+            <div className="flex items-center gap-2 shrink-0 flex-wrap">
+              <Link
+                href="/admin/waste"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+              >
+                Zarządzaj terminami →
+              </Link>
+              <Link
+                href="/odpady"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"
+              >
+                Zobacz publiczną stronę →
+              </Link>
+            </div>
           </div>
         )}
       </section>

@@ -1,18 +1,14 @@
 import { supabase } from "./supabaseClient";
-import type { WasteScheduleItem, WasteType } from "@/types/wasteSchedule";
+import type { WasteScheduleItem, WasteScheduleItemInput, WasteType } from "@/types/wasteSchedule";
 
-// Read-only access to the proposed `waste_schedule_items` table (Sprint 80,
-// waste_type list revised Sprint 81 — see
-// docs/supabase_waste_schedule_items.sql). That migration is NOT applied
-// automatically — this module detects a missing table and returns a calm,
-// explanatory result instead of throwing, so the public `/odpady` page (and
-// the admin dashboard's status card) keep working whether or not the
-// migration has been run yet. Same pattern as
-// src/lib/supabaseCandidateWrites.ts (Sprint 78).
-//
-// Deliberately read-only: there is no insert/update/delete function here.
-// Unlike the read path, an admin write/entry UI is gated on the table
-// actually existing — see Decisions.md (Sprint 81) for why.
+// Access to the `waste_schedule_items` table (Sprint 80, waste_type list
+// revised Sprint 81, RLS-limitation documented Sprint 82, migration
+// actually applied + write functions added Sprint 83 — see
+// docs/supabase_waste_schedule_items.sql). The missing-table detection
+// below is kept even though the table now exists (confirmed live Sprint
+// 83) — same defensive pattern as src/lib/supabaseCandidateWrites.ts
+// (Sprint 78), cheap insurance against a future environment where the
+// migration genuinely hasn't run yet (e.g. a fresh Supabase project).
 
 interface SupabaseErrorLike {
   code?: string;
@@ -75,4 +71,107 @@ export async function getUpcomingWasteScheduleItems(limit = 50): Promise<WasteSc
   }
 
   return { items: (data ?? []).map(rowToWasteScheduleItem) };
+}
+
+// ── Admin (Sprint 83) ────────────────────────────────────────────────────────
+
+// All items, past and future — the admin list needs to show (and flag)
+// outdated entries too, unlike the public "upcoming only" view above.
+export async function getAllWasteScheduleItems(limit = 500): Promise<WasteScheduleResult> {
+  if (!supabase) return { items: [], error: "Brak połączenia z Supabase." };
+
+  const { data, error } = await supabase
+    .from("waste_schedule_items")
+    .select("*")
+    .order("collection_date", { ascending: true })
+    .limit(limit);
+
+  if (error) {
+    if (isMissingTableError(error)) {
+      return { items: [], tableMissing: true };
+    }
+    console.error("[Alertownik] getAllWasteScheduleItems error:", error.message);
+    return { items: [], error: error.message };
+  }
+
+  return { items: (data ?? []).map(rowToWasteScheduleItem) };
+}
+
+export interface WasteScheduleSaveResult {
+  ok: boolean;
+  error?: string;
+  tableMissing?: boolean;
+}
+
+function toRow(input: WasteScheduleItemInput) {
+  return {
+    locality: input.locality.trim(),
+    area_name: input.areaName?.trim() || null,
+    street_group: input.streetGroup?.trim() || null,
+    waste_type: input.wasteType,
+    collection_date: input.collectionDate,
+    source_name: input.sourceName?.trim() || null,
+    source_url: input.sourceUrl?.trim() || null,
+    notes: input.notes?.trim() || null,
+  };
+}
+
+// Single insert reuses the bulk path with a one-element array — keeps the
+// add form and the JSON import on exactly one insert code path, the same
+// "don't let two entry points drift apart" reasoning as
+// validateWasteScheduleInput (src/lib/wasteSchedule.ts).
+export async function createWasteScheduleItems(
+  inputs: WasteScheduleItemInput[]
+): Promise<WasteScheduleSaveResult> {
+  if (!supabase) return { ok: false, error: "Brak połączenia z Supabase." };
+  if (inputs.length === 0) return { ok: false, error: "Brak wierszy do zapisania." };
+
+  const { error } = await supabase
+    .from("waste_schedule_items")
+    .insert(inputs.map(toRow));
+
+  if (error) {
+    if (isMissingTableError(error)) {
+      return { ok: false, tableMissing: true, error: "Tabela nie istnieje." };
+    }
+    console.error("[Alertownik] createWasteScheduleItems error:", error.message);
+    return { ok: false, error: error.message };
+  }
+
+  return { ok: true };
+}
+
+export async function updateWasteScheduleItem(
+  id: string,
+  input: WasteScheduleItemInput
+): Promise<WasteScheduleSaveResult> {
+  if (!supabase) return { ok: false, error: "Brak połączenia z Supabase." };
+
+  const { error } = await supabase
+    .from("waste_schedule_items")
+    .update(toRow(input))
+    .eq("id", id);
+
+  if (error) {
+    console.error("[Alertownik] updateWasteScheduleItem error:", error.message);
+    return { ok: false, error: error.message };
+  }
+
+  return { ok: true };
+}
+
+export async function deleteWasteScheduleItem(id: string): Promise<WasteScheduleSaveResult> {
+  if (!supabase) return { ok: false, error: "Brak połączenia z Supabase." };
+
+  const { error } = await supabase
+    .from("waste_schedule_items")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    console.error("[Alertownik] deleteWasteScheduleItem error:", error.message);
+    return { ok: false, error: error.message };
+  }
+
+  return { ok: true };
 }

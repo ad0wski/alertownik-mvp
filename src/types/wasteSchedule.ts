@@ -25,3 +25,15 @@ export interface WasteScheduleItem {
   createdAt: string;
   updatedAt: string;
 }
+
+// Admin create/update input — same shape minus the server-assigned fields.
+export interface WasteScheduleItemInput {
+  locality: string;
+  areaName?: string;
+  streetGroup?: string;
+  wasteType: WasteType;
+  collectionDate: string;
+  sourceName?: string;
+  sourceUrl?: string;
+  notes?: string;
+}

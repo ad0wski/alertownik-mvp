@@ -13,6 +13,7 @@ const adminLinks = [
   { href: "/ai-helper",      label: "AI Helper" },
   { href: "/admin/sources",  label: "Źródła" },
   { href: "/admin/queue",    label: "Kandydaci" },
+  { href: "/admin/waste",    label: "Harmonogram odpadów" },
 ];
 
 export function AppHeader() {

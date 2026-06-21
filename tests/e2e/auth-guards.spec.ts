@@ -18,6 +18,7 @@ const PROTECTED_ROUTES = [
   { path: "/ai-helper",     hint: "Zaloguj się, aby kontynuować." },
   { path: "/admin/sources", hint: "Ta sekcja jest dostępna po zalogowaniu." },
   { path: "/admin/queue",   hint: "Zaloguj się, aby kontynuować." },
+  { path: "/admin/waste",   hint: "Zaloguj się, aby kontynuować." },
 ];
 
 for (const { path, hint } of PROTECTED_ROUTES) {
