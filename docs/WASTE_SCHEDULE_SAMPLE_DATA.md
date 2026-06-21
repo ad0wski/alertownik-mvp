@@ -1,10 +1,15 @@
 # Waste Schedule — Sample Import Data
 
-Sprint 84. A safe, copy-pasteable starting point for `/admin/waste`'s
-"Import z JSON →" panel — not real data, not inserted automatically by
-Claude Code. Use this to see the import format work end to end, then
-replace every row with a verified official schedule before treating it as
-real.
+Sprint 84 (extended Sprint 85). A safe, copy-pasteable starting point for
+`/admin/waste`'s "Import z JSON →" panel — not real data, not inserted
+automatically by Claude Code. Use this to see the import format work end
+to end, then replace every row with a verified official schedule before
+treating it as real.
+
+A SQL-Editor equivalent of these exact rows exists at
+`docs/supabase_waste_schedule_seed_example.sql`, for an admin who prefers
+running SQL directly over pasting JSON into `/admin/waste` — same rows,
+same "PRZYKŁAD" markers, same not-run-automatically rule.
 
 ## ⚠️ These rows are EXAMPLES, not verified data
 

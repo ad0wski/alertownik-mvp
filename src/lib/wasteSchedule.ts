@@ -133,10 +133,15 @@ export function isPastDate(iso: string): boolean {
 // the same entry. A warning, never a block — the admin may legitimately
 // want two rows for the same date/type if a source genuinely lists both
 // (e.g. a corrected re-announcement).
+//
+// `existing` accepts saved items OR not-yet-saved inputs (both have the
+// three fields this function reads) so the same check can run against
+// already-saved rows (single form, Sprint 83) and against earlier rows in
+// an in-progress bulk-import batch that hasn't been saved yet (Sprint 85).
 export function findDuplicateWasteItem(
   input: WasteScheduleItemInput,
-  existing: WasteScheduleItem[]
-): WasteScheduleItem | null {
+  existing: (WasteScheduleItem | WasteScheduleItemInput)[]
+): WasteScheduleItem | WasteScheduleItemInput | null {
   const locality = input.locality.trim().toLowerCase();
   return (
     existing.find(

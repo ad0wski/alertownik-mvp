@@ -282,6 +282,24 @@ function WasteAdminContent() {
     await loadItems();
   }
 
+  // Non-blocking duplicate warnings for the parsed import batch — checked
+  // against both existing rows and earlier rows in the same paste (the
+  // single-row form only needed the former; a bulk paste can also
+  // duplicate itself). Sprint 85: the single form has warned about exact
+  // duplicates since Sprint 83 (findDuplicateWasteItem + confirm()); the
+  // bulk import never did, which was a real gap, not a deliberate omission.
+  const importDuplicateWarnings: string[] = importParsed
+    ? importParsed.flatMap((row, i) => {
+        if (findDuplicateWasteItem(row, items)) {
+          return [`Wiersz ${i + 1}: podobny wpis już istnieje w harmonogramie (${row.locality}, ${WASTE_TYPE_LABELS[row.wasteType] ?? row.wasteType}, ${row.collectionDate}).`];
+        }
+        if (findDuplicateWasteItem(row, importParsed.slice(0, i))) {
+          return [`Wiersz ${i + 1}: duplikat innego wiersza w tym samym imporcie (${row.locality}, ${WASTE_TYPE_LABELS[row.wasteType] ?? row.wasteType}, ${row.collectionDate}).`];
+        }
+        return [];
+      })
+    : [];
+
   // ── Filtering ─────────────────────────────────────────────────────────────
 
   const filtered = items.filter((item) => {
@@ -528,6 +546,11 @@ function WasteAdminContent() {
                 <p className="text-sm font-medium text-emerald-700">
                   {importParsed.length} {importParsed.length === 1 ? "wiersz gotowy" : "wierszy gotowych"} do zaimportowania.
                 </p>
+              )}
+              {importDuplicateWarnings.length > 0 && (
+                <ul className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 space-y-0.5">
+                  {importDuplicateWarnings.map((warn, i) => <li key={i}>{warn}</li>)}
+                </ul>
               )}
               {importMsg && <p className="text-sm font-medium text-slate-700">{importMsg}</p>}
               <button
