@@ -131,6 +131,17 @@ test.describe("Public homepage", () => {
     ).toHaveAttribute("href", /pruszkow\.pl/);
   });
 
+  test("odpady page's upcoming-schedule section shows a graceful state, not a crash", async ({ page }) => {
+    await page.goto("/odpady");
+    await expect(page.getByText("Nadchodzące terminy")).toBeVisible();
+    // Whether the waste_schedule_items migration has been run or not, the
+    // section must show one of these two honest states — never fabricated
+    // dates (see Decisions.md, Sprint 80/81) and never a crash.
+    await expect(
+      page.getByText(/Harmonogram nie jest jeszcze włączony|Brak zapisanych terminów/)
+    ).toBeVisible({ timeout: 10_000 });
+  });
+
   test("homepage links to the odpady page", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("link", { name: "Odpady" }).first().click();

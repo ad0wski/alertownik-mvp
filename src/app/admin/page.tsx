@@ -14,6 +14,7 @@ import {
   type RecentSourceCheck,
 } from "@/lib/supabaseSourceWrites";
 import { getSourceCandidateNotices } from "@/lib/supabaseCandidateWrites";
+import { getUpcomingWasteScheduleItems } from "@/lib/supabaseWasteWrites";
 import type { SourceNoticeCandidate } from "@/types/sourceCandidate";
 import type { Session } from "@supabase/supabase-js";
 
@@ -109,6 +110,11 @@ export default function AdminPage() {
   // migration hasn't been run yet (table missing), array once loaded.
   const [persistentNotices, setPersistentNotices] = useState<SourceNoticeCandidate[] | null>(null);
 
+  // Waste schedule (Sprint 80/81) — null while loading or if the migration
+  // hasn't been run yet (table missing), a count once loaded.
+  const [wasteScheduleCount, setWasteScheduleCount] = useState<number | null>(null);
+  const [wasteScheduleEnabled, setWasteScheduleEnabled] = useState(false);
+
   useEffect(() => {
     if (!supabase) { setAuthLoading(false); return; }
 
@@ -142,7 +148,8 @@ export default function AdminPage() {
       getRecentSourceChecks(3),
       getSourceCandidates(100),
       getSourceCandidateNotices(),
-    ]).then(([sourcesResult, checksResult, candidatesResult, noticesResult]) => {
+      getUpcomingWasteScheduleItems(200),
+    ]).then(([sourcesResult, checksResult, candidatesResult, noticesResult, wasteResult]) => {
       const count = sourcesResult.sources.filter((s) =>
         sourceNeedsChecking(s.lastCheckedAt, s.isActive)
       ).length;
@@ -152,6 +159,8 @@ export default function AdminPage() {
         candidatesResult.candidates.filter((c) => !c.relatedAlertId).length
       );
       setPersistentNotices(noticesResult.tableMissing ? null : noticesResult.candidates);
+      setWasteScheduleEnabled(!wasteResult.tableMissing);
+      setWasteScheduleCount(wasteResult.tableMissing ? null : wasteResult.items.length);
       setSourcesLoading(false);
     });
   }, [session]);
@@ -556,6 +565,53 @@ export default function AdminPage() {
                 </div>
               );
             })()}
+          </div>
+        )}
+      </section>
+
+      {/* ── Waste schedule status (Sprint 80/81) ──────────────────────── */}
+      <section className="mb-8">
+        <h2 className="text-base font-semibold text-slate-800 mb-4">Harmonogram odpadów</h2>
+
+        {sourcesLoading ? (
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 animate-pulse">
+            <div className="h-4 w-48 bg-slate-100 rounded" />
+          </div>
+        ) : !wasteScheduleEnabled ? (
+          <div className="bg-white rounded-2xl border border-slate-200 p-5">
+            <p className="text-sm font-medium text-slate-700 mb-1">
+              Tabela harmonogramu nie jest jeszcze włączona.
+            </p>
+            <p className="text-sm text-slate-500 leading-relaxed">
+              Uruchom migrację z{" "}
+              <span className="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded">
+                docs/supabase_waste_schedule_items.sql
+              </span>{" "}
+              w Supabase SQL Editor, żeby zacząć dodawać terminy odbioru (na razie
+              ręcznie przez Table Editor — formularz w panelu admina jeszcze nie istnieje).{" "}
+              <Link href="/odpady" className="font-medium text-blue-600 hover:underline">
+                Zobacz publiczną stronę „Odpady" →
+              </Link>
+            </p>
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex-1">
+              <p className={`text-3xl font-bold ${wasteScheduleCount === 0 ? "text-amber-600" : "text-emerald-600"}`}>
+                {wasteScheduleCount}
+              </p>
+              <p className="text-sm text-slate-500 mt-1 leading-snug">
+                {wasteScheduleCount === 0
+                  ? "nadchodzących terminów zapisanych — harmonogram jest pusty"
+                  : "nadchodzących terminów odbioru zapisanych"}
+              </p>
+            </div>
+            <Link
+              href="/odpady"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors shrink-0"
+            >
+              Zobacz publiczną stronę →
+            </Link>
           </div>
         )}
       </section>

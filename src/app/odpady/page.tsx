@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { WasteScheduleSection } from "@/components/WasteScheduleSection";
 
 export const metadata = {
   title: "Odpady — Alertownik",
@@ -54,12 +55,20 @@ export default function OdpadyPage() {
         </div>
         <p className="text-sm sm:text-base text-slate-500 leading-relaxed">
           Planujemy, żeby Alertownik pokazywał najbliższe terminy odbioru odpadów
-          dla Twojej okolicy — bez przeszukiwania harmonogramów PDF. Ta strona
-          opisuje, jak to ma działać, i na razie kieruje do oficjalnych źródeł.
+          dla Twojej okolicy — bez przeszukiwania harmonogramów PDF. Sekcja
+          poniżej już realnie sprawdza, czy takie terminy są zapisane — na razie
+          nie ma jeszcze żadnych, więc strona kieruje też do oficjalnych źródeł.
         </p>
       </div>
 
       <div className="flex flex-col gap-4">
+        <section>
+          <h2 className="text-base font-semibold text-slate-900 mb-2.5">
+            Nadchodzące terminy
+          </h2>
+          <WasteScheduleSection />
+        </section>
+
         <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
           <h2 className="text-base font-semibold text-slate-900 mb-2">
             Jak to ma działać

@@ -1,6 +1,6 @@
 -- ============================================================================
 -- Alertownik — Waste Schedule Items Schema
--- Sprint 80: proposed. NOT APPLIED.
+-- Sprint 80: proposed. Sprint 81: waste_type value list revised. NOT APPLIED.
 -- ============================================================================
 -- STATUS: PROPOSAL — NOT APPLIED. Run manually in the Supabase SQL Editor
 -- only after explicit confirmation. Do NOT execute automatically or via a
@@ -31,12 +31,16 @@
 -- ("prefer area/street-group based selection, not exact personal address").
 --
 -- BEFORE RUNNING:
---   1. Confirm this is genuinely wanted — no app code depends on this table
---      existing yet. Sprint 80 intentionally stopped before any
---      Supabase-querying code for this feature (see Decisions.md) — the
---      public /odpady page shipped this sprint is a static UI shell with
---      no database calls.
+--   1. Confirm this is genuinely wanted. As of Sprint 81, the public
+--      `/odpady` page reads from this table defensively (it detects a
+--      missing table and shows an explanatory state — see
+--      src/lib/supabaseWasteWrites.ts) but no admin write/entry UI exists
+--      yet — see Decisions.md (Sprint 81) for why the read path was built
+--      ahead of this migration but the write path deliberately was not.
 --   2. Run the full SQL below in the Supabase SQL Editor.
+--   3. Reload `/odpady` afterwards — no redeploy needed, the app detects
+--      the table's presence at runtime the same way Sprint 78's candidate
+--      queue does.
 -- ============================================================================
 
 
@@ -64,8 +68,12 @@ create table if not exists public.waste_schedule_items (
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now(),
 
+  -- Sprint 81 revised this list from Sprint 80's draft: renamed
+  -- 'plastic_metal' → 'plastics_metals' and added 'other' as a fallback
+  -- bucket for anything that doesn't fit the named 5 (no equivalent
+  -- existed in Sprint 80's draft) — both per the Sprint 81 brief.
   constraint waste_schedule_items_waste_type_check
-    check (waste_type in ('mixed', 'paper', 'plastic_metal', 'glass', 'bio', 'bulky'))
+    check (waste_type in ('mixed', 'paper', 'plastics_metals', 'glass', 'bio', 'bulky', 'other'))
 );
 
 
@@ -153,9 +161,13 @@ notify pgrst, 'reload schema';
 -- this sprint's explicit safety rules. After running it manually in the
 -- Supabase SQL Editor:
 --   1. Verify waste_schedule_items appears in the Table Editor.
---   2. No app code depends on it yet — Sprint 80 stopped at this proposal
---      plus a non-data-connected UI shell (src/app/odpady/page.tsx). A
---      future sprint would add the real data-fetching (public page) and
---      admin-entry workflow once this table actually exists — see
---      Roadmap.md's Sprint 80 update for the proposed next steps.
+--   2. Open `/odpady` — it should switch automatically from the "not yet
+--      enabled" state to a genuine empty-state ("no upcoming dates yet")
+--      with no app redeploy needed (src/lib/supabaseWasteWrites.ts already
+--      reads from this table defensively, as of Sprint 81).
+--   3. Insert a few real rows manually via the Supabase Table Editor (not
+--      via this SQL file) to confirm the public page renders them grouped
+--      by date, with waste type/locality/source — no admin entry UI exists
+--      yet to do this from inside the app; that's documented future work,
+--      not built this sprint (see Roadmap.md's Sprint 81 update).
 -- ============================================================================
