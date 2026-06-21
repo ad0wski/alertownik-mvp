@@ -153,6 +153,26 @@ test.describe("Public homepage", () => {
     ).toBeVisible({ timeout: 10_000 });
   });
 
+  test("odpady page respects a saved 'Moja okolica' preference without crashing", async ({ page }) => {
+    // Same localStorage key/shape AlertList's PreferencesSection saves
+    // (src/lib/userPreferences.ts) — Sprint 84 reuses it on /odpady too,
+    // rather than introducing a second area picker.
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        "alertownik-user-preferences",
+        JSON.stringify({ locationKeywords: "Komorów", categories: [] })
+      );
+    });
+    await page.goto("/odpady");
+    await expect(page.getByText("Najbliższy odbiór")).toBeVisible();
+    // Whether the table is missing, empty, or has rows that do/don't match
+    // "Komorów", the page must show one honest state — never a crash.
+    await expect(
+      page.getByText(/Harmonogram nie jest jeszcze włączony|Brak zapisanych terminów|Wszystkie okolice/)
+    ).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator("body")).not.toContainText("Application error");
+  });
+
   test("homepage links to the odpady page", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("link", { name: "Odpady" }).first().click();

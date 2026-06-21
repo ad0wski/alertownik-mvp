@@ -8,7 +8,9 @@ import {
   formatScheduleDate,
   relativeDayLabel,
   nextCollectionGroup,
+  matchesLocationKeywords,
 } from "@/lib/wasteSchedule";
+import { loadPreferences, hasPreferences } from "@/lib/userPreferences";
 import type { WasteScheduleItem } from "@/types/wasteSchedule";
 
 type LoadState = "loading" | "ready" | "table_missing" | "error";
@@ -18,9 +20,17 @@ type LoadState = "loading" | "ready" | "table_missing" | "error";
 // grouped-by-date list below it. Shares the same data-access function and
 // presentation helpers; fetches independently (small dataset, simpler than
 // lifting shared state up for two components on one page).
+//
+// Unlike WasteScheduleSection's explicit toggle, this card has only one
+// highlight slot — so when a "Moja okolica" preference is saved
+// (src/lib/userPreferences.ts), it automatically prefers a match in that
+// area over the global soonest date, since "next for me" is the card's
+// whole purpose. Falls back to the global soonest date if nothing in the
+// saved area is upcoming yet, rather than showing an empty card.
 export function NextCollectionCard() {
   const [items, setItems] = useState<WasteScheduleItem[]>([]);
   const [state, setState] = useState<LoadState>("loading");
+  const [isMyAreaMatch, setIsMyAreaMatch] = useState(false);
 
   useEffect(() => {
     getUpcomingWasteScheduleItems(10).then((result) => {
@@ -31,6 +41,16 @@ export function NextCollectionCard() {
       if (result.error) {
         setState("error");
         return;
+      }
+      const prefs = loadPreferences();
+      if (hasPreferences(prefs) && prefs.locationKeywords.trim()) {
+        const myArea = result.items.filter((i) => matchesLocationKeywords(i, prefs.locationKeywords));
+        if (myArea.length > 0) {
+          setItems(myArea);
+          setIsMyAreaMatch(true);
+          setState("ready");
+          return;
+        }
       }
       setItems(result.items);
       setState("ready");
@@ -80,7 +100,7 @@ export function NextCollectionCard() {
   return (
     <div className="bg-blue-50 rounded-2xl border border-blue-200 shadow-sm p-4 sm:p-5">
       <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1.5">
-        Najbliższy odbiór
+        Najbliższy odbiór{isMyAreaMatch && " — Twoja okolica"}
       </p>
       <p className="text-base font-bold text-slate-900 mb-0.5">
         {relativeDayLabel(first.collectionDate)} — {formatScheduleDate(first.collectionDate)}

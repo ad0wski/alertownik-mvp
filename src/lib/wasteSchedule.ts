@@ -27,6 +27,24 @@ export function placeLabel(item: WasteScheduleItem): string {
   return [item.areaName, item.streetGroup].filter(Boolean).join(" — ") || item.locality;
 }
 
+// Reuses the exact "Moja okolica" free-text keywords saved by the alerts
+// homepage (src/lib/userPreferences.ts) so a resident only ever sets their
+// area once — same substring matching as AlertList's matchesMyAlerts(), but
+// checked against locality/areaName/streetGroup instead of alert text
+// fields. Empty keywords match everything (no filter applied).
+export function matchesLocationKeywords(item: WasteScheduleItem, locationKeywords: string): boolean {
+  const keywords = locationKeywords
+    .split(",")
+    .map((k) => k.trim().toLowerCase())
+    .filter(Boolean);
+  if (keywords.length === 0) return true;
+
+  const fields = [item.locality, item.areaName, item.streetGroup]
+    .filter(Boolean)
+    .map((f) => (f as string).toLowerCase());
+  return keywords.some((kw) => fields.some((f) => f.includes(kw)));
+}
+
 export function formatScheduleDate(iso: string): string {
   const d = new Date(iso);
   const label = d.toLocaleDateString("pl-PL", {

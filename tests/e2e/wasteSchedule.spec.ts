@@ -8,6 +8,7 @@ import {
   validateWasteScheduleInput,
   isPastDate,
   findDuplicateWasteItem,
+  matchesLocationKeywords,
 } from "@/lib/wasteSchedule";
 import type { WasteScheduleItem, WasteScheduleItemInput } from "@/types/wasteSchedule";
 
@@ -121,6 +122,29 @@ test.describe("isPastDate", () => {
 
   test("treats a date far in the future as not past", () => {
     expect(isPastDate("2099-01-01")).toBe(false);
+  });
+});
+
+test.describe("matchesLocationKeywords", () => {
+  test("matches when locality contains a saved keyword", () => {
+    const item = makeItem({ locality: "Komorów" });
+    expect(matchesLocationKeywords(item, "Komorów, Pruszków")).toBe(true);
+  });
+
+  test("matches case-insensitively against areaName/streetGroup", () => {
+    const item = makeItem({ locality: "Komorów", streetGroup: "ul. Główna – ul. Sportowa" });
+    expect(matchesLocationKeywords(item, "główna")).toBe(true);
+  });
+
+  test("returns false when no keyword matches any field", () => {
+    const item = makeItem({ locality: "Komorów" });
+    expect(matchesLocationKeywords(item, "Pruszków")).toBe(false);
+  });
+
+  test("empty keywords match everything (no filter applied)", () => {
+    const item = makeItem({ locality: "Komorów" });
+    expect(matchesLocationKeywords(item, "")).toBe(true);
+    expect(matchesLocationKeywords(item, "   ")).toBe(true);
   });
 });
 
