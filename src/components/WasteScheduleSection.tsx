@@ -2,45 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { getUpcomingWasteScheduleItems } from "@/lib/supabaseWasteWrites";
-import type { WasteScheduleItem, WasteType } from "@/types/wasteSchedule";
-
-const WASTE_TYPE_LABELS: Record<WasteType, string> = {
-  mixed: "Zmieszane",
-  paper: "Papier",
-  plastics_metals: "Plastik i metal",
-  glass: "Szkło",
-  bio: "Bio",
-  bulky: "Wielkogabarytowe",
-  other: "Inne",
-};
-
-function formatGroupDate(iso: string): string {
-  const d = new Date(iso);
-  const label = d.toLocaleDateString("pl-PL", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-  return label.charAt(0).toUpperCase() + label.slice(1);
-}
-
-function placeLabel(item: WasteScheduleItem): string {
-  return [item.areaName, item.streetGroup].filter(Boolean).join(" — ") || item.locality;
-}
-
-function groupByDate(items: WasteScheduleItem[]): { date: string; items: WasteScheduleItem[] }[] {
-  const groups: { date: string; items: WasteScheduleItem[] }[] = [];
-  for (const item of items) {
-    const last = groups[groups.length - 1];
-    if (last && last.date === item.collectionDate) {
-      last.items.push(item);
-    } else {
-      groups.push({ date: item.collectionDate, items: [item] });
-    }
-  }
-  return groups;
-}
+import { WASTE_TYPE_LABELS, placeLabel, formatScheduleDate, groupByDate } from "@/lib/wasteSchedule";
+import type { WasteScheduleItem } from "@/types/wasteSchedule";
 
 type LoadState = "loading" | "ready" | "table_missing" | "error";
 
@@ -123,7 +86,7 @@ export function WasteScheduleSection() {
       {groups.map((group) => (
         <div key={group.date} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
           <p className="text-sm font-semibold text-slate-900 mb-2.5">
-            {formatGroupDate(group.date)}
+            {formatScheduleDate(group.date)}
           </p>
           <div className="flex flex-col gap-2">
             {group.items.map((item) => (

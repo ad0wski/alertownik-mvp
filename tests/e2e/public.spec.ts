@@ -142,6 +142,17 @@ test.describe("Public homepage", () => {
     ).toBeVisible({ timeout: 10_000 });
   });
 
+  test("odpady page's next-collection card shows a graceful state, not a crash", async ({ page }) => {
+    await page.goto("/odpady");
+    await expect(page.getByText("Najbliższy odbiór")).toBeVisible();
+    // Same honesty requirement as the full list above, applied to the
+    // single-item highlight card (Sprint 82) — table-missing/empty are
+    // both acceptable, a fabricated date or a crash are not.
+    await expect(
+      page.getByText(/Funkcja jeszcze nie jest włączona|Brak zaplanowanych terminów/)
+    ).toBeVisible({ timeout: 10_000 });
+  });
+
   test("homepage links to the odpady page", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("link", { name: "Odpady" }).first().click();

@@ -1,6 +1,8 @@
 -- ============================================================================
 -- Alertownik — Waste Schedule Items Schema
--- Sprint 80: proposed. Sprint 81: waste_type value list revised. NOT APPLIED.
+-- Sprint 80: proposed. Sprint 81: waste_type value list revised.
+-- Sprint 82: documented known RLS/admin-role limitation. NOT APPLIED —
+-- third sprint in a row confirming this live (see Decisions.md).
 -- ============================================================================
 -- STATUS: PROPOSAL — NOT APPLIED. Run manually in the Supabase SQL Editor
 -- only after explicit confirmation. Do NOT execute automatically or via a
@@ -122,6 +124,19 @@ create trigger waste_schedule_items_set_updated_at
 -- published rows. There is no draft/published distinction here (see note
 -- above), so a single, unconditional public SELECT policy is correct —
 -- there is nothing non-public ever stored in this table to filter out.
+--
+-- KNOWN LIMITATION (Sprint 82, explicitly documented per this sprint's
+-- brief, not a new gap introduced by this table): write access below uses
+-- `auth.role() = 'authenticated'`, the same "any logged-in user is an
+-- admin" model every other table in this project already uses
+-- (alert_sources, source_checks, source_notice_candidates) — there is no
+-- per-locality or per-region admin scoping. Any authenticated admin can
+-- edit any locality's schedule, same as they can already edit any source
+-- or any alert today. Acceptable for a single-admin pilot (this project's
+-- current real-world shape); would need a real roles/permissions model
+-- before onboarding a second, independent admin who should only manage
+-- their own municipality's data — that model does not exist yet anywhere
+-- in this codebase, and building it is out of scope here.
 
 alter table public.waste_schedule_items enable row level security;
 

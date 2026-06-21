@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { NextCollectionCard } from "@/components/NextCollectionCard";
 import { WasteScheduleSection } from "@/components/WasteScheduleSection";
 
 export const metadata = {
@@ -62,6 +63,8 @@ export default function OdpadyPage() {
       </div>
 
       <div className="flex flex-col gap-4">
+        <NextCollectionCard />
+
         <section>
           <h2 className="text-base font-semibold text-slate-900 mb-2.5">
             Nadchodzące terminy
