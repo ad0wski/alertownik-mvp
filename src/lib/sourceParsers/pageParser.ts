@@ -140,6 +140,26 @@ function findFeedUrl(html: string, baseUrl: string): string | undefined {
   return undefined;
 }
 
+// HTTP status → admin-facing failure reason for a page fetch attempt. Pure
+// function (no fetch call) so it's unit-testable without hitting a live
+// site. 401/403 get their own message because Sprint 73 and Sprint 77 both
+// independently confirmed pruszkow.pl returns 403 to an automated fetch
+// while the page itself is genuinely live — the generic "check your URL"
+// message would send an admin chasing a non-existent broken link instead of
+// recognizing bot protection.
+export function describePageFetchFailure(status: number): string {
+  if (status === 401 || status === 403) {
+    return `Strona zablokowała automatyczne pobieranie (HTTP ${status}) — to częste zabezpieczenie przed botami na stronach instytucji, niekoniecznie zepsuty link. Otwórz stronę ręcznie w przeglądarce i sprawdź treść tam.`;
+  }
+  if (status === 404) {
+    return "Strona nie została znaleziona (HTTP 404). Sprawdź, czy adres URL jest aktualny — instytucje czasem zmieniają adresy stron.";
+  }
+  if (status >= 500) {
+    return `Serwer źródła zwrócił błąd (HTTP ${status}) — to problem po stronie źródła, nie aplikacji. Spróbuj ponownie później.`;
+  }
+  return `Strona zwróciła błąd HTTP ${status}. Sprawdź, czy adres URL jest poprawny — otwórz go ręcznie w przeglądarce, żeby się przekonać.`;
+}
+
 export function parsePageHtml(html: string, baseUrl: string): PageParseResult {
   const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
   const title = titleMatch ? stripTags(titleMatch[1]).trim().slice(0, 120) : "";

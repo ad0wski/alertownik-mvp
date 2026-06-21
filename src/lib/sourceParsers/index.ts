@@ -33,6 +33,11 @@ export function detectParserStrategy(sourceType?: AlertSourceType | string | nul
   }
 }
 
-export { parsePageHtml, type PageCandidate, type PageParseResult } from "./pageParser";
+export {
+  parsePageHtml,
+  describePageFetchFailure,
+  type PageCandidate,
+  type PageParseResult,
+} from "./pageParser";
 export { getFeedParserPlaceholder, type FeedParseResult } from "./feedParser";
 export { getPdfManualInstructions, type PdfManualResult } from "./pdfParser";

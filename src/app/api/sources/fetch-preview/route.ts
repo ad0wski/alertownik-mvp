@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { parsePageHtml, type PageCandidate } from "@/lib/sourceParsers/pageParser";
+import {
+  parsePageHtml,
+  describePageFetchFailure,
+  type PageCandidate,
+} from "@/lib/sourceParsers/pageParser";
 
 // ── Public types ──────────────────────────────────────────────────────────────
 
@@ -70,7 +74,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<FetchPreviewR
     if (!response.ok) {
       return NextResponse.json({
         ok: false,
-        error: `Strona zwróciła błąd HTTP ${response.status}. Sprawdź, czy adres URL jest poprawny (np. czy nie zawiera nieprawidłowo zakodowanych znaków) — otwórz go ręcznie w przeglądarce, żeby się przekonać.`,
+        error: describePageFetchFailure(response.status),
       });
     }
 

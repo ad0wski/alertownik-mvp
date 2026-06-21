@@ -91,8 +91,10 @@ const PILOT_SOURCE_SUGGESTIONS: PilotSourceSuggestion[] = [
     name: "Miasto Pruszków — aktualności dla mieszkańców",
     url: "https://www.pruszkow.pl/mieszkancy/aktualnosci-mieszkaniec/",
     category: "municipal",
-    sourceType: "website",
-    notes: "Aktualności i ogłoszenia urzędu miasta Pruszków.",
+    sourceType: "other",
+    notes:
+      "Aktualności i ogłoszenia urzędu miasta Pruszków. Strona blokuje automatyczne pobieranie " +
+      "(HTTP 403, potwierdzone dwukrotnie) — traktuj jako źródło manualne, sprawdzaj ręcznie w przeglądarce.",
   },
   {
     id: "pge",
@@ -100,7 +102,9 @@ const PILOT_SOURCE_SUGGESTIONS: PilotSourceSuggestion[] = [
     url: "https://pgedystrybucja.pl/wylaczenia",
     category: "power",
     sourceType: "website",
-    notes: "Planowane wyłączenia prądu w regionie (wybierz odpowiedni rejon na stronie).",
+    notes:
+      "Strona ogólna ładuje się poprawnie (HTTP 200), ale lista wyłączeń dla konkretnego adresu " +
+      "wymaga wyboru rejonu w przeglądarce — automatyczny podgląd zwykle nie pokaże aktualnych wyłączeń.",
   },
   {
     id: "wodociagi-michalowice",
@@ -115,8 +119,10 @@ const PILOT_SOURCE_SUGGESTIONS: PilotSourceSuggestion[] = [
     name: "Pruszków — terminy odbioru odpadów",
     url: "https://www.pruszkow.pl/mieszkancy/terminy-odbioru-odpadow/",
     category: "waste",
-    sourceType: "website",
-    notes: "Harmonogram odbioru odpadów komunalnych w Pruszkowie (MZO Pruszków).",
+    sourceType: "other",
+    notes:
+      "Harmonogram odbioru odpadów komunalnych w Pruszkowie (MZO Pruszków). Ta sama domena blokuje " +
+      "automatyczne pobieranie (HTTP 403) — traktuj jako źródło manualne.",
   },
 ];
 
@@ -179,11 +185,36 @@ function todayString(): string {
   return new Date().toISOString().split("T")[0];
 }
 
+function daysSince(iso: string): number {
+  return Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000));
+}
+
 function getMonitoringStatus(source: AlertSource): MonitoringStatus {
   if (!source.isActive) return "nieaktywne";
   if (!source.lastCheckedAt) return "do_sprawdzenia";
   const checkedDate = source.lastCheckedAt.split("T")[0];
   return checkedDate === todayString() ? "sprawdzone_dzis" : "ostatnio_sprawdzone";
+}
+
+// "Ostatnio sprawdzone" used to be one flat label regardless of whether that
+// was yesterday or a month ago — for real, growing monitoring this hides the
+// exact thing an admin needs to notice (a source nobody has looked at in
+// weeks). Computed per-source instead of via the static monitoringConfig
+// lookup; the other 3 statuses stay static since "today"/"never"/"inactive"
+// don't need relative-time granularity.
+function getMonitoringBadge(source: AlertSource): { label: string; badge: string } {
+  const status = getMonitoringStatus(source);
+  if (status === "ostatnio_sprawdzone" && source.lastCheckedAt) {
+    const days = daysSince(source.lastCheckedAt);
+    const stale = days > 7;
+    return {
+      label: days === 1 ? "Sprawdzone wczoraj" : `Sprawdzone ${days} dni temu`,
+      badge: stale
+        ? "bg-amber-50 text-amber-700 ring-1 ring-amber-200"
+        : "bg-slate-100 text-slate-500 ring-1 ring-slate-200",
+    };
+  }
+  return monitoringConfig[status];
 }
 
 function needsChecking(source: AlertSource): boolean {
@@ -397,6 +428,8 @@ function SourceForm({
           </select>
           <p className="text-xs text-slate-400 mt-1">
             Jeśli źródło ma kanał RSS, oznacz „RSS/Feed" — ułatwi to przyszłą automatyzację.
+            Jeśli strona blokuje automatyczne pobieranie (np. błąd 403 przy „Sprawdź stronę"),
+            oznacz „Inne" — podgląd nadal spróbuje pobrać stronę, ale traktuj ją jako źródło manualne.
           </p>
         </div>
       </div>
@@ -460,7 +493,7 @@ function SourceCard({
   const router    = useRouter();
   const inactive  = !source.isActive;
   const monStatus = getMonitoringStatus(source);
-  const monCfg    = monitoringConfig[monStatus];
+  const monCfg    = getMonitoringBadge(source);
 
   const [showPanel,        setShowPanel]        = useState(false);
   const [formResult,       setFormResult]       = useState<SourceCheckResult>("no_changes");
@@ -638,6 +671,11 @@ function SourceCard({
             <span className="text-xs text-indigo-500 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full">
               {PARSER_STRATEGY_LABELS[detectParserStrategy(source.sourceType)]}
             </span>
+            {!source.url && (
+              <span className="text-xs font-medium text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
+                ⚠ Brak adresu URL
+              </span>
+            )}
           </div>
 
           <a

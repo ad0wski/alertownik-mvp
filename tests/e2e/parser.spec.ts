@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { parsePageHtml } from "@/lib/sourceParsers/pageParser";
+import { parsePageHtml, describePageFetchFailure } from "@/lib/sourceParsers/pageParser";
 import { detectParserStrategy } from "@/lib/sourceParsers";
 import { detectDateInText, textSimilarity } from "@/lib/candidateWarnings";
 
@@ -73,6 +73,27 @@ test.describe("parsePageHtml", () => {
     const html = "<html><head><title>Bez RSS</title></head><body><p>Brak kanału.</p></body></html>";
     const result = parsePageHtml(html, "https://example.test/");
     expect(result.feedUrl).toBeUndefined();
+  });
+});
+
+test.describe("describePageFetchFailure", () => {
+  test("403/401 are described as bot-blocking, not a broken link", () => {
+    expect(describePageFetchFailure(403)).toContain("zablokowała automatyczne pobieranie");
+    expect(describePageFetchFailure(401)).toContain("zablokowała automatyczne pobieranie");
+    expect(describePageFetchFailure(403)).not.toContain("Sprawdź, czy adres URL jest poprawny");
+  });
+
+  test("404 points at a possibly outdated URL", () => {
+    expect(describePageFetchFailure(404)).toContain("nie została znaleziona");
+  });
+
+  test("5xx is described as a problem on the source's side", () => {
+    expect(describePageFetchFailure(500)).toContain("problem po stronie źródła");
+    expect(describePageFetchFailure(503)).toContain("problem po stronie źródła");
+  });
+
+  test("other statuses fall back to the generic URL-check message", () => {
+    expect(describePageFetchFailure(418)).toContain("Sprawdź, czy adres URL jest poprawny");
   });
 });
 
