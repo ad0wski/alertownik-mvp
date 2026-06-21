@@ -15,7 +15,7 @@ import {
   updateCandidateStatus,
 } from "@/lib/supabaseCandidateWrites";
 import { getAdminSupabaseAlerts, type AdminAlert } from "@/lib/getAdminSupabaseAlerts";
-import { getCandidateWarnings } from "@/lib/candidateWarnings";
+import { getCandidateWarnings, trimAtWord } from "@/lib/candidateWarnings";
 import type { SourceCheck } from "@/types/alertSource";
 import type { SourceNoticeCandidate, SourceCandidateStatus } from "@/types/sourceCandidate";
 import type { AlertCategory } from "@/types/alert";
@@ -79,7 +79,7 @@ function formatCheckedAt(iso: string): string {
 }
 
 function draftTitleFromCandidate(c: SourceCandidate): string {
-  const fromNotes = c.notes?.trim().slice(0, 80);
+  const fromNotes = c.notes?.trim() ? trimAtWord(c.notes.trim(), 80) : "";
   return fromNotes || `${c.sourceName} — do uzupełnienia`;
 }
 

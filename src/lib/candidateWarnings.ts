@@ -15,6 +15,16 @@ export function detectDateInText(text: string): boolean {
   return DATE_PATTERNS.some((re) => re.test(text));
 }
 
+// Trim to max length at the last whole word instead of mid-word — used
+// whenever free-form source text becomes a candidate/alert title, so the
+// result reads cleanly instead of cutting off mid-word.
+export function trimAtWord(text: string, max: number): string {
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max);
+  const lastSpace = cut.lastIndexOf(" ");
+  return (lastSpace > 20 ? cut.slice(0, lastSpace) : cut) + "…";
+}
+
 // Same Polish-diacritic map already used by the slug helpers in
 // builder.tsx / queue/page.tsx / api/ai/draft-alert route.ts — "ł" has no
 // Unicode NFD decomposition, so a generic accent-stripping approach would

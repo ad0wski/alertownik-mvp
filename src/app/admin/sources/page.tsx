@@ -29,7 +29,7 @@ import {
   createSourceCandidateNotice,
 } from "@/lib/supabaseCandidateWrites";
 import { getAdminSupabaseAlerts } from "@/lib/getAdminSupabaseAlerts";
-import { findSimilarText } from "@/lib/candidateWarnings";
+import { findSimilarText, trimAtWord } from "@/lib/candidateWarnings";
 import {
   detectParserStrategy,
   PARSER_STRATEGY_LABELS,
@@ -550,7 +550,7 @@ function SourceCard({
       sourceId: source.id,
       sourceName: source.name,
       sourceUrl: source.url || undefined,
-      title: (heading || trimmed.slice(0, 80)).trim(),
+      title: (heading || trimAtWord(trimmed, 80)).trim(),
       excerpt: trimmed.slice(0, 300),
       rawText: trimmed,
     });
@@ -1338,10 +1338,16 @@ export default function SourcesPage() {
     ]);
 
     const counts: Record<string, number> = {};
+    // Dedup-check pool for "Zapisz jako kandydata" (Sprint 78) — combines
+    // both systems' pending text, since a notice logged as a legacy
+    // source_checks "found_notice" is just as real a duplicate as one
+    // already saved as a persistent candidate.
+    const dedupTexts: string[] = [];
     if (!legacy.error) {
       for (const c of legacy.candidates) {
         if (c.relatedAlertId) continue; // only count still-pending candidates
         counts[c.sourceId] = (counts[c.sourceId] ?? 0) + 1;
+        if (c.notes) dedupTexts.push(c.notes);
       }
     }
     if (!persistent.error) {
@@ -1350,8 +1356,9 @@ export default function SourcesPage() {
         if (!c.sourceId) continue;
         counts[c.sourceId] = (counts[c.sourceId] ?? 0) + 1;
       }
-      setExistingCandidateTexts(pending.map((c) => c.title));
+      dedupTexts.push(...pending.map((c) => c.title));
     }
+    setExistingCandidateTexts(dedupTexts);
     setCandidateCounts(counts);
   }
 

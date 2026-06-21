@@ -367,7 +367,13 @@ export async function POST(req: NextRequest): Promise<NextResponse<DraftAlertRes
 
       const result = buildAiDraft(parsed, sourceName, sourceUrl || null, suggestedCategory, today);
       if (!result) {
-        return NextResponse.json({ ok: false, error: "AI zwróciło draft w nieprawidłowym formacie." });
+        // buildAiDraft only returns null when "change" came back empty —
+        // the JSON itself parsed fine, so the generic "invalid format"
+        // message above would be misleading here.
+        return NextResponse.json({
+          ok: false,
+          error: "AI nie potrafiło wyodrębnić treści zmiany z komunikatu. Wklej więcej kontekstu albo użyj ręcznego promptu.",
+        });
       }
 
       const { draft, dateFromAi, placeFromAi } = result;

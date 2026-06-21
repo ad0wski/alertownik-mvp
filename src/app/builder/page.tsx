@@ -301,6 +301,10 @@ export default function BuilderPage() {
     setEditingSupabaseAlert(a);
     setSupabaseUpdateError(null);
     setSupabaseUpdateSuccess(false);
+    // Loading an unrelated existing alert must not inherit a pending source
+    // candidate id from whatever was loaded before — otherwise saving this
+    // alert later would wrongly mark that other candidate "converted".
+    setPendingCandidateId("");
     setSupabaseLoadedMsg(true);
     setTimeout(() => setSupabaseLoadedMsg(false), 3000);
     setTimeout(() => setLoadingSupabaseId(null), 600);
@@ -382,6 +386,10 @@ export default function BuilderPage() {
       // last alert's value (see Sprint 73 fix: this used to fall back to
       // `form.X`, which silently mixed fields between consecutive imports).
       setForm(buildFormFromJson(data, ""));
+      // A manually-pasted JSON is not the candidate that may have been
+      // loaded earlier via AI Helper — don't let a stale id silently mark
+      // that other candidate "converted" when this import gets saved.
+      setPendingCandidateId("");
       setImportStatus("success");
     } catch {
       setImportStatus("error");
@@ -405,6 +413,7 @@ export default function BuilderPage() {
 
   function loadDraft(draft: Draft) {
     setForm({ ...initialForm, ...draft.form });
+    setPendingCandidateId("");
     setDraftStatus("loaded");
     setTimeout(() => setDraftStatus("idle"), 2500);
   }
@@ -459,6 +468,7 @@ export default function BuilderPage() {
       sourceUrl: pa.sourceUrl ?? "",
       sourceId: pa.sourceId ?? "",
     });
+    setPendingCandidateId("");
     setPublishStatus("loaded");
     setTimeout(() => setPublishStatus("idle"), 2500);
   }

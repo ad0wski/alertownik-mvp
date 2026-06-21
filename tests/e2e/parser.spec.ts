@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { parsePageHtml, describePageFetchFailure } from "@/lib/sourceParsers/pageParser";
 import { detectParserStrategy } from "@/lib/sourceParsers";
-import { detectDateInText, textSimilarity, findSimilarText } from "@/lib/candidateWarnings";
+import { detectDateInText, textSimilarity, findSimilarText, trimAtWord } from "@/lib/candidateWarnings";
 
 /**
  * Unit-style tests for the Sprint 76 parser abstraction and the Sprint 75
@@ -125,5 +125,17 @@ test.describe("candidateWarnings helpers", () => {
     const text = "Remont ulicy Głównej w Granicy zakończony w terminie";
     const candidates = ["Planowana przerwa w dostawie wody w Komorowie", "", "Inny temat zupełnie"];
     expect(findSimilarText(text, candidates)).toBeNull();
+  });
+
+  test("trimAtWord leaves short text untouched", () => {
+    expect(trimAtWord("Krótki tytuł", 80)).toBe("Krótki tytuł");
+  });
+
+  test("trimAtWord cuts at the last whole word, not mid-word", () => {
+    const text = "Remont ulicy Głównej w Granicy rozpoczyna się od skrzyżowania z ulicą Rekreacyjną i potrwa kilka tygodni";
+    const result = trimAtWord(text, 40);
+    expect(result.length).toBeLessThanOrEqual(41); // 40 + the trailing "…"
+    expect(result.endsWith("…")).toBe(true);
+    expect(text.startsWith(result.slice(0, -1).trimEnd())).toBe(true);
   });
 });
