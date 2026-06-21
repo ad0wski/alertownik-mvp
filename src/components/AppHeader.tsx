@@ -87,6 +87,9 @@ export function AppHeader() {
             <Link href="/" className={publicNavLinkClass("/")}>
               Alerty
             </Link>
+            <Link href="/odpady" className={publicNavLinkClass("/odpady")}>
+              Odpady
+            </Link>
             <Link href="/about" className={publicNavLinkClass("/about")}>
               O projekcie
             </Link>
@@ -128,20 +131,28 @@ export function AppHeader() {
           </nav>
 
           {/* ── Mobile nav (below sm) ── */}
-          <div className="flex sm:hidden items-center gap-1">
-            <Link href="/" className={publicNavLinkClass("/")}>
-              Alerty
-            </Link>
-            <Link href="/about" className={publicNavLinkClass("/about")}>
-              O projekcie
-            </Link>
+          <div className="flex sm:hidden items-center gap-1 flex-1 min-w-0">
+            {/* Public links scroll horizontally if they don't fit, rather than
+                wrapping/overflowing the header (3 links + logo no longer fit
+                on a 375px screen) — same pattern as the category-filter row. */}
+            <div className="flex items-center gap-1 min-w-0 overflow-x-auto">
+              <Link href="/" className={publicNavLinkClass("/") + " shrink-0 whitespace-nowrap"}>
+                Alerty
+              </Link>
+              <Link href="/odpady" className={publicNavLinkClass("/odpady") + " shrink-0 whitespace-nowrap"}>
+                Odpady
+              </Link>
+              <Link href="/about" className={publicNavLinkClass("/about") + " shrink-0 whitespace-nowrap"}>
+                O projekcie
+              </Link>
+            </div>
 
             {session && (
               <button
                 onClick={() => setMenuOpen((v) => !v)}
                 aria-expanded={menuOpen}
                 aria-label="Menu admina"
-                className="p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+                className="p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors shrink-0"
               >
                 {menuOpen ? (
                   <svg

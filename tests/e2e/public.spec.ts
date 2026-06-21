@@ -122,6 +122,21 @@ test.describe("Public homepage", () => {
     await expect(page).toHaveURL(/\/about$/);
   });
 
+  test("odpady page loads with planned-feature info and official source links", async ({ page }) => {
+    await page.goto("/odpady");
+    await expect(page.locator("h1")).toContainText("Odpady");
+    await expect(page.getByText("W przygotowaniu")).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: /Eco-Harmonogram/ })
+    ).toHaveAttribute("href", /pruszkow\.pl/);
+  });
+
+  test("homepage links to the odpady page", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("link", { name: "Odpady" }).first().click();
+    await expect(page).toHaveURL(/\/odpady$/);
+  });
+
   test("homepage links to the tester-interest section", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("link", { name: /zgłoś się jako tester/ }).click();
