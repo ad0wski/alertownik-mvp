@@ -25,6 +25,12 @@ import {
   getSourceCandidates,
 } from "@/lib/supabaseSourceWrites";
 import {
+  getSourceCandidateNotices,
+  createSourceCandidateNotice,
+} from "@/lib/supabaseCandidateWrites";
+import { getAdminSupabaseAlerts } from "@/lib/getAdminSupabaseAlerts";
+import { findSimilarText } from "@/lib/candidateWarnings";
+import {
   detectParserStrategy,
   PARSER_STRATEGY_LABELS,
   getPdfManualInstructions,
@@ -484,11 +490,18 @@ interface SourceCardProps {
   pendingCandidateCount: number;
   checks: SourceCheck[];
   onCheckSaved: () => void;
+  /** Titles/excerpts of already-pending persistent candidates + known alert
+   *  titles — used only for the "possible duplicate" warning before saving
+   *  a new candidate (Sprint 78). Not persisted, just a confirm() prompt. */
+  existingCandidateTexts: string[];
+  alertTitles: string[];
+  onCandidateSaved: () => void;
 }
 
 function SourceCard({
   source, onEdit, onToggle, onDelete, onPrepareAlert, onMarkChecked,
   markingChecked, alertCount, pendingCandidateCount, checks, onCheckSaved,
+  existingCandidateTexts, alertTitles, onCandidateSaved,
 }: SourceCardProps) {
   const router    = useRouter();
   const inactive  = !source.isActive;
@@ -513,7 +526,42 @@ function SourceCard({
   const [inlineDraft,     setInlineDraft]     = useState<InlineDraftState>({ status: "idle" });
   const [inlineDraftSent, setInlineDraftSent] = useState(false);
 
+  // Persistent candidate saving (Sprint 78) — keyed per preview snippet so
+  // multiple snippets on the same card can each show their own state.
+  const [savingCandidateKey, setSavingCandidateKey] = useState<string | null>(null);
+  const [savedCandidateKeys, setSavedCandidateKeys] = useState<Set<string>>(new Set());
+  const [candidateSaveError, setCandidateSaveError] = useState<string | null>(null);
+
   const showNoticeField = NOTICE_RESULTS.includes(formResult);
+
+  async function saveAsCandidate(key: string, text: string, heading?: string) {
+    setCandidateSaveError(null);
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    const similar = findSimilarText(trimmed, existingCandidateTexts) ?? findSimilarText(trimmed, alertTitles);
+    if (similar) {
+      const proceed = confirm(
+        `Możliwy duplikat — podobna treść już istnieje: „${similar.slice(0, 100)}". Zapisać mimo to jako nowego kandydata?`
+      );
+      if (!proceed) return;
+    }
+    setSavingCandidateKey(key);
+    const result = await createSourceCandidateNotice({
+      sourceId: source.id,
+      sourceName: source.name,
+      sourceUrl: source.url || undefined,
+      title: (heading || trimmed.slice(0, 80)).trim(),
+      excerpt: trimmed.slice(0, 300),
+      rawText: trimmed,
+    });
+    setSavingCandidateKey(null);
+    if (!result.ok) {
+      setCandidateSaveError(result.error ?? "Nie udało się zapisać kandydata.");
+      return;
+    }
+    setSavedCandidateKeys((prev) => new Set(prev).add(key));
+    onCandidateSaved();
+  }
 
   function handleResultChange(newResult: SourceCheckResult) {
     setFormResult(newResult);
@@ -920,6 +968,17 @@ function SourceCard({
                           >
                             Wyślij do AI Helpera →
                           </button>
+                          <button
+                            onClick={() => saveAsCandidate(`c${i}`, candidateText, c.heading)}
+                            disabled={savingCandidateKey === `c${i}` || savedCandidateKeys.has(`c${i}`)}
+                            className="text-xs font-medium text-amber-600 hover:text-amber-800 hover:underline disabled:opacity-50"
+                          >
+                            {savedCandidateKeys.has(`c${i}`)
+                              ? "Zapisano jako kandydat ✓"
+                              : savingCandidateKey === `c${i}`
+                                ? "Zapisywanie…"
+                                : "Zapisz jako kandydata →"}
+                          </button>
                         </div>
                       </div>
                     );
@@ -948,7 +1007,27 @@ function SourceCard({
                   >
                     Wyślij do AI Helpera →
                   </button>
+                  <button
+                    onClick={() => {
+                      const text = previewData?.rawText;
+                      if (text) saveAsCandidate("full", text.slice(0, 3000));
+                    }}
+                    disabled={savingCandidateKey === "full" || savedCandidateKeys.has("full")}
+                    className="text-xs text-amber-600 hover:text-amber-800 hover:underline font-medium disabled:opacity-50"
+                  >
+                    {savedCandidateKeys.has("full")
+                      ? "Zapisano jako kandydat ✓"
+                      : savingCandidateKey === "full"
+                        ? "Zapisywanie…"
+                        : "Zapisz jako kandydata →"}
+                  </button>
                 </div>
+              )}
+
+              {candidateSaveError && (
+                <p className="mt-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                  {candidateSaveError}
+                </p>
               )}
 
               {/* Inline AI draft result */}
@@ -1194,6 +1273,11 @@ export default function SourcesPage() {
   const [candidateCounts, setCandidateCounts]     = useState<Record<string, number>>({});
   const [sourceChecks, setSourceChecks]           = useState<Record<string, SourceCheck[]>>({});
 
+  // Sprint 78: duplicate-check inputs for "Zapisz jako kandydata" — titles/
+  // excerpts of already-pending persistent candidates + known alert titles.
+  const [existingCandidateTexts, setExistingCandidateTexts] = useState<string[]>([]);
+  const [alertTitles, setAlertTitles]                       = useState<string[]>([]);
+
   // ── Auth ────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -1219,6 +1303,7 @@ export default function SourcesPage() {
     loadAlertCounts();
     loadChecks();
     loadCandidateCounts();
+    loadAlertTitles();
   }, [session]);
 
   async function loadAlertCounts() {
@@ -1235,13 +1320,37 @@ export default function SourcesPage() {
     setAlertCounts(counts);
   }
 
+  async function loadAlertTitles() {
+    const { alerts } = await getAdminSupabaseAlerts();
+    setAlertTitles(alerts.map((a) => a.title).filter(Boolean));
+  }
+
+  // Counts BOTH the legacy source_checks-derived view and the new
+  // persistent table (Sprint 78) — admin sees one combined "needs action"
+  // number per source regardless of which system a candidate came from.
+  // Missing-table errors from the new table are ignored here (falls back
+  // to legacy-only counts), consistent with how the rest of this page
+  // degrades gracefully before the migration is run.
   async function loadCandidateCounts() {
-    const result = await getSourceCandidates(100);
-    if (result.error) return;
+    const [legacy, persistent] = await Promise.all([
+      getSourceCandidates(100),
+      getSourceCandidateNotices(),
+    ]);
+
     const counts: Record<string, number> = {};
-    for (const c of result.candidates) {
-      if (c.relatedAlertId) continue; // only count still-pending candidates
-      counts[c.sourceId] = (counts[c.sourceId] ?? 0) + 1;
+    if (!legacy.error) {
+      for (const c of legacy.candidates) {
+        if (c.relatedAlertId) continue; // only count still-pending candidates
+        counts[c.sourceId] = (counts[c.sourceId] ?? 0) + 1;
+      }
+    }
+    if (!persistent.error) {
+      const pending = persistent.candidates.filter((c) => c.status === "pending");
+      for (const c of pending) {
+        if (!c.sourceId) continue;
+        counts[c.sourceId] = (counts[c.sourceId] ?? 0) + 1;
+      }
+      setExistingCandidateTexts(pending.map((c) => c.title));
     }
     setCandidateCounts(counts);
   }
@@ -1612,6 +1721,9 @@ export default function SourcesPage() {
                 pendingCandidateCount={candidateCounts[source.id] ?? 0}
                 checks={sourceChecks[source.id] ?? []}
                 onCheckSaved={handleCheckSaved}
+                existingCandidateTexts={existingCandidateTexts}
+                alertTitles={alertTitles}
+                onCandidateSaved={loadCandidateCounts}
               />
             )
           )}

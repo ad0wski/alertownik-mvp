@@ -25,6 +25,9 @@ export interface AlertFormData {
 export interface SaveResult {
   ok: boolean;
   error?: string;
+  /** id of the inserted/updated alerts row — used by Builder to mark a
+   *  source candidate (Sprint 78) as converted with a real alert reference. */
+  id?: string;
 }
 
 export async function saveAlertDraftToSupabase(
@@ -39,7 +42,7 @@ export async function saveAlertDraftToSupabase(
     return { ok: false, error: "Nieprawidłowy poziom ważności alertu." };
   }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("alerts")
     .upsert(
       {
@@ -58,13 +61,15 @@ export async function saveAlertDraftToSupabase(
         status: "draft",
       },
       { onConflict: "slug" }
-    );
+    )
+    .select("id")
+    .single();
 
   if (error) {
     return { ok: false, error: error.message };
   }
 
-  return { ok: true };
+  return { ok: true, id: (data?.id as string) || undefined };
 }
 
 export async function publishAlertToSupabase(
@@ -79,7 +84,7 @@ export async function publishAlertToSupabase(
     return { ok: false, error: "Nieprawidłowy poziom ważności alertu." };
   }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("alerts")
     .upsert(
       {
@@ -99,13 +104,15 @@ export async function publishAlertToSupabase(
         published_at: new Date().toISOString(),
       },
       { onConflict: "slug" }
-    );
+    )
+    .select("id")
+    .single();
 
   if (error) {
     return { ok: false, error: error.message };
   }
 
-  return { ok: true };
+  return { ok: true, id: (data?.id as string) || undefined };
 }
 
 export async function publishSupabaseAlert(slug: string): Promise<SaveResult> {

@@ -107,6 +107,10 @@ ${sourceLines || "Źródło: nieznane"}`;
 const AI_PENDING_KEY = "alertownik_pending_ai_alert_json";
 const AI_PENDING_SOURCE_ID_KEY = "alertownik_pending_alert_source_id";
 const PENDING_SOURCE_KEY = "alertownik_pending_source_for_ai";
+// Same contract Builder reads (Sprint 78) — set here only when this session
+// came from a persistent source candidate, so Builder can mark it converted
+// once an alert is actually saved.
+const PENDING_CANDIDATE_ID_KEY = "alertownik_pending_candidate_notice_id";
 
 interface PendingSourceData {
   sourceName: string;
@@ -114,6 +118,7 @@ interface PendingSourceData {
   suggestedCategory: string;
   sourceId: string;
   checkNotes?: string;
+  candidateNoticeId?: string;
 }
 
 // Minimal shape for displaying the AI draft preview
@@ -166,6 +171,7 @@ export default function AiHelperPage() {
   const [aiJsonStatus, setAiJsonStatus] = useState<"idle" | "valid" | "error">("idle");
   const [loadedFrom, setLoadedFrom] = useState<"source" | "check" | null>(null);
   const [pendingSourceId, setPendingSourceId] = useState("");
+  const [pendingCandidateId, setPendingCandidateId] = useState("");
 
   // AI draft generator
   const [aiDraftStatus, setAiDraftStatus] = useState<AiDraftStatus>("idle");
@@ -185,6 +191,7 @@ export default function AiHelperPage() {
       if (data.sourceUrl)         setSourceUrl(data.sourceUrl);
       if (data.suggestedCategory) setSuggestedCategory(data.suggestedCategory);
       if (data.sourceId)          setPendingSourceId(data.sourceId);
+      if (data.candidateNoticeId) setPendingCandidateId(data.candidateNoticeId);
       sessionStorage.removeItem(PENDING_SOURCE_KEY);
       if (data.checkNotes) {
         setRawText(data.checkNotes);
@@ -238,6 +245,9 @@ export default function AiHelperPage() {
     if (pendingSourceId) {
       sessionStorage.setItem(AI_PENDING_SOURCE_ID_KEY, pendingSourceId);
     }
+    if (pendingCandidateId) {
+      sessionStorage.setItem(PENDING_CANDIDATE_ID_KEY, pendingCandidateId);
+    }
     router.push("/builder");
   }
 
@@ -286,6 +296,9 @@ export default function AiHelperPage() {
     sessionStorage.setItem(AI_PENDING_KEY, aiDraftResult);
     if (pendingSourceId) {
       sessionStorage.setItem(AI_PENDING_SOURCE_ID_KEY, pendingSourceId);
+    }
+    if (pendingCandidateId) {
+      sessionStorage.setItem(PENDING_CANDIDATE_ID_KEY, pendingCandidateId);
     }
     setAiDraftSent(true);
     router.push("/builder");

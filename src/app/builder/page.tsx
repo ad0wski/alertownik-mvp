@@ -17,6 +17,13 @@ import {
   type AdminAlert,
 } from "@/lib/getAdminSupabaseAlerts";
 import { normalizeAlertSeverity } from "@/lib/normalizeAlert";
+import { markCandidateConverted } from "@/lib/supabaseCandidateWrites";
+
+// Same sessionStorage contract /admin/queue and /ai-helper already use for
+// sourceId — a persistent candidate notice (Sprint 78) flowing through
+// either path carries its id the same way, so Builder can mark it
+// "converted" once an alert is actually saved from it.
+const PENDING_CANDIDATE_ID_KEY = "alertownik_pending_candidate_notice_id";
 
 const categoryOptions: { value: AlertCategory; label: string }[] = [
   { value: "transport", label: "Transport" },
@@ -268,6 +275,7 @@ export default function BuilderPage() {
   const [urlEditError, setUrlEditError] = useState<string | null>(null);
   const [loadingSupabaseId, setLoadingSupabaseId] = useState<string | null>(null);
   const [aiHelperLoadedMsg, setAiHelperLoadedMsg] = useState(false);
+  const [pendingCandidateId, setPendingCandidateId] = useState("");
   // Refs track URL-based edit loading: param is read once on mount, processed flag
   // prevents re-loading when the Supabase list refreshes after saves.
   const urlEditParamRef = useRef<string | null>(null);
@@ -333,12 +341,15 @@ export default function BuilderPage() {
 
     const pendingJson = sessionStorage.getItem("alertownik_pending_ai_alert_json");
     const pendingSourceId = sessionStorage.getItem("alertownik_pending_alert_source_id") ?? "";
+    const pendingCandidateNoticeId = sessionStorage.getItem(PENDING_CANDIDATE_ID_KEY) ?? "";
     if (pendingJson) {
       sessionStorage.removeItem("alertownik_pending_ai_alert_json");
       sessionStorage.removeItem("alertownik_pending_alert_source_id");
+      sessionStorage.removeItem(PENDING_CANDIDATE_ID_KEY);
       try {
         const data = JSON.parse(stripCodeFences(pendingJson));
         setForm(buildFormFromJson(data, pendingSourceId));
+        if (pendingCandidateNoticeId) setPendingCandidateId(pendingCandidateNoticeId);
         setAiHelperLoadedMsg(true);
         setTimeout(() => setAiHelperLoadedMsg(false), 6000);
         requestAnimationFrame(() => {
@@ -468,6 +479,7 @@ export default function BuilderPage() {
     setSupabaseUpdateError(null);
     setSupabaseUpdateSuccess(false);
     setUrlEditError(null);
+    setPendingCandidateId("");
     if (window.location.search.includes("edit=")) {
       window.history.replaceState({}, "", "/builder");
     }
@@ -606,6 +618,12 @@ export default function BuilderPage() {
       setLastSavedAlert({ slug, title: form.title, category: form.category });
       setSupabaseSavedSlug(slug);
       setSupabaseSuccess("draft");
+      if (pendingCandidateId) {
+        // Best-effort — a failure here must never undo the alert save that
+        // already succeeded above. See src/lib/supabaseCandidateWrites.ts.
+        await markCandidateConverted(pendingCandidateId, result.id ?? null);
+        setPendingCandidateId("");
+      }
       // Reset for the next alert — without this, an import missing a field
       // would silently inherit this alert's leftover value (Sprint 73 fix).
       setForm(initialForm);
@@ -646,6 +664,10 @@ export default function BuilderPage() {
       setLastSavedAlert({ slug, title: form.title, category: form.category });
       setSupabaseSavedSlug(slug);
       setSupabaseSuccess("published");
+      if (pendingCandidateId) {
+        await markCandidateConverted(pendingCandidateId, result.id ?? null);
+        setPendingCandidateId("");
+      }
       // Reset for the next alert — without this, an import missing a field
       // would silently inherit this alert's leftover value (Sprint 73 fix).
       setForm(initialForm);

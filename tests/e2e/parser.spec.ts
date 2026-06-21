@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { parsePageHtml, describePageFetchFailure } from "@/lib/sourceParsers/pageParser";
 import { detectParserStrategy } from "@/lib/sourceParsers";
-import { detectDateInText, textSimilarity } from "@/lib/candidateWarnings";
+import { detectDateInText, textSimilarity, findSimilarText } from "@/lib/candidateWarnings";
 
 /**
  * Unit-style tests for the Sprint 76 parser abstraction and the Sprint 75
@@ -110,5 +110,20 @@ test.describe("candidateWarnings helpers", () => {
     const c = "Planowana przerwa w dostawie wody w Komorowie";
     expect(textSimilarity(a, b)).toBeGreaterThan(0.6);
     expect(textSimilarity(a, c)).toBeLessThan(0.3);
+  });
+
+  test("findSimilarText returns the closest match above the threshold", () => {
+    const text = "Remont ulicy Głównej w Granicy zakończony w terminie";
+    const candidates = [
+      "Planowana przerwa w dostawie wody w Komorowie",
+      "Remont ul. Głównej w Granicy zakończony w terminie",
+    ];
+    expect(findSimilarText(text, candidates)).toBe(candidates[1]);
+  });
+
+  test("findSimilarText returns null when nothing is similar enough", () => {
+    const text = "Remont ulicy Głównej w Granicy zakończony w terminie";
+    const candidates = ["Planowana przerwa w dostawie wody w Komorowie", "", "Inny temat zupełnie"];
+    expect(findSimilarText(text, candidates)).toBeNull();
   });
 });

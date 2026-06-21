@@ -98,3 +98,21 @@ export function getCandidateWarnings(
 
   return warnings;
 }
+
+// Used when an admin is about to save a *new* persistent candidate (Sprint
+// 78) — checks free-form text (a heading/excerpt) against a list of
+// existing strings (other pending candidates' titles, or known alert
+// titles) and returns the closest match above the threshold, or null.
+// Same word-overlap heuristic as above, just exposed for a one-off check
+// instead of building a full warnings list.
+export function findSimilarText(text: string, candidates: string[]): string | null {
+  let best: { text: string; score: number } | null = null;
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    const score = textSimilarity(text, candidate);
+    if (score >= SIMILARITY_THRESHOLD && (!best || score > best.score)) {
+      best = { text: candidate, score };
+    }
+  }
+  return best?.text ?? null;
+}

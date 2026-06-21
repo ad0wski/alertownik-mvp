@@ -13,6 +13,8 @@ import {
   getSourceCandidates,
   type RecentSourceCheck,
 } from "@/lib/supabaseSourceWrites";
+import { getSourceCandidateNotices } from "@/lib/supabaseCandidateWrites";
+import type { SourceNoticeCandidate } from "@/types/sourceCandidate";
 import type { Session } from "@supabase/supabase-js";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -49,6 +51,13 @@ function formatDate(iso: string): string {
     minute: "2-digit",
   });
 }
+
+const CANDIDATE_STATUS_LABELS_PL: Record<SourceNoticeCandidate["status"], string> = {
+  pending: "oczekuje",
+  ignored: "zignorowany",
+  converted: "wykorzystany",
+  archived: "zarchiwizowany",
+};
 
 const CHECK_RESULT_LABELS: Record<string, { label: string; color: string }> = {
   no_changes:     { label: "Brak zmian",                     color: "text-slate-600" },
@@ -96,6 +105,10 @@ export default function AdminPage() {
   const [recentChecks, setRecentChecks]       = useState<RecentSourceCheck[]>([]);
   const [pendingCandidates, setPendingCandidates] = useState(0);
 
+  // Persistent candidates (Sprint 78) — undefined while loading, null if the
+  // migration hasn't been run yet (table missing), array once loaded.
+  const [persistentNotices, setPersistentNotices] = useState<SourceNoticeCandidate[] | null>(null);
+
   useEffect(() => {
     if (!supabase) { setAuthLoading(false); return; }
 
@@ -128,7 +141,8 @@ export default function AdminPage() {
       getAlertSources(),
       getRecentSourceChecks(3),
       getSourceCandidates(100),
-    ]).then(([sourcesResult, checksResult, candidatesResult]) => {
+      getSourceCandidateNotices(),
+    ]).then(([sourcesResult, checksResult, candidatesResult, noticesResult]) => {
       const count = sourcesResult.sources.filter((s) =>
         sourceNeedsChecking(s.lastCheckedAt, s.isActive)
       ).length;
@@ -137,6 +151,7 @@ export default function AdminPage() {
       setPendingCandidates(
         candidatesResult.candidates.filter((c) => !c.relatedAlertId).length
       );
+      setPersistentNotices(noticesResult.tableMissing ? null : noticesResult.candidates);
       setSourcesLoading(false);
     });
   }, [session]);
@@ -502,6 +517,45 @@ export default function AdminPage() {
             >
               Przejdź do kandydatów →
             </Link>
+          </div>
+        )}
+
+        {/* Persistent candidates (Sprint 78) — only rendered once the
+            source_notice_candidates migration has actually been run. */}
+        {!sourcesLoading && persistentNotices && (
+          <div className="mt-3 bg-slate-50 rounded-2xl border border-slate-200 p-5">
+            <p className="text-sm font-medium text-slate-700 mb-2">
+              Trwali kandydaci: {persistentNotices.filter((n) => n.status === "pending").length} oczekujących
+            </p>
+            {(() => {
+              const recent = [...persistentNotices]
+                .sort((a, b) => b.detectedAt.localeCompare(a.detectedAt))
+                .slice(0, 3);
+              const recentlyConverted = persistentNotices
+                .filter((n) => n.status === "converted")
+                .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+                .slice(0, 2);
+              if (recent.length === 0) {
+                return <p className="text-sm text-slate-400">Brak zapisanych kandydatów jeszcze.</p>;
+              }
+              return (
+                <div className="space-y-1.5">
+                  {recent.map((n) => (
+                    <p key={n.id} className="text-xs text-slate-600 truncate">
+                      <span className="font-medium text-slate-800">{n.title}</span>
+                      {" — "}{n.sourceName}
+                      {" · "}
+                      <span className="text-slate-400">{CANDIDATE_STATUS_LABELS_PL[n.status]}</span>
+                    </p>
+                  ))}
+                  {recentlyConverted.length > 0 && (
+                    <p className="text-xs text-emerald-700 pt-1">
+                      Ostatnio wykorzystane: {recentlyConverted.map((n) => n.title).join(", ")}
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         )}
       </section>
