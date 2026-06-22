@@ -97,6 +97,20 @@ export function nextCollectionGroup(items: WasteScheduleItem[]): WasteScheduleIt
   return items.filter((i) => i.collectionDate === soonest);
 }
 
+// Whether a collection date falls within the next `days` days from today
+// (today itself counts as within 0+). Used to flag near-term groups in
+// the upcoming list (e.g. "Ten tydzień") as a lightweight reminder cue,
+// distinct from nextCollectionGroup()'s single-soonest-date highlight —
+// this is the "within next 7 days" reminder-logic capability from the
+// Sprint 89 brief, not a new fetch/filter on the data layer.
+export function isWithinDays(iso: string, days: number): boolean {
+  const todayIso = new Date().toISOString().split("T")[0];
+  const diffDays = Math.round(
+    (new Date(iso).getTime() - new Date(todayIso).getTime()) / 86_400_000
+  );
+  return diffDays >= 0 && diffDays <= days;
+}
+
 // ── Admin validation (Sprint 83) ─────────────────────────────────────────────
 // Shared by the single add/edit form and the bulk JSON import, so the two
 // entry paths can't drift out of sync (the same bug class fixed for

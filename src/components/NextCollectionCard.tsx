@@ -99,6 +99,7 @@ export function NextCollectionCard({ areaKeywords }: Props) {
   }
 
   const first = group[0];
+  const hasAreaPreference = areaKeywords.trim().length > 0;
 
   return (
     <div className="bg-blue-50 rounded-2xl border border-blue-200 shadow-sm p-4 sm:p-5">
@@ -128,6 +129,16 @@ export function NextCollectionCard({ areaKeywords }: Props) {
         >
           Źródło: {first.sourceName || "zobacz"} →
         </a>
+      )}
+      {hasAreaPreference && !isMyAreaMatch && (
+        <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+          Brak terminów dla Twojej okolicy — pokazujemy najbliższy ogólny termin.
+        </p>
+      )}
+      {!hasAreaPreference && (
+        <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+          Ustaw swoją okolicę powyżej, aby spersonalizować to przypomnienie.
+        </p>
       )}
     </div>
   );

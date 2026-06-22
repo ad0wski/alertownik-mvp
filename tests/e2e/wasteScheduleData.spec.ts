@@ -251,3 +251,60 @@ test.describe("/odpady inline area preference editor (Sprint 86)", () => {
     await expect(page.getByText("Komorów", { exact: true })).toBeVisible();
   });
 });
+
+/**
+ * In-app reminder enhancements — Sprint 89.
+ *
+ * Adds: relative day labels + a "Ten tydzień" (this week) badge on the
+ * full upcoming list (previously only the next-collection card showed a
+ * relative label); explicit messaging on the next-collection card for
+ * "no area preference set yet" and "preference set but nothing matches";
+ * and the two new no-push-yet / verify-with-official-source trust lines.
+ */
+test.describe("/odpady in-app reminder enhancements (Sprint 89)", () => {
+  test("upcoming list shows a relative day label and a 'Ten tydzień' badge only for near-term groups", async ({ page }) => {
+    await mockWasteScheduleRows(page);
+    await page.goto("/odpady");
+
+    const section = upcomingSection(page);
+    // mock-1/mock-2 collect TOMORROW (one group, within 7 days); mock-3
+    // collects 10 days out (a second group, outside the window) — so
+    // exactly one of the two date groups should carry the badge.
+    await expect(section.getByText("Jutro")).toBeVisible();
+    await expect(section.getByText("Ten tydzień")).toHaveCount(1);
+  });
+
+  test("next-collection card prompts to set an area when no preference exists yet", async ({ page }) => {
+    await mockWasteScheduleRows(page);
+    await page.goto("/odpady");
+
+    const card = nextCollectionCard(page);
+    await expect(card.getByText("Ustaw swoją okolicę powyżej, aby spersonalizować to przypomnienie.")).toBeVisible();
+  });
+
+  test("next-collection card explains a non-matching area preference instead of silently falling back", async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        "alertownik-user-preferences",
+        JSON.stringify({ locationKeywords: "Warszawa", categories: [] })
+      );
+    });
+    await mockWasteScheduleRows(page);
+    await page.goto("/odpady");
+
+    const card = nextCollectionCard(page);
+    await expect(card.getByText("Brak terminów dla Twojej okolicy — pokazujemy najbliższy ogólny termin.")).toBeVisible();
+  });
+
+  test("no-push-yet and verify-with-source trust copy is visible on /odpady", async ({ page }) => {
+    await mockWasteScheduleRows(page);
+    await page.goto("/odpady");
+
+    await expect(
+      page.getByText("Nie wysyłamy jeszcze powiadomień — to przypomnienie widoczne w aplikacji.")
+    ).toBeVisible();
+    await expect(
+      page.getByText("Dane harmonogramu należy sprawdzić w oficjalnym źródle.")
+    ).toBeVisible();
+  });
+});

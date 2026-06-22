@@ -6,6 +6,8 @@ import {
   WASTE_TYPE_LABELS,
   placeLabel,
   formatScheduleDate,
+  relativeDayLabel,
+  isWithinDays,
   groupByDate,
   matchesLocationKeywords,
 } from "@/lib/wasteSchedule";
@@ -144,8 +146,14 @@ export function WasteScheduleSection({ areaKeywords }: Props) {
       ) : (
         groups.map((group) => (
           <div key={group.date} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
-            <p className="text-sm font-semibold text-slate-900 mb-2.5">
-              {formatScheduleDate(group.date)}
+            <p className="text-sm font-semibold text-slate-900 mb-2.5 flex flex-wrap items-center gap-2">
+              {relativeDayLabel(group.date)}{" "}
+              <span className="text-slate-400 font-normal">— {formatScheduleDate(group.date)}</span>
+              {isWithinDays(group.date, 7) && (
+                <span className="text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
+                  Ten tydzień
+                </span>
+              )}
             </p>
             <div className="flex flex-col gap-2">
               {group.items.map((item) => (
