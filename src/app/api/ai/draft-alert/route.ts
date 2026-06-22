@@ -288,6 +288,7 @@ function computeWarnings(
   dateFromAi: boolean,
   placeFromAi: boolean,
   sourceName: string,
+  sourceUrl: string | null,
 ): string[] {
   const warnings: string[] = [];
   if (!dateFromAi) {
@@ -301,6 +302,12 @@ function computeWarnings(
   }
   if (!sourceName) {
     warnings.push("Brakuje nazwy źródła — uzupełnij je w Kreatorze przed publikacją.");
+  }
+  // Sprint 91: mirrors the same check Builder's pre-publish checklist now
+  // runs (src/lib/alertQuality.ts) — flagged here too, as early as
+  // possible, not just at the final publish step.
+  if (!sourceUrl) {
+    warnings.push("Brakuje linku do źródła — uzupełnij go w Kreatorze przed publikacją.");
   }
   return warnings;
 }
@@ -377,7 +384,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<DraftAlertRes
       }
 
       const { draft, dateFromAi, placeFromAi } = result;
-      const warnings = computeWarnings(draft.category, dateFromAi, placeFromAi, draft.sourceName);
+      const warnings = computeWarnings(draft.category, dateFromAi, placeFromAi, draft.sourceName, draft.sourceUrl);
 
       return NextResponse.json({ ok: true, draft, mode: "anthropic", warnings });
     } catch (err) {

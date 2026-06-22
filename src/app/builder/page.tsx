@@ -18,7 +18,7 @@ import {
 } from "@/lib/getAdminSupabaseAlerts";
 import { normalizeAlertSeverity } from "@/lib/normalizeAlert";
 import { markCandidateConverted } from "@/lib/supabaseCandidateWrites";
-import { findSuspiciousFields } from "@/lib/testContentDetection";
+import { getPrePublishWarnings, confirmPrePublish } from "@/lib/alertQuality";
 
 // Same sessionStorage contract /admin/queue and /ai-helper already use for
 // sourceId — a persistent candidate notice (Sprint 78) flowing through
@@ -200,39 +200,9 @@ function statusLabel(status: AdminAlert["status"]): string {
   return "Draft";
 }
 
-// Fields a resident actually reads on the public alert — flagged before publish
-// so an admin doesn't accidentally ship an alert that looks broken/empty.
-function getIncompleteFields(f: { place: string; change: string; action: string; sourceName: string }): string[] {
-  const missing: string[] = [];
-  if (!f.place.trim()) missing.push("Lokalizacja");
-  if (!f.change.trim()) missing.push("Co się zmienia");
-  if (!f.action.trim()) missing.push("Co zrobić");
-  if (!f.sourceName.trim()) missing.push("Źródło");
-  return missing;
-}
-
-function confirmIncompletePublish(missing: string[]): boolean {
-  if (missing.length === 0) return true;
-  return confirm(
-    `Ten alert nie ma wypełnionych pól: ${missing.join(", ")}. Mieszkańcy zobaczą to jako „Brak informacji". Opublikować mimo to?`
-  );
-}
-
-// Same heuristic the admin dashboard uses to flag an already-published
-// test alert (Sprint 87) — checked here too, before publish, so the
-// catch happens before a resident ever sees it instead of only after.
-function confirmSuspiciousContent(f: { title: string; place: string; change: string; action: string }): boolean {
-  const flagged = findSuspiciousFields({
-    "Tytuł": f.title,
-    "Lokalizacja": f.place,
-    "Co się zmienia": f.change,
-    "Co zrobić": f.action,
-  });
-  if (flagged.length === 0) return true;
-  return confirm(
-    `Pole(-a) „${flagged.join(", ")}" wygląda na testowe/placeholder (np. „test", „przykład"). Opublikować mimo to?`
-  );
-}
+// getPrePublishWarnings/confirmPrePublish moved to src/lib/alertQuality.ts
+// (Sprint 91) so the logic stays unit-testable despite this page being
+// auth-gated end-to-end.
 
 function matchesAdminSearch(a: AdminAlert, query: string): boolean {
   const q = query.toLowerCase().trim();
@@ -668,8 +638,7 @@ export default function BuilderPage() {
     setSupabaseSuccess("idle");
     const err = validateForSupabase();
     if (err) { setSupabaseError(err); return; }
-    if (!confirmIncompletePublish(getIncompleteFields(form))) return;
-    if (!confirmSuspiciousContent(form)) return;
+    if (!confirmPrePublish(getPrePublishWarnings(form))) return;
     setSupabaseSaving(true);
     const slug = form.slug.trim() || generateSlug(form.title);
     if (!form.slug) setForm((prev) => ({ ...prev, slug }));
@@ -1174,6 +1143,27 @@ export default function BuilderPage() {
             kolejnego JSON.
           </p>
 
+          {/* Sprint 91 — a visible checklist, not just a confirm() popup at
+              the moment of clicking publish, so an admin sees what's
+              missing while they still have time to fix it in the form. */}
+          {(() => {
+            const prePublishWarnings = getPrePublishWarnings(form);
+            return (
+              <div className="rounded-lg bg-white border border-blue-200 px-3 py-2.5">
+                <p className="text-xs font-semibold text-blue-900 mb-1.5">Przed publikacją sprawdź:</p>
+                {prePublishWarnings.length === 0 ? (
+                  <p className="text-xs text-emerald-700">✓ Wszystko wygląda gotowe do publikacji.</p>
+                ) : (
+                  <ul className="space-y-0.5">
+                    {prePublishWarnings.map((w, i) => (
+                      <li key={i} className="text-xs text-amber-700">⚠ {w}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            );
+          })()}
+
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={handleSaveDraftToSupabase}
@@ -1524,7 +1514,7 @@ export default function BuilderPage() {
                   {a.status === "draft" && (
                     <button
                       onClick={() => {
-                        if (!confirmIncompletePublish(getIncompleteFields(a))) return;
+                        if (!confirmPrePublish(getPrePublishWarnings(a))) return;
                         handleStatusAction(a.slug, "publish");
                       }}
                       disabled={statusActionSlug === a.slug}
