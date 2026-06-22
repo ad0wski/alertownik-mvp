@@ -202,4 +202,25 @@ test.describe("Public homepage", () => {
     await expect(page).not.toHaveURL("/", { timeout: 15_000 });
     await expect(page.getByRole("link", { name: /Zgłoś/ })).toBeVisible();
   });
+
+  // Sprint 92 — beta-readiness check: AppHeader/AppFooter gate every admin
+  // link behind `{session && ...}`; this asserts that gate from the
+  // outside, on a genuinely logged-out session, rather than just trusting
+  // the source. The footer's single "Panel admina" → /login link is the
+  // one intentional exception (a generic login link, not admin content).
+  test("logged-out visitors see no admin navigation links", async ({ page }) => {
+    await page.goto("/");
+    for (const label of ["Kreator alertu", "AI Helper", "Źródła", "Kandydaci", "Harmonogram odpadów", "Wyloguj"]) {
+      await expect(page.getByRole("link", { name: label })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: label })).toHaveCount(0);
+    }
+  });
+
+  test("logged-out visitors see no admin navigation links on /odpady", async ({ page }) => {
+    await page.goto("/odpady");
+    for (const label of ["Kreator alertu", "AI Helper", "Źródła", "Kandydaci", "Harmonogram odpadów", "Wyloguj"]) {
+      await expect(page.getByRole("link", { name: label })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: label })).toHaveCount(0);
+    }
+  });
 });

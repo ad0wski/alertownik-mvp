@@ -522,6 +522,30 @@ export default function AdminPage() {
           </div>
         )}
 
+        {/* Sprint 92: the waste-schedule section below already tells the
+            admin explicitly when its migration hasn't run — this section
+            silently rendered nothing in that case instead, which hid a
+            real, long-standing blocker (11+ sprints as of Sprint 90) from
+            the one place an admin would otherwise see it. */}
+        {!sourcesLoading && persistentNotices === null && (
+          <div className="mt-3 bg-white rounded-2xl border border-slate-200 p-5">
+            <p className="text-sm font-medium text-slate-700 mb-1">
+              Trwali kandydaci nie są jeszcze włączeni.
+            </p>
+            <p className="text-sm text-slate-500 leading-relaxed">
+              Uruchom migrację z{" "}
+              <span className="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded">
+                docs/supabase_source_notice_candidates.sql
+              </span>{" "}
+              w Supabase SQL Editor. Do tego czasu kandydaci są widoczni tylko w starszym
+              widoku w{" "}
+              <Link href="/admin/queue" className="font-medium text-blue-600 hover:underline">
+                Kandydatach
+              </Link>.
+            </p>
+          </div>
+        )}
+
         {/* Persistent candidates (Sprint 78) — only rendered once the
             source_notice_candidates migration has actually been run. */}
         {!sourcesLoading && persistentNotices && (
