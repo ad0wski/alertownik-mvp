@@ -56,8 +56,8 @@ export function PreferencesSection({ savedPrefs, onSave, onClear }: Props) {
       <div>
         <h2 className="text-base font-semibold text-slate-900">Moje alerty</h2>
         <p className="text-sm text-slate-500 mt-0.5 leading-relaxed">
-          Dostosuj widok do swojej okolicy i kategorii, które Cię interesują.
-          Nie wymaga konta — preferencje zapisują się tylko na tym urządzeniu.
+          Wybierz swoją okolicę i kategorie, które Cię interesują. Nie wymaga
+          konta — preferencje zapisują się tylko w tej przeglądarce.
         </p>
       </div>
 
@@ -78,7 +78,10 @@ export function PreferencesSection({ savedPrefs, onSave, onClear }: Props) {
           className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
         />
         <p className="text-xs text-slate-400 leading-relaxed">
-          Alertownik pokaże alerty, które zawierają te słowa w tytule, miejscu lub opisie.
+          Nie podawaj dokładnego adresu — wystarczy miejscowość lub grupa
+          ulic. Alertownik pokaże alerty i terminy odbioru odpadów (strona{" "}
+          <span className="font-medium text-slate-500">Odpady</span>), które
+          zawierają te słowa.
         </p>
       </div>
 
@@ -126,7 +129,7 @@ export function PreferencesSection({ savedPrefs, onSave, onClear }: Props) {
         </button>
         {saved && (
           <span className="text-sm font-medium text-emerald-700">
-            Preferencje zapisane na tym urządzeniu.
+            Preferencje zapisane — tylko w tej przeglądarce.
           </span>
         )}
       </div>

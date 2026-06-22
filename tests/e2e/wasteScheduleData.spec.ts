@@ -153,3 +153,101 @@ test.describe("/odpady data state (mocked Supabase response)", () => {
     await expect(page.getByText("Brak terminów dla Twojej okolicy.")).toBeVisible();
   });
 });
+
+/**
+ * Inline area-preference editor — Sprint 86.
+ *
+ * Before this sprint, the only way to set/change the "Moja okolica" value
+ * consumed by /odpady was the homepage's "Moje alerty" panel — both
+ * NextCollectionCard and WasteScheduleSection read localStorage
+ * independently on their own mount. This sprint added AreaPreferenceBar +
+ * OdpadyClient (a shared state owner) so the value can be set/changed/
+ * cleared directly on /odpady and both views update live, with no page
+ * reload. These tests exercise that live-update behavior specifically.
+ */
+test.describe("/odpady inline area preference editor (Sprint 86)", () => {
+  test("with no saved preference, shows a prompt and lets the user set an area inline", async ({ page }) => {
+    await mockWasteScheduleRows(page);
+    await page.goto("/odpady");
+
+    await expect(page.getByText("Wybierz swoją okolicę")).toBeVisible();
+    await page.getByRole("button", { name: "Wybierz okolicę" }).click();
+
+    await page.getByLabel("Moja okolica").fill("Komorów");
+    await page.getByRole("button", { name: "Zapisz" }).click();
+
+    // The card now prefers the Komorów match — no page reload needed.
+    await expect(page.getByText("Najbliższy odbiór — Twoja okolica", { exact: true })).toBeVisible();
+  });
+
+  test("with a saved preference, shows the current value with Zmień/Wyczyść controls", async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        "alertownik-user-preferences",
+        JSON.stringify({ locationKeywords: "Komorów", categories: [] })
+      );
+    });
+    await mockWasteScheduleRows(page);
+    await page.goto("/odpady");
+
+    await expect(page.getByText("Komorów", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Zmień" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Wyczyść" })).toBeVisible();
+  });
+
+  test("changing the area inline updates the next-collection card live", async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        "alertownik-user-preferences",
+        JSON.stringify({ locationKeywords: "Warszawa", categories: [] })
+      );
+    });
+    await mockWasteScheduleRows(page);
+    await page.goto("/odpady");
+
+    // "Warszawa" matches nothing in the mocked rows — global soonest shown.
+    await expect(page.getByText("Najbliższy odbiór", { exact: true })).toBeVisible();
+
+    await page.getByRole("button", { name: "Zmień" }).click();
+    await page.getByLabel("Moja okolica").fill("Komorów");
+    await page.getByRole("button", { name: "Zapisz" }).click();
+
+    await expect(page.getByText("Najbliższy odbiór — Twoja okolica", { exact: true })).toBeVisible();
+  });
+
+  test("clearing the area inline removes the 'Moja okolica' filter toggle from the full list", async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        "alertownik-user-preferences",
+        JSON.stringify({ locationKeywords: "Komorów", categories: [] })
+      );
+    });
+    await mockWasteScheduleRows(page);
+    await page.goto("/odpady");
+
+    await expect(page.getByRole("button", { name: "Moja okolica" })).toBeVisible();
+
+    await page.getByRole("button", { name: "Wyczyść" }).click();
+
+    await expect(page.getByRole("button", { name: "Moja okolica" })).toHaveCount(0);
+    await expect(page.getByText("Wybierz swoją okolicę")).toBeVisible();
+  });
+
+  test("'Anuluj' discards an in-progress edit without saving", async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        "alertownik-user-preferences",
+        JSON.stringify({ locationKeywords: "Komorów", categories: [] })
+      );
+    });
+    await mockWasteScheduleRows(page);
+    await page.goto("/odpady");
+
+    await page.getByRole("button", { name: "Zmień" }).click();
+    await page.getByLabel("Moja okolica").fill("Coś innego");
+    await page.getByRole("button", { name: "Anuluj" }).click();
+
+    // Original value is still shown, edit was discarded.
+    await expect(page.getByText("Komorów", { exact: true })).toBeVisible();
+  });
+});

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { getUpcomingWasteScheduleItems } from "@/lib/supabaseWasteWrites";
 import {
   WASTE_TYPE_LABELS,
@@ -10,10 +10,13 @@ import {
   nextCollectionGroup,
   matchesLocationKeywords,
 } from "@/lib/wasteSchedule";
-import { loadPreferences, hasPreferences } from "@/lib/userPreferences";
 import type { WasteScheduleItem } from "@/types/wasteSchedule";
 
 type LoadState = "loading" | "ready" | "table_missing" | "error";
+
+interface Props {
+  areaKeywords: string;
+}
 
 // "Najbliższy odbiór" — a single-glance highlight of the soonest upcoming
 // collection date(s), distinct from WasteScheduleSection's full
@@ -21,16 +24,16 @@ type LoadState = "loading" | "ready" | "table_missing" | "error";
 // presentation helpers; fetches independently (small dataset, simpler than
 // lifting shared state up for two components on one page).
 //
-// Unlike WasteScheduleSection's explicit toggle, this card has only one
-// highlight slot — so when a "Moja okolica" preference is saved
-// (src/lib/userPreferences.ts), it automatically prefers a match in that
-// area over the global soonest date, since "next for me" is the card's
-// whole purpose. Falls back to the global soonest date if nothing in the
-// saved area is upcoming yet, rather than showing an empty card.
-export function NextCollectionCard() {
+// `areaKeywords` is owned by the parent (OdpadyClient) rather than read
+// from localStorage here directly, so the inline area editor on /odpady
+// (AreaPreferenceBar) updates this card live instead of needing a page
+// reload. When set, this card prefers a match in that area over the
+// global soonest date, since "next for me" is the card's whole purpose —
+// falling back to the global soonest date if nothing in the saved area is
+// upcoming yet, rather than showing an empty card.
+export function NextCollectionCard({ areaKeywords }: Props) {
   const [items, setItems] = useState<WasteScheduleItem[]>([]);
   const [state, setState] = useState<LoadState>("loading");
-  const [isMyAreaMatch, setIsMyAreaMatch] = useState(false);
 
   useEffect(() => {
     getUpcomingWasteScheduleItems(10).then((result) => {
@@ -42,20 +45,20 @@ export function NextCollectionCard() {
         setState("error");
         return;
       }
-      const prefs = loadPreferences();
-      if (hasPreferences(prefs) && prefs.locationKeywords.trim()) {
-        const myArea = result.items.filter((i) => matchesLocationKeywords(i, prefs.locationKeywords));
-        if (myArea.length > 0) {
-          setItems(myArea);
-          setIsMyAreaMatch(true);
-          setState("ready");
-          return;
-        }
-      }
       setItems(result.items);
       setState("ready");
     });
   }, []);
+
+  const { displayItems, isMyAreaMatch } = useMemo(() => {
+    if (areaKeywords.trim()) {
+      const myArea = items.filter((i) => matchesLocationKeywords(i, areaKeywords));
+      if (myArea.length > 0) {
+        return { displayItems: myArea, isMyAreaMatch: true };
+      }
+    }
+    return { displayItems: items, isMyAreaMatch: false };
+  }, [items, areaKeywords]);
 
   if (state === "loading") {
     return (
@@ -80,7 +83,7 @@ export function NextCollectionCard() {
     );
   }
 
-  const group = nextCollectionGroup(items);
+  const group = nextCollectionGroup(displayItems);
 
   if (group.length === 0) {
     return (

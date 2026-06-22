@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { NextCollectionCard } from "@/components/NextCollectionCard";
-import { WasteScheduleSection } from "@/components/WasteScheduleSection";
+import { OdpadyClient } from "@/components/OdpadyClient";
 
 export const metadata = {
   title: "Odpady — Alertownik",
@@ -63,14 +62,7 @@ export default function OdpadyPage() {
       </div>
 
       <div className="flex flex-col gap-4">
-        <NextCollectionCard />
-
-        <section>
-          <h2 className="text-base font-semibold text-slate-900 mb-2.5">
-            Nadchodzące terminy
-          </h2>
-          <WasteScheduleSection />
-        </section>
+        <OdpadyClient />
 
         <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
           <h2 className="text-base font-semibold text-slate-900 mb-2">
@@ -78,8 +70,10 @@ export default function OdpadyPage() {
           </h2>
           <ul className="text-sm text-slate-600 space-y-1.5 list-disc list-inside leading-relaxed">
             <li>Wybierasz swoją okolicę albo grupę ulic — bez podawania dokładnego adresu.</li>
+            <li>Nie musisz się logować — preferencja zapisuje się tylko w tej przeglądarce.</li>
             <li>Widzisz najbliższe terminy odbioru, podzielone według rodzaju odpadów.</li>
-            <li>Każdy termin wskazuje źródło, z którego pochodzi.</li>
+            <li>Każdy termin wskazuje źródło, z którego pochodzi — to ono jest najważniejsze, nie ta strona.</li>
+            <li>Przypomnienia (np. dzień wcześniej) są planowane na później — na razie strona pokazuje tylko terminy.</li>
           </ul>
           <p className="text-sm text-slate-500 mt-3 leading-relaxed">
             Planowane rodzaje odpadów: {PLANNED_WASTE_TYPES.join(", ")}.

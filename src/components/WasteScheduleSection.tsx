@@ -9,21 +9,25 @@ import {
   groupByDate,
   matchesLocationKeywords,
 } from "@/lib/wasteSchedule";
-import { loadPreferences, hasPreferences, type UserPreferences } from "@/lib/userPreferences";
 import type { WasteScheduleItem } from "@/types/wasteSchedule";
-import Link from "next/link";
 
 type LoadState = "loading" | "ready" | "table_missing" | "error";
 
+interface Props {
+  areaKeywords: string;
+}
+
 // "Moja okolica" filter reuses the same free-text keywords the homepage's
-// "Moje alerty" panel already saves (src/lib/userPreferences.ts) — no new
-// address/area picker, no exact address ever collected. Default is "all"
-// (unfiltered), matching AlertList's mode default even when prefs exist.
-export function WasteScheduleSection() {
+// "Moje alerty" panel already saves (src/lib/userPreferences.ts), now
+// owned by the parent (OdpadyClient) and passed down as `areaKeywords` so
+// the inline AreaPreferenceBar on /odpady can update this list live — no
+// new address/area picker, no exact address ever collected. Default is
+// "all" (unfiltered), matching AlertList's mode default even when prefs
+// exist.
+export function WasteScheduleSection({ areaKeywords }: Props) {
   const [items, setItems] = useState<WasteScheduleItem[]>([]);
   const [state, setState] = useState<LoadState>("loading");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [prefs, setPrefs] = useState<UserPreferences | null>(null);
   const [showMyArea, setShowMyArea] = useState(false);
 
   useEffect(() => {
@@ -40,7 +44,6 @@ export function WasteScheduleSection() {
       setItems(result.items);
       setState("ready");
     });
-    setPrefs(loadPreferences());
   }, []);
 
   if (state === "loading") {
@@ -94,10 +97,10 @@ export function WasteScheduleSection() {
     );
   }
 
-  const prefsSet = prefs !== null && hasPreferences(prefs) && prefs.locationKeywords.trim().length > 0;
+  const prefsSet = areaKeywords.trim().length > 0;
   const filteredItems =
-    showMyArea && prefsSet && prefs
-      ? items.filter((i) => matchesLocationKeywords(i, prefs.locationKeywords))
+    showMyArea && prefsSet
+      ? items.filter((i) => matchesLocationKeywords(i, areaKeywords))
       : items;
   const groups = groupByDate(filteredItems);
 
@@ -134,12 +137,8 @@ export function WasteScheduleSection() {
             Brak terminów dla Twojej okolicy.
           </p>
           <p className="text-sm text-slate-500 leading-relaxed">
-            Żaden zapisany termin nie pasuje do okolicy ustawionej w „Moje
-            alerty" na stronie głównej. Sprawdź „Wszystkie okolice" albo{" "}
-            <Link href="/" className="font-medium text-blue-600 hover:underline">
-              zmień swoją okolicę
-            </Link>
-            .
+            Żaden zapisany termin nie pasuje do Twojej okolicy. Sprawdź
+            „Wszystkie okolice" albo zmień okolicę w panelu powyżej.
           </p>
         </div>
       ) : (
