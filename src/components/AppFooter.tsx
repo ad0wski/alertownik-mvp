@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
+import { buildFeedbackMailto } from "@/lib/feedbackMailto";
 import type { Session } from "@supabase/supabase-js";
 
 export function AppFooter() {
@@ -39,7 +40,7 @@ export function AppFooter() {
                 O projekcie
               </Link>
               <a
-                href="mailto:ak.jurkowski@gmail.com?subject=Alertownik%20%E2%80%94%20opinia"
+                href={buildFeedbackMailto()}
                 className="text-xs text-slate-300 hover:text-slate-500 transition-colors"
               >
                 Kontakt

@@ -6,6 +6,7 @@ import { sampleAlerts } from "@/data/sampleAlerts";
 import { getSupabaseAlertBySlug } from "@/lib/getSupabaseAlerts";
 import { formatAlertRange, formatAlertDateTime } from "@/lib/formatAlertDate";
 import { getAlertTimeStatus, type AlertTimeStatus } from "@/lib/getAlertTimeStatus";
+import { buildAlertReportMailto } from "@/lib/feedbackMailto";
 import type { Alert } from "@/types/alert";
 
 const timeStatusConfig: Record<
@@ -244,9 +245,7 @@ export function AlertDetailClient({ slug }: { slug: string }) {
             oficjalnych komunikatów — w razie wątpliwości sprawdź źródło powyżej.
           </p>
           <a
-            href={`mailto:ak.jurkowski@gmail.com?subject=${encodeURIComponent(
-              `Alertownik — zgłoszenie: ${alert.title}`
-            )}`}
+            href={buildAlertReportMailto(alert.title)}
             className="inline-block mt-1.5 font-medium text-slate-500 hover:text-blue-700 hover:underline"
           >
             Ten alert jest nieaktualny albo błędny? Zgłoś →

@@ -1,6 +1,5 @@
 import Link from "next/link";
-
-const FEEDBACK_EMAIL = "ak.jurkowski@gmail.com";
+import { FEEDBACK_EMAIL, buildFeedbackMailto } from "@/lib/feedbackMailto";
 
 export const metadata = {
   title: "O projekcie — Alertownik",
@@ -140,10 +139,12 @@ export default function AboutPage() {
           <p className="text-sm text-slate-600 leading-relaxed mb-3">
             To wczesna wersja serwisu — chętnie usłyszymy, co działa dobrze, co
             warto poprawić, albo zgłosisz alert, który jest nieaktualny lub
-            błędny.
+            błędny. Wystarczą 3 minuty — kliknięcie poniżej otworzy e-mail z
+            kilkoma krótkimi pytaniami, ale możesz też po prostu napisać
+            własnymi słowami.
           </p>
           <a
-            href={`mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent("Alertownik — opinia o pilotażu")}`}
+            href={buildFeedbackMailto()}
             className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
           >
             Napisz do nas →
