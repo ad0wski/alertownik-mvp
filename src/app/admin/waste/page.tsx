@@ -300,6 +300,29 @@ function WasteAdminContent() {
       })
     : [];
 
+  // Sprint 88: the single-row form has warned on a past collectionDate
+  // (via confirm()) since Sprint 83; the bulk import never checked this
+  // at all, the same kind of gap Sprint 85 found and fixed for duplicate
+  // warnings. A warning, not a block — re-importing a corrected past
+  // entry is a legitimate use case.
+  const importPastDateWarnings: string[] = importParsed
+    ? importParsed.flatMap((row, i) =>
+        isPastDate(row.collectionDate)
+          ? [`Wiersz ${i + 1}: data odbioru (${row.collectionDate}) jest w przeszłości.`]
+          : []
+      )
+    : [];
+
+  // Sprint 88: the single-row form has shown an amber "Brak linku źródła"
+  // notice since Sprint 83; the bulk import never surfaced the same signal
+  // per row, even though an unverified import is exactly where a missing
+  // source matters most.
+  const importMissingSourceWarnings: string[] = importParsed
+    ? importParsed.flatMap((row, i) =>
+        row.sourceUrl?.trim() ? [] : [`Wiersz ${i + 1}: brak linku źródła (${row.locality}, ${row.collectionDate}).`]
+      )
+    : [];
+
   // ── Filtering ─────────────────────────────────────────────────────────────
 
   const filtered = items.filter((item) => {
@@ -543,13 +566,51 @@ function WasteAdminContent() {
                 </ul>
               )}
               {importParsed && (
-                <p className="text-sm font-medium text-emerald-700">
-                  {importParsed.length} {importParsed.length === 1 ? "wiersz gotowy" : "wierszy gotowych"} do zaimportowania.
-                </p>
+                <>
+                  <p className="text-sm font-medium text-emerald-700">
+                    {importParsed.length} {importParsed.length === 1 ? "wiersz gotowy" : "wierszy gotowych"} do zaimportowania. Sprawdź podgląd przed zapisem:
+                  </p>
+                  <div className="overflow-x-auto rounded-lg border border-slate-200">
+                    <table className="w-full text-xs">
+                      <thead className="bg-slate-50 text-slate-500">
+                        <tr>
+                          <th className="text-left px-2.5 py-1.5 font-medium">#</th>
+                          <th className="text-left px-2.5 py-1.5 font-medium">Lokalizacja</th>
+                          <th className="text-left px-2.5 py-1.5 font-medium">Rodzaj</th>
+                          <th className="text-left px-2.5 py-1.5 font-medium">Data</th>
+                          <th className="text-left px-2.5 py-1.5 font-medium">Źródło</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {importParsed.map((row, i) => (
+                          <tr key={i} className="border-t border-slate-100">
+                            <td className="px-2.5 py-1.5 text-slate-400">{i + 1}</td>
+                            <td className="px-2.5 py-1.5 text-slate-700">
+                              {[row.locality, row.areaName, row.streetGroup].filter(Boolean).join(" — ")}
+                            </td>
+                            <td className="px-2.5 py-1.5 text-slate-700">{WASTE_TYPE_LABELS[row.wasteType] ?? row.wasteType}</td>
+                            <td className="px-2.5 py-1.5 text-slate-700">{row.collectionDate}</td>
+                            <td className="px-2.5 py-1.5 text-slate-500">{row.sourceName || row.sourceUrl || "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               )}
               {importDuplicateWarnings.length > 0 && (
                 <ul className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 space-y-0.5">
                   {importDuplicateWarnings.map((warn, i) => <li key={i}>{warn}</li>)}
+                </ul>
+              )}
+              {importPastDateWarnings.length > 0 && (
+                <ul className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 space-y-0.5">
+                  {importPastDateWarnings.map((warn, i) => <li key={i}>{warn}</li>)}
+                </ul>
+              )}
+              {importMissingSourceWarnings.length > 0 && (
+                <ul className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 space-y-0.5">
+                  {importMissingSourceWarnings.map((warn, i) => <li key={i}>{warn}</li>)}
                 </ul>
               )}
               {importMsg && <p className="text-sm font-medium text-slate-700">{importMsg}</p>}
