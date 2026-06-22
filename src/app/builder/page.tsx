@@ -18,6 +18,7 @@ import {
 } from "@/lib/getAdminSupabaseAlerts";
 import { normalizeAlertSeverity } from "@/lib/normalizeAlert";
 import { markCandidateConverted } from "@/lib/supabaseCandidateWrites";
+import { findSuspiciousFields } from "@/lib/testContentDetection";
 
 // Same sessionStorage contract /admin/queue and /ai-helper already use for
 // sourceId — a persistent candidate notice (Sprint 78) flowing through
@@ -214,6 +215,22 @@ function confirmIncompletePublish(missing: string[]): boolean {
   if (missing.length === 0) return true;
   return confirm(
     `Ten alert nie ma wypełnionych pól: ${missing.join(", ")}. Mieszkańcy zobaczą to jako „Brak informacji". Opublikować mimo to?`
+  );
+}
+
+// Same heuristic the admin dashboard uses to flag an already-published
+// test alert (Sprint 87) — checked here too, before publish, so the
+// catch happens before a resident ever sees it instead of only after.
+function confirmSuspiciousContent(f: { title: string; place: string; change: string; action: string }): boolean {
+  const flagged = findSuspiciousFields({
+    "Tytuł": f.title,
+    "Lokalizacja": f.place,
+    "Co się zmienia": f.change,
+    "Co zrobić": f.action,
+  });
+  if (flagged.length === 0) return true;
+  return confirm(
+    `Pole(-a) „${flagged.join(", ")}" wygląda na testowe/placeholder (np. „test", „przykład"). Opublikować mimo to?`
   );
 }
 
@@ -652,6 +669,7 @@ export default function BuilderPage() {
     const err = validateForSupabase();
     if (err) { setSupabaseError(err); return; }
     if (!confirmIncompletePublish(getIncompleteFields(form))) return;
+    if (!confirmSuspiciousContent(form)) return;
     setSupabaseSaving(true);
     const slug = form.slug.trim() || generateSlug(form.title);
     if (!form.slug) setForm((prev) => ({ ...prev, slug }));

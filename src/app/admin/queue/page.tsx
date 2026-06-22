@@ -200,6 +200,28 @@ function QueueContent() {
 
   // ── Persistent candidate actions (Sprint 78) ──────────────────────────────
 
+  // Sprint 90: the legacy view above has shown these warnings since
+  // candidateWarnings.ts existed; the persistent view never wired them
+  // in, despite being the primary path going forward. "Previous text for
+  // this source" here means the most recently detected *other* notice
+  // from the same source (persistent notices have no source_checks row
+  // to compare against), not a perfect analogue of warningsFor() above —
+  // close enough to catch the same "looks like last time" case.
+  function noticeWarningsFor(n: SourceNoticeCandidate): string[] {
+    const text = n.rawText || n.excerpt || "";
+    const previousFromSameSource = notices
+      .filter((other) => other.id !== n.id && other.sourceId === n.sourceId)
+      .sort((a, b) => b.detectedAt.localeCompare(a.detectedAt))[0];
+
+    return getCandidateWarnings(
+      { sourceUrl: n.sourceUrl ?? "", notes: text },
+      {
+        previousCheckNotes: previousFromSameSource?.rawText || previousFromSameSource?.excerpt,
+        alertTitles: alerts.map((a) => a.title),
+      }
+    );
+  }
+
   function sendNoticeToAiHelper(n: SourceNoticeCandidate) {
     sessionStorage.setItem(
       PENDING_SOURCE_KEY,
@@ -393,6 +415,7 @@ function QueueContent() {
                 {filteredNotices.map((n) => {
                   const convertedAlert = alertFor(n.convertedAlertId);
                   const busy = noticeActionId === n.id;
+                  const warnings = n.status === "pending" ? noticeWarningsFor(n) : [];
                   return (
                     <div key={n.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 flex flex-col gap-3">
                       <div className="flex flex-wrap items-center gap-2">
@@ -415,6 +438,16 @@ function QueueContent() {
                         <p className="text-xs text-emerald-700">
                           → przekształcone w alert: <strong className="font-semibold">{convertedAlert.title || "Bez tytułu"}</strong>
                         </p>
+                      )}
+
+                      {warnings.length > 0 && (
+                        <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2">
+                          <ul className="space-y-0.5">
+                            {warnings.map((w, wi) => (
+                              <li key={wi} className="text-xs text-amber-700">⚠ {w}</li>
+                            ))}
+                          </ul>
+                        </div>
                       )}
 
                       <div className="flex flex-wrap items-center gap-2 pt-0.5">

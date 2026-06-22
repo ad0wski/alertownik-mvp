@@ -15,6 +15,7 @@ import {
 } from "@/lib/supabaseSourceWrites";
 import { getSourceCandidateNotices } from "@/lib/supabaseCandidateWrites";
 import { getUpcomingWasteScheduleItems } from "@/lib/supabaseWasteWrites";
+import { looksLikeTestContent } from "@/lib/testContentDetection";
 import type { SourceNoticeCandidate } from "@/types/sourceCandidate";
 import type { Session } from "@supabase/supabase-js";
 
@@ -72,14 +73,6 @@ function sourceNeedsChecking(lastCheckedAt: string | undefined, isActive: boolea
   if (!lastCheckedAt) return true;
   const today = new Date().toISOString().split("T")[0];
   return lastCheckedAt.split("T")[0] !== today;
-}
-
-// Heuristic only — flags likely test/placeholder content for a human to verify,
-// never auto-archives or hides anything.
-const SUSPICIOUS_TITLE_PATTERNS = [/test/i, /aaaa/i, /asdf/i, /lorem/i, /placeholder/i, /\bxxx\b/i];
-
-function looksLikeTestContent(title: string): boolean {
-  return SUSPICIOUS_TITLE_PATTERNS.some((re) => re.test(title));
 }
 
 const DAILY_WORKFLOW_STEPS: { label: string; note: string; href?: string }[] = [

@@ -855,16 +855,38 @@ function SourceCard({
       {(previewStatus === "success" || previewStatus === "error" || previewStatus === "pdf_manual") && (
         <div className="mt-3 pt-3 border-t border-slate-100">
           {previewStatus === "error" && (
-            <div className="flex items-start gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5">
-              <span className="font-medium shrink-0">Nie udało się pobrać:</span>
-              <span className="flex-1">{previewError}</span>
-              <button
-                onClick={() => setPreviewStatus("idle")}
-                className="shrink-0 text-red-400 hover:text-red-600 font-bold leading-none"
-                aria-label="Zamknij"
-              >
-                ×
-              </button>
+            <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5">
+              <div className="flex items-start gap-2">
+                <span className="font-medium shrink-0">Nie udało się pobrać:</span>
+                <span className="flex-1">{previewError}</span>
+                <button
+                  onClick={() => setPreviewStatus("idle")}
+                  className="shrink-0 text-red-400 hover:text-red-600 font-bold leading-none"
+                  aria-label="Zamknij"
+                >
+                  ×
+                </button>
+              </div>
+              {/* Sprint 90: automated fetch failing (bot-block, timeout,
+                  4xx/5xx) doesn't mean the source is unusable — it just
+                  means a human has to read it instead. Without these, the
+                  admin saw the error text but no actionable next step. */}
+              <div className="flex flex-wrap gap-3 mt-2 pt-2 border-t border-red-100">
+                <a
+                  href={source.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-red-700 hover:text-red-900 hover:underline"
+                >
+                  Otwórz źródło ręcznie →
+                </a>
+                <button
+                  onClick={() => handlePrepareAlertFromCheck()}
+                  className="font-medium text-red-700 hover:text-red-900 hover:underline"
+                >
+                  Wyślij źródło do AI Helpera →
+                </button>
+              </div>
             </div>
           )}
 

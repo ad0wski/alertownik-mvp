@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import { parsePageHtml, describePageFetchFailure } from "@/lib/sourceParsers/pageParser";
 import { detectParserStrategy } from "@/lib/sourceParsers";
 import { detectDateInText, textSimilarity, findSimilarText, trimAtWord } from "@/lib/candidateWarnings";
+import { looksLikeTestContent, findSuspiciousFields } from "@/lib/testContentDetection";
 
 /**
  * Unit-style tests for the Sprint 76 parser abstraction and the Sprint 75
@@ -137,5 +138,40 @@ test.describe("candidateWarnings helpers", () => {
     expect(result.length).toBeLessThanOrEqual(41); // 40 + the trailing "…"
     expect(result.endsWith("…")).toBe(true);
     expect(text.startsWith(result.slice(0, -1).trimEnd())).toBe(true);
+  });
+});
+
+// Sprint 90 — shared between the admin dashboard's post-publish review
+// (Sprint 87) and Builder's pre-publish warning, so both checkpoints use
+// exactly the same word list.
+test.describe("testContentDetection helpers", () => {
+  test("looksLikeTestContent flags common test/placeholder words", () => {
+    expect(looksLikeTestContent("Test alertu")).toBe(true);
+    expect(looksLikeTestContent("To jest przykład komunikatu")).toBe(true);
+    expect(looksLikeTestContent("aaaaaa")).toBe(true);
+    expect(looksLikeTestContent("Lorem ipsum dolor")).toBe(true);
+  });
+
+  test("looksLikeTestContent does not flag genuine content", () => {
+    expect(looksLikeTestContent("Remont ul. Głównej w Granicy")).toBe(false);
+    expect(looksLikeTestContent("Planowana przerwa w dostawie wody")).toBe(false);
+  });
+
+  test("findSuspiciousFields names only the flagged fields", () => {
+    const flagged = findSuspiciousFields({
+      "Tytuł": "Test alertu",
+      "Lokalizacja": "Komorów",
+      "Co się zmienia": "Przerwa w dostawie wody",
+      "Co zrobić": "Sprawdź harmonogram",
+    });
+    expect(flagged).toEqual(["Tytuł"]);
+  });
+
+  test("findSuspiciousFields returns an empty list when nothing looks suspicious", () => {
+    const flagged = findSuspiciousFields({
+      "Tytuł": "Brak wody w Granicy",
+      "Lokalizacja": "Granica",
+    });
+    expect(flagged).toEqual([]);
   });
 });
