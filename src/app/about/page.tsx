@@ -137,11 +137,11 @@ export default function AboutPage() {
             Masz uwagi albo pytania?
           </h2>
           <p className="text-sm text-slate-600 leading-relaxed mb-3">
-            To wczesna wersja serwisu — chętnie usłyszymy, co działa dobrze, co
-            warto poprawić, albo zgłosisz alert, który jest nieaktualny lub
-            błędny. Wystarczą 3 minuty — kliknięcie poniżej otworzy e-mail z
-            kilkoma krótkimi pytaniami, ale możesz też po prostu napisać
-            własnymi słowami.
+            Nie musi być długo — napisz jedną rzecz, która była niejasna, albo
+            po prostu czy to ma sens. Kliknięcie poniżej otworzy e-mail z tą
+            jedną prośbą (i kilkoma dodatkowymi pytaniami, jeśli chcesz
+            odpowiedzieć na więcej) — możesz też po prostu napisać własnymi
+            słowami.
           </p>
           <a
             href={buildFeedbackMailto()}

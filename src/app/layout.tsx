@@ -23,7 +23,8 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: "Alertownik",
-  description: "Lokalne alerty w jednym miejscu",
+  description:
+    "Lokalne alerty w jednym miejscu — transport, woda, prąd, odpady i komunikaty gminne dla Komorowa, Pruszkowa i okolic.",
   applicationName: "Alertownik",
   appleWebApp: {
     capable: true,

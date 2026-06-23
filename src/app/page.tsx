@@ -12,7 +12,8 @@ export default function Home() {
         </h1>
         <p className="text-sm sm:text-base text-slate-500 mb-4 sm:mb-5 leading-relaxed">
           Alertownik zbiera w jednym miejscu informacje o utrudnieniach w transporcie,
-          dostawach wody i prądu, drogach, odpadach i komunikatach gminnych —
+          dostawach wody i prądu, drogach, odpadach i komunikatach gminnych dla{" "}
+          <span className="font-medium text-slate-600">Komorowa, Pruszkowa i okolic</span> —
           bez przeszukiwania długich ogłoszeń.
         </p>
         <div className="flex flex-wrap gap-2 mb-4 sm:mb-5">

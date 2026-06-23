@@ -15,6 +15,13 @@ test.describe("buildFeedbackMailto", () => {
     expect(href).toContain(encodeURIComponent("Alertownik — opinia o pilotażu"));
   });
 
+  test("leads with one easy ask before the optional question list", () => {
+    const href = buildFeedbackMailto();
+    const bodyParam = new URL(href.replace("mailto:", "http://x/")).searchParams.get("body") ?? "";
+    expect(bodyParam.indexOf("Jedna prosta prośba")).toBeGreaterThanOrEqual(0);
+    expect(bodyParam.indexOf("Jedna prosta prośba")).toBeLessThan(bodyParam.indexOf(FEEDBACK_QUESTIONS[0]));
+  });
+
   test("includes every suggested question in the encoded body", () => {
     const href = buildFeedbackMailto();
     const bodyParam = new URL(href.replace("mailto:", "http://x/")).searchParams.get("body") ?? "";

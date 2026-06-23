@@ -18,12 +18,15 @@ export const FEEDBACK_QUESTIONS = [
 ];
 
 // General feedback link (about page "Napisz do nas", footer "Kontakt") —
-// the full short-question template, since these are the general-opinion
-// entry points the questions were written for.
+// Sprint 95: leads with one trivially-easy ask (the rest of the list is
+// kept as an optional bonus, not the headline request) — a 6-question list
+// up front reads as a survey, which is exactly the friction a low-response
+// beta needs less of.
 export function buildFeedbackMailto(): string {
   const body = [
-    "Kilka krótkich pytań — odpowiedz na te, na które łatwo (nie trzeba na wszystkie):",
+    "Jedna prosta prośba: napisz jedną rzecz, która była niejasna — albo po prostu czy to ma sens. To już bardzo pomaga.",
     "",
+    "Jeśli masz chwilę więcej, możesz też odpowiedzieć na:",
     ...FEEDBACK_QUESTIONS.map((q) => `- ${q}`),
   ].join("\n");
   return `mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent("Alertownik — opinia o pilotażu")}&body=${encodeURIComponent(body)}`;

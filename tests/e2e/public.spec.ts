@@ -14,6 +14,14 @@ test.describe("Public homepage", () => {
     await expect(page.locator("h1")).toContainText("Lokalne zmiany");
   });
 
+  // Sprint 95 — the hero must say *where* this is for, not just what it
+  // does: a visitor deciding "is this for me" in the first few seconds
+  // needs the location, not just the category list.
+  test("hero states the pilot's covered area", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByText(/Komorowa, Pruszkowa i okolic/)).toBeVisible();
+  });
+
   test("search input accepts text without crashing", async ({ page }) => {
     await page.goto("/");
     const input = page.getByPlaceholder(/Szukaj po miejscowości/);
