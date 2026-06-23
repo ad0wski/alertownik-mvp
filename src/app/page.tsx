@@ -33,8 +33,8 @@ export default function Home() {
         </div>
         <p className="text-xs text-slate-400">
           Wczesny pilotaż —{" "}
-          <Link href="/about" className="font-medium text-slate-500 hover:text-blue-700 underline">
-            sprawdź jak to działa
+          <Link href="/about#jak-testowac" className="font-medium text-slate-500 hover:text-blue-700 underline">
+            sprawdź w 60 sekund, jak to działa
           </Link>
           {" "}albo{" "}
           <Link href="/about#chce-testowac" className="font-medium text-emerald-600 hover:text-emerald-800 underline">

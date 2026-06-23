@@ -419,7 +419,7 @@ export default function AdminPage() {
                 <span className="text-slate-400">○</span>
                 <span>
                   Sprawdź ręcznie, że link feedbackowy (mailto) otwiera się poprawnie na telefonie —{" "}
-                  <Link href="/about#chce-testowac" className="font-medium text-blue-600 hover:underline">
+                  <Link href="/about#feedback" className="font-medium text-blue-600 hover:underline">
                     zobacz na /about
                   </Link>.
                 </span>
@@ -427,6 +427,39 @@ export default function AdminPage() {
               <li className="flex items-start gap-2">
                 <span className="text-slate-400">○</span>
                 <span>Sprawdź wygląd na telefonie (np. w trybie incognito) — homepage, /odpady, /about.</span>
+              </li>
+            </ul>
+
+            {/* Sprint 99 — items the dashboard genuinely can't check from
+                data (deployment health, login, secrets, the test suite) —
+                explicit manual reminders instead of silently omitting them. */}
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mt-4 mb-2.5">
+              Dodatkowo przed wysłaniem (Sprint 99)
+            </p>
+            <ul className="text-sm text-slate-600 space-y-1.5">
+              <li className="flex items-start gap-2">
+                <span className="text-slate-400">○</span>
+                <span>
+                  Otwórz żywy adres na Vercelu (nie tylko localhost) i sprawdź, że strona się ładuje.
+                </span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-slate-400">○</span>
+                <span>Zaloguj się ponownie na koncie admina — sprawdź, że logowanie wciąż działa.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-slate-400">○</span>
+                <span>
+                  Sprawdź, że żaden klucz/sekret (Supabase service_role, ANTHROPIC_API_KEY) nie trafił do
+                  kodu albo commita — tylko zmienne środowiskowe na Vercelu.
+                </span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-slate-400">○</span>
+                <span>
+                  Uruchom <span className="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded">npm run check</span>{" "}
+                  i <span className="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded">npm run test:e2e</span> — oba muszą przejść.
+                </span>
               </li>
             </ul>
           </div>

@@ -103,14 +103,15 @@ export default function AboutPage() {
             Co sprawdzić w 60 sekund
           </h2>
           <p className="text-sm text-slate-600 leading-relaxed mb-2">
-            Nie trzeba dużo czasu — te 4 kroki zajmują około minuty i pokazują,
+            Nie trzeba dużo czasu — te 5 kroków zajmują około minuty i pokazują,
             o co chodzi w aplikacji:
           </p>
           <ol className="text-sm text-slate-600 space-y-1.5 list-decimal list-inside leading-relaxed">
-            <li>Wybierz swoją okolicę (albo kategorie) w „Moje alerty" i sprawdź listę alertów.</li>
-            <li>Zerknij na „Odpady" i na źródło przy wybranym alercie („Zobacz źródło →").</li>
-            <li>Wyślij krótką opinię — wystarczy jedno zdanie, nie musi być długo.</li>
-            <li>Jeśli chcesz, dodaj stronę do ekranu głównego telefonu.</li>
+            <li>Sprawdź swoją okolicę — w „Moje alerty" wpisz miejscowość albo zaznacz kategorie.</li>
+            <li>Zobacz aktualne alerty na liście.</li>
+            <li>Sprawdź „Odpady" albo źródło przy wybranym alercie („Zobacz źródło →").</li>
+            <li>Wyślij jedną krótką opinię — wystarczy jedno zdanie.</li>
+            <li>Opcjonalnie dodaj stronę do ekranu głównego telefonu.</li>
           </ol>
         </section>
 
@@ -132,7 +133,7 @@ export default function AboutPage() {
           </a>
         </section>
 
-        <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
+        <section id="feedback" className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
           <h2 className="text-base font-semibold text-slate-900 mb-2">
             Masz uwagi albo pytania?
           </h2>
