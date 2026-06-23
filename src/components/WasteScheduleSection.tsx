@@ -91,9 +91,10 @@ export function WasteScheduleSection({ areaKeywords }: Props) {
           Brak zapisanych terminów.
         </p>
         <p className="text-sm text-slate-500 leading-relaxed">
-          Harmonogram jest pusty — admin jeszcze nie uzupełnił terminów dla
-          żadnej okolicy. Sprawdź oficjalne źródła poniżej, dopóki nie
-          pojawią się tu pierwsze daty.
+          Harmonogram odpadów wymaga oficjalnych danych — admin jeszcze nie
+          zaimportował terminów z oficjalnego harmonogramu gminy/operatora dla
+          żadnej okolicy. To nie błąd, tylko brak importu na razie. Sprawdź
+          oficjalne źródła poniżej, dopóki nie pojawią się tu pierwsze daty.
         </p>
       </div>
     );

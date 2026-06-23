@@ -17,6 +17,7 @@ import { getSourceCandidateNotices } from "@/lib/supabaseCandidateWrites";
 import { getUpcomingWasteScheduleItems } from "@/lib/supabaseWasteWrites";
 import { looksLikeTestContent } from "@/lib/testContentDetection";
 import type { SourceNoticeCandidate } from "@/types/sourceCandidate";
+import type { AlertSource } from "@/types/alertSource";
 import type { Session } from "@supabase/supabase-js";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -75,6 +76,20 @@ function sourceNeedsChecking(lastCheckedAt: string | undefined, isActive: boolea
   return lastCheckedAt.split("T")[0] !== today;
 }
 
+// Sprint 96 — per-source "where is this in the pipeline" label, used by the
+// new "Status workflow źródeł" section. Same "today/yesterday/N dni temu"
+// granularity as the relative badge already on /admin/sources (Sprint 77),
+// reimplemented here in one line rather than imported, since the two pages
+// style it slightly differently (a full badge there, a short label here).
+function lastCheckedLabel(lastCheckedAt: string | undefined): string {
+  if (!lastCheckedAt) return "Nigdy sprawdzone";
+  const today = new Date().toISOString().split("T")[0];
+  const checkedDate = lastCheckedAt.split("T")[0];
+  if (checkedDate === today) return "Sprawdzone dziś";
+  const days = Math.max(0, Math.floor((Date.now() - new Date(lastCheckedAt).getTime()) / 86_400_000));
+  return days === 1 ? "Sprawdzone wczoraj" : `Sprawdzone ${days} dni temu`;
+}
+
 const DAILY_WORKFLOW_STEPS: { label: string; note: string; href?: string }[] = [
   { label: "Sprawdź źródła priorytetowe",  note: "Zacznij od źródeł oznaczonych „Do sprawdzenia”.", href: "/admin/sources" },
   { label: "Przejrzyj treść źródła",       note: "Użyj „Sprawdź stronę”, by pobrać podgląd i kandydatów na komunikaty.", href: "/admin/sources" },
@@ -98,6 +113,14 @@ export default function AdminPage() {
   const [sourcesLoading, setSourcesLoading]   = useState(false);
   const [recentChecks, setRecentChecks]       = useState<RecentSourceCheck[]>([]);
   const [pendingCandidates, setPendingCandidates] = useState(0);
+
+  // Sprint 96 — per-source operational status ("Status workflow źródeł").
+  // All three are derived from data this page already fetches elsewhere
+  // (or, for alert counts, the same direct query /admin/sources already
+  // runs) — no new tables, no new Supabase functions.
+  const [activeSources, setActiveSources] = useState<AlertSource[]>([]);
+  const [sourceAlertCounts, setSourceAlertCounts] = useState<Record<string, number>>({});
+  const [sourceCandidateCounts, setSourceCandidateCounts] = useState<Record<string, number>>({});
 
   // Persistent candidates (Sprint 78) — undefined while loading, null if the
   // migration hasn't been run yet (table missing), array once loaded.
@@ -142,7 +165,10 @@ export default function AdminPage() {
       getSourceCandidates(100),
       getSourceCandidateNotices(),
       getUpcomingWasteScheduleItems(200),
-    ]).then(([sourcesResult, checksResult, candidatesResult, noticesResult, wasteResult]) => {
+      supabase
+        ? supabase.from("alerts").select("source_id").not("source_id", "is", null)
+        : Promise.resolve({ data: null }),
+    ]).then(([sourcesResult, checksResult, candidatesResult, noticesResult, wasteResult, alertSourceRows]) => {
       const count = sourcesResult.sources.filter((s) =>
         sourceNeedsChecking(s.lastCheckedAt, s.isActive)
       ).length;
@@ -154,6 +180,32 @@ export default function AdminPage() {
       setPersistentNotices(noticesResult.tableMissing ? null : noticesResult.candidates);
       setWasteScheduleEnabled(!wasteResult.tableMissing);
       setWasteScheduleCount(wasteResult.tableMissing ? null : wasteResult.items.length);
+
+      // Sprint 96 — per-source operational status, combining counts already
+      // available from the calls above (no extra Supabase round-trips besides
+      // the one direct alerts query, mirroring /admin/sources' loadAlertCounts).
+      setActiveSources(sourcesResult.sources.filter((s) => s.isActive));
+
+      const candidateCounts: Record<string, number> = {};
+      for (const c of candidatesResult.candidates) {
+        if (c.relatedAlertId) continue;
+        candidateCounts[c.sourceId] = (candidateCounts[c.sourceId] ?? 0) + 1;
+      }
+      if (!noticesResult.tableMissing) {
+        for (const n of noticesResult.candidates) {
+          if (n.status !== "pending" || !n.sourceId) continue;
+          candidateCounts[n.sourceId] = (candidateCounts[n.sourceId] ?? 0) + 1;
+        }
+      }
+      setSourceCandidateCounts(candidateCounts);
+
+      const alertCounts: Record<string, number> = {};
+      const rows = (alertSourceRows as { data: { source_id: string }[] | null }).data;
+      for (const row of rows ?? []) {
+        alertCounts[row.source_id] = (alertCounts[row.source_id] ?? 0) + 1;
+      }
+      setSourceAlertCounts(alertCounts);
+
       setSourcesLoading(false);
     });
   }, [session]);
@@ -582,6 +634,91 @@ export default function AdminPage() {
                 </div>
               );
             })()}
+          </div>
+        )}
+      </section>
+
+      {/* ── Per-source operational status (Sprint 96) ─────────────────── */}
+      <section className="mb-8">
+        <h2 className="text-base font-semibold text-slate-800 mb-1">Status workflow źródeł</h2>
+        <p className="text-xs text-slate-400 mb-4 leading-relaxed">
+          Cały pipeline w jednym miejscu: źródło → sprawdzenie → kandydaci → alerty.
+          Liczby pochodzą z danych już wczytanych powyżej — bez nowych zapytań.
+        </p>
+
+        {sourcesLoading ? (
+          <div className="flex flex-col gap-2">
+            {[1, 2].map((i) => (
+              <div key={i} className="bg-white rounded-xl border border-slate-200 p-4 animate-pulse h-16" />
+            ))}
+          </div>
+        ) : activeSources.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-slate-200 p-5">
+            <p className="text-sm font-medium text-slate-700 mb-1">Brak aktywnych źródeł.</p>
+            <p className="text-sm text-slate-500 leading-relaxed">
+              Dodaj pierwsze źródło w{" "}
+              <Link href="/admin/sources" className="font-medium text-blue-600 hover:underline">
+                Źródłach
+              </Link>{" "}
+              — bez źródła pipeline źródło→kandydat→alert nie ma od czego zacząć.
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {[...activeSources]
+              .sort((a, b) => (a.lastCheckedAt ?? "").localeCompare(b.lastCheckedAt ?? ""))
+              .map((s) => {
+                const candidateCount = sourceCandidateCounts[s.id] ?? 0;
+                const alertCount = sourceAlertCounts[s.id] ?? 0;
+                return (
+                  <div
+                    key={s.id}
+                    className="bg-white rounded-xl border border-slate-200 p-3.5 flex flex-wrap items-center justify-between gap-3"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-semibold text-slate-900 truncate">{s.name}</span>
+                        <span className="text-xs text-slate-400 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-full">
+                          {categoryLabels[s.category] ?? s.category}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-400 mt-1">
+                        {lastCheckedLabel(s.lastCheckedAt)}
+                        {" · "}
+                        {candidateCount > 0 ? (
+                          <span className="text-purple-600 font-medium">{candidateCount} kandydat(ów)</span>
+                        ) : (
+                          "0 kandydatów"
+                        )}
+                        {" · "}
+                        {alertCount} {alertCount === 1 ? "alert" : "alertów"}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+                      <Link
+                        href="/admin/sources"
+                        className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+                      >
+                        Sprawdź źródło →
+                      </Link>
+                      {candidateCount > 0 && (
+                        <Link
+                          href={`/admin/queue?source=${s.id}`}
+                          className="rounded-lg border border-purple-200 bg-purple-50 px-2.5 py-1.5 text-xs font-medium text-purple-700 hover:bg-purple-100 transition-colors"
+                        >
+                          Przejrzyj kandydatów →
+                        </Link>
+                      )}
+                      <Link
+                        href="/builder"
+                        className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 transition-colors"
+                      >
+                        Kreator →
+                      </Link>
+                    </div>
+                  </div>
+                );
+              })}
           </div>
         )}
       </section>

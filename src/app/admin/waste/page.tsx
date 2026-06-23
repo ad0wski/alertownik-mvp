@@ -353,7 +353,10 @@ function WasteAdminContent() {
         <p className="text-sm text-slate-500 leading-relaxed">
           Dodawaj i edytuj terminy odbioru odpadów. Każdy termin jest widoczny publicznie od razu po
           zapisaniu — nie ma tu draftów. Zawsze sprawdzaj dane z oficjalnym źródłem przed zapisem i
-          unikaj wpisywania dokładnych adresów — używaj okolicy albo grupy ulic.
+          unikaj wpisywania dokładnych adresów — używaj okolicy albo grupy ulic. Pełna checklista importu:{" "}
+          <span className="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded">
+            docs/waste-schedule-import-template.md
+          </span>.
         </p>
       </div>
 

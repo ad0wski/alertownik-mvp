@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { AlertCard } from "@/components/AlertCard";
 import { PreferencesSection } from "@/components/PreferencesSection";
 import { getSupabaseAlerts } from "@/lib/getSupabaseAlerts";
@@ -148,6 +149,17 @@ export function AlertList() {
 
   const prefsSet = hasPreferences(prefs);
 
+  // ── "Co sprawdzić teraz" status (Sprint 96) ─────────────────────────────────
+  // A practical "reason to return" line, independent of whatever category/
+  // search filter is currently active — always computed from the raw,
+  // unfiltered `alerts` list so it answers "what's going on right now,"
+  // not "what does my current filter show." Reuses data already fetched by
+  // this component (no new Supabase query) — narrowed to the saved
+  // okolica/categories when set, since "X near me" is more actionable than
+  // a global count once a preference exists.
+  const liveAlerts = alerts.filter((a) => getAlertTimeStatus(a.startsAt, a.endsAt) !== "ended");
+  const liveAlertsForMe = prefsSet ? liveAlerts.filter((a) => matchesMyAlerts(a, prefs)) : liveAlerts;
+
   // ── Filtering pipeline ─────────────────────────────────────────────────────
   // Step 1: "Moje alerty" filter (only when mode=my and preferences exist)
   const byMyAlerts =
@@ -207,6 +219,25 @@ export function AlertList() {
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" aria-hidden="true" />
             )}
           </button>
+        </div>
+      )}
+
+      {/* ── "Co sprawdzić teraz" status (Sprint 96) ─────────────────────── */}
+      {!loading && (
+        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 mb-5 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-slate-600">
+            <span className="font-semibold text-slate-800">
+              {liveAlertsForMe.length}
+            </span>{" "}
+            {liveAlertsForMe.length === 1 ? "aktywny lub nadchodzący alert" : "aktywnych lub nadchodzących alertów"}
+            {prefsSet ? " w Twojej okolicy" : " w tej chwili"}.
+          </p>
+          <Link
+            href="/odpady"
+            className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline shrink-0"
+          >
+            Sprawdź najbliższy odbiór odpadów →
+          </Link>
         </div>
       )}
 

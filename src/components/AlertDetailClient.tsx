@@ -240,6 +240,13 @@ export function AlertDetailClient({ slug }: { slug: string }) {
         </dl>
 
         <div className="text-xs text-slate-400 leading-relaxed border-t border-slate-100 pt-3 mt-1">
+          <p className="flex flex-wrap items-center gap-1.5 mb-1.5">
+            <span className="inline-flex items-center gap-1 font-medium text-emerald-700">
+              ✓ Zatwierdzone ręcznie przez administratora
+            </span>
+            <span className="text-slate-300">·</span>
+            <span>Wczesny pilotaż — szczegóły na stronie O projekcie</span>
+          </p>
           <p>
             Alertownik pomaga szybko zorientować się w sytuacji, ale nie zastępuje
             oficjalnych komunikatów — w razie wątpliwości sprawdź źródło powyżej.

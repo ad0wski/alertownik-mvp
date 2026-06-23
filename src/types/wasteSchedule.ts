@@ -1,7 +1,7 @@
 // Mirrors docs/supabase_waste_schedule_items.sql (proposed Sprint 80,
-// waste_type list revised Sprint 81 — NOT applied yet, see
-// src/lib/supabaseWasteWrites.ts for how the app behaves before that
-// migration is run).
+// waste_type list revised Sprint 81, migration applied Sprint 83 — see
+// src/lib/supabaseWasteWrites.ts for the missing-table fallback the app
+// still keeps in case a future environment hasn't run it yet).
 
 export type WasteType =
   | "mixed"

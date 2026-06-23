@@ -22,6 +22,19 @@ test.describe("Public homepage", () => {
     await expect(page.getByText(/Komorowa, Pruszkowa i okolic/)).toBeVisible();
   });
 
+  // Sprint 96 — a practical "reason to return" status line, computed from
+  // whatever alerts already loaded; visible even when the count is 0; not
+  // tied to a specific published alert existing.
+  test("homepage shows a 'co sprawdzić teraz' status line linking to odpady", async ({ page }) => {
+    await page.goto("/");
+    await expect(
+      page.getByText(/aktywn(y|ych) lub nadchodząc(y|ych) alert/)
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(
+      page.getByRole("link", { name: /Sprawdź najbliższy odbiór odpadów/ })
+    ).toBeVisible();
+  });
+
   test("search input accepts text without crashing", async ({ page }) => {
     await page.goto("/");
     const input = page.getByPlaceholder(/Szukaj po miejscowości/);
@@ -95,6 +108,27 @@ test.describe("Public homepage", () => {
     await openLink.click();
     await expect(page).not.toHaveURL("/", { timeout: 15_000 });
     await expect(page.getByText(/nie zastępuje/)).toBeVisible();
+  });
+
+  // Sprint 96 — Real Data Readiness Audit: an alert needs to state plainly
+  // that it was manually approved, not just imply it via /about's general
+  // copy — this is the per-alert version of that trust signal.
+  test("alert detail page states the alert was manually approved by an admin", async ({ page }) => {
+    await page.goto("/");
+
+    await expect(
+      page.getByText(/Wszystkich alertów|Brak aktualnych alertów/)
+    ).toBeVisible({ timeout: 15_000 });
+
+    const openLink = page.getByRole("link", { name: /Otwórz alert/ }).first();
+    if (!(await openLink.isVisible())) {
+      // No published alerts — nothing to navigate to
+      return;
+    }
+
+    await openLink.click();
+    await expect(page).not.toHaveURL("/", { timeout: 15_000 });
+    await expect(page.getByText(/Zatwierdzone ręcznie przez administratora/)).toBeVisible();
   });
 
   test("about page loads with project info and feedback link", async ({ page }) => {
