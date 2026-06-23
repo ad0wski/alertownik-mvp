@@ -160,6 +160,20 @@ export function AlertList() {
   const liveAlerts = alerts.filter((a) => getAlertTimeStatus(a.startsAt, a.endsAt) !== "ended");
   const liveAlertsForMe = prefsSet ? liveAlerts.filter((a) => matchesMyAlerts(a, prefs)) : liveAlerts;
 
+  // Sprint 97 — "what's actually new" is a different, complementary signal
+  // from "how many are active right now": a returning visitor with the same
+  // active count as last time has no reason to look again unless something
+  // changed. Uses publishedAt/updatedAt — both already public fields, no
+  // new query — to surface up to 2 alerts touched in the last 7 days.
+  const recentlyTouched = [...liveAlertsForMe]
+    .filter((a) => {
+      const touchedAt = a.updatedAt || a.publishedAt;
+      if (!touchedAt) return false;
+      const days = (new Date().getTime() - new Date(touchedAt).getTime()) / 86_400_000;
+      return days >= 0 && days <= 7;
+    })
+    .sort((a, b) => (b.updatedAt || b.publishedAt || "").localeCompare(a.updatedAt || a.publishedAt || ""));
+
   // ── Filtering pipeline ─────────────────────────────────────────────────────
   // Step 1: "Moje alerty" filter (only when mode=my and preferences exist)
   const byMyAlerts =
@@ -222,22 +236,36 @@ export function AlertList() {
         </div>
       )}
 
-      {/* ── "Co sprawdzić teraz" status (Sprint 96) ─────────────────────── */}
+      {/* ── "Co sprawdzić teraz" status (Sprint 96, +freshness Sprint 97) ─ */}
       {!loading && (
-        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 mb-5 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-slate-600">
-            <span className="font-semibold text-slate-800">
-              {liveAlertsForMe.length}
-            </span>{" "}
-            {liveAlertsForMe.length === 1 ? "aktywny lub nadchodzący alert" : "aktywnych lub nadchodzących alertów"}
-            {prefsSet ? " w Twojej okolicy" : " w tej chwili"}.
-          </p>
-          <Link
-            href="/odpady"
-            className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline shrink-0"
-          >
-            Sprawdź najbliższy odbiór odpadów →
-          </Link>
+        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 mb-5 flex flex-col gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-slate-600">
+              <span className="font-semibold text-slate-800">
+                {liveAlertsForMe.length}
+              </span>{" "}
+              {liveAlertsForMe.length === 1 ? "aktywny lub nadchodzący alert" : "aktywnych lub nadchodzących alertów"}
+              {prefsSet ? " w Twojej okolicy" : " w tej chwili"}.
+            </p>
+            <Link
+              href="/odpady"
+              className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline shrink-0"
+            >
+              Sprawdź najbliższy odbiór odpadów →
+            </Link>
+          </div>
+          {recentlyTouched.length > 0 && (
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Nowe albo zmienione w tym tygodniu:{" "}
+              {recentlyTouched.slice(0, 2).map((a, i) => (
+                <span key={a.id}>
+                  {i > 0 && ", "}
+                  <span className="font-medium text-slate-600">{a.title}</span>
+                </span>
+              ))}
+              {recentlyTouched.length > 2 && ` i ${recentlyTouched.length - 2} więcej`}.
+            </p>
+          )}
         </div>
       )}
 
