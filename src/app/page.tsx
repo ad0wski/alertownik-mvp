@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AlertList } from "@/components/AlertList";
+import { BetaStatusCard } from "@/components/BetaStatusCard";
 
 export default function Home() {
   return (
@@ -42,6 +43,8 @@ export default function Home() {
           .
         </p>
       </div>
+
+      <BetaStatusCard />
 
       <AlertList />
     </main>

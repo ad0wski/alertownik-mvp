@@ -35,6 +35,14 @@ test.describe("Public homepage", () => {
     ).toBeVisible();
   });
 
+  // Sprint 98 — a single-glance trust/status card for first-time visitors,
+  // consolidating facts that previously required a click to /about.
+  test("homepage shows the beta status card", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByText("Status pilotażu")).toBeVisible();
+    await expect(page.getByRole("link", { name: /Zgłoś brakujące źródło lub błąd/ })).toBeVisible();
+  });
+
   test("search input accepts text without crashing", async ({ page }) => {
     await page.goto("/");
     const input = page.getByPlaceholder(/Szukaj po miejscowości/);
@@ -149,7 +157,15 @@ test.describe("Public homepage", () => {
 
   test("about page has tester instructions", async ({ page }) => {
     await page.goto("/about");
-    await expect(page.getByText("Jak testować")).toBeVisible();
+    await expect(page.getByText("Co sprawdzić w 60 sekund")).toBeVisible();
+  });
+
+  // Sprint 98 — one-click feedback reasons, so a tester doesn't have to
+  // compose a message from a blank line.
+  test("about page has quick feedback reason options", async ({ page }) => {
+    await page.goto("/about");
+    await expect(page.getByRole("link", { name: "Brakuje ważnego alertu" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Dane są nieaktualne" })).toBeVisible();
   });
 
   test("My Alerty toggle opens the local preferences panel", async ({ page }) => {

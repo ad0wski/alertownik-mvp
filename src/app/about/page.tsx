@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FEEDBACK_EMAIL, buildFeedbackMailto } from "@/lib/feedbackMailto";
+import { FeedbackQuickOptions } from "@/components/FeedbackQuickOptions";
 
 export const metadata = {
   title: "O projekcie — Alertownik",
@@ -99,18 +100,17 @@ export default function AboutPage() {
 
         <section id="jak-testowac" className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
           <h2 className="text-base font-semibold text-slate-900 mb-2">
-            Jak testować
+            Co sprawdzić w 60 sekund
           </h2>
           <p className="text-sm text-slate-600 leading-relaxed mb-2">
-            Jeśli zgodziłeś/zgodziłaś się przetestować Alertownik, oto na co warto zwrócić uwagę:
+            Nie trzeba dużo czasu — te 4 kroki zajmują około minuty i pokazują,
+            o co chodzi w aplikacji:
           </p>
           <ol className="text-sm text-slate-600 space-y-1.5 list-decimal list-inside leading-relaxed">
-            <li>Otwórz aplikację i przejrzyj listę alertów.</li>
-            <li>Wejdź w szczegóły wybranego alertu.</li>
-            <li>Sprawdź, skąd pochodzi informacja (sekcja „Źródło").</li>
-            <li>Spróbuj „Moje alerty" — wpisz swoją okolicę albo zaznacz kategorie.</li>
-            <li>Wyślij feedback — co działa, co nie, co było niejasne.</li>
-            <li>Zgłoś, jeśli czegoś brakowało albo coś wydawało się błędne lub nieaktualne.</li>
+            <li>Wybierz swoją okolicę (albo kategorie) w „Moje alerty" i sprawdź listę alertów.</li>
+            <li>Zerknij na „Odpady" i na źródło przy wybranym alercie („Zobacz źródło →").</li>
+            <li>Wyślij krótką opinię — wystarczy jedno zdanie, nie musi być długo.</li>
+            <li>Jeśli chcesz, dodaj stronę do ekranu głównego telefonu.</li>
           </ol>
         </section>
 
@@ -137,12 +137,13 @@ export default function AboutPage() {
             Masz uwagi albo pytania?
           </h2>
           <p className="text-sm text-slate-600 leading-relaxed mb-3">
-            Nie musi być długo — napisz jedną rzecz, która była niejasna, albo
-            po prostu czy to ma sens. Kliknięcie poniżej otworzy e-mail z tą
-            jedną prośbą (i kilkoma dodatkowymi pytaniami, jeśli chcesz
-            odpowiedzieć na więcej) — możesz też po prostu napisać własnymi
-            słowami.
+            Nie musi być długo. Wybierz, co najlepiej opisuje Twoją opinię —
+            każda opcja otworzy e-mail z gotowym tematem i krótkim pytaniem,
+            możesz też po prostu napisać własnymi słowami.
           </p>
+          <div className="mb-3">
+            <FeedbackQuickOptions />
+          </div>
           <a
             href={buildFeedbackMailto()}
             className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors"

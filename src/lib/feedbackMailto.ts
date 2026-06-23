@@ -40,3 +40,62 @@ export function buildAlertReportMailto(alertTitle: string): string {
   const body = "Co jest nieaktualne albo błędne w tym alercie?\n\n";
   return `mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
+
+// Sprint 98 — quick-pick feedback reasons. The general mailto above still
+// works, but it asks someone to compose a message from a blank line. These
+// give a tester a one-click starting point for the most common kinds of
+// feedback, each with its own subject and a short prompt instead of a
+// shared 6-question body. "Inna sugestia" intentionally reuses the general
+// mailto above instead of a near-duplicate body.
+export interface FeedbackQuickReason {
+  id: string;
+  label: string;
+  mailto: string;
+}
+
+function buildReasonMailto(subjectSuffix: string, prompt: string): string {
+  const subject = `Alertownik — opinia: ${subjectSuffix}`;
+  return `mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(prompt)}`;
+}
+
+export function buildFeedbackQuickReasons(): FeedbackQuickReason[] {
+  return [
+    {
+      id: "missing-alert",
+      label: "Brakuje ważnego alertu",
+      mailto: buildReasonMailto(
+        "brakuje alertu",
+        "Jaki alert/komunikat brakuje? Skąd pochodzi (link do źródła, jeśli masz)?\n\n"
+      ),
+    },
+    {
+      id: "outdated",
+      label: "Dane są nieaktualne",
+      mailto: buildReasonMailto(
+        "dane nieaktualne",
+        "Który alert albo która informacja jest nieaktualna?\n\n"
+      ),
+    },
+    {
+      id: "confusing",
+      label: "Nie rozumiem tej strony",
+      mailto: buildReasonMailto(
+        "niejasna strona",
+        "Która strona/sekcja była niejasna? Co próbowałeś/aś zrobić?\n\n"
+      ),
+    },
+    {
+      id: "add-area",
+      label: "Chcę dodać swoją okolicę",
+      mailto: buildReasonMailto(
+        "nowa okolica",
+        "Jakiej okolicy/miejscowości brakuje?\n\n"
+      ),
+    },
+    {
+      id: "other",
+      label: "Inna sugestia",
+      mailto: buildFeedbackMailto(),
+    },
+  ];
+}

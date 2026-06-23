@@ -244,6 +244,17 @@ export default function AdminPage() {
   const draftCount     = alerts.filter((a) => a.status === "draft").length;
   const archivedCount  = alerts.filter((a) => a.status === "archived").length;
 
+  // Sprint 98 — "Before sending beta link" checklist, data-driven where
+  // possible instead of a static reminder list, reusing data this page
+  // already fetches (no new queries). Minimums are a judgment call, not a
+  // hard rule — see docs/admin-clickthrough-runbook.md / Public Beta
+  // Readiness in Obsidian for the fuller reasoning.
+  const publishedCategoryCount = new Set(
+    alerts.filter((a) => a.status === "published").map((a) => a.category)
+  ).size;
+  const MIN_RECOMMENDED_ALERTS = 5;
+  const MIN_RECOMMENDED_CATEGORIES = 3;
+
   const recent = [...alerts]
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
     .slice(0, 5);
@@ -358,6 +369,67 @@ export default function AdminPage() {
               tak, jak zobaczy ją tester.
             </li>
           </ul>
+
+          {/* Sprint 98 — data-driven checklist for sending the link to a
+              wider, less-curated group, reusing data already loaded above
+              (no new queries). Mobile/feedback-mailto can't be checked
+              from data, so those stay as explicit manual reminders. */}
+          <div className="border-t border-slate-100 mt-4 pt-4">
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2.5">
+              Checklist przed wysłaniem do szerszej grupy
+            </p>
+            <ul className="text-sm text-slate-600 space-y-1.5">
+              <li className="flex items-start gap-2">
+                <span className={publishedCount >= MIN_RECOMMENDED_ALERTS && publishedCategoryCount >= MIN_RECOMMENDED_CATEGORIES ? "text-emerald-600" : "text-amber-600"}>
+                  {publishedCount >= MIN_RECOMMENDED_ALERTS && publishedCategoryCount >= MIN_RECOMMENDED_CATEGORIES ? "✓" : "○"}
+                </span>
+                <span>
+                  <span className="font-medium text-slate-800">{publishedCount}</span> opublikowanych
+                  alertów w <span className="font-medium text-slate-800">{publishedCategoryCount}/6</span>{" "}
+                  kategoriach (rekomendowane minimum: {MIN_RECOMMENDED_ALERTS} alertów w {MIN_RECOMMENDED_CATEGORIES}+ kategoriach).
+                </span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className={sourcesToCheck === 0 ? "text-emerald-600" : "text-amber-600"}>
+                  {sourcesToCheck === 0 ? "✓" : "○"}
+                </span>
+                <span>
+                  {sourcesToCheck === 0
+                    ? "Wszystkie aktywne źródła sprawdzone dziś."
+                    : `${sourcesToCheck} aktywnych źródeł nie sprawdzonych dziś — `}
+                  {sourcesToCheck > 0 && (
+                    <Link href="/admin/sources" className="font-medium text-blue-600 hover:underline">
+                      sprawdź teraz →
+                    </Link>
+                  )}
+                </span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-slate-400">○</span>
+                <span>
+                  Harmonogram odpadów:{" "}
+                  {!wasteScheduleEnabled
+                    ? "migracja nie uruchomiona — to nie błąd, /odpady pokazuje uczciwy stan „w przygotowaniu”."
+                    : wasteScheduleCount === 0
+                      ? "tabela włączona, ale 0 terminów — /odpady pokaże uczciwy puste-stan, nie błąd."
+                      : `${wasteScheduleCount} zapisanych terminów.`}
+                </span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-slate-400">○</span>
+                <span>
+                  Sprawdź ręcznie, że link feedbackowy (mailto) otwiera się poprawnie na telefonie —{" "}
+                  <Link href="/about#chce-testowac" className="font-medium text-blue-600 hover:underline">
+                    zobacz na /about
+                  </Link>.
+                </span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-slate-400">○</span>
+                <span>Sprawdź wygląd na telefonie (np. w trybie incognito) — homepage, /odpady, /about.</span>
+              </li>
+            </ul>
+          </div>
         </div>
       </section>
 
