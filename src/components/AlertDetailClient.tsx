@@ -228,11 +228,11 @@ export function AlertDetailClient({ slug }: { slug: string }) {
           {(alert.publishedAt || alert.updatedAt) && (
             <div className="flex flex-col py-3 gap-1">
               <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                Aktualizacja
+                Ostatnia weryfikacja przez admina
               </dt>
               <dd className="text-sm text-slate-700 leading-relaxed">
                 {alert.updatedAt
-                  ? `ostatnio zmieniono ${formatAlertDateTime(alert.updatedAt)}`
+                  ? `ostatnio sprawdzono/zmieniono ${formatAlertDateTime(alert.updatedAt)}`
                   : `opublikowano ${formatAlertDateTime(alert.publishedAt as string)}`}
               </dd>
             </div>

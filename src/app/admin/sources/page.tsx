@@ -407,6 +407,14 @@ function SourceForm({
       onSubmit={onSubmit}
       className="rounded-xl border border-slate-200 bg-white p-5 space-y-4"
     >
+      {/* Sprint 104 — admin helper text: the one hard rule from Real Data
+          Admin Checklist / Admin Source Seeding Checklist, restated where
+          the mistake would actually happen. */}
+      <p className="text-xs text-slate-400">
+        Zanim dodasz: otwórz link w przeglądarce i potwierdź, że strona
+        faktycznie istnieje i pochodzi z oficjalnego źródła. Nie dodawaj
+        źródła, którego nie da się zweryfikować.
+      </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className={labelClass}>Nazwa źródła</label>
