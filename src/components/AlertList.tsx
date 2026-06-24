@@ -6,6 +6,7 @@ import { AlertCard } from "@/components/AlertCard";
 import { PreferencesSection } from "@/components/PreferencesSection";
 import { getSupabaseAlerts } from "@/lib/getSupabaseAlerts";
 import { getAlertTimeStatus } from "@/lib/getAlertTimeStatus";
+import { buildFeedbackQuickReasons } from "@/lib/feedbackMailto";
 import {
   loadPreferences,
   savePreferences,
@@ -196,6 +197,11 @@ export function AlertList() {
   // Decide which empty state to show when filtered.length === 0
   const showMyAlertsEmptyState = mode === "my" && prefsSet && filtered.length === 0 && !loading;
   const showGenericEmptyState  = filtered.length === 0 && !loading && !showMyAlertsEmptyState;
+
+  // Sprint 103 — a filtered-empty result during early beta is a coverage
+  // gap, not a bug; reuse the existing "add-area" feedback reason instead
+  // of a new mailto/component (same pattern as BetaStatusCard).
+  const addAreaReason = buildFeedbackQuickReasons().find((r) => r.id === "add-area");
 
   // Separate current/upcoming alerts from ended ones so stale content never
   // looks as prominent as live content — order within each group is already
@@ -398,6 +404,17 @@ export function AlertList() {
                     <p className="text-sm text-slate-400 mt-2">
                       Możesz zmienić okolice lub kategorie w ustawieniach powyżej.
                     </p>
+                    <p className="text-xs text-slate-400 mt-3">
+                      To nie błąd — liczba alertów i okolic w pilotażu jest jeszcze ograniczona.
+                      {addAreaReason && (
+                        <>
+                          {" "}
+                          <a href={addAreaReason.mailto} className="font-medium text-blue-600 hover:underline">
+                            Zgłoś swoją okolicę →
+                          </a>
+                        </>
+                      )}
+                    </p>
                   </div>
                 )}
 
@@ -410,6 +427,17 @@ export function AlertList() {
                       </p>
                       <p className="text-sm text-slate-400 mt-2">
                         Spróbuj zmienić kategorię albo wpisać inną lokalizację.
+                      </p>
+                      <p className="text-xs text-slate-400 mt-3">
+                        To nie błąd — liczba alertów i okolic w pilotażu jest jeszcze ograniczona.
+                        {addAreaReason && (
+                          <>
+                            {" "}
+                            <a href={addAreaReason.mailto} className="font-medium text-blue-600 hover:underline">
+                              Zgłoś swoją okolicę →
+                            </a>
+                          </>
+                        )}
                       </p>
                     </div>
                   ) : (

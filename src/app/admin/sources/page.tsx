@@ -130,6 +130,26 @@ const PILOT_SOURCE_SUGGESTIONS: PilotSourceSuggestion[] = [
       "Harmonogram odbioru odpadów komunalnych w Pruszkowie (MZO Pruszków). Ta sama domena blokuje " +
       "automatyczne pobieranie (HTTP 403) — traktuj jako źródło manualne.",
   },
+  {
+    id: "eco-harmonogram-pruszkow",
+    name: "Eco-Harmonogram (Pruszków)",
+    url: "https://www.pruszkow.pl/aplikacja-eco-harmonogram/",
+    category: "waste",
+    sourceType: "other",
+    notes:
+      "Adresowa aplikacja gminna z harmonogramem odbioru odpadów. Ta sama domena co inne źródła " +
+      "Pruszkowa blokujące automatyczne pobieranie — nie testowana osobno, traktuj jako manualne.",
+  },
+  {
+    id: "michalowice-harmonogram-odpadow",
+    name: "Gmina Michałowice — harmonogram odbioru odpadów",
+    url: "https://www.michalowice.pl/ochrona-srodowiska/odbior-odpadow/nowy-harmonogram-odbioru-odpadow-komunalnych",
+    category: "waste",
+    sourceType: "pdf",
+    notes:
+      "Strona linkuje realne PDF-y harmonogramu na 2026 rok (znalezione Sprint 88) — strona sama się " +
+      "ładuje, ale PDF-y są skanowane/skompresowane, więc wymagają ręcznego przepisania (zob. docs/OFFICIAL_DATA_NEEDED.md).",
+  },
 ];
 
 // ── Source preview types (fetch-preview result, ephemeral UI only) ─────────────

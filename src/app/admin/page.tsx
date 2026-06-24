@@ -18,11 +18,12 @@ import { getUpcomingWasteScheduleItems } from "@/lib/supabaseWasteWrites";
 import { looksLikeTestContent } from "@/lib/testContentDetection";
 import type { SourceNoticeCandidate } from "@/types/sourceCandidate";
 import type { AlertSource } from "@/types/alertSource";
+import type { AlertCategory } from "@/types/alert";
 import type { Session } from "@supabase/supabase-js";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const categoryLabels: Record<string, string> = {
+const categoryLabels: Record<AlertCategory, string> = {
   transport: "Transport",
   water:     "Woda",
   power:     "Prąd",
@@ -249,9 +250,15 @@ export default function AdminPage() {
   // already fetches (no new queries). Minimums are a judgment call, not a
   // hard rule — see docs/admin-clickthrough-runbook.md / Public Beta
   // Readiness in Obsidian for the fuller reasoning.
-  const publishedCategoryCount = new Set(
+  const publishedCategorySet = new Set(
     alerts.filter((a) => a.status === "published").map((a) => a.category)
-  ).size;
+  );
+  const publishedCategoryCount = publishedCategorySet.size;
+  // Sprint 103 — name the gap, not just the count, so "what to source
+  // next" is a glance, not a guess (feeds Real Data Admin Checklist).
+  const missingCategoryLabels = (Object.entries(categoryLabels) as [AlertCategory, string][])
+    .filter(([key]) => !publishedCategorySet.has(key))
+    .map(([, label]) => label);
   const MIN_RECOMMENDED_ALERTS = 5;
   const MIN_RECOMMENDED_CATEGORIES = 3;
 
@@ -387,6 +394,9 @@ export default function AdminPage() {
                   <span className="font-medium text-slate-800">{publishedCount}</span> opublikowanych
                   alertów w <span className="font-medium text-slate-800">{publishedCategoryCount}/6</span>{" "}
                   kategoriach (rekomendowane minimum: {MIN_RECOMMENDED_ALERTS} alertów w {MIN_RECOMMENDED_CATEGORIES}+ kategoriach).
+                  {missingCategoryLabels.length > 0 && (
+                    <> Brakuje: {missingCategoryLabels.join(", ")}.</>
+                  )}
                 </span>
               </li>
               <li className="flex items-start gap-2">
