@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint src",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit --project tsconfig.typecheck.json",
     "check": "npm run typecheck && npm run lint && npm run build",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
