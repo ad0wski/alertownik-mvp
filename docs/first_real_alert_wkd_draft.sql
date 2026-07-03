@@ -40,7 +40,7 @@ values
     'Możliwe kilkuminutowe opóźnienia na linii WKD',
     'Linia WKD — Komorów, Pruszków WKD i okolice',
     'WKD poinformowała, że z powodu wysokich temperatur wprowadzono ograniczenia prędkości pociągów na linii WKD. Może to powodować kilkuminutowe opóźnienia pociągów.',
-    'Jeśli korzystasz z WKD, uwzględnij możliwe kilkuminutowe opóźnienia przy planowaniu przejazdu.',
+    'Przed podróżą sprawdź aktualny rozkład jazdy i komunikaty WKD.',  -- Sprint 108: action text per Adam's brief
     '2026-06-29 00:00:00+02',                 -- see FIELD NOTES: publication date; confirm effective date in the notice
     null,                                     -- source gives no end date — stays null
     'Warszawska Kolej Dojazdowa',

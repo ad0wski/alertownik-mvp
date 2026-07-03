@@ -1350,7 +1350,9 @@ export default function BuilderPage() {
         <p className="text-sm text-slate-500 mb-4">
           Alerty zapisane w prawdziwej bazie danych. Widoczne tylko dla zalogowanego administratora.
           Jeśli komunikat jest już nieaktualny, ustaw go jako zarchiwizowany („Archiwizuj")
-          — albo nie publikuj go wcale, jeśli jeszcze jest draftem.
+          — albo nie publikuj go wcale, jeśli jeszcze jest draftem. Jeśli utrudnienie się
+          zakończyło, a alert ma zostać widoczny dla historii, uzupełnij „Data do" (Edytuj)
+          — alert sam przejdzie na publicznej stronie do wyszarzonej sekcji „Zakończone".
         </p>
 
         {/* Search + filters — only shown when alerts are loaded */}
