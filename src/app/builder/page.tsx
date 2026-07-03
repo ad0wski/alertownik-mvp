@@ -1020,7 +1020,7 @@ export default function BuilderPage() {
           <div className="flex flex-col gap-2">
             <label className={labelClass}>
               Link do źródła{" "}
-              <span className="font-normal text-slate-400">(opcjonalnie)</span>
+              <span className="font-normal text-amber-600">(wymagany dla realnego alertu)</span>
             </label>
             <input
               type="url"
@@ -1164,6 +1164,12 @@ export default function BuilderPage() {
             );
           })()}
 
+          <p className="text-xs text-blue-700">
+            Publikuj dopiero po ręcznym sprawdzeniu źródła — draft z AI Helpera
+            nie jest zweryfikowany. Nie publikuj komunikatów starych ani spoza
+            obszaru pilota. Jeśli masz wątpliwości, zapisz jako draft.
+          </p>
+
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={handleSaveDraftToSupabase}
@@ -1204,6 +1210,10 @@ export default function BuilderPage() {
               >
                 Otwórz alert → /alerts/{supabaseSavedSlug}
               </a>
+              <p className="text-xs text-slate-400">
+                Sprawdź publiczny widok wylogowany/incognito i na telefonie —
+                upewnij się, że alert nie wygląda jak placeholder.
+              </p>
             </div>
           )}
         </section>
@@ -1339,6 +1349,8 @@ export default function BuilderPage() {
         </div>
         <p className="text-sm text-slate-500 mb-4">
           Alerty zapisane w prawdziwej bazie danych. Widoczne tylko dla zalogowanego administratora.
+          Jeśli komunikat jest już nieaktualny, ustaw go jako zarchiwizowany („Archiwizuj")
+          — albo nie publikuj go wcale, jeśli jeszcze jest draftem.
         </p>
 
         {/* Search + filters — only shown when alerts are loaded */}
