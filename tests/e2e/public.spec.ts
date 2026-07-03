@@ -326,3 +326,41 @@ test.describe("Partner page (/partnerzy)", () => {
     await expect(page.getByRole("link", { name: "Współpraca" })).toBeVisible();
   });
 });
+
+// Sprint 109B — public legal pages (beta drafts). Static content, no auth,
+// no Supabase dependency.
+test.describe("Legal pages (/prywatnosc, /zasady)", () => {
+  test("privacy policy page shows heading, beta-draft status and privacy contact", async ({ page }) => {
+    await page.goto("/prywatnosc");
+    await expect(page.locator("h1")).toContainText("Polityka prywatności");
+    await expect(page.getByText(/Wersja beta \(szkic\)/)).toBeVisible();
+    await expect(page.getByText(/Status tego dokumentu/)).toBeVisible();
+    // The honest "what we do NOT collect" line — a core trust claim.
+    await expect(page.getByText(/Czego NIE zbieramy/)).toBeVisible();
+  });
+
+  test("privacy policy names the actual processors", async ({ page }) => {
+    await page.goto("/prywatnosc");
+    for (const processor of ["Vercel", "Supabase", "Anthropic"]) {
+      await expect(page.getByText(processor, { exact: false }).first()).toBeVisible();
+    }
+  });
+
+  test("terms page leads with the not-an-emergency-service disclaimer and 112", async ({ page }) => {
+    await page.goto("/zasady");
+    await expect(page.locator("h1")).toContainText("Zasady korzystania");
+    await expect(page.getByText(/nie jest oficjalnym\s+system/i)).toBeVisible();
+    await expect(page.getByText("112", { exact: true })).toBeVisible();
+  });
+
+  test("terms page states independence from municipalities and operators", async ({ page }) => {
+    await page.goto("/zasady");
+    await expect(page.getByText(/Nie jest\s+oficjalnym serwisem żadnej gminy/)).toBeVisible();
+  });
+
+  test("footer links to privacy and terms for logged-out visitors", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByRole("link", { name: "Prywatność" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Zasady" })).toBeVisible();
+  });
+});

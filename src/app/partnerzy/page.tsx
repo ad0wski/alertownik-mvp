@@ -97,10 +97,15 @@ export default function PartnersPage() {
           <h2 className="text-base font-semibold text-slate-900 mb-2">
             Porozmawiajmy
           </h2>
-          <p className="text-sm text-slate-600 leading-relaxed mb-3">
+          <p className="text-sm text-slate-600 leading-relaxed mb-2">
             Jesteśmy na etapie pierwszych rozmów — bez zobowiązań i bez
             cenników. Jeśli którakolwiek z form współpracy brzmi ciekawie,
             napisz kilka zdań o sobie i okolicy, której dotyczysz.
+          </p>
+          <p className="text-sm text-slate-600 leading-relaxed mb-3">
+            Czego szukamy teraz: opinii o serwisie, podpowiedzi lokalnych
+            źródeł, partnera pilotażu (np. wspólnoty) — a w dalszej
+            kolejności lokalnego sponsora.
           </p>
           <a
             href={`mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent("Alertownik — współpraca")}`}

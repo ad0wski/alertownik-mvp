@@ -32,7 +32,7 @@ export function AppFooter() {
           </p>
 
           {!session && (
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <Link
                 href="/about"
                 className="text-xs text-slate-300 hover:text-slate-500 transition-colors"
@@ -44,6 +44,18 @@ export function AppFooter() {
                 className="text-xs text-slate-300 hover:text-slate-500 transition-colors"
               >
                 Współpraca
+              </Link>
+              <Link
+                href="/prywatnosc"
+                className="text-xs text-slate-300 hover:text-slate-500 transition-colors"
+              >
+                Prywatność
+              </Link>
+              <Link
+                href="/zasady"
+                className="text-xs text-slate-300 hover:text-slate-500 transition-colors"
+              >
+                Zasady
               </Link>
               <a
                 href={buildFeedbackMailto()}
