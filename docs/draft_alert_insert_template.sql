@@ -4,8 +4,11 @@
 -- Low Manual Real Alert Workflow (see Obsidian: Low Manual Real Alert
 -- Workflow). Lets Adam create a real alert DRAFT with one paste in the
 -- Supabase SQL Editor instead of filling the Builder form field by field.
+-- Sprint 107: the input/verification contract for filling this template
+-- lives in Obsidian: "First Real Alert Draft Pack".
 -- ============================================================================
 -- STATUS: TEMPLATE — DO NOT RUN UNTIL FILLED WITH REAL VERIFIED SOURCE DATA.
+-- DO NOT SET STATUS TO PUBLISHED IN SQL.
 -- REQUIRES ADAM APPROVAL BEFORE RUNNING. Never run automatically, never via
 -- script, never by Claude Code (its MCP access is read-only by design).
 --
