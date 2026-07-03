@@ -282,3 +282,47 @@ test.describe("Public homepage", () => {
     }
   });
 });
+
+// Sprint 109 — public partner/cooperation page. Static content, no auth,
+// no Supabase dependency; safe to assert exact copy.
+test.describe("Partner page (/partnerzy)", () => {
+  test("heading and pilot honesty copy are visible", async ({ page }) => {
+    await page.goto("/partnerzy");
+    await expect(page.locator("h1")).toContainText("Współpraca i partnerstwa");
+    await expect(page.getByText(/wczesnej fazie pilotażu/)).toBeVisible();
+  });
+
+  test("all five cooperation types are listed", async ({ page }) => {
+    await page.goto("/partnerzy");
+    for (const label of [
+      "Lokalny sponsor",
+      "Wspólnota mieszkaniowa / zarządca",
+      "Gmina / lokalna instytucja",
+      "Partner źródłowy / danych",
+      "Partner beta / tester",
+    ]) {
+      await expect(page.getByText(label, { exact: true })).toBeVisible();
+    }
+  });
+
+  test("contact CTA is a mailto link with the cooperation subject", async ({ page }) => {
+    await page.goto("/partnerzy");
+    const cta = page.getByRole("link", { name: /Napisz w sprawie współpracy/ });
+    await expect(cta).toBeVisible();
+    const href = await cta.getAttribute("href");
+    expect(href).toContain("mailto:");
+    expect(href).toContain(encodeURIComponent("Alertownik — współpraca"));
+  });
+
+  test("trust disclaimer — no emergency guarantee — is visible", async ({ page }) => {
+    await page.goto("/partnerzy");
+    await expect(
+      page.getByText(/nie jest systemem powiadamiania ratunkowego/)
+    ).toBeVisible();
+  });
+
+  test("footer links to the partner page for logged-out visitors", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByRole("link", { name: "Współpraca" })).toBeVisible();
+  });
+});

@@ -39,6 +39,12 @@ export function AppFooter() {
               >
                 O projekcie
               </Link>
+              <Link
+                href="/partnerzy"
+                className="text-xs text-slate-300 hover:text-slate-500 transition-colors"
+              >
+                Współpraca
+              </Link>
               <a
                 href={buildFeedbackMailto()}
                 className="text-xs text-slate-300 hover:text-slate-500 transition-colors"
