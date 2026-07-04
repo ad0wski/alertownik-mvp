@@ -75,7 +75,14 @@ export function AppFooter() {
 
         {!session && (
           <p className="text-xs text-slate-300">
-            Możesz dodać Alertownik do ekranu głównego telefonu.
+            Możesz dodać Alertownik do ekranu głównego telefonu —{" "}
+            <Link
+              href="/about#instalacja"
+              className="underline hover:text-slate-500 transition-colors"
+            >
+              zobacz jak
+            </Link>
+            .
           </p>
         )}
       </div>

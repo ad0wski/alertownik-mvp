@@ -321,9 +321,47 @@ test.describe("Partner page (/partnerzy)", () => {
     ).toBeVisible();
   });
 
+  // Sprint 110 — independence must be stated on the partner page itself,
+  // not only on /zasady: a potential partner reading this page must not
+  // come away thinking they'd be dealing with an official municipal app.
+  test("independence disclaimer and legal-page links are visible", async ({ page }) => {
+    await page.goto("/partnerzy");
+    await expect(
+      page.getByText(/niezależnym projektem prywatnym/)
+    ).toBeVisible();
+    await expect(page.getByRole("link", { name: "Polityka prywatności" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Zasady korzystania" })).toBeVisible();
+  });
+
   test("footer links to the partner page for logged-out visitors", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByRole("link", { name: "Współpraca" })).toBeVisible();
+  });
+});
+
+// Sprint 110 — public PWA install instructions. Static content, honest by
+// requirement: must explain add-to-home-screen per platform WITHOUT claiming
+// the app is in any store.
+test.describe("PWA install instructions (/about#instalacja)", () => {
+  test("about page has per-platform add-to-home-screen steps", async ({ page }) => {
+    await page.goto("/about");
+    await expect(page.getByText("Dodaj Alertownik do ekranu głównego")).toBeVisible();
+    await expect(page.getByText("Android (Chrome)")).toBeVisible();
+    await expect(page.getByText("iPhone (Safari)")).toBeVisible();
+  });
+
+  test("install section honestly states the app is not in any store yet", async ({ page }) => {
+    await page.goto("/about");
+    await expect(
+      page.getByText(/nie ma jeszcze w\s+Google Play ani App Store/)
+    ).toBeVisible();
+  });
+
+  test("footer install line links to the install instructions", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("link", { name: "zobacz jak" }).click();
+    await expect(page).toHaveURL(/\/about#instalacja$/);
+    await expect(page.getByText("Android (Chrome)")).toBeVisible();
   });
 });
 

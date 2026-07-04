@@ -123,8 +123,20 @@ export default function PartnersPage() {
             <li>To wczesny pilotaż — zasięg i funkcje serwisu wciąż rosną.</li>
             <li>Alerty opierają się na oficjalnych źródłach i ręcznej weryfikacji.</li>
             <li>Alertownik nie jest systemem powiadamiania ratunkowego i nie gwarantuje kompletności informacji.</li>
+            <li>Alertownik jest niezależnym projektem prywatnym — nie jest oficjalną aplikacją żadnej gminy, WKD, PGE ani innych operatorów.</li>
             <li>Współpraca nigdy nie wpłynie na treść ani kolejność alertów — zaufanie mieszkańców jest nienegocjowalne.</li>
           </ul>
+          <p className="text-xs text-slate-400 leading-relaxed mt-3">
+            Zobacz też:{" "}
+            <Link href="/prywatnosc" className="underline hover:text-slate-600">
+              Polityka prywatności
+            </Link>{" "}
+            ·{" "}
+            <Link href="/zasady" className="underline hover:text-slate-600">
+              Zasady korzystania
+            </Link>{" "}
+            (szkice beta).
+          </p>
         </section>
       </div>
     </main>

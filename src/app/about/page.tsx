@@ -111,8 +111,53 @@ export default function AboutPage() {
             <li>Zobacz aktualne alerty na liście.</li>
             <li>Sprawdź „Odpady" albo źródło przy wybranym alercie („Zobacz źródło →").</li>
             <li>Wyślij jedną krótką opinię — wystarczy jedno zdanie.</li>
-            <li>Opcjonalnie dodaj stronę do ekranu głównego telefonu.</li>
+            <li>
+              Opcjonalnie{" "}
+              <a href="#instalacja" className="font-medium text-blue-700 hover:text-blue-800 underline">
+                dodaj stronę do ekranu głównego telefonu
+              </a>
+              .
+            </li>
           </ol>
+        </section>
+
+        <section id="instalacja" className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
+          <h2 className="text-base font-semibold text-slate-900 mb-2">
+            Dodaj Alertownik do ekranu głównego
+          </h2>
+          <p className="text-sm text-slate-600 leading-relaxed mb-3">
+            Alertownik działa w przeglądarce i możesz dodać go do ekranu
+            głównego telefonu — będzie otwierał się jak aplikacja, bez
+            pobierania czegokolwiek ze sklepu. Alertownika nie ma jeszcze w
+            Google Play ani App Store.
+          </p>
+          <div className="flex flex-col gap-3">
+            <div className="border border-slate-100 rounded-xl p-3">
+              <p className="text-sm font-medium text-slate-800 mb-1.5">
+                Android (Chrome)
+              </p>
+              <ol className="text-sm text-slate-600 space-y-1 list-decimal list-inside leading-relaxed">
+                <li>Otwórz Alertownik w przeglądarce Chrome.</li>
+                <li>Dotknij menu <span aria-hidden="true">⋮</span> w prawym górnym rogu.</li>
+                <li>Wybierz „Dodaj do ekranu głównego" (na niektórych telefonach: „Zainstaluj aplikację").</li>
+              </ol>
+            </div>
+            <div className="border border-slate-100 rounded-xl p-3">
+              <p className="text-sm font-medium text-slate-800 mb-1.5">
+                iPhone (Safari)
+              </p>
+              <ol className="text-sm text-slate-600 space-y-1 list-decimal list-inside leading-relaxed">
+                <li>Otwórz Alertownik w przeglądarce Safari.</li>
+                <li>Dotknij przycisku udostępniania (kwadrat ze strzałką w górę).</li>
+                <li>Przewiń w dół i wybierz „Dodaj do ekranu początkowego".</li>
+              </ol>
+            </div>
+          </div>
+          <p className="text-xs text-slate-400 leading-relaxed mt-3">
+            Nazwy opcji mogą się nieznacznie różnić w zależności od wersji
+            telefonu i przeglądarki. Ikona na ekranie głównym otwiera zwykłą
+            stronę Alertownika — nie instaluje niczego dodatkowego.
+          </p>
         </section>
 
         <section id="chce-testowac" className="bg-emerald-50 rounded-2xl border border-emerald-200 shadow-sm p-4 sm:p-5">
