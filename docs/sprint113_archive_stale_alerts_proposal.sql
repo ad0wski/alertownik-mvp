@@ -9,8 +9,15 @@
 --
 -- WHAT THIS DOES: sets status = 'archived' on up to TWO old alerts that
 -- are (per the freshness review) resolved and clutter the public list:
---   1. "Brak wody — Granica, Nowa Wieś"  — water outage, long resolved
---   2. "Remont ul. Głównej w Granicy"    — roadworks, ended ~2026-07-02
+--   1. "Brak wody — Granica, Nowa Wieś"  — water outage, ends_at 2026-06-26
+--   2. "Remont ul. Głównej w Granicy"    — roadworks,   ends_at 2026-07-02
+--
+-- STATUS SEMANTICS (verified in code, Sprint 114): the app knows exactly
+-- three statuses — draft / published / archived (supabaseAlertWrites.ts;
+-- there is NO 'resolved' status anywhere in src/). Public list + detail
+-- both filter status='published' (getSupabaseAlerts.ts), so 'archived'
+-- hides a row from ALL public views immediately. See Obsidian:
+-- "Status Semantics Audit".
 --
 -- WHAT THIS DOES NOT TOUCH (on purpose):
 --   - "Rozkład jazdy WKD od 29 czerwca"  — stays published (relevant

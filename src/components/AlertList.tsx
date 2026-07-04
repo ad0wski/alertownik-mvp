@@ -117,6 +117,10 @@ export function AlertList() {
   const [prefs, setPrefs]         = useState<UserPreferences>({ locationKeywords: "", categories: [] });
   const [prefsReady, setPrefsReady] = useState(false);
 
+  // Sprint 114 — ended alerts are collapsed by default so stale content
+  // can't dominate the page even before old rows get archived in the DB.
+  const [showEnded, setShowEnded] = useState(false);
+
   useEffect(() => {
     // Fetch alerts
     getSupabaseAlerts()
@@ -468,22 +472,34 @@ export function AlertList() {
                   <AlertCard key={alert.id} alert={alert} />
                 ))}
 
-                {/* Ended alerts — visually de-emphasized, shown for reference only */}
+                {/* Ended alerts — de-emphasized and collapsed by default when
+                    current alerts exist; expanded automatically when they are
+                    the only thing matching (the notice above explains that) */}
                 {endedFiltered.length > 0 && (
                   <div className="flex flex-col gap-4">
                     {liveFiltered.length > 0 && (
-                      <div className="flex items-center gap-2 pt-2">
+                      <div className="flex flex-wrap items-center gap-2 pt-2">
                         <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                           Zakończone
                         </span>
+                        <button
+                          onClick={() => setShowEnded((prev) => !prev)}
+                          aria-expanded={showEnded}
+                          className="text-xs font-medium text-slate-500 hover:text-slate-700 underline underline-offset-2 transition-colors"
+                        >
+                          {showEnded
+                            ? "Ukryj zakończone"
+                            : `Pokaż zakończone (${endedFiltered.length})`}
+                        </button>
                         <span className="text-xs text-slate-400">— pokazane pomocniczo</span>
                       </div>
                     )}
-                    {endedFiltered.map((alert) => (
-                      <div key={alert.id} className="opacity-60">
-                        <AlertCard alert={alert} />
-                      </div>
-                    ))}
+                    {(showEnded || liveFiltered.length === 0) &&
+                      endedFiltered.map((alert) => (
+                        <div key={alert.id} className="opacity-60">
+                          <AlertCard alert={alert} />
+                        </div>
+                      ))}
                   </div>
                 )}
               </section>
