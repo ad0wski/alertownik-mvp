@@ -268,7 +268,7 @@ test.describe("Public homepage", () => {
   // one intentional exception (a generic login link, not admin content).
   test("logged-out visitors see no admin navigation links", async ({ page }) => {
     await page.goto("/");
-    for (const label of ["Kreator alertu", "AI Helper", "Źródła", "Kandydaci", "Harmonogram odpadów", "Wyloguj"]) {
+    for (const label of ["Nowy alert", "Kreator alertu", "AI Helper", "Źródła", "Kandydaci", "Harmonogram odpadów", "Wyloguj"]) {
       await expect(page.getByRole("link", { name: label })).toHaveCount(0);
       await expect(page.getByRole("button", { name: label })).toHaveCount(0);
     }
@@ -276,7 +276,7 @@ test.describe("Public homepage", () => {
 
   test("logged-out visitors see no admin navigation links on /odpady", async ({ page }) => {
     await page.goto("/odpady");
-    for (const label of ["Kreator alertu", "AI Helper", "Źródła", "Kandydaci", "Harmonogram odpadów", "Wyloguj"]) {
+    for (const label of ["Nowy alert", "Kreator alertu", "AI Helper", "Źródła", "Kandydaci", "Harmonogram odpadów", "Wyloguj"]) {
       await expect(page.getByRole("link", { name: label })).toHaveCount(0);
       await expect(page.getByRole("button", { name: label })).toHaveCount(0);
     }

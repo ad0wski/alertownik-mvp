@@ -13,8 +13,9 @@ import { test, expect } from "@playwright/test";
  */
 
 const PROTECTED_ROUTES = [
-  { path: "/admin",         hint: "Panel admina jest dostępny po zalogowaniu." },
-  { path: "/builder",       hint: "Zaloguj się, aby kontynuować." },
+  { path: "/admin",           hint: "Panel admina jest dostępny po zalogowaniu." },
+  { path: "/admin/new-alert", hint: "Zaloguj się, aby kontynuować." },
+  { path: "/builder",         hint: "Zaloguj się, aby kontynuować." },
   { path: "/ai-helper",     hint: "Zaloguj się, aby kontynuować." },
   { path: "/admin/sources", hint: "Ta sekcja jest dostępna po zalogowaniu." },
   { path: "/admin/queue",   hint: "Zaloguj się, aby kontynuować." },

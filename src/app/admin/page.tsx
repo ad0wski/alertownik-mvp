@@ -306,6 +306,25 @@ export default function AdminPage() {
         </p>
       </div>
 
+      {/* ── Draft from Source entry point ──────────────────────────────── */}
+      <section className="mb-8">
+        <div className="rounded-2xl border border-blue-200 bg-blue-50 shadow-sm p-5">
+          <h2 className="text-base font-semibold text-blue-900 mb-1">
+            Utwórz draft ze źródła
+          </h2>
+          <p className="text-sm text-blue-800 leading-relaxed mb-3">
+            Wklej link i treść komunikatu, a Alertownik przygotuje szkic.
+            Publikacja nadal wymaga ręcznego zatwierdzenia.
+          </p>
+          <Link
+            href="/admin/new-alert"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+          >
+            Nowy alert ze źródła →
+          </Link>
+        </div>
+      </section>
+
       {alertsError && (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 mb-6">
           <p className="text-sm font-medium text-red-700">
@@ -484,15 +503,16 @@ export default function AdminPage() {
           </h2>
           <p className="text-sm text-slate-600 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 mb-4 leading-relaxed">
             <span className="font-semibold text-blue-800">Szybki start:</span>{" "}
-            masz link z komunikatem? Otwórz{" "}
-            <Link href="/ai-helper" className="font-medium text-blue-700 hover:underline">
-              AI Helper
-            </Link>
-            , wygeneruj draft, popraw go w{" "}
+            masz link z komunikatem? Użyj{" "}
+            <Link href="/admin/new-alert" className="font-medium text-blue-700 hover:underline">
+              Nowy alert ze źródła
+            </Link>{" "}
+            — wklejasz treść, dostajesz szkic, zapisujesz draft i publikujesz
+            po weryfikacji w{" "}
             <Link href="/builder" className="font-medium text-blue-700 hover:underline">
               Kreatorze
-            </Link>{" "}
-            i opublikuj. Pełna lista kroków poniżej — nie musisz jej znać na pamięć.
+            </Link>
+            . Pełna lista kroków poniżej — nie musisz jej znać na pamięć.
           </p>
           <ol className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {DAILY_WORKFLOW_STEPS.map((step, i) => (

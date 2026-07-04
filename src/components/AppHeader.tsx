@@ -8,8 +8,9 @@ import { signOut } from "@/lib/auth";
 import type { Session } from "@supabase/supabase-js";
 
 const adminLinks = [
-  { href: "/admin",          label: "Panel" },
-  { href: "/builder",        label: "Kreator alertu" },
+  { href: "/admin",           label: "Panel" },
+  { href: "/admin/new-alert", label: "Nowy alert" },
+  { href: "/builder",         label: "Kreator alertu" },
   { href: "/ai-helper",      label: "AI Helper" },
   { href: "/admin/sources",  label: "Źródła" },
   { href: "/admin/queue",    label: "Kandydaci" },
