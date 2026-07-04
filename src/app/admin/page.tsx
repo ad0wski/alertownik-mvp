@@ -482,6 +482,18 @@ export default function AdminPage() {
           <h2 className="text-base font-semibold text-slate-800 mb-3">
             Codzienny workflow admina
           </h2>
+          <p className="text-sm text-slate-600 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 mb-4 leading-relaxed">
+            <span className="font-semibold text-blue-800">Szybki start:</span>{" "}
+            masz link z komunikatem? Otwórz{" "}
+            <Link href="/ai-helper" className="font-medium text-blue-700 hover:underline">
+              AI Helper
+            </Link>
+            , wygeneruj draft, popraw go w{" "}
+            <Link href="/builder" className="font-medium text-blue-700 hover:underline">
+              Kreatorze
+            </Link>{" "}
+            i opublikuj. Pełna lista kroków poniżej — nie musisz jej znać na pamięć.
+          </p>
           <ol className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {DAILY_WORKFLOW_STEPS.map((step, i) => (
               <li key={step.label} className="flex items-start gap-2.5">

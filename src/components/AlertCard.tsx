@@ -45,12 +45,22 @@ const severityConfig: Record<
   },
 };
 
+// Same 7-day window as AlertList's "Nowe albo zmienione w tym tygodniu" line —
+// the badge and the summary must agree on what counts as fresh.
+function isFreshAlert(alert: Alert): boolean {
+  const touchedAt = alert.updatedAt || alert.publishedAt;
+  if (!touchedAt) return false;
+  const days = (Date.now() - new Date(touchedAt).getTime()) / 86_400_000;
+  return days >= 0 && days <= 7;
+}
+
 export function AlertCard({ alert, isPreview }: { alert: Alert; isPreview?: boolean }) {
   const [expanded, setExpanded] = useState(false);
   const severity = severityConfig[alert.severity];
   const isRealLink = Boolean(alert.sourceUrl && alert.sourceUrl !== "#");
   const timeStatus = getAlertTimeStatus(alert.startsAt, alert.endsAt);
   const timeCfg = timeStatus !== "unknown" ? timeStatusConfig[timeStatus] : null;
+  const showFreshBadge = timeStatus !== "ended" && isFreshAlert(alert);
 
   return (
     <article
@@ -64,6 +74,11 @@ export function AlertCard({ alert, isPreview }: { alert: Alert; isPreview?: bool
         <span className={`text-xs font-semibold rounded-full px-2.5 py-1 ${severity.badge}`}>
           {severity.label}
         </span>
+        {showFreshBadge && (
+          <span className="text-xs font-semibold rounded-full px-2.5 py-1 bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200">
+            Nowe
+          </span>
+        )}
         {timeCfg && (
           <span className={`inline-flex items-center gap-1 text-xs font-medium ${timeCfg.text}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${timeCfg.dot} shrink-0`} aria-hidden="true" />
@@ -87,6 +102,13 @@ export function AlertCard({ alert, isPreview }: { alert: Alert; isPreview?: bool
         {" · "}
         {formatAlertRange(alert.startsAt, alert.endsAt)}
       </p>
+
+      {/* Source line — trust signal visible without expanding the card */}
+      {alert.sourceName && (
+        <p className="text-xs text-slate-500 -mt-1.5">
+          Źródło: <span className="font-medium text-slate-600">{alert.sourceName}</span>
+        </p>
+      )}
 
       {/* Action row */}
       <div className="flex flex-wrap items-center gap-2 sm:gap-3 pt-0.5">

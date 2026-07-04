@@ -27,7 +27,7 @@ export function AppFooter() {
     <footer className="border-t border-slate-200 mt-auto">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex flex-col gap-2">
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-500">
             {session ? "Alertownik — panel admina" : "Alertownik — wersja pilotażowa"}
           </p>
 
@@ -35,37 +35,37 @@ export function AppFooter() {
             <div className="flex flex-wrap items-center gap-3">
               <Link
                 href="/about"
-                className="text-xs text-slate-300 hover:text-slate-500 transition-colors"
+                className="text-xs text-slate-500 hover:text-slate-800 transition-colors"
               >
                 O projekcie
               </Link>
               <Link
                 href="/partnerzy"
-                className="text-xs text-slate-300 hover:text-slate-500 transition-colors"
+                className="text-xs text-slate-500 hover:text-slate-800 transition-colors"
               >
                 Współpraca
               </Link>
               <Link
                 href="/prywatnosc"
-                className="text-xs text-slate-300 hover:text-slate-500 transition-colors"
+                className="text-xs text-slate-500 hover:text-slate-800 transition-colors"
               >
                 Prywatność
               </Link>
               <Link
                 href="/zasady"
-                className="text-xs text-slate-300 hover:text-slate-500 transition-colors"
+                className="text-xs text-slate-500 hover:text-slate-800 transition-colors"
               >
                 Zasady
               </Link>
               <a
                 href={buildFeedbackMailto()}
-                className="text-xs text-slate-300 hover:text-slate-500 transition-colors"
+                className="text-xs text-slate-500 hover:text-slate-800 transition-colors"
               >
                 Kontakt
               </a>
               <Link
                 href="/login"
-                className="text-xs text-slate-300 hover:text-slate-500 transition-colors"
+                className="text-xs text-slate-500 hover:text-slate-800 transition-colors"
               >
                 Panel admina
               </Link>
@@ -74,11 +74,11 @@ export function AppFooter() {
         </div>
 
         {!session && (
-          <p className="text-xs text-slate-300">
+          <p className="text-xs text-slate-500">
             Możesz dodać Alertownik do ekranu głównego telefonu —{" "}
             <Link
               href="/about#instalacja"
-              className="underline hover:text-slate-500 transition-colors"
+              className="underline hover:text-slate-800 transition-colors"
             >
               zobacz jak
             </Link>

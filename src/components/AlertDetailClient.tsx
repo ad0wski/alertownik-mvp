@@ -204,27 +204,6 @@ export function AlertDetailClient({ slug }: { slug: string }) {
             </dd>
           </div>
 
-          <div className="flex flex-col py-3 gap-1">
-            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-              Źródło
-            </dt>
-            <dd className="text-sm text-slate-700 flex flex-wrap items-center gap-3 mt-0.5">
-              {alert.sourceName && <span>{alert.sourceName}</span>}
-              {isRealLink ? (
-                <a
-                  href={alert.sourceUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
-                >
-                  Zobacz źródło →
-                </a>
-              ) : !alert.sourceName ? (
-                <span className="text-xs text-slate-400">Brak informacji o źródle</span>
-              ) : null}
-            </dd>
-          </div>
-
           {(alert.publishedAt || alert.updatedAt) && (
             <div className="flex flex-col py-3 gap-1">
               <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400">
@@ -238,6 +217,29 @@ export function AlertDetailClient({ slug }: { slug: string }) {
             </div>
           )}
         </dl>
+
+        {/* Source box — the single most important trust element on this page:
+            where this information comes from, one tap from the official notice */}
+        <div className="rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-3.5">
+          <p className="text-xs font-semibold uppercase tracking-wider text-blue-700/80 mb-1">
+            Źródło komunikatu
+          </p>
+          {alert.sourceName ? (
+            <p className="text-sm font-medium text-slate-800">{alert.sourceName}</p>
+          ) : (
+            <p className="text-sm italic text-slate-500">Brak informacji o źródle</p>
+          )}
+          {isRealLink && (
+            <a
+              href={alert.sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 mt-2 rounded-lg border border-blue-200 bg-white px-3.5 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100 hover:border-blue-300 transition-colors"
+            >
+              Zobacz oficjalny komunikat →
+            </a>
+          )}
+        </div>
 
         <div className="text-xs text-slate-400 leading-relaxed border-t border-slate-100 pt-3 mt-1">
           <p className="flex flex-wrap items-center gap-1.5 mb-1.5">
