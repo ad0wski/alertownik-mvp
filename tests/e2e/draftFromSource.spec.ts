@@ -4,6 +4,7 @@ import {
   dateCameFromSource,
   suggestSourceNameFromUrl,
 } from "@/lib/draftFromSource";
+import { getPrePublishWarnings } from "@/lib/alertQuality";
 
 /**
  * Unit-style tests for the Sprint 115 "Draft from Source" assessment
@@ -79,6 +80,54 @@ test.describe("suggestSourceNameFromUrl", () => {
     expect(suggestSourceNameFromUrl("   ")).toBe("");
     expect(suggestSourceNameFromUrl("not a url")).toBe("");
     expect(suggestSourceNameFromUrl("javascript:alert(1)")).toBe("");
+  });
+});
+
+// Sprint 118 — the flow's first real-notice validation case (Pruszków
+// roadworks, 6–7 July 2026), frozen as a regression test. Field values
+// mirror what the operator will actually save; no live pages, no AI calls
+// — this exercises the same deterministic layer the page runs on the
+// API's output.
+test.describe("real notice case: Pruszków roadworks (Sprint 118)", () => {
+  const pruszkowDraft = {
+    title: "Utrudnienia w ruchu na ul. Komorowskiej i Bolesława Prusa",
+    place: "ul. Komorowska (od ul. Żwirowej do ul. Brzozowej) i ul. Bolesława Prusa — Komorów / Pruszków",
+    change:
+      "W dniach 6–7 lipca 2026 r. prowadzone będą prace drogowe polegające na frezowaniu nawierzchni. " +
+      "Prace obejmą m.in. ul. Komorowską na odcinku od ul. Żwirowej do ul. Brzozowej w Komorowie i Pruszkowie " +
+      "oraz ul. Bolesława Prusa w Pruszkowie.",
+    action: "W czasie prac uwzględnij możliwe czasowe utrudnienia i ograniczenia w przejeździe.",
+    sourceName: "Miasto Pruszków",
+    sourceUrl: "https://www.pruszkow.pl/przyklad-komunikatu",
+    startsAt: "2026-07-06",
+    endsAt: "2026-07-07",
+  };
+
+  test("full draft passes the pre-publish checklist with zero warnings", () => {
+    expect(getPrePublishWarnings(pruszkowDraft)).toEqual([]);
+  });
+
+  test("warning-severity roadworks with a source → medium risk, draft-ok", () => {
+    const result = assessDraft(
+      { severity: "warning", sourceUrl: pruszkowDraft.sourceUrl, place: pruszkowDraft.place },
+      getPrePublishWarnings(pruszkowDraft)
+    );
+    expect(result.risk).toBe("medium");
+    expect(result.recommendation).toBe("draft-ok");
+  });
+
+  test("same draft without a source URL → do-not-publish", () => {
+    const warnings = getPrePublishWarnings({ ...pruszkowDraft, sourceUrl: undefined });
+    expect(warnings).toContain("Brak linku do źródła.");
+    const result = assessDraft(
+      { severity: "warning", sourceUrl: null, place: pruszkowDraft.place },
+      warnings
+    );
+    expect(result.recommendation).toBe("do-not-publish");
+  });
+
+  test("works date range 6–7 July is not flagged as inverted", () => {
+    expect(getPrePublishWarnings(pruszkowDraft).some((w) => w.includes("zakres dat"))).toBe(false);
   });
 });
 

@@ -46,7 +46,7 @@ Schemat wyjściowy:
   "endsAt": "<data YYYY-MM-DD — jeśli data zakończenia nie jest podana: null>",
   "change": "<co dokładnie się zmienia — 1–3 krótkie zdania po polsku>",
   "action": "<co mieszkaniec powinien zrobić — 1–2 krótkie zdania po polsku>",
-  "sourceName": "<nazwa instytucji lub źródła — użyj nazwy z metadanych jeśli podana>",
+  "sourceName": "<nazwa instytucji lub źródła — użyj nazwy z metadanych jeśli podana; jeśli ani komunikat, ani metadane nie podają nazwy, zwróć pusty string \\"\\" — nie zgaduj instytucji>",
   "sourceUrl": "<URL źródła — użyj URL z metadanych jeśli podany, w przeciwnym razie null>"
 }
 

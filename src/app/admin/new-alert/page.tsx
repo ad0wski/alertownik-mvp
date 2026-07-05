@@ -15,6 +15,7 @@ import {
   type DraftAssessment,
 } from "@/lib/draftFromSource";
 import { saveAlertDraftToSupabase } from "@/lib/supabaseAlertWrites";
+import { getAdminSupabaseAlerts } from "@/lib/getAdminSupabaseAlerts";
 import type { Alert, AlertCategory, AlertSeverity } from "@/types/alert";
 
 // Same handoff keys AI Helper and /admin/sources already use — Builder
@@ -180,6 +181,30 @@ function NewAlertPageInner() {
     setSaving(true);
     setSaveError(null);
     const d = result.draft;
+
+    // The draft save is an upsert by slug — without this check, a slug that
+    // happens to collide with an existing alert would silently overwrite it
+    // AND set its status back to draft (un-publishing it). Builder has the
+    // same guard in validateForSupabase(); this is the /admin/new-alert
+    // equivalent (Sprint 118, found while validating the Pruszków notice).
+    const { alerts: existing, error: listError } = await getAdminSupabaseAlerts();
+    if (listError) {
+      setSaving(false);
+      setSaveError(
+        "Nie udało się sprawdzić, czy adres szkicu nie koliduje z istniejącym alertem. " +
+        "Spróbuj ponownie albo użyj „Otwórz w Kreatorze”."
+      );
+      return;
+    }
+    if (existing.some((a) => a.slug === d.slug)) {
+      setSaving(false);
+      setSaveError(
+        `Adres „${d.slug}” jest już zajęty przez inny alert w bazie — zapis zastąpiłby tamten alert. ` +
+        "Użyj „Otwórz w Kreatorze” i zmień adres (slug) przed zapisem."
+      );
+      return;
+    }
+
     const saved = await saveAlertDraftToSupabase({
       slug: d.slug,
       category: d.category,
@@ -338,6 +363,10 @@ function NewAlertPageInner() {
                 onChange={(e) => setPublishedDate(e.target.value)}
                 className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
+              <p className="text-xs text-slate-400 mt-1">
+                Kiedy źródło opublikowało komunikat — terminy robót/utrudnień
+                AI odczyta z treści.
+              </p>
             </div>
           </div>
 
