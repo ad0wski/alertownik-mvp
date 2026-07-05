@@ -252,9 +252,10 @@ function NewAlertPageInner() {
           </span>
         </div>
         <p className="mt-1 text-sm text-slate-500 leading-relaxed">
-          Wklej link i treść komunikatu, a Alertownik przygotuje szkic.
-          Najpierw draft, publikacja dopiero po weryfikacji — ta strona
-          niczego nie publikuje.
+          Trzy kroki: <span className="font-medium text-slate-600">wklej komunikat</span>{" "}
+          → <span className="font-medium text-slate-600">sprawdź szkic</span>{" "}
+          → <span className="font-medium text-slate-600">opublikuj ręcznie w Kreatorze</span>.
+          Ta strona niczego nie publikuje — szkic zawsze czeka na Twoją weryfikację.
         </p>
       </div>
 
@@ -366,10 +367,10 @@ function NewAlertPageInner() {
               2. Tak zobaczy to mieszkaniec
             </h2>
             <p className="text-xs text-slate-400 mb-3">
-              Tryb generowania: {result.mode === "anthropic" ? "AI (Claude)" : "lokalny szkic bez AI"}
+              Szkic przygotował: {result.mode === "anthropic" ? "AI (Claude)" : "tryb lokalny bez AI"}
               {" · "}kategoria: {CATEGORY_LABELS[result.draft.category]}
               {" · "}ważność: {SEVERITY_LABELS[result.draft.severity]}
-              {" · "}slug: <span className="font-mono">{result.draft.slug}</span>
+              {" · "}adres: <span className="font-mono">{result.draft.slug}</span>
               {result.placeFilledFromArea && " · lokalizację uzupełniono z pola „Obszar”"}
             </p>
             <AlertCard alert={previewAlert} isPreview />

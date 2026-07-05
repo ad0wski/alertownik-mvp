@@ -50,6 +50,11 @@ export default function PartnersPage() {
           zbiera w jednym miejscu informacje o utrudnieniach w transporcie,
           dostawach wody i prądu, drogach, odpadach i komunikatach gminnych.
         </p>
+        <p className="text-sm mt-2">
+          <a href="#kontakt" className="font-medium text-emerald-700 hover:text-emerald-900 hover:underline">
+            Przejdź do kontaktu ↓
+          </a>
+        </p>
       </div>
 
       <div className="flex flex-col gap-4">
@@ -93,7 +98,7 @@ export default function PartnersPage() {
           </ul>
         </section>
 
-        <section className="bg-emerald-50 rounded-2xl border border-emerald-200 shadow-sm p-4 sm:p-5">
+        <section id="kontakt" className="bg-emerald-50 rounded-2xl border border-emerald-200 shadow-sm p-4 sm:p-5 scroll-mt-20">
           <h2 className="text-base font-semibold text-slate-900 mb-2">
             Porozmawiajmy
           </h2>

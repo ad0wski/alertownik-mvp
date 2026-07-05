@@ -116,6 +116,16 @@ export function AlertDetailClient({ slug }: { slug: string }) {
 
   const severity = severityConfig[alert.severity];
   const isRealLink = Boolean(alert.sourceUrl && alert.sourceUrl !== "#");
+  // Bare domain shown under the source name — lets a reader sanity-check
+  // where the link actually goes before tapping it.
+  let sourceHost = "";
+  if (isRealLink) {
+    try {
+      sourceHost = new URL(alert.sourceUrl as string).hostname.replace(/^www\./, "");
+    } catch {
+      sourceHost = "";
+    }
+  }
   const timeStatus = getAlertTimeStatus(alert.startsAt, alert.endsAt);
   const timeCfg = timeStatus !== "unknown" ? timeStatusConfig[timeStatus] : null;
 
@@ -229,6 +239,9 @@ export function AlertDetailClient({ slug }: { slug: string }) {
           ) : (
             <p className="text-sm italic text-slate-500">Brak informacji o źródle</p>
           )}
+          {sourceHost && sourceHost !== alert.sourceName && (
+            <p className="text-xs text-slate-500 mt-0.5">{sourceHost}</p>
+          )}
           {isRealLink && (
             <a
               href={alert.sourceUrl}
@@ -251,7 +264,8 @@ export function AlertDetailClient({ slug }: { slug: string }) {
           </p>
           <p>
             Alertownik pomaga szybko zorientować się w sytuacji, ale nie zastępuje
-            oficjalnych komunikatów — w razie wątpliwości sprawdź źródło powyżej.
+            oficjalnych komunikatów — przy ważnych decyzjach sprawdź oficjalne
+            źródło powyżej.
           </p>
           <a
             href={buildAlertReportMailto(alert.title)}

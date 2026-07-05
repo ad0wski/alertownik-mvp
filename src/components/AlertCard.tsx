@@ -87,9 +87,19 @@ export function AlertCard({ alert, isPreview }: { alert: Alert; isPreview?: bool
         )}
       </div>
 
-      {/* Title */}
+      {/* Title — links to the detail page for published alerts, so the
+          biggest visual element is also the biggest tap target on mobile */}
       <h2 className="text-[15px] sm:text-base font-semibold text-slate-900 leading-snug">
-        {alert.title}
+        {isPreview ? (
+          alert.title
+        ) : (
+          <Link
+            href={`/alerts/${alert.slug}`}
+            className="hover:text-blue-700 transition-colors"
+          >
+            {alert.title}
+          </Link>
+        )}
       </h2>
 
       {/* Place · date */}
