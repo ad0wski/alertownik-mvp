@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, type ChangeEvent } from "react";
+import Link from "next/link";
 import { AlertCard } from "@/components/AlertCard";
 import { AuthGate } from "@/components/AuthGate";
 import type { Alert, AlertCategory, AlertSeverity } from "@/types/alert";
@@ -222,6 +223,13 @@ type ImportStatus = "idle" | "success" | "error";
 type DraftStatus = "idle" | "saved" | "loaded" | "deleted";
 type PublishStatus = "idle" | "published" | "loaded" | "deleted";
 
+// Sprint 117 — Builder split: one tool per view instead of six stacked
+// sections in a single scroll. "edit" is the main create/verify/publish
+// flow, "alerts" is the Supabase list with status actions, "tools" holds
+// JSON paste/output and the legacy local-browser copies. Nothing was
+// removed — only regrouped.
+type BuilderView = "edit" | "alerts" | "tools";
+
 export default function BuilderPage() {
   const [form, setForm] = useState(initialForm);
   const [copied, setCopied] = useState(false);
@@ -263,6 +271,7 @@ export default function BuilderPage() {
   const [loadingSupabaseId, setLoadingSupabaseId] = useState<string | null>(null);
   const [aiHelperLoadedMsg, setAiHelperLoadedMsg] = useState(false);
   const [pendingCandidateId, setPendingCandidateId] = useState("");
+  const [view, setView] = useState<BuilderView>("edit");
   // Refs track URL-based edit loading: param is read once on mount, processed flag
   // prevents re-loading when the Supabase list refreshes after saves.
   const urlEditParamRef = useRef<string | null>(null);
@@ -271,6 +280,10 @@ export default function BuilderPage() {
 
   const loadFromSupabaseAlert = useCallback(function(a: AdminAlert) {
     setLoadingSupabaseId(a.id);
+    // Editing happens in the "edit" view — switch there so the loaded form
+    // is actually visible when the operator clicks "Wczytaj do edycji"
+    // from the Supabase list view.
+    setView("edit");
     setForm({
       category: a.category,
       severity: a.severity,
@@ -325,7 +338,17 @@ export default function BuilderPage() {
   }, [loadFromSupabaseAlert]);
 
   useEffect(() => {
-    urlEditParamRef.current = new URLSearchParams(window.location.search).get("edit");
+    const params = new URLSearchParams(window.location.search);
+    urlEditParamRef.current = params.get("edit");
+    // Deep links from the admin dashboard task cards: ?tab= picks the view,
+    // ?status= pre-filters the Supabase list (e.g. "Sprawdź drafty" →
+    // /builder?tab=alerts&status=draft).
+    const tabParam = params.get("tab");
+    if (tabParam === "alerts" || tabParam === "tools") setView(tabParam);
+    const statusParam = params.get("status");
+    if (statusParam === "draft" || statusParam === "published" || statusParam === "archived") {
+      setAdminStatusFilter(statusParam);
+    }
     setDrafts(loadDrafts());
     setPublishedAlerts(loadPublished());
     refreshSupabaseAlerts();
@@ -341,6 +364,7 @@ export default function BuilderPage() {
         const data = JSON.parse(stripCodeFences(pendingJson));
         setForm(buildFormFromJson(data, pendingSourceId));
         if (pendingCandidateNoticeId) setPendingCandidateId(pendingCandidateNoticeId);
+        setView("edit"); // handoff lands in the form — make sure it's visible
         setAiHelperLoadedMsg(true);
         setTimeout(() => setAiHelperLoadedMsg(false), 6000);
         requestAnimationFrame(() => {
@@ -378,6 +402,12 @@ export default function BuilderPage() {
       // that other candidate "converted" when this import gets saved.
       setPendingCandidateId("");
       setImportStatus("success");
+      // The filled form lives in the "edit" view — jump there so the
+      // operator sees the result of the import immediately.
+      setView("edit");
+      requestAnimationFrame(() => {
+        formSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
     } catch {
       setImportStatus("error");
     }
@@ -760,12 +790,38 @@ export default function BuilderPage() {
           </span>
         </div>
         <p className="mt-1 text-sm text-slate-500 leading-relaxed">
-          Przygotuj nowy alert, uzupełnij formularz i opublikuj go w bazie danych.
-          Możesz też zapisać lokalny szkic lub wczytać alert z AI Helpera.
+          Tu weryfikujesz i publikujesz alerty. Masz link z nowym komunikatem?
+          Najbezpieczniejszy start to{" "}
+          <Link href="/admin/new-alert" className="font-medium text-blue-700 hover:underline">
+            Nowy alert ze źródła
+          </Link>{" "}
+          — najpierw szkic, potem ręczna publikacja tutaj.
         </p>
       </div>
 
+      {/* ── View switcher (Sprint 117) — one tool per view ────────────── */}
+      <div className="flex flex-wrap gap-2 mb-8">
+        {([
+          { value: "edit",   label: "Edycja i publikacja" },
+          { value: "alerts", label: `Alerty w bazie${supabaseAlerts.length > 0 ? ` (${supabaseAlerts.length})` : ""}` },
+          { value: "tools",  label: "Narzędzia (JSON, kopie lokalne)" },
+        ] as { value: BuilderView; label: string }[]).map((t) => (
+          <button
+            key={t.value}
+            onClick={() => setView(t.value)}
+            className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
+              view === t.value
+                ? "bg-slate-800 text-white border-slate-800"
+                : "bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:text-slate-900"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
       {/* ── JSON import ───────────────────────────────────────────────── */}
+      {view === "tools" && (
       <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-4 mb-6">
         <div>
           <h2 className={sectionTitleClass}>Wczytaj alert z JSON</h2>
@@ -806,8 +862,10 @@ export default function BuilderPage() {
           )}
         </div>
       </section>
+      )}
 
       {/* ── Manual form ───────────────────────────────────────────────── */}
+      {view === "edit" && (
       <section ref={formSectionRef} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-5 mb-6">
 
         {aiHelperLoadedMsg && (
@@ -1043,9 +1101,15 @@ export default function BuilderPage() {
           </div>
         </div>
       </section>
+      )}
 
       {/* ── Form actions (lokalne) ────────────────────────────────────── */}
-      <p className="text-xs text-slate-400 mb-2">Zapis lokalny — tylko w tej przeglądarce, niewidoczny dla innych:</p>
+      {view === "tools" && (
+      <>
+      <p className="text-xs text-slate-400 mb-2">
+        Zapis lokalny — tylko w tej przeglądarce, niewidoczny dla innych.
+        Przyciski działają na formularzu z zakładki „Edycja i publikacja":
+      </p>
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <button
           onClick={saveDraft}
@@ -1091,9 +1155,11 @@ export default function BuilderPage() {
           </span>
         )}
       </div>
+      </>
+      )}
 
       {/* ── Supabase save / edit ──────────────────────────────────────── */}
-      {editingSupabaseAlert ? (
+      {view === "edit" && (editingSupabaseAlert ? (
         <section className="bg-amber-50 border border-amber-200 rounded-2xl p-6 flex flex-col gap-4 mb-10">
           <div>
             <h2 className="text-base font-semibold text-amber-900">Edycja alertu w Supabase</h2>
@@ -1164,11 +1230,14 @@ export default function BuilderPage() {
             );
           })()}
 
-          <p className="text-xs text-blue-700">
-            Publikuj dopiero po ręcznym sprawdzeniu źródła — draft z AI Helpera
-            nie jest zweryfikowany. Nie publikuj komunikatów starych ani spoza
-            obszaru pilota. Jeśli masz wątpliwości, zapisz jako draft.
-          </p>
+          <ul className="text-xs text-blue-700 space-y-1 list-disc list-inside">
+            <li>Publikuj tylko po sprawdzeniu oficjalnego źródła.</li>
+            <li>Brak linku do źródła = nie publikuj.</li>
+            <li>AI pomaga pisać, ale nie weryfikuje faktów za Ciebie.</li>
+            <li>Komunikat stary albo spoza obszaru pilota? Nie publikuj — a jeśli
+              już jest opublikowany, archiwizuj zamiast usuwać.</li>
+            <li>Masz wątpliwości? Zapisz jako draft.</li>
+          </ul>
 
           <div className="flex flex-wrap items-center gap-3">
             <button
@@ -1217,15 +1286,18 @@ export default function BuilderPage() {
             </div>
           )}
         </section>
-      )}
+      ))}
 
       {/* ── Card preview ──────────────────────────────────────────────── */}
+      {view === "edit" && (
       <section className="mb-10">
         <h2 className={sectionTitleClass + " mb-4"}>Podgląd karty</h2>
         <AlertCard alert={previewAlert} isPreview />
       </section>
+      )}
 
       {/* ── JSON output ───────────────────────────────────────────────── */}
+      {view === "tools" && (
       <section className="mb-10">
         <div className="flex items-center justify-between mb-4">
           <h2 className={sectionTitleClass}>JSON alertu</h2>
@@ -1247,8 +1319,10 @@ export default function BuilderPage() {
           {jsonOutput}
         </pre>
       </section>
+      )}
 
       {/* ── Saved drafts ──────────────────────────────────────────────── */}
+      {view === "tools" && (
       <section className="mb-10">
         <h2 className={sectionTitleClass + " mb-4"}>Zapisane drafty</h2>
 
@@ -1290,8 +1364,10 @@ export default function BuilderPage() {
           </div>
         )}
       </section>
+      )}
 
       {/* ── Published alerts ──────────────────────────────────────────── */}
+      {view === "tools" && (
       <section className="mb-10">
         <h2 className={sectionTitleClass + " mb-4"}>Lokalnie opublikowane alerty</h2>
 
@@ -1335,7 +1411,10 @@ export default function BuilderPage() {
           </div>
         )}
       </section>
+      )}
+
       {/* ── Alerty w Supabase ─────────────────────────────────────────── */}
+      {view === "alerts" && (
       <section className="pb-10">
         <div className="flex items-center justify-between mb-1">
           <h2 className={sectionTitleClass}>Alerty w Supabase</h2>
@@ -1576,6 +1655,7 @@ export default function BuilderPage() {
           </div>
         )}
       </section>
+      )}
 
     </main>
     </AuthGate>

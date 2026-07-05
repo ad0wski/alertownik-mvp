@@ -7,6 +7,7 @@ import {
   getAdminSupabaseAlerts,
   type AdminAlert,
 } from "@/lib/getAdminSupabaseAlerts";
+import { getAlertTimeStatus } from "@/lib/getAlertTimeStatus";
 import {
   getAlertSources,
   getRecentSourceChecks,
@@ -69,6 +70,14 @@ const CHECK_RESULT_LABELS: Record<string, { label: string; color: string }> = {
   alert_created:  { label: "Przygotowano alert",             color: "text-emerald-600" },
   needs_followup: { label: "Wymaga późniejszego sprawdzenia", color: "text-amber-600" },
 };
+
+// Same 7-day freshness window as AlertCard's "Nowe" badge — the smoke-test
+// card asks "is there a fresh alert visible publicly", so both must agree.
+function isFreshPublished(a: AdminAlert): boolean {
+  if (a.status !== "published") return false;
+  const days = (Date.now() - new Date(a.updatedAt).getTime()) / 86_400_000;
+  return days >= 0 && days <= 7;
+}
 
 function sourceNeedsChecking(lastCheckedAt: string | undefined, isActive: boolean): boolean {
   if (!isActive) return false;
@@ -275,6 +284,17 @@ export default function AdminPage() {
     (a) => a.status === "published" && looksLikeTestContent(a.title || "")
   );
 
+  // Sprint 117 — inputs for the "Co teraz?" task cards, derived from the
+  // alerts already fetched above (no new queries). "Ended but still
+  // published" is the cleanup queue: archive, never delete.
+  const endedPublished = alerts.filter(
+    (a) => a.status === "published" && getAlertTimeStatus(a.startsAt, a.endsAt) === "ended"
+  );
+  const publishedMissingSource = alerts.filter(
+    (a) => a.status === "published" && !(a.sourceUrl ?? "").trim()
+  );
+  const freshPublishedCount = alerts.filter(isFreshPublished).length;
+
   const stats = [
     { label: "Wszystkie alerty", value: total,          color: "text-slate-900" },
     { label: "Opublikowane",     value: publishedCount, color: "text-emerald-700" },
@@ -306,22 +326,115 @@ export default function AdminPage() {
         </p>
       </div>
 
-      {/* ── Draft from Source entry point ──────────────────────────────── */}
+      {/* ── "Co teraz?" — task cards (Sprint 117) ──────────────────────── */}
       <section className="mb-8">
-        <div className="rounded-2xl border border-blue-200 bg-blue-50 shadow-sm p-5">
-          <h2 className="text-base font-semibold text-blue-900 mb-1">
-            Utwórz draft ze źródła
-          </h2>
-          <p className="text-sm text-blue-800 leading-relaxed mb-3">
-            Wklej link i treść komunikatu, a Alertownik przygotuje szkic.
-            Publikacja nadal wymaga ręcznego zatwierdzenia.
-          </p>
-          <Link
-            href="/admin/new-alert"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
-          >
-            Nowy alert ze źródła →
-          </Link>
+        <h2 className="text-base font-semibold text-slate-800 mb-1">Co teraz?</h2>
+        <p className="text-xs text-slate-400 mb-4">
+          Zadania w kolejności — liczby pochodzą z bazy, nie z pamięci.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+          {/* 1 — Draft from Source (primary) */}
+          <div className="sm:col-span-2 rounded-2xl border border-blue-200 bg-blue-50 shadow-sm p-5">
+            <h3 className="text-sm font-semibold text-blue-900 mb-1">
+              1. Utwórz alert ze źródła
+            </h3>
+            <p className="text-sm text-blue-800 leading-relaxed mb-3">
+              Wklej link i treść komunikatu. Alertownik przygotuje szkic.
+              Publikacja wymaga ręcznego zatwierdzenia.
+            </p>
+            <Link
+              href="/admin/new-alert"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+            >
+              Nowy alert ze źródła →
+            </Link>
+          </div>
+
+          {/* 2 — Verify drafts */}
+          <div className={`rounded-2xl border shadow-sm p-5 bg-white ${draftCount > 0 ? "border-amber-200" : "border-slate-200"}`}>
+            <h3 className="text-sm font-semibold text-slate-800 mb-1">
+              2. Sprawdź drafty{!alertsLoading && draftCount > 0 && ` (${draftCount})`}
+            </h3>
+            <p className="text-sm text-slate-600 leading-relaxed mb-3">
+              Zweryfikuj źródło i opublikuj tylko prawdziwe komunikaty.
+              Brak linku do źródła = nie publikuj.
+            </p>
+            <Link
+              href="/builder?tab=alerts&status=draft"
+              className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+            >
+              Otwórz listę draftów →
+            </Link>
+          </div>
+
+          {/* 3 — Cleanup */}
+          <div className={`rounded-2xl border shadow-sm p-5 bg-white ${endedPublished.length > 0 ? "border-amber-200" : "border-slate-200"}`}>
+            <h3 className="text-sm font-semibold text-slate-800 mb-1">
+              3. Posprzątaj stare alerty{!alertsLoading && endedPublished.length > 0 && ` (${endedPublished.length})`}
+            </h3>
+            <p className="text-sm text-slate-600 leading-relaxed mb-3">
+              {!alertsLoading && endedPublished.length > 0
+                ? `${endedPublished.length === 1 ? "1 opublikowany alert już się zakończył" : `${endedPublished.length} opublikowane alerty już się zakończyły`} — zarchiwizuj je w Kreatorze.`
+                : "Brak zakończonych alertów do archiwizacji."}{" "}
+              Zawsze archiwizuj zamiast usuwać — archiwum można przywrócić.
+            </p>
+            <Link
+              href="/builder?tab=alerts&status=published"
+              className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+            >
+              Otwórz opublikowane →
+            </Link>
+          </div>
+
+          {/* 4 — Smoke test readiness */}
+          <div className="rounded-2xl border border-slate-200 shadow-sm p-5 bg-white">
+            <h3 className="text-sm font-semibold text-slate-800 mb-2">
+              4. Wyślij smoke test
+            </h3>
+            <ul className="text-sm text-slate-600 space-y-1 mb-3">
+              <li className="flex items-start gap-2">
+                <span className={freshPublishedCount > 0 ? "text-emerald-600" : "text-amber-600"}>
+                  {freshPublishedCount > 0 ? "✓" : "○"}
+                </span>
+                <span>Świeży alert widoczny publicznie</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className={endedPublished.length === 0 ? "text-emerald-600" : "text-amber-600"}>
+                  {endedPublished.length === 0 ? "✓" : "○"}
+                </span>
+                <span>Stare alerty zarchiwizowane</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className={publishedMissingSource.length === 0 ? "text-emerald-600" : "text-amber-600"}>
+                  {publishedMissingSource.length === 0 ? "✓" : "○"}
+                </span>
+                <span>Każdy opublikowany alert ma link do źródła</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-slate-400">○</span>
+                <span>Widok na telefonie sprawdzony ręcznie</span>
+              </li>
+            </ul>
+            <Link
+              href="/"
+              className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+            >
+              Zobacz stronę jak mieszkaniec →
+            </Link>
+          </div>
+
+          {/* 5 — Future: AI verifier */}
+          <div className="sm:col-span-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5">
+            <h3 className="text-sm font-semibold text-slate-500 mb-1">
+              Następny etap: AI verifier (jeszcze nie wdrożony)
+            </h3>
+            <p className="text-sm text-slate-500 leading-relaxed">
+              W przyszłości AI sprawdzi źródło, datę, obszar i ryzyko, zanim
+              zaproponuje publikację. Decyzja o publikacji pozostanie zawsze
+              po stronie człowieka.
+            </p>
+          </div>
         </div>
       </section>
 
@@ -400,10 +513,11 @@ export default function AdminPage() {
               wider, less-curated group, reusing data already loaded above
               (no new queries). Mobile/feedback-mailto can't be checked
               from data, so those stay as explicit manual reminders. */}
-          <div className="border-t border-slate-100 mt-4 pt-4">
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2.5">
-              Checklist przed wysłaniem do szerszej grupy
-            </p>
+          <details className="border-t border-slate-100 mt-4 pt-4 group">
+            <summary className="text-xs font-semibold text-slate-500 uppercase tracking-wide cursor-pointer select-none hover:text-slate-700 mb-2.5">
+              Pełna checklista przed wysłaniem do szerszej grupy
+              <span className="ml-1 font-normal normal-case text-slate-400">(rozwiń)</span>
+            </summary>
             <ul className="text-sm text-slate-600 space-y-1.5">
               <li className="flex items-start gap-2">
                 <span className={publishedCount >= MIN_RECOMMENDED_ALERTS && publishedCategoryCount >= MIN_RECOMMENDED_CATEGORIES ? "text-emerald-600" : "text-amber-600"}>
@@ -491,7 +605,7 @@ export default function AdminPage() {
                 </span>
               </li>
             </ul>
-          </div>
+          </details>
         </div>
       </section>
 
@@ -512,8 +626,13 @@ export default function AdminPage() {
             <Link href="/builder" className="font-medium text-blue-700 hover:underline">
               Kreatorze
             </Link>
-            . Pełna lista kroków poniżej — nie musisz jej znać na pamięć.
+            . Nie musisz znać kroków na pamięć — pełna lista jest pod spodem.
           </p>
+          <details>
+            <summary className="text-xs font-semibold text-slate-500 uppercase tracking-wide cursor-pointer select-none hover:text-slate-700 mb-3">
+              Pełna lista kroków
+              <span className="ml-1 font-normal normal-case text-slate-400">(rozwiń)</span>
+            </summary>
           <ol className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {DAILY_WORKFLOW_STEPS.map((step, i) => (
               <li key={step.label} className="flex items-start gap-2.5">
@@ -533,6 +652,7 @@ export default function AdminPage() {
               </li>
             ))}
           </ol>
+          </details>
         </div>
       </section>
 
