@@ -3,7 +3,7 @@ import { OdpadyClient } from "@/components/OdpadyClient";
 
 export const metadata = {
   title: "Odpady — Alertownik",
-  description: "Harmonogram odbioru odpadów — funkcja w przygotowaniu. Do tego czasu sprawdź oficjalne źródła.",
+  description: "Najbliższe terminy odbioru odpadów przepisane ręcznie z oficjalnych harmonogramów — na start Komorów (Gmina Michałowice, 2026). Zawsze z linkiem do źródła.",
 };
 
 const PLANNED_WASTE_TYPES = [
@@ -55,7 +55,7 @@ export default function OdpadyPage() {
             Odpady — harmonogram odbioru
           </h1>
           <span className="inline-flex items-center text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-full px-2.5 py-0.5">
-            W przygotowaniu
+            Wczesna wersja
           </span>
         </div>
         <p className="text-sm sm:text-base text-slate-500 leading-relaxed">

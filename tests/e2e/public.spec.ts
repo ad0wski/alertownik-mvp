@@ -180,10 +180,12 @@ test.describe("Public homepage", () => {
     await expect(page).toHaveURL(/\/about$/);
   });
 
-  test("odpady page loads with planned-feature info and official source links", async ({ page }) => {
+  test("odpady page loads with early-version badge and official source links", async ({ page }) => {
     await page.goto("/odpady");
     await expect(page.locator("h1")).toContainText("Odpady");
-    await expect(page.getByText("W przygotowaniu")).toBeVisible();
+    // Sprint 125: "W przygotowaniu" → "Wczesna wersja" after the first
+    // real import (Komorów batch 1) made the old badge untrue.
+    await expect(page.getByText("Wczesna wersja")).toBeVisible();
     await expect(
       page.getByRole("link", { name: /Eco-Harmonogram/ })
     ).toHaveAttribute("href", /pruszkow\.pl/);
