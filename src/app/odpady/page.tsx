@@ -17,6 +17,11 @@ const PLANNED_WASTE_TYPES = [
 
 const OFFICIAL_SOURCES = [
   {
+    name: "Gmina Michałowice — harmonogram odbioru odpadów",
+    url: "https://www.michalowice.pl/ochrona-srodowiska/odbior-odpadow/nowy-harmonogram-odbioru-odpadow-komunalnych",
+    note: "Oficjalne harmonogramy PDF na 2026 rok (m.in. Komorów, Nowa Wieś, Granica, Michałowice, Reguły) — to z nich planujemy przepisać pierwsze terminy.",
+  },
+  {
     name: "Eco-Harmonogram (Pruszków)",
     url: "https://www.pruszkow.pl/aplikacja-eco-harmonogram/",
     note: "Aplikacja gminna — wybierz adres, zobacz aktualny harmonogram odbioru.",
@@ -58,6 +63,8 @@ export default function OdpadyPage() {
           dla Twojej okolicy — bez przeszukiwania harmonogramów PDF. Sekcja
           poniżej już realnie sprawdza, czy takie terminy są zapisane — na razie
           nie ma jeszcze żadnych, więc strona kieruje też do oficjalnych źródeł.
+          Najbliższy krok: ręczne przepisanie terminów z oficjalnego harmonogramu
+          gminy (zaczynamy od Komorowa) — każdy termin z linkiem do źródła.
         </p>
       </div>
 

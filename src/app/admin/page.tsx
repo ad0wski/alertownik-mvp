@@ -424,7 +424,40 @@ export default function AdminPage() {
             </Link>
           </div>
 
-          {/* 5 — Future: AI verifier */}
+          {/* 5 — Data expansion (Sprint 121 — smoke-test feedback: the
+              bottleneck is data coverage, not UI; priority order from the
+              first real tester response) */}
+          <div className="sm:col-span-2 rounded-2xl border border-emerald-200 bg-emerald-50 shadow-sm p-5">
+            <h3 className="text-sm font-semibold text-emerald-900 mb-1">
+              5. Uzupełnij dane: odpady / prąd / woda / remonty
+            </h3>
+            <p className="text-sm text-emerald-800 leading-relaxed mb-3">
+              Feedback ze smoke testu: aplikacja jest zrozumiała i przydatna,
+              ale brakuje danych. Priorytety: terminy odbioru odpadów
+              {wasteScheduleCount !== null && ` (obecnie: ${wasteScheduleCount} terminów)`},
+              planowane wyłączenia prądu (PGE), przerwy w dostawie wody i
+              ciepłej wody, remonty dróg.
+              {!alertsLoading && missingCategoryLabels.length > 0 && (
+                <> Kategorie bez opublikowanego alertu: {missingCategoryLabels.join(", ")}.</>
+              )}
+            </p>
+            <div className="flex flex-wrap gap-x-4 gap-y-1">
+              <Link
+                href="/admin/waste"
+                className="text-sm font-medium text-emerald-700 hover:text-emerald-900 hover:underline"
+              >
+                Importuj harmonogram odpadów →
+              </Link>
+              <Link
+                href="/admin/sources"
+                className="text-sm font-medium text-emerald-700 hover:text-emerald-900 hover:underline"
+              >
+                Sprawdź źródła (PGE, gmina, Pruszków) →
+              </Link>
+            </div>
+          </div>
+
+          {/* Future: AI verifier */}
           <div className="sm:col-span-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5">
             <h3 className="text-sm font-semibold text-slate-500 mb-1">
               Następny etap: AI verifier (jeszcze nie wdrożony)
