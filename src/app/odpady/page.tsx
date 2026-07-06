@@ -59,15 +59,15 @@ export default function OdpadyPage() {
           </span>
         </div>
         <p className="text-sm sm:text-base text-slate-500 leading-relaxed">
-          Planujemy, żeby Alertownik pokazywał najbliższe terminy odbioru odpadów
-          dla Twojej okolicy — bez przeszukiwania harmonogramów PDF. Sekcja
-          poniżej już realnie sprawdza, czy takie terminy są zapisane — na razie
-          nie ma jeszcze żadnych, więc strona kieruje też do oficjalnych źródeł.
-          Najpierw dodamy najbliższe terminy dla{" "}
+          Alertownik pokazuje najbliższe terminy odbioru odpadów dla Twojej
+          okolicy — bez przeszukiwania harmonogramów PDF. Sekcja poniżej
+          pokazuje wyłącznie terminy przepisane ręcznie z oficjalnych
+          harmonogramów i zweryfikowane przed publikacją — każdy z linkiem do
+          źródła. Zaczynamy od{" "}
           <span className="font-medium text-slate-600">Komorowa</span> (zabudowa
-          jednorodzinna), ręcznie przepisane z oficjalnego harmonogramu Gminy
-          Michałowice na 2026 rok i zweryfikowane przed publikacją — każdy
-          termin z linkiem do źródła.
+          jednorodzinna, harmonogram Gminy Michałowice na 2026 rok); jeśli
+          Twojej okolicy jeszcze tu nie ma, skorzystaj z oficjalnych źródeł
+          poniżej.
         </p>
       </div>
 
@@ -92,12 +92,12 @@ export default function OdpadyPage() {
 
         <section className="bg-amber-50 rounded-2xl border border-amber-200 shadow-sm p-4 sm:p-5">
           <h2 className="text-base font-semibold text-amber-900 mb-2">
-            Na razie sprawdź oficjalne źródło
+            Pełny harmonogram znajdziesz w oficjalnym źródle
           </h2>
           <p className="text-sm text-amber-800 leading-relaxed mb-3">
-            Ta funkcja nie pokazuje jeszcze żadnych dat — żeby nie pokazywać
-            nieaktualnego albo niesprawdzonego terminu, na razie odsyłamy do
-            źródeł, które same prowadzą harmonogram:
+            Alertownik pokazuje tylko terminy, które zostały już ręcznie
+            przepisane i zweryfikowane — pozostałe okolice, typy zabudowy i
+            frakcje znajdziesz w źródłach, które same prowadzą harmonogram:
           </p>
           <ul className="flex flex-col gap-2.5">
             {OFFICIAL_SOURCES.map((s) => (

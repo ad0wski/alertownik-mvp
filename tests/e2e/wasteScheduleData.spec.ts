@@ -95,7 +95,7 @@ test.describe("/odpady data state (mocked Supabase response)", () => {
     const card = nextCollectionCard(page);
     await expect(card.getByText("Jutro")).toBeVisible();
     await expect(card.getByText("Zmieszane", { exact: true })).toBeVisible();
-    await expect(card.getByText("Bio", { exact: true })).toBeVisible();
+    await expect(card.getByText("BIO", { exact: true })).toBeVisible();
     await expect(card.getByText("Strefa A — ul. Główna – ul. Sportowa", { exact: true })).toBeVisible();
   });
 

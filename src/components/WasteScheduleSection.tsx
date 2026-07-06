@@ -110,15 +110,23 @@ export function WasteScheduleSection({ areaKeywords }: Props) {
   const groups = groupByDate(filteredItems);
 
   // Derived from the actual fetched rows, never hardcoded — so this line
-  // can only ever name localities that genuinely have saved dates (e.g.
-  // "Komorów" after the first real import), and disappears with them.
+  // can only ever name localities/fractions that genuinely have saved
+  // dates (e.g. "Komorów" after the first real import), and disappears
+  // with them. The "missing fractions" sentence stays truthful the same
+  // way: it only points at whatever is absent from the data.
   const coveredLocalities = [...new Set(items.map((i) => i.locality))];
+  const coveredTypeLabels = [
+    ...new Set(items.map((i) => WASTE_TYPE_LABELS[i.wasteType] ?? i.wasteType)),
+  ];
 
   return (
     <div className="flex flex-col gap-3">
       <p className="text-xs text-slate-500 leading-relaxed">
         Zapisane terminy obejmują:{" "}
-        <span className="font-medium text-slate-600">{coveredLocalities.join(", ")}</span>.
+        <span className="font-medium text-slate-600">{coveredLocalities.join(", ")}</span>
+        {" "}(frakcje: {coveredTypeLabels.join(", ").toLowerCase()}).
+        Frakcji, których tu nie widać (np. popiół albo odzież i tekstylia),
+        jeszcze nie zaimportowano — sprawdź je w oficjalnym harmonogramie.
         Szczegółowy zakres (np. typ zabudowy) opisuje źródło podlinkowane przy
         każdym terminie.
       </p>

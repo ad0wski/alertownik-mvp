@@ -192,22 +192,25 @@ test.describe("Public homepage", () => {
   test("odpady page's upcoming-schedule section shows a graceful state, not a crash", async ({ page }) => {
     await page.goto("/odpady");
     await expect(page.getByText("Nadchodzące terminy")).toBeVisible();
-    // Whether the waste_schedule_items migration has been run or not, the
-    // section must show one of these two honest states — never fabricated
-    // dates (see Decisions.md, Sprint 80/81) and never a crash.
+    // Three honest states are acceptable: table missing, table empty, or
+    // real imported rows (the coverage line only renders with data —
+    // Sprint 124, first real rows live). Fabricated dates or a crash are
+    // not (see Decisions.md, Sprint 80/81). This spec runs against the
+    // real Supabase project, so which state appears depends on the DB.
     await expect(
-      page.getByText(/Harmonogram nie jest jeszcze włączony|Brak zapisanych terminów/)
+      page.getByText(/Harmonogram nie jest jeszcze włączony|Brak zapisanych terminów|Zapisane terminy obejmują:/)
     ).toBeVisible({ timeout: 10_000 });
   });
 
   test("odpady page's next-collection card shows a graceful state, not a crash", async ({ page }) => {
     await page.goto("/odpady");
     await expect(page.getByText("Najbliższy odbiór")).toBeVisible();
-    // Same honesty requirement as the full list above, applied to the
-    // single-item highlight card (Sprint 82) — table-missing/empty are
-    // both acceptable, a fabricated date or a crash are not.
+    // Same three honest states as the full list above, applied to the
+    // single-item highlight card (Sprint 82). With real rows and no saved
+    // area preference (this test saves none), the card always shows the
+    // "Ustaw swoją okolicę" personalization hint.
     await expect(
-      page.getByText(/Funkcja jeszcze nie jest włączona|Brak zaplanowanych terminów/)
+      page.getByText(/Funkcja jeszcze nie jest włączona|Brak zaplanowanych terminów|Ustaw swoją okolicę powyżej/)
     ).toBeVisible({ timeout: 10_000 });
   });
 

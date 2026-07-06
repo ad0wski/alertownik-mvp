@@ -9,16 +9,17 @@ export const WASTE_TYPES: WasteType[] = [
   "mixed", "paper", "plastics_metals", "glass", "bio", "bulky", "other",
 ];
 
-// Sprint 83 aligned these with the brief's exact suggested wording
-// ("tworzywa/metale", "gabaryty") and standard Polish harmonogram
-// terminology — a small accuracy fix, not a schema change (these are
-// labels only, the underlying `waste_type` DB values are unchanged).
+// Sprint 83 aligned these with the brief's exact suggested wording;
+// Sprint 124 re-aligned two of them with the official Gmina Michałowice
+// harmonogram's own fraction names ("Metale i tworzywa sztuczne", "BIO"),
+// since real imported rows now sit next to that source's PDF — labels
+// only, the underlying `waste_type` DB values are unchanged.
 export const WASTE_TYPE_LABELS: Record<WasteType, string> = {
   mixed: "Zmieszane",
   paper: "Papier",
-  plastics_metals: "Tworzywa sztuczne i metale",
+  plastics_metals: "Metale i tworzywa sztuczne",
   glass: "Szkło",
-  bio: "Bio",
+  bio: "BIO",
   bulky: "Gabaryty",
   other: "Inne",
 };
