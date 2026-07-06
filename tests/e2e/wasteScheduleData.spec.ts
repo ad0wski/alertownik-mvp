@@ -117,6 +117,21 @@ test.describe("/odpady data state (mocked Supabase response)", () => {
     await expect(page.getByText("Brak zaplanowanych terminów")).toBeVisible();
     await expect(page.getByText("Brak zapisanych terminów.")).toBeVisible();
     await expect(page.locator("body")).not.toContainText("Application error");
+    // The coverage line is derived from fetched rows — with zero rows it
+    // must not appear (nothing may claim any locality is covered).
+    await expect(page.getByText("Zapisane terminy obejmują:")).toHaveCount(0);
+  });
+
+  // Sprint 123 — the coverage line names exactly the localities present in
+  // the data, never a hardcoded list (guards the "no pretending data
+  // exists" rule in the other direction too: with rows, coverage is stated).
+  test("coverage line lists the localities derived from the fetched rows", async ({ page }) => {
+    await mockWasteScheduleRows(page);
+    await page.goto("/odpady");
+
+    const section = upcomingSection(page);
+    await expect(section.getByText("Zapisane terminy obejmują:")).toBeVisible();
+    await expect(section.getByText("Komorów, Pruszków", { exact: true })).toBeVisible();
   });
 
   test("'Moja okolica' filter narrows both the card and the full list to the saved locality", async ({ page }) => {

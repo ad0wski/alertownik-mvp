@@ -109,8 +109,19 @@ export function WasteScheduleSection({ areaKeywords }: Props) {
       : items;
   const groups = groupByDate(filteredItems);
 
+  // Derived from the actual fetched rows, never hardcoded — so this line
+  // can only ever name localities that genuinely have saved dates (e.g.
+  // "Komorów" after the first real import), and disappears with them.
+  const coveredLocalities = [...new Set(items.map((i) => i.locality))];
+
   return (
     <div className="flex flex-col gap-3">
+      <p className="text-xs text-slate-500 leading-relaxed">
+        Zapisane terminy obejmują:{" "}
+        <span className="font-medium text-slate-600">{coveredLocalities.join(", ")}</span>.
+        Szczegółowy zakres (np. typ zabudowy) opisuje źródło podlinkowane przy
+        każdym terminie.
+      </p>
       {prefsSet && (
         <div className="flex items-center gap-2 mb-1">
           <button
