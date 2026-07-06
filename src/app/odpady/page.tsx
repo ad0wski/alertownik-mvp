@@ -19,7 +19,7 @@ const OFFICIAL_SOURCES = [
   {
     name: "Gmina Michałowice — harmonogram odbioru odpadów",
     url: "https://www.michalowice.pl/ochrona-srodowiska/odbior-odpadow/nowy-harmonogram-odbioru-odpadow-komunalnych",
-    note: "Oficjalne harmonogramy PDF na 2026 rok (m.in. Komorów, Nowa Wieś, Granica, Michałowice, Reguły) — to z nich planujemy przepisać pierwsze terminy.",
+    note: "Oficjalne harmonogramy PDF na 2026 rok (ważne 1.01–31.12.2026, m.in. Komorów, Nowa Wieś, Granica, Michałowice, Reguły) — z harmonogramu dla zabudowy jednorodzinnej planujemy przepisać pierwsze terminy dla Komorowa.",
   },
   {
     name: "Eco-Harmonogram (Pruszków)",
@@ -63,8 +63,11 @@ export default function OdpadyPage() {
           dla Twojej okolicy — bez przeszukiwania harmonogramów PDF. Sekcja
           poniżej już realnie sprawdza, czy takie terminy są zapisane — na razie
           nie ma jeszcze żadnych, więc strona kieruje też do oficjalnych źródeł.
-          Najbliższy krok: ręczne przepisanie terminów z oficjalnego harmonogramu
-          gminy (zaczynamy od Komorowa) — każdy termin z linkiem do źródła.
+          Najpierw dodamy najbliższe terminy dla{" "}
+          <span className="font-medium text-slate-600">Komorowa</span> (zabudowa
+          jednorodzinna), ręcznie przepisane z oficjalnego harmonogramu Gminy
+          Michałowice na 2026 rok i zweryfikowane przed publikacją — każdy
+          termin z linkiem do źródła.
         </p>
       </div>
 
@@ -138,6 +141,9 @@ export default function OdpadyPage() {
             faktycznie się tu pojawi, każdy termin trzeba będzie zweryfikować
             z oficjalnym źródłem gminy albo operatora odpadów. Alertownik nie
             zastępuje urzędowego harmonogramu, tylko ułatwia go znaleźć.
+            Alertownik jest niezależnym projektem — nie jest oficjalną stroną
+            Gminy Michałowice ani żadnej gminy czy operatora odpadów; w razie
+            wątpliwości rozstrzygające jest zawsze oficjalne źródło.
           </p>
         </section>
       </div>

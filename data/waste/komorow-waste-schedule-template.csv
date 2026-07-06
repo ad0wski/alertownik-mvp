@@ -1,0 +1,15 @@
+# Sprint 122 — szablon transkrypcji harmonogramu odpadów: Komorów (zabudowa jednorodzinna)
+# Źródło do przepisania: oficjalny PDF Gminy Michałowice (2026):
+#   https://www.michalowice.pl/files/307953978/file/harmonogram_jednorodzinna_final3.pdf
+# Zasady:
+#   - locality: "Komorów" (miejscowość — nigdy dokładny adres/numer domu)
+#   - area_name / street_group: opcjonalne; TYLKO strefa/zakres ulic, jeśli PDF tak dzieli
+#   - waste_type: jedna z wartości: mixed | paper | plastics_metals | glass | bio | bulky | other
+#   - collection_date: format RRRR-MM-DD, przepisany 1:1 z PDF — NIE zgaduj, NIE uzupełniaj "co dwa tygodnie"
+#   - source_name / source_url: skąd pochodzi KAŻDY wiersz
+#   - notes: tu zapisz datę weryfikacji, np. "Zweryfikowano 2026-07-07 z harmonogram_jednorodzinna_final3.pdf"
+#     (kolumna verified_at NIE istnieje w tabeli — konwencja notes, patrz docs/waste-schedule-import-template.md)
+# Ten plik to szablon — NIE zawiera żadnych prawdziwych dat. Wypełnione wiersze
+# wklej do Claude Code do konwersji na JSON albo przepisz ręcznie do
+# /admin/waste → "Import z JSON" (format: docs/waste-schedule-import-template.md).
+locality,area_name,street_group,waste_type,collection_date,source_name,source_url,notes

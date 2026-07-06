@@ -10,15 +10,25 @@ still missing, and what to do next.
 
 A real, current official source **does exist** for Gmina Michałowice:
 
-- **Main schedule (single-family homes), 2026:**
-  `https://www.michalowice.pl/files/685683571/lib/Harmonogram_2026.pdf`
-- **Multi-family housing schedule, 2026:**
-  `https://www.michalowice.pl/files/685683571/lib/Harmonogram_Wielorodzinna_2026.pdf`
-- **General waste-collection info leaflet:**
-  `https://www.michalowice.pl/files/685683571/lib/Niezbednik_2026.pdf`
+- **Single-family housing schedule, 2026 (CANONICAL as of Sprint 122 —
+  valid 2026-01-01 → 2026-12-31; use THIS one for the Komorów import):**
+  `https://www.michalowice.pl/files/307953978/file/harmonogram_jednorodzinna_final3.pdf`
+- Older URLs found in Sprint 88 (may still work, but prefer the one above):
+  - Main schedule (single-family homes), 2026:
+    `https://www.michalowice.pl/files/685683571/lib/Harmonogram_2026.pdf`
+  - Multi-family housing schedule, 2026:
+    `https://www.michalowice.pl/files/685683571/lib/Harmonogram_Wielorodzinna_2026.pdf`
+  - General waste-collection info leaflet:
+    `https://www.michalowice.pl/files/685683571/lib/Niezbednik_2026.pdf`
 
 Found via the municipality's own "Harmonogram odbioru odpadów komunalnych"
 page: `https://www.michalowice.pl/ochrona-srodowiska/odbior-odpadow/nowy-harmonogram-odbioru-odpadow-komunalnych`
+
+**Sprint 122 workflow update:** the Komorów-first transcription workflow
+now lives in `data/waste/README.md` (CSV template:
+`data/waste/komorow-waste-schedule-template.csv`; SQL fallback:
+`docs/sprint122_komorow_waste_seed_proposal.sql`; read-only live check:
+`docs/sprint122_waste_schedule_readonly_check.sql`).
 
 The two other previously-documented candidate sources (Pruszków's
 Eco-Harmonogram and "terminy odbioru odpadów" page — see

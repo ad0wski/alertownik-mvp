@@ -92,9 +92,11 @@ export function WasteScheduleSection({ areaKeywords }: Props) {
         </p>
         <p className="text-sm text-slate-500 leading-relaxed">
           Harmonogram odpadów wymaga oficjalnych danych — admin jeszcze nie
-          zaimportował terminów z oficjalnego harmonogramu gminy/operatora dla
-          żadnej okolicy. To nie błąd, tylko brak importu na razie. Sprawdź
-          oficjalne źródła poniżej, dopóki nie pojawią się tu pierwsze daty.
+          zaimportował terminów z oficjalnego harmonogramu gminy/operatora.
+          To nie błąd, tylko brak importu na razie. Przygotowujemy import z
+          oficjalnego harmonogramu Gminy Michałowice — najpierw najbliższe
+          terminy dla Komorowa. Do tego czasu sprawdź oficjalne źródła
+          poniżej.
         </p>
       </div>
     );
