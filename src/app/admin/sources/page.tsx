@@ -109,8 +109,10 @@ const PILOT_SOURCE_SUGGESTIONS: PilotSourceSuggestion[] = [
     category: "power",
     sourceType: "website",
     notes:
-      "Strona ogólna ładuje się poprawnie (HTTP 200), ale lista wyłączeń dla konkretnego adresu " +
-      "wymaga wyboru rejonu w przeglądarce — automatyczny podgląd zwykle nie pokaże aktualnych wyłączeń.",
+      "Oficjalne źródło planowanych wyłączeń — gmina Michałowice sama odsyła tam mieszkańców. " +
+      "Podstrona planowanych wyłączeń: pgedystrybucja.pl/wylaczenia/planowane-wylaczenia. Lista dla " +
+      "konkretnego adresu wymaga wyboru rejonu w przeglądarce — sprawdzaj ręcznie (Komorów, Nowa Wieś, " +
+      "Granica, Michałowice, Reguły, Pruszków), automatyczny podgląd zwykle nie pokaże aktualnych wyłączeń.",
   },
   {
     id: "wodociagi-michalowice",

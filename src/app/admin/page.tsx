@@ -457,6 +457,45 @@ export default function AdminPage() {
             </div>
           </div>
 
+          {/* 6 — PGE planned outages manual check (Sprint 126 — the next
+              data category after waste got its first positive signal;
+              manual browser check only, no scraping/automation) */}
+          <div className="sm:col-span-2 rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
+            <h3 className="text-sm font-semibold text-slate-800 mb-1">
+              6. Sprawdź PGE / prąd
+            </h3>
+            <p className="text-sm text-slate-600 leading-relaxed mb-3">
+              PGE Dystrybucja to oficjalne źródło planowanych wyłączeń prądu —
+              gmina Michałowice sama odsyła tam mieszkańców. Sprawdź ręcznie w
+              przeglądarce miejscowości: Komorów, Nowa Wieś, Granica,
+              Michałowice, Reguły, Pruszków. Znalezione wyłączenie przepisz
+              przez „Nowy alert ze źródła" (draft) i opublikuj dopiero po
+              zweryfikowaniu szczegółów w komunikacie PGE.
+            </p>
+            <div className="flex flex-wrap gap-x-4 gap-y-1">
+              <a
+                href="https://pgedystrybucja.pl/wylaczenia/planowane-wylaczenia"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+              >
+                Planowane wyłączenia PGE →
+              </a>
+              <Link
+                href="/admin/new-alert"
+                className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+              >
+                Nowy alert ze źródła →
+              </Link>
+              <Link
+                href="/admin/sources"
+                className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+              >
+                Zaloguj check w Źródłach →
+              </Link>
+            </div>
+          </div>
+
           {/* Future: AI verifier */}
           <div className="sm:col-span-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5">
             <h3 className="text-sm font-semibold text-slate-500 mb-1">
