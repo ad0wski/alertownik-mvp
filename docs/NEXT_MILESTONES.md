@@ -1,128 +1,59 @@
 # Next Milestones — Alertownik
 
 This document describes the next meaningful product milestones, not individual sprints.
-Each milestone is a coherent capability the product gains. Milestones can be broken into
-sprints during active development.
+It mirrors the gate system defined in the Obsidian project vault (canonical pages:
+`Product Maturity Gates`, `Next 15 Sprint Plan`, `Current Priority Decision` in
+`Adam_Life/04_Projekty/Alertownik/`). This repo copy is the short version for anyone
+reading the codebase.
 
-Last updated: June 2026 — Sprint 58: real Anthropic API mode added, mock fallback preserved
-
----
-
-## Current state (as of Milestone 0 complete)
-
-- Public alert list with search, filters, Moje alerty preferences
-- Admin login via Supabase Auth
-- Admin dashboard with stats and source monitoring overview
-- Alert Builder: create, edit, publish, archive, restore
-- AI Helper: manual prompt workflow → ChatGPT/Claude → JSON → Builder
-- Source registry: add, edit, toggle, delete sources
-- Manual source monitoring: monitoring status, check history, notice text capture
-- Source check → AI Helper shortcut (notice text flows to AI Helper prefilled)
-- PWA manifest + mobile-friendly header
+Last updated: July 2026 — Sprint 127 (roadmap reset). The previous version of this
+file was frozen at Sprint 58 and marked the AI Draft Generator as "active" — that
+milestone shipped long ago (Sprints 57–58, Flow B in 115/118).
 
 ---
 
-## Milestone A — Pilot MVP Cleanup
+## Honest current stage
 
-**Goal:** Polish the product to the level needed for a real pilot with 3–5 users.
+**Utility MVP with an early positive signal, before a scalable data engine.**
 
-**Key work:**
-- Fix any bugs found during manual testing
-- Polish the public alert list UX (card design, empty states, loading skeletons)
-- Ensure every admin workflow is fast and error-free
-- Write a simple onboarding guide for pilot admin users
-- Verify Vercel deployment is stable and fast
-- Double-check all Polish text for grammar and natural phrasing
-- Archive the old QA checklist and replace with `docs/QA_MANUAL_CHECKLIST.md`
+- Public MVP, admin tools, and Draft from Source (Flow B) exist and work.
+- First real alerts are published; Komorów waste schedule (40 rows) is live on `/odpady`.
+- First real user feedback is positive ("jest git") — but n=1.
+- The main blocker is **data coverage and a repeatable source workflow**, not UX,
+  not the app store, and not pricing.
 
-**Done when:** An admin can find a source notice, run it through AI Helper, publish an alert, and a resident can read it on their phone — all without any coaching.
+## Gate system (canonical statuses live in Obsidian)
 
----
+| Gate | Meaning | Status (2026-07-07) |
+|---|---|---|
+| 1. Utility MVP | real alerts + waste data + visible sourcing + ≥1 positive signal | ✅ passed (thin — n=1) |
+| 2. Local Beta | 3–5 data categories, 5–10 testers, mobile tested on a real phone, no stale data | ⬜ not yet — **current focus** |
+| 3. Partner Demo | clean screenshots, demo page, 3–5 fresh examples, 2–3 user signals | 🔶 close, not yet |
+| 4. Monetization Test | offer + target list + outreach + pricing hypothesis (no payments code) | ⬜ not yet |
+| 5. Store Launch | verified PWA install, PNG icons, screenshots, stable data, packaging decision | ⬜ not yet |
 
-## Milestone B — AI Draft Generator ← aktywne
+Gates are passed in order. Preparation for a later gate is fine; execution is not.
 
-**Goal:** Replace the copy-paste ChatGPT/Claude workflow with a direct AI API call from within the app.
+## Next sprints (order, not calendar — full table in Obsidian `Next 15 Sprint Plan`)
 
-**Key work:**
-- Integrate Claude API (Anthropic SDK) server-side — via a Next.js API route, never client-side
-- API key stored as a Vercel environment variable, never in source code
-- "Generuj draft alertu" button in AI Helper → calls API → returns pre-filled JSON
-- Admin still reviews and edits the draft before publishing
-- Rate limiting: limit calls per session to avoid abuse
-- Error handling: graceful fallback if API is unavailable
+1. **Sprint 128 — PWA phone install test + screenshot/icon pack** (recommended next;
+   unblocked, feeds Gates 3 and 5).
+2. PGE manual source workflow in real use + waste coverage expansion (data).
+3. Source Checker Dashboard v1 — only after ≥1 week of real logged source checks.
+4. Reach 3–5 fresh alerts → local smoke test round 2 (5–10 testers).
+5. Partner demo page → soft outreach (feedback first, money later).
+6. Source engine stages: candidate queue → AI verifier → risk scoring → one-click
+   approve. Guarded autopublish stays beyond this horizon, behind hard safeguards.
+7. Android packaging decision (stay PWA vs TWA) and, only after its gate, Google
+   Play Console. iOS remains LATER.
 
-**Done when:** Admin can click one button after pasting a notice, get a draft alert, review it, and publish — without opening ChatGPT or Claude.
+## Standing rules (unchanged)
 
-**Prerequisite:** Anthropic API key available. Cost per call evaluated.
-
----
-
-## Milestone C — Source Monitor v0.1
-
-**Goal:** Surface new notices automatically without full scraping.
-
-**Key work:**
-- For each source with an RSS feed: fetch the feed on a schedule (Vercel cron or external)
-- For each new feed item not yet seen: create a "pending notice" entry in the database
-- Admin sees pending notices in the dashboard: title, source, link
-- One-click "Przygotuj alert" from a pending notice → AI Helper (or direct draft if Milestone B is done)
-- No full HTML scraping yet — RSS only in this milestone
-
-**Done when:** A source with an RSS feed surfaces new notices to the admin dashboard automatically, within 1 hour of publication.
-
-**Prerequisite:** At least one active source has a working RSS feed.
-
----
-
-## Milestone D — User Pilot
-
-**Goal:** Run a real 30-day pilot with at least one Polish municipality or local operator.
-
-**Key work:**
-- Onboard a partner (e.g. WKD, Gmina Michałowice, or local water utility)
-- Ensure the partner can add official content and review alerts before publishing
-- Track: How many alerts published per week? How many residents reached?
-- Simple feedback collection (a Google Form or email is fine)
-- No new code required for this milestone — it's operational
-
-**Done when:** At least 10 real alerts published, at least 20 unique public visitors per week.
-
----
-
-## Milestone E — Notifications
-
-**Goal:** Proactively reach residents instead of requiring them to check the app.
-
-**Key work:**
-- Residents can subscribe to alerts by category or location keyword (email or browser push)
-- Subscription stored server-side (Supabase, no accounts required — just an email or push token)
-- On alert publish: send notification to relevant subscribers
-- Unsubscribe mechanism (one-click)
-- Daily digest option (not per-alert spam)
-- Polish privacy disclosure
-
-**Done when:** A resident can subscribe on the homepage and receive a notification within 10 minutes of an alert being published.
-
-**Prerequisite:** Milestone D data shows resident demand. Compliance with Polish RODO (GDPR) reviewed.
-
----
-
-## Milestone F — PWA / Mobile App Direction
-
-**Goal:** Make Alertownik feel like a native mobile app for daily use.
-
-**Key work:**
-- Service worker with offline alert cache (last 20 published alerts available offline)
-- Push notification integration for PWA (Web Push API)
-- "Add to Home Screen" prompt flow — automatic, non-intrusive
-- Explore native app (React Native or Capacitor) if pilot shows strong mobile usage
-- App icon, splash screen, correct status bar colour
-
-**Done when:** A resident can install Alertownik on their iPhone or Android phone from the browser and receive push notifications without a native app store.
-
-**Prerequisite:** Milestone E push infrastructure. PWA push tested on iOS 16.4+ (which added PWA push support).
-
----
+- No auto-publish; a human approves every alert.
+- Official sources only (PGE / gmina / WKD / utilities); Facebook and community
+  posts are discovery clues, never publication sources.
+- No payments code, no push notifications, no scraping without explicit approval.
+- No schema/RLS changes without an approved SQL proposal in `docs/`.
 
 ## Out of Scope (Permanent)
 
