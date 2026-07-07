@@ -57,10 +57,15 @@ function formatDate(iso: string): string {
   });
 }
 
+// v2 status enum (Sprint 132 schema proposal) — needs_review/approved are
+// only ever set by future flows (AI verifier / one-click approve).
 const CANDIDATE_STATUS_LABELS_PL: Record<SourceNoticeCandidate["status"], string> = {
   pending: "oczekuje",
-  ignored: "zignorowany",
-  converted: "wykorzystany",
+  needs_review: "do przeglądu",
+  approved: "zatwierdzony",
+  rejected: "odrzucony",
+  converted_to_draft: "przekształcony w draft",
+  published: "opublikowany",
   archived: "zarchiwizowany",
 };
 
@@ -963,15 +968,15 @@ export default function AdminPage() {
         {!sourcesLoading && persistentNotices === null && (
           <div className="mt-3 bg-white rounded-2xl border border-slate-200 p-5">
             <p className="text-sm font-medium text-slate-700 mb-1">
-              Trwali kandydaci nie są jeszcze włączeni.
+              Trwali kandydaci nie są jeszcze włączeni — tabela wymaga zatwierdzenia Adama.
             </p>
             <p className="text-sm text-slate-500 leading-relaxed">
-              Uruchom migrację z{" "}
+              Propozycja schematu:{" "}
               <span className="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded">
-                docs/supabase_source_notice_candidates.sql
+                docs/sprint132_candidate_persistence_schema_proposal.sql
               </span>{" "}
-              w Supabase SQL Editor. Do tego czasu kandydaci są widoczni tylko w starszym
-              widoku w{" "}
+              (uruchamiana ręcznie w Supabase SQL Editor, dopiero po zatwierdzeniu).
+              Do tego czasu kandydaci są widoczni tylko w starszym widoku w{" "}
               <Link href="/admin/queue" className="font-medium text-blue-600 hover:underline">
                 Kandydatach
               </Link>.
@@ -991,7 +996,7 @@ export default function AdminPage() {
                 .sort((a, b) => b.detectedAt.localeCompare(a.detectedAt))
                 .slice(0, 3);
               const recentlyConverted = persistentNotices
-                .filter((n) => n.status === "converted")
+                .filter((n) => n.status === "converted_to_draft" || n.status === "published")
                 .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
                 .slice(0, 2);
               if (recent.length === 0) {

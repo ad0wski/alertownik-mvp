@@ -1,25 +1,20 @@
 "use client";
 
-import type { SourceCandidateStatus } from "@/types/sourceCandidate";
+import type {
+  CandidateStatus,
+  RiskLevel,
+  VerificationStatus,
+} from "@/types/sourceCandidate";
 
 // Sprint 131 — reusable candidate card for /admin/queue (and, later, any
-// automation surface that shows candidates). The display shape is wider
-// than today's SourceNoticeCandidate on purpose: the v2 data model
-// (Obsidian: Candidate Queue Data Model Proposal) adds category/severity/
-// locality/dates/confidence/risk/verification, and this card can already
-// render them — but every future field is optional and rendered only when
-// actually present. Nothing in production sets them yet (no table, no
-// fake data); the only always-visible future element is the honest
-// "AI verifier: wkrótce" placeholder on pending cards.
-
-export type CandidateRiskLevel = "low" | "medium" | "high";
-
-export type CandidateVerificationStatus =
-  | "unverified"
-  | "auto_checked"
-  | "ai_verified"
-  | "human_verified"
-  | "failed";
+// automation surface that shows candidates). Sprint 132 aligned it with
+// the v2 data model (docs/sprint132_candidate_persistence_schema_proposal
+// .sql): risk/verification enums now come from src/types/sourceCandidate,
+// and the reject action writes the v2 `rejected` status. Every future
+// field stays optional and is rendered only when actually present —
+// nothing in production sets them yet (no table, no fake data); the only
+// always-visible future element is the honest "AI verifier: wkrótce"
+// placeholder on pending cards.
 
 export interface CandidateCardData {
   id: string;
@@ -36,30 +31,30 @@ export interface CandidateCardData {
   startsAt?: string | null;
   endsAt?: string | null;
   confidenceScore?: number | null;
-  riskLevel?: CandidateRiskLevel | null;
-  verificationStatus?: CandidateVerificationStatus;
+  riskLevel?: RiskLevel | null;
+  verificationStatus?: VerificationStatus;
   duplicateWarning?: string | null;
 }
 
 interface CandidateCardProps {
   candidate: CandidateCardData;
-  status: SourceCandidateStatus;
+  status: CandidateStatus;
   warnings?: string[];
   convertedAlertTitle?: string | null;
   busy?: boolean;
   sent?: boolean;
   onSendToAiHelper?: () => void;
   onCreateBuilderDraft?: () => void;
-  onSetStatus?: (status: SourceCandidateStatus) => void;
+  onSetStatus?: (status: CandidateStatus) => void;
 }
 
-const RISK_LABELS: Record<CandidateRiskLevel, { label: string; color: string }> = {
+const RISK_LABELS: Record<RiskLevel, { label: string; color: string }> = {
   low:    { label: "Ryzyko: niskie",  color: "text-emerald-700 bg-emerald-50 border-emerald-200" },
   medium: { label: "Ryzyko: średnie", color: "text-amber-700 bg-amber-50 border-amber-200" },
   high:   { label: "Ryzyko: wysokie", color: "text-red-700 bg-red-50 border-red-200" },
 };
 
-const VERIFICATION_LABELS: Record<CandidateVerificationStatus, string> = {
+const VERIFICATION_LABELS: Record<VerificationStatus, string> = {
   unverified:     "Niezweryfikowany",
   auto_checked:   "Sprawdzony automatycznie",
   ai_verified:    "Zweryfikowany przez AI",
@@ -171,7 +166,7 @@ export function CandidateCard({
 
       {/* Honest future-flow note: the AI verifier (plan A3) doesn't exist
           yet, so a pending candidate is by definition manually reviewed. */}
-      {status === "pending" && !c.verificationStatus && (
+      {status === "pending" && (!c.verificationStatus || c.verificationStatus === "unverified") && (
         <p className="text-xs text-slate-400 italic">
           Weryfikacja: ręczna (admin). Raport AI verifiera — wkrótce, w kolejnym etapie automatyzacji.
         </p>
@@ -222,10 +217,10 @@ export function CandidateCard({
               <>
                 <button
                   disabled={busy}
-                  onClick={() => onSetStatus("ignored")}
+                  onClick={() => onSetStatus("rejected")}
                   className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors"
                 >
-                  Zignoruj
+                  Odrzuć
                 </button>
                 <button
                   disabled={busy}
@@ -239,7 +234,7 @@ export function CandidateCard({
           </>
         )}
 
-        {(status === "ignored" || status === "archived") && onSetStatus && (
+        {(status === "rejected" || status === "archived") && onSetStatus && (
           <button
             disabled={busy}
             onClick={() => onSetStatus("pending")}

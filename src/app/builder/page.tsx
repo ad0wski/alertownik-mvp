@@ -692,7 +692,9 @@ export default function BuilderPage() {
       setSupabaseSavedSlug(slug);
       setSupabaseSuccess("published");
       if (pendingCandidateId) {
-        await markCandidateConverted(pendingCandidateId, result.id ?? null);
+        // v2 statuses: the manual publish click is the ONLY path that may
+        // set a candidate to `published` (see supabaseCandidateWrites.ts).
+        await markCandidateConverted(pendingCandidateId, result.id ?? null, "published");
         setPendingCandidateId("");
       }
       // Reset for the next alert — without this, an import missing a field

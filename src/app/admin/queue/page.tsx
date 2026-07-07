@@ -46,11 +46,23 @@ const resultLabels: Record<string, { label: string; color: string }> = {
   needs_followup: { label: "Wymaga późniejszego sprawdzenia", color: "text-amber-600 bg-amber-50 border-amber-200" },
 };
 
+// v2 status enum (Sprint 132 schema proposal) — needs_review/approved are
+// set only by future flows (AI verifier A3, one-click approve A4), so they
+// have labels here but no tab below yet.
 const CANDIDATE_STATUS_LABELS: Record<SourceCandidateStatus, string> = {
   pending: "Oczekujące",
-  ignored: "Zignorowane",
-  converted: "Wykorzystane",
+  needs_review: "Do przeglądu",
+  approved: "Zatwierdzone",
+  rejected: "Odrzucone",
+  converted_to_draft: "Przekształcone w draft",
+  published: "Opublikowane",
   archived: "Zarchiwizowane",
+};
+
+const SEVERITY_LABELS: Record<string, string> = {
+  info: "Info",
+  warning: "Ostrzeżenie",
+  urgent: "Pilne",
 };
 
 const POLISH_MAP: Record<string, string> = {
@@ -293,7 +305,8 @@ function QueueContent() {
     ? notices.filter((n) => n.sourceId === sourceFilter)
     : notices;
   const noticeCounts: Record<SourceCandidateStatus, number> = {
-    pending: 0, ignored: 0, converted: 0, archived: 0,
+    pending: 0, needs_review: 0, approved: 0, rejected: 0,
+    converted_to_draft: 0, published: 0, archived: 0,
   };
   for (const n of noticesBySource) noticeCounts[n.status]++;
   const filteredNotices = noticesBySource.filter((n) => n.status === noticeStatusFilter);
@@ -335,11 +348,11 @@ function QueueContent() {
             <p className="text-xs text-slate-400 mt-1 leading-snug">Zatwierdzone</p>
           </div>
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
-            <p className="text-2xl font-bold text-slate-700">{noticeCounts.ignored}</p>
-            <p className="text-xs text-slate-500 mt-1 leading-snug">Odrzucone (dziś: zignorowane)</p>
+            <p className="text-2xl font-bold text-slate-700">{noticeCounts.rejected}</p>
+            <p className="text-xs text-slate-500 mt-1 leading-snug">Odrzucone</p>
           </div>
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
-            <p className="text-2xl font-bold text-emerald-700">{noticeCounts.converted}</p>
+            <p className="text-2xl font-bold text-emerald-700">{noticeCounts.converted_to_draft + noticeCounts.published}</p>
             <p className="text-xs text-slate-500 mt-1 leading-snug">Przekształcone w draft</p>
           </div>
         </div>
@@ -418,16 +431,17 @@ function QueueContent() {
         {noticesTableMissing ? (
           <div className="bg-white rounded-2xl border border-slate-200 p-5">
             <p className="text-sm font-medium text-slate-700 mb-1">
-              Trwali kandydaci nie są jeszcze włączeni.
+              Trwali kandydaci nie są jeszcze włączeni — tabela kandydatów wymaga
+              zatwierdzenia Adama.
             </p>
             <p className="text-sm text-slate-500 leading-relaxed">
-              Uruchom migrację z{" "}
+              Propozycja schematu czeka w{" "}
               <span className="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded">
-                docs/supabase_source_notice_candidates.sql
-              </span>{" "}
-              w Supabase SQL Editor, aby zacząć zapisywać kandydatów na trwałe (przycisk
-              „Zapisz jako kandydata” w Źródłach). Do tego czasu działa tylko starszy widok
-              poniżej.
+                docs/sprint132_candidate_persistence_schema_proposal.sql
+              </span>
+              . Po zatwierdzeniu i ręcznym uruchomieniu w Supabase SQL Editor kandydaci
+              zaczną się zapisywać na trwałe (przycisk „Zapisz jako kandydata” w Źródłach).
+              Do tego czasu działa tylko starszy widok poniżej.
             </p>
           </div>
         ) : (
@@ -440,7 +454,7 @@ function QueueContent() {
 
             {/* Status tabs */}
             <div className="flex flex-wrap items-center gap-2 mb-4">
-              {(["pending", "ignored", "converted", "archived"] as SourceCandidateStatus[]).map((s) => (
+              {(["pending", "rejected", "converted_to_draft", "published", "archived"] as SourceCandidateStatus[]).map((s) => (
                 <button
                   key={s}
                   onClick={() => setNoticeStatusFilter(s)}
@@ -489,7 +503,12 @@ function QueueContent() {
               <div className="flex flex-col gap-3">
                 {filteredNotices.map((n) => {
                   const convertedAlert = alertFor(n.convertedAlertId);
-                  const category = n.sourceId ? sourceCategoryById[n.sourceId] : undefined;
+                  // v2: the candidate's own category (from the proposed schema)
+                  // wins over the source's category; both may be absent.
+                  const category =
+                    (n.category as AlertCategory | null) ??
+                    (n.sourceId ? sourceCategoryById[n.sourceId] : undefined);
+                  const duplicateAlert = alertFor(n.duplicateOfAlertId);
                   return (
                     <CandidateCard
                       key={n.id}
@@ -502,6 +521,18 @@ function QueueContent() {
                         excerpt: n.excerpt,
                         detectedAt: n.detectedAt,
                         categoryLabel: category ? categoryLabels[category] : undefined,
+                        severityLabel: n.severity ? SEVERITY_LABELS[n.severity] : undefined,
+                        locality: n.locality ?? undefined,
+                        startsAt: n.startsAt,
+                        endsAt: n.endsAt,
+                        confidenceScore: n.confidenceScore,
+                        riskLevel: n.riskLevel,
+                        verificationStatus: n.verificationStatus,
+                        duplicateWarning: duplicateAlert
+                          ? `Możliwy duplikat alertu: „${duplicateAlert.title || "Bez tytułu"}”`
+                          : n.duplicateOfAlertId
+                            ? "Oznaczony jako możliwy duplikat istniejącego alertu."
+                            : null,
                       }}
                       status={n.status}
                       warnings={n.status === "pending" ? noticeWarningsFor(n) : []}

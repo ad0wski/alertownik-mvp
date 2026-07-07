@@ -259,10 +259,11 @@ export async function createSourceCheck(input: SourceCheckInput): Promise<SaveRe
 // ── Candidate queue (V0 — built on source_checks, no schema change) ───────────
 // "Candidates" are source_checks the admin marked as having found something
 // worth turning into an alert. There is no persisted title/url/excerpt or
-// ignore/archive status yet — see docs/supabase_source_notice_candidates.sql
-// for the proposed table that would add those. Until that's applied, status
-// is derived: a candidate with no relatedAlertId is "pending", one with a
-// relatedAlertId is "converted" (resolve the alert separately to display it).
+// reject/archive status yet — see docs/sprint132_candidate_persistence_
+// schema_proposal.sql for the proposed table that would add those. Until
+// that's applied, status is derived: a candidate with no relatedAlertId is
+// "pending", one with a relatedAlertId is "converted" (resolve the alert
+// separately to display it).
 
 const CANDIDATE_RESULTS: SourceCheckResult[] = ["found_notice", "needs_followup"];
 

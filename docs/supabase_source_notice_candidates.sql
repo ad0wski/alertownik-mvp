@@ -1,7 +1,15 @@
 -- ============================================================================
--- Alertownik — Source Notice Candidates Schema
+-- Alertownik — Source Notice Candidates Schema (v1)
 -- Sprint 74: proposed. Sprint 78: finalized shape (Persistent Source
--- Candidate Queue). STILL NOT APPLIED as of Sprint 78.
+-- Candidate Queue). NEVER APPLIED (confirmed live in Sprint 106S).
+--
+-- ⛔ SUPERSEDED (Sprint 132) — DO NOT RUN THIS FILE.
+-- The current proposal is docs/sprint132_candidate_persistence_schema_
+-- proposal.sql (v2: automation/verification fields + split status enum).
+-- Running this v1 file would create a table whose status check constraint
+-- ('pending'/'ignored'/'converted'/'archived') REJECTS the v2 status
+-- values the app now writes ('rejected'/'converted_to_draft'/'published').
+-- Kept for history only.
 -- ============================================================================
 -- STATUS: PROPOSAL — NOT APPLIED. Run manually in the Supabase SQL Editor
 -- only after explicit confirmation. Do NOT execute automatically or via a

@@ -5,16 +5,17 @@ import type {
   SourceCandidateStatus,
 } from "@/types/sourceCandidate";
 
-// Reads/writes for the proposed `source_notice_candidates` table (Sprint 78
-// — see docs/supabase_source_notice_candidates.sql). That migration is NOT
-// applied automatically — every function here detects a missing table and
-// returns a calm, explanatory error instead of throwing, so /admin/queue
-// and /admin/sources keep working (showing the existing source_checks-based
-// view) whether or not the admin has run the migration yet.
+// Reads/writes for the proposed `source_notice_candidates` table (v2 schema:
+// docs/sprint132_candidate_persistence_schema_proposal.sql). That migration
+// is NOT applied automatically and requires Adam's explicit approval —
+// every function here detects a missing table and returns a calm,
+// explanatory error instead of throwing, so /admin/queue and /admin/sources
+// keep working (showing the existing source_checks-based view) whether or
+// not the migration has been run yet.
 
 const TABLE_MISSING_HINT =
-  "Tabela „source_notice_candidates” jeszcze nie istnieje w Supabase. " +
-  "Uruchom migrację z docs/supabase_source_notice_candidates.sql, aby włączyć trwałych kandydatów.";
+  "Tabela „source_notice_candidates” jeszcze nie istnieje w Supabase (wymaga zatwierdzenia Adama). " +
+  "Propozycja migracji: docs/sprint132_candidate_persistence_schema_proposal.sql.";
 
 interface SupabaseErrorLike {
   code?: string;
@@ -58,6 +59,29 @@ function rowToCandidate(row: Record<string, unknown>): SourceNoticeCandidate {
     convertedAlertId: (row.converted_alert_id as string) || null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
+    // v2 columns (schema proposal, Sprint 132) — mapped defensively so the
+    // same code works before the migration (columns absent → undefined)
+    // and starts surfacing them in the UI the moment the table exists.
+    sourceKey: (row.source_key as string) || undefined,
+    officialDomain: (row.official_domain as string) || undefined,
+    rawTitle: (row.raw_title as string) || undefined,
+    category: (row.category as string) || null,
+    severity: (row.severity as string) || null,
+    locality: (row.locality as string) || null,
+    place: (row.place as string) || null,
+    startsAt: (row.starts_at as string) || null,
+    endsAt: (row.ends_at as string) || null,
+    change: (row.change as string) || null,
+    action: (row.action as string) || null,
+    confidenceScore:
+      typeof row.confidence_score === "number" ? row.confidence_score : null,
+    riskLevel: (row.risk_level as SourceNoticeCandidate["riskLevel"]) || null,
+    verificationStatus:
+      (row.verification_status as SourceNoticeCandidate["verificationStatus"]) ||
+      undefined,
+    verificationNotes: (row.verification_notes as string) || null,
+    duplicateOfAlertId: (row.duplicate_of_alert_id as string) || null,
+    checkedAt: (row.checked_at as string) || null,
   };
 }
 
@@ -86,12 +110,19 @@ export async function createSourceCandidateNotice(
 ): Promise<CandidateSaveResult> {
   if (!supabase) return { ok: false, error: "Brak połączenia z Supabase." };
 
+  // v2 schema makes source_url NOT NULL (hard project rule: no source link
+  // = no candidate) — guard here so the failure is a clear message, not a
+  // Postgres constraint error.
+  if (!input.sourceUrl?.trim()) {
+    return { ok: false, error: "Kandydat wymaga adresu źródła (source_url)." };
+  }
+
   const { data, error } = await supabase
     .from("source_notice_candidates")
     .insert({
       source_id: input.sourceId ?? null,
       source_name: input.sourceName,
-      source_url: input.sourceUrl?.trim() || null,
+      source_url: input.sourceUrl.trim(),
       candidate_url: input.candidateUrl?.trim() || null,
       title: input.title.trim(),
       excerpt: input.excerpt?.trim() || null,
@@ -136,16 +167,20 @@ export async function updateCandidateStatus(
 // Called from Builder after a candidate-sourced draft/publish actually
 // succeeds (see src/app/builder/page.tsx) — best-effort: a failure here
 // must never block or roll back the alert save that already happened.
+// v2 statuses: a draft save marks the candidate `converted_to_draft`;
+// `published` is set ONLY by the manual publish click in Builder — this is
+// the single allowed path to that status (no automated path exists).
 export async function markCandidateConverted(
   id: string,
-  convertedAlertId?: string | null
+  convertedAlertId?: string | null,
+  status: "converted_to_draft" | "published" = "converted_to_draft"
 ): Promise<CandidateSaveResult> {
   if (!supabase) return { ok: false, error: "Brak połączenia z Supabase." };
 
   const { error } = await supabase
     .from("source_notice_candidates")
     .update({
-      status: "converted",
+      status,
       converted_alert_id: convertedAlertId ?? null,
       updated_at: new Date().toISOString(),
     })
