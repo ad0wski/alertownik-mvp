@@ -524,6 +524,10 @@ export default function AdminPage() {
               zaproponuje publikację. Decyzja o publikacji pozostanie zawsze
               po stronie człowieka.
             </p>
+            <p className="text-sm text-slate-500 leading-relaxed mt-2">
+              Automatyzacja będzie działać przez kolejkę kandydatów
+              (candidate queue) — najpierw bez autopublish.
+            </p>
           </div>
         </div>
       </section>
