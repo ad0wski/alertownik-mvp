@@ -457,12 +457,30 @@ export default function AdminPage() {
             </div>
           </div>
 
-          {/* 6 — PGE planned outages manual check (Sprint 126 — the next
+          {/* 6 — Source Checker Dashboard v1 (Sprint 129 — static checklist
+              of official sources on /admin/sources; manual, source-first) */}
+          <div className="sm:col-span-2 rounded-2xl border border-blue-200 bg-white shadow-sm p-5">
+            <h3 className="text-sm font-semibold text-slate-800 mb-1">
+              6. Sprawdź źródła
+            </h3>
+            <p className="text-sm text-slate-600 leading-relaxed mb-3">
+              Lista oficjalnych źródeł do ręcznego sprawdzania. Jeśli znajdziesz
+              komunikat, utwórz szkic przez Draft from Source.
+            </p>
+            <Link
+              href="/admin/sources#checklista"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100 transition-colors"
+            >
+              Przejdź do źródeł →
+            </Link>
+          </div>
+
+          {/* 7 — PGE planned outages manual check (Sprint 126 — the next
               data category after waste got its first positive signal;
               manual browser check only, no scraping/automation) */}
           <div className="sm:col-span-2 rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
             <h3 className="text-sm font-semibold text-slate-800 mb-1">
-              6. Sprawdź PGE / prąd
+              7. Sprawdź PGE / prąd
             </h3>
             <p className="text-sm text-slate-600 leading-relaxed mb-3">
               PGE Dystrybucja to oficjalne źródło planowanych wyłączeń prądu —

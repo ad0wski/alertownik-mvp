@@ -30,6 +30,7 @@ import {
 } from "@/lib/supabaseCandidateWrites";
 import { getAdminSupabaseAlerts } from "@/lib/getAdminSupabaseAlerts";
 import { findSimilarText, trimAtWord } from "@/lib/candidateWarnings";
+import { OfficialSourceChecklist } from "@/components/OfficialSourceChecklist";
 import {
   detectParserStrategy,
   PARSER_STRATEGY_LABELS,
@@ -1585,6 +1586,10 @@ export default function SourcesPage() {
           Sprawdzanie odbywa się ręcznie — kliknij „Sprawdź" przy wybranym źródle, aby zapisać wynik.
         </p>
       </div>
+
+      {/* Source Checker Dashboard v1 (Sprint 129) — static, code-defined
+          checklist of official sources to check by hand; no DB, no fetching */}
+      <OfficialSourceChecklist />
 
       {/* Add button + pilot suggestions toggle */}
       <div className="mb-5 flex flex-wrap items-center gap-2">
