@@ -306,7 +306,7 @@ export default function AdminPage() {
     { href: "/builder",       title: "Kreator alertu",      desc: "Twórz, edytuj i publikuj alerty w Supabase.",    border: "border-amber-200 hover:border-amber-300" },
     { href: "/ai-helper",     title: "AI Helper",           desc: "Przygotuj treść alertu z pomocą AI.",             border: "border-purple-200 hover:border-purple-300" },
     { href: "/admin/sources", title: "Źródła",              desc: "Zarządzaj źródłami komunikatów.",                border: "border-slate-200 hover:border-slate-300" },
-    { href: "/admin/queue",   title: "Kandydaci na alerty", desc: "Przejrzyj znalezione komunikaty czekające na decyzję.", border: "border-purple-200 hover:border-purple-300" },
+    { href: "/admin/queue",   title: "Kolejka kandydatów",  desc: "Przejrzyj znalezione komunikaty czekające na decyzję.", border: "border-purple-200 hover:border-purple-300" },
     { href: "/",              title: "Publiczna lista alertów", desc: "Sprawdź co widzą mieszkańcy.",               border: "border-blue-200 hover:border-blue-300" },
   ];
 
@@ -901,9 +901,13 @@ export default function AdminPage() {
         )}
       </section>
 
-      {/* ── Source candidates ──────────────────────────────────────────── */}
+      {/* ── Candidate queue (Sprint 131) ───────────────────────────────── */}
       <section className="mb-8">
-        <h2 className="text-base font-semibold text-slate-800 mb-4">Kandydaci na alerty</h2>
+        <h2 className="text-base font-semibold text-slate-800 mb-1">Kolejka kandydatów</h2>
+        <p className="text-xs text-slate-400 mb-4 leading-relaxed">
+          Tu będą trafiały komunikaty znalezione przez automatyzację. Najpierw
+          sprawdzimy je ręcznie, potem dodamy AI verifier.
+        </p>
 
         {sourcesLoading ? (
           <div className="bg-white rounded-2xl border border-slate-200 p-5 animate-pulse">
@@ -926,12 +930,28 @@ export default function AdminPage() {
                   : "Brak kandydatów czekających na decyzję"}
               </p>
             </div>
-            <Link
-              href="/admin/queue"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors shrink-0"
-            >
-              Przejdź do kandydatów →
-            </Link>
+            <div className="flex flex-col items-start gap-1.5 shrink-0">
+              <Link
+                href="/admin/queue"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"
+              >
+                Otwórz kolejkę →
+              </Link>
+              <div className="flex flex-wrap gap-x-3">
+                <Link
+                  href="/admin/sources"
+                  className="text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                >
+                  Sprawdź źródła →
+                </Link>
+                <Link
+                  href="/admin/new-alert"
+                  className="text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                >
+                  Draft from Source →
+                </Link>
+              </div>
+            </div>
           </div>
         )}
 

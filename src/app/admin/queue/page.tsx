@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
+import { CandidateCard } from "@/components/CandidateCard";
 import {
   getSourceCandidates,
   getSourceChecks,
@@ -81,6 +82,26 @@ function formatCheckedAt(iso: string): string {
 function draftTitleFromCandidate(c: SourceCandidate): string {
   const fromNotes = c.notes?.trim() ? trimAtWord(c.notes.trim(), 80) : "";
   return fromNotes || `${c.sourceName} — do uzupełnienia`;
+}
+
+// Module-level on purpose: this runs at click time only, but since Sprint
+// 131 the callback travels through a CandidateCard prop, so the
+// react-hooks/purity lint can no longer see it's an event handler — at
+// module scope the Date.now() slug suffix is out of the rule's reach.
+function buildDraftFromNotice(n: SourceNoticeCandidate, category: AlertCategory) {
+  return {
+    category,
+    severity: "info",
+    title: n.title,
+    slug: `${toSlug(n.title)}-${Date.now()}`,
+    place: "",
+    startsAt: new Date().toISOString().slice(0, 10),
+    endsAt: null,
+    change: n.rawText || n.excerpt || "",
+    action: "",
+    sourceName: n.sourceName,
+    sourceUrl: n.sourceUrl || null,
+  };
 }
 
 // ── Page content (auth-gated) ──────────────────────────────────────────────────
@@ -239,19 +260,10 @@ function QueueContent() {
   }
 
   function createBuilderDraftFromNotice(n: SourceNoticeCandidate) {
-    const draft = {
-      category: (n.sourceId && sourceCategoryById[n.sourceId]) || "municipal",
-      severity: "info",
-      title: n.title,
-      slug: `${toSlug(n.title)}-${Date.now()}`,
-      place: "",
-      startsAt: new Date().toISOString().slice(0, 10),
-      endsAt: null,
-      change: n.rawText || n.excerpt || "",
-      action: "",
-      sourceName: n.sourceName,
-      sourceUrl: n.sourceUrl || null,
-    };
+    const draft = buildDraftFromNotice(
+      n,
+      (n.sourceId && sourceCategoryById[n.sourceId]) || "municipal"
+    );
     sessionStorage.setItem(AI_PENDING_KEY, JSON.stringify(draft));
     if (n.sourceId) sessionStorage.setItem(AI_PENDING_SOURCE_ID_KEY, n.sourceId);
     sessionStorage.setItem(PENDING_CANDIDATE_ID_KEY, n.id);
@@ -299,9 +311,59 @@ function QueueContent() {
           </span>
         </div>
         <p className="mt-1 text-sm text-slate-500 leading-relaxed">
-          Komunikaty znalezione podczas sprawdzania źródeł, czekające na decyzję admina.
+          Tu będą trafiały komunikaty znalezione przez Source Checker / automatyzację.
+          Na razie publikacja zawsze wymaga ręcznego zatwierdzenia.
         </p>
       </div>
+
+      {/* ── Pipeline status cards (Sprint 131) ─────────────────────────────
+          Live counts come from today's v1 statuses; the two stages that
+          exist only in the v2 plan (AI review, approve) are honestly marked
+          "wkrótce" instead of showing a made-up zero as if they ran. */}
+      <section className="mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
+            <p className="text-2xl font-bold text-purple-600">{noticeCounts.pending}</p>
+            <p className="text-xs text-slate-500 mt-1 leading-snug">Oczekujące</p>
+          </div>
+          <div className="bg-slate-50 rounded-2xl border border-dashed border-slate-300 p-4">
+            <p className="text-sm font-semibold text-slate-400">wkrótce</p>
+            <p className="text-xs text-slate-400 mt-1 leading-snug">Do przeglądu (AI verifier)</p>
+          </div>
+          <div className="bg-slate-50 rounded-2xl border border-dashed border-slate-300 p-4">
+            <p className="text-sm font-semibold text-slate-400">wkrótce</p>
+            <p className="text-xs text-slate-400 mt-1 leading-snug">Zatwierdzone</p>
+          </div>
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
+            <p className="text-2xl font-bold text-slate-700">{noticeCounts.ignored}</p>
+            <p className="text-xs text-slate-500 mt-1 leading-snug">Odrzucone (dziś: zignorowane)</p>
+          </div>
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
+            <p className="text-2xl font-bold text-emerald-700">{noticeCounts.converted}</p>
+            <p className="text-xs text-slate-500 mt-1 leading-snug">Przekształcone w draft</p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 mt-3">
+          <Link
+            href="/admin/sources"
+            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"
+          >
+            Sprawdź źródła →
+          </Link>
+          <Link
+            href="/admin/new-alert"
+            className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-100 transition-colors"
+          >
+            Utwórz draft ze źródła →
+          </Link>
+          <Link
+            href="/builder"
+            className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-700 hover:bg-amber-100 transition-colors"
+          >
+            Otwórz Builder →
+          </Link>
+        </div>
+      </section>
 
       {/* Workflow explanation */}
       <section className="mb-6">
@@ -406,118 +468,52 @@ function QueueContent() {
               <div className="bg-white rounded-2xl border border-slate-200 p-5">
                 <p className="text-sm text-slate-500">
                   {noticeStatusFilter === "pending"
-                    ? "Brak oczekujących kandydatów. Zapisz fragment komunikatu jako kandydata w Źródłach, aby zobaczyć go tutaj."
+                    ? "Brak kandydatów. Na tym etapie źródła sprawdzamy ręcznie lub przez Draft from Source."
                     : `Brak kandydatów ze statusem „${CANDIDATE_STATUS_LABELS[noticeStatusFilter]}”.`}
                 </p>
+                {noticeStatusFilter === "pending" && (
+                  <p className="text-sm text-slate-500 mt-2 leading-relaxed">
+                    Zapisz fragment komunikatu jako kandydata w{" "}
+                    <Link href="/admin/sources" className="font-medium text-blue-600 hover:underline">
+                      Źródłach
+                    </Link>{" "}
+                    albo przygotuj szkic przez{" "}
+                    <Link href="/admin/new-alert" className="font-medium text-blue-600 hover:underline">
+                      Draft from Source
+                    </Link>
+                    .
+                  </p>
+                )}
               </div>
             ) : (
               <div className="flex flex-col gap-3">
                 {filteredNotices.map((n) => {
                   const convertedAlert = alertFor(n.convertedAlertId);
-                  const busy = noticeActionId === n.id;
-                  const warnings = n.status === "pending" ? noticeWarningsFor(n) : [];
+                  const category = n.sourceId ? sourceCategoryById[n.sourceId] : undefined;
                   return (
-                    <div key={n.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 flex flex-col gap-3">
-                      <div className="flex flex-wrap items-center gap-2">
-                        {n.sourceId && sourceCategoryById[n.sourceId] && (
-                          <span className="text-xs font-medium text-slate-600 bg-slate-100 rounded-full px-2.5 py-1">
-                            {categoryLabels[sourceCategoryById[n.sourceId]]}
-                          </span>
-                        )}
-                        <span className="text-xs text-slate-400">{formatCheckedAt(n.detectedAt)}</span>
-                      </div>
-
-                      <p className="text-sm font-semibold text-slate-900">{n.title}</p>
-                      <p className="text-xs text-slate-500">Źródło: {n.sourceName}</p>
-
-                      {n.excerpt && (
-                        <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">{n.excerpt}</p>
-                      )}
-
-                      {convertedAlert && (
-                        <p className="text-xs text-emerald-700">
-                          → przekształcone w alert: <strong className="font-semibold">{convertedAlert.title || "Bez tytułu"}</strong>
-                        </p>
-                      )}
-
-                      {warnings.length > 0 && (
-                        <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2">
-                          <ul className="space-y-0.5">
-                            {warnings.map((w, wi) => (
-                              <li key={wi} className="text-xs text-amber-700">⚠ {w}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      <div className="flex flex-wrap items-center gap-2 pt-0.5">
-                        {n.sourceUrl && (
-                          <a
-                            href={n.sourceUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"
-                          >
-                            Otwórz źródło →
-                          </a>
-                        )}
-                        {n.candidateUrl && (
-                          <a
-                            href={n.candidateUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"
-                          >
-                            Otwórz link kandydata →
-                          </a>
-                        )}
-
-                        {n.status === "pending" && (
-                          <>
-                            <button
-                              onClick={() => sendNoticeToAiHelper(n)}
-                              className="inline-flex items-center gap-1 rounded-lg border border-purple-200 bg-purple-50 px-3 py-1.5 text-sm font-medium text-purple-700 hover:bg-purple-100 transition-colors"
-                            >
-                              Wyślij do AI Helpera →
-                            </button>
-                            <button
-                              onClick={() => createBuilderDraftFromNotice(n)}
-                              className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-700 hover:bg-amber-100 transition-colors"
-                            >
-                              Utwórz szkic w Kreatorze →
-                            </button>
-                            <button
-                              disabled={busy}
-                              onClick={() => setNoticeStatus(n, "ignored")}
-                              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors"
-                            >
-                              Zignoruj
-                            </button>
-                            <button
-                              disabled={busy}
-                              onClick={() => setNoticeStatus(n, "archived")}
-                              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-500 hover:bg-slate-50 disabled:opacity-50 transition-colors"
-                            >
-                              Archiwizuj
-                            </button>
-                          </>
-                        )}
-
-                        {(n.status === "ignored" || n.status === "archived") && (
-                          <button
-                            disabled={busy}
-                            onClick={() => setNoticeStatus(n, "pending")}
-                            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors"
-                          >
-                            Przywróć do oczekujących
-                          </button>
-                        )}
-
-                        {sentId === n.id && (
-                          <span className="text-xs text-emerald-700 font-medium">Wysłano ✓</span>
-                        )}
-                      </div>
-                    </div>
+                    <CandidateCard
+                      key={n.id}
+                      candidate={{
+                        id: n.id,
+                        title: n.title,
+                        sourceName: n.sourceName,
+                        sourceUrl: n.sourceUrl,
+                        candidateUrl: n.candidateUrl,
+                        excerpt: n.excerpt,
+                        detectedAt: n.detectedAt,
+                        categoryLabel: category ? categoryLabels[category] : undefined,
+                      }}
+                      status={n.status}
+                      warnings={n.status === "pending" ? noticeWarningsFor(n) : []}
+                      convertedAlertTitle={
+                        convertedAlert ? convertedAlert.title || "Bez tytułu" : null
+                      }
+                      busy={noticeActionId === n.id}
+                      sent={sentId === n.id}
+                      onSendToAiHelper={() => sendNoticeToAiHelper(n)}
+                      onCreateBuilderDraft={() => createBuilderDraftFromNotice(n)}
+                      onSetStatus={(status) => setNoticeStatus(n, status)}
+                    />
                   );
                 })}
               </div>
