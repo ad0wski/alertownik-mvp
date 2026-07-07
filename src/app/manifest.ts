@@ -17,24 +17,38 @@ export default function manifest(): MetadataRoute.Manifest {
     background_color: "#f0f9ff",
     theme_color: "#2563eb",
     icons: [
+      // Sprint 128 — PNG icons rendered from the brand SVG via
+      // scripts/generate-mobile-assets.mjs. PNGs listed before the SVG:
+      // some Android launchers and older WebViews ignore SVG manifest
+      // icons, and fixed-size PNGs are what Play/TWA packaging expects.
+      {
+        src: "/icon-192.png",
+        sizes: "192x192",
+        type: "image/png",
+        purpose: "any",
+      },
+      {
+        src: "/icon-512.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "any",
+      },
+      // The maskable entry must be FULL-BLEED (no transparent corners) —
+      // the OS applies its own mask shape over the whole canvas. The
+      // previous maskable entry reused the rounded icon.svg, whose
+      // transparent corners would show through a square or squircle mask;
+      // this dedicated full-bleed PNG fixes that.
+      {
+        src: "/icon-maskable-512.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "maskable",
+      },
       {
         src: "/icon.svg",
         sizes: "any",
         type: "image/svg+xml",
         purpose: "any",
-      },
-      // "maskable" added Sprint 97 — same file, separate manifest entry,
-      // since Next.js's manifest type only accepts one purpose value per
-      // entry (the W3C spec's space-separated multi-value form isn't
-      // representable here). The icon's actual visible content (a small
-      // centered dot) sits well inside the safe zone any OS mask would
-      // crop to, and the background is already a full-bleed rounded
-      // square — exactly the shape a maskable icon is supposed to provide.
-      {
-        src: "/icon.svg",
-        sizes: "any",
-        type: "image/svg+xml",
-        purpose: "maskable",
       },
       {
         src: "/favicon.ico",
