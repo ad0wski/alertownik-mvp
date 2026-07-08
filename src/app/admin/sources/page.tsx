@@ -31,6 +31,8 @@ import {
 import { getAdminSupabaseAlerts } from "@/lib/getAdminSupabaseAlerts";
 import { findSimilarText, trimAtWord } from "@/lib/candidateWarnings";
 import { OfficialSourceChecklist } from "@/components/OfficialSourceChecklist";
+import { SourceHealthDashboard } from "@/components/SourceHealthDashboard";
+import { buildSourceHealthRows, type HealthCandidate } from "@/lib/sourceHealth";
 import {
   detectParserStrategy,
   PARSER_STRATEGY_LABELS,
@@ -1347,6 +1349,11 @@ export default function SourcesPage() {
   const [existingCandidateTexts, setExistingCandidateTexts] = useState<string[]>([]);
   const [alertTitles, setAlertTitles]                       = useState<string[]>([]);
 
+  // Sprint 137: persistent candidates projected down to what the health
+  // dashboard needs (source attribution + detection time) — filled from the
+  // same fetch as candidateCounts, no extra query.
+  const [healthCandidates, setHealthCandidates] = useState<HealthCandidate[]>([]);
+
   // ── Auth ────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -1426,6 +1433,12 @@ export default function SourcesPage() {
         counts[c.sourceId] = (counts[c.sourceId] ?? 0) + 1;
       }
       dedupTexts.push(...pending.map((c) => c.title));
+      // Health dashboard counts ALL recent persistent candidates (any
+      // status) — it answers "does this source produce anything?", not
+      // "what still needs action?" (that's candidateCounts above).
+      setHealthCandidates(
+        persistent.candidates.map((c) => ({ sourceId: c.sourceId, detectedAt: c.detectedAt }))
+      );
     }
     setExistingCandidateTexts(dedupTexts);
     setCandidateCounts(counts);
@@ -1602,6 +1615,23 @@ export default function SourcesPage() {
           Sprawdzanie odbywa się ręcznie — kliknij „Sprawdź" przy wybranym źródle, aby zapisać wynik.
         </p>
       </div>
+
+      {/* Source Health Dashboard v1 (Sprint 137) — read-only overview of
+          official-source health built from data this page already loads.
+          Rendered once the registry is in (avoids a flash of "brak w
+          rejestrze" for registered sources); checks/candidates may still
+          stream in and simply re-render. sourceChecks keeps the 3 most
+          recent per source, so flattening it still contains each source's
+          latest check — exactly what the health rows need. */}
+      {loadState === "ready" && (
+        <SourceHealthDashboard
+          rows={buildSourceHealthRows({
+            registrySources: sources,
+            checks: Object.values(sourceChecks).flat(),
+            candidates: healthCandidates,
+          })}
+        />
+      )}
 
       {/* Source Checker Dashboard v1 (Sprint 129) — static, code-defined
           checklist of official sources to check by hand. Sprint 134: the
