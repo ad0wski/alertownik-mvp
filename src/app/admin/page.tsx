@@ -519,15 +519,17 @@ export default function AdminPage() {
             </div>
           </div>
 
-          {/* Future: AI verifier */}
+          {/* Verifier status (Sprint 135): rule-based v1 exists on the
+              queue cards; the real AI version is still a future stage. */}
           <div className="sm:col-span-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5">
             <h3 className="text-sm font-semibold text-slate-500 mb-1">
-              Następny etap: AI verifier (jeszcze nie wdrożony)
+              Weryfikator kandydatów: v1 (reguły) działa · wersja AI — wkrótce
             </h3>
             <p className="text-sm text-slate-500 leading-relaxed">
-              W przyszłości AI sprawdzi źródło, datę, obszar i ryzyko, zanim
-              zaproponuje publikację. Decyzja o publikacji pozostanie zawsze
-              po stronie człowieka.
+              W kolejce kandydatów przycisk „Zweryfikuj (pomocnik)” sprawdza
+              deterministycznie źródło, datę, kategorię i duplikaty, i doradza
+              (raport + pewność + ryzyko). Wersja z prawdziwym AI — w kolejnym
+              etapie. Decyzja o publikacji pozostaje zawsze po stronie człowieka.
             </p>
             <p className="text-sm text-slate-500 leading-relaxed mt-2">
               Automatyzacja będzie działać przez kolejkę kandydatów

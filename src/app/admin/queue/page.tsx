@@ -14,7 +14,12 @@ import {
 import {
   getSourceCandidateNotices,
   updateCandidateStatus,
+  saveCandidateVerification,
 } from "@/lib/supabaseCandidateWrites";
+import {
+  ruleBasedVerifyCandidate,
+  type CandidateVerification,
+} from "@/lib/candidateVerifier";
 import { getAdminSupabaseAlerts, type AdminAlert } from "@/lib/getAdminSupabaseAlerts";
 import { getCandidateWarnings, trimAtWord } from "@/lib/candidateWarnings";
 import { CANDIDATE_STATUS_LABELS } from "@/lib/candidateStatusLabels";
@@ -122,6 +127,9 @@ function QueueContent() {
   const [noticesTableMissing, setNoticesTableMissing] = useState(false);
   const [noticeStatusFilter, setNoticeStatusFilter] = useState<SourceCandidateStatus>("pending");
   const [noticeActionId, setNoticeActionId] = useState<string | null>(null);
+  // Sprint 135 — verifier: which card is verifying + transient reports by id.
+  const [verifyingId, setVerifyingId] = useState<string | null>(null);
+  const [verificationById, setVerificationById] = useState<Record<string, CandidateVerification>>({});
   const [sourceCategoryById, setSourceCategoryById] = useState<Record<string, AlertCategory>>({});
 
   const [alerts, setAlerts] = useState<AdminAlert[]>([]);
@@ -282,6 +290,52 @@ function QueueContent() {
       setNoticesError(result.error ?? "Nie udało się zmienić statusu kandydata.");
       return;
     }
+    await loadPersistentNotices();
+  }
+
+  // ── Verifier v1 (Sprint 135, A3) — deterministic rules, runs in this
+  // browser; the report is persisted onto the candidate's verification
+  // columns (Sprint 132 schema) through the admin session. It NEVER touches
+  // the candidate's status — acting on the recommendation is the admin's
+  // separate click on the existing buttons. ─────────────────────────────────
+  async function verifyNotice(n: SourceNoticeCandidate) {
+    setVerifyingId(n.id);
+
+    const verification = ruleBasedVerifyCandidate(
+      {
+        title: n.title,
+        sourceUrl: n.sourceUrl,
+        excerpt: n.excerpt,
+        rawText: n.rawText,
+      },
+      {
+        alertTitles: alerts.map((a) => a.title),
+        otherCandidateTexts: notices
+          .filter((other) => other.id !== n.id)
+          .map((other) => other.rawText || other.excerpt || other.title),
+      }
+    );
+
+    // If the duplicate match is an existing alert's title, persist the FK
+    // so the card shows the duplicate warning permanently, not just now.
+    const duplicateAlert = verification.duplicateMatch
+      ? alerts.find((a) => a.title === verification.duplicateMatch)
+      : undefined;
+
+    const result = await saveCandidateVerification(n.id, {
+      confidence: verification.confidence,
+      riskLevel: verification.riskLevel,
+      verificationStatus: "auto_checked",
+      verificationNotes: [verification.summary, ...verification.reasons].join("\n"),
+      duplicateOfAlertId: duplicateAlert?.id ?? null,
+    });
+
+    setVerifyingId(null);
+    if (!result.ok) {
+      setNoticesError(result.error ?? "Nie udało się zapisać raportu weryfikacji.");
+      return;
+    }
+    setVerificationById((prev) => ({ ...prev, [n.id]: verification }));
     await loadPersistentNotices();
   }
 
@@ -548,6 +602,9 @@ function QueueContent() {
                       onSendToAiHelper={() => sendNoticeToAiHelper(n)}
                       onCreateBuilderDraft={() => createBuilderDraftFromNotice(n)}
                       onSetStatus={(status) => setNoticeStatus(n, status)}
+                      onVerify={() => verifyNotice(n)}
+                      verifying={verifyingId === n.id}
+                      verification={verificationById[n.id] ?? null}
                     />
                   );
                 })}

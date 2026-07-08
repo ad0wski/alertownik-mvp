@@ -173,6 +173,51 @@ export async function updateCandidateStatus(
   return { ok: true };
 }
 
+// Sprint 135 (A3) — persists a verifier report onto the candidate using
+// columns that exist since the Sprint 132 migration (confidence_score
+// 0–1, risk_level, verification_status, verification_notes,
+// duplicate_of_alert_id, checked_at). Deliberately NEVER touches `status`:
+// the verifier advises, the admin decides via the existing manual actions.
+export interface CandidateVerificationUpdate {
+  /** 0–100 as produced by the verifier; stored as 0–1 per the DB constraint. */
+  confidence: number;
+  riskLevel: "low" | "medium" | "high";
+  verificationStatus: "auto_checked" | "ai_verified";
+  /** Polish report text (summary + reasons). */
+  verificationNotes: string;
+  duplicateOfAlertId?: string | null;
+}
+
+export async function saveCandidateVerification(
+  id: string,
+  verification: CandidateVerificationUpdate
+): Promise<CandidateSaveResult> {
+  if (!supabase) return { ok: false, error: "Brak połączenia z Supabase." };
+
+  const { error } = await supabase
+    .from("source_notice_candidates")
+    .update({
+      confidence_score: Math.max(0, Math.min(1, verification.confidence / 100)),
+      risk_level: verification.riskLevel,
+      verification_status: verification.verificationStatus,
+      verification_notes: verification.verificationNotes,
+      duplicate_of_alert_id: verification.duplicateOfAlertId ?? null,
+      checked_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  if (error) {
+    if (isMissingTableError(error)) {
+      return { ok: false, error: TABLE_MISSING_HINT, tableMissing: true };
+    }
+    console.error("[Alertownik] saveCandidateVerification error:", error.message);
+    return { ok: false, error: error.message };
+  }
+
+  return { ok: true };
+}
+
 // Called from Builder after a candidate-sourced draft/publish actually
 // succeeds (see src/app/builder/page.tsx) — best-effort: a failure here
 // must never block or roll back the alert save that already happened.

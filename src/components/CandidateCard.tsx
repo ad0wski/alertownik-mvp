@@ -5,6 +5,11 @@ import type {
   RiskLevel,
   VerificationStatus,
 } from "@/types/sourceCandidate";
+import {
+  RECOMMENDATION_LABELS,
+  VERIFIER_DISCLAIMER,
+  type CandidateVerification,
+} from "@/lib/candidateVerifier";
 
 // Sprint 131 — reusable candidate card for /admin/queue (and, later, any
 // automation surface that shows candidates). Sprint 132 aligned it with
@@ -46,6 +51,11 @@ interface CandidateCardProps {
   onSendToAiHelper?: () => void;
   onCreateBuilderDraft?: () => void;
   onSetStatus?: (status: CandidateStatus) => void;
+  // Sprint 135 (A3) — rule-based verifier: report just produced for this
+  // card (transient; the persisted fields render via the badges above).
+  onVerify?: () => void;
+  verifying?: boolean;
+  verification?: CandidateVerification | null;
 }
 
 const RISK_LABELS: Record<RiskLevel, { label: string; color: string }> = {
@@ -80,6 +90,12 @@ function formatDateOnly(iso: string): string {
   });
 }
 
+const RECOMMENDATION_BADGE_CLASS: Record<CandidateVerification["recommendation"], string> = {
+  approve:      "text-emerald-700 bg-emerald-50 border-emerald-200",
+  needs_review: "text-amber-700 bg-amber-50 border-amber-200",
+  reject:       "text-red-700 bg-red-50 border-red-200",
+};
+
 export function CandidateCard({
   candidate: c,
   status,
@@ -90,6 +106,9 @@ export function CandidateCard({
   onSendToAiHelper,
   onCreateBuilderDraft,
   onSetStatus,
+  onVerify,
+  verifying = false,
+  verification = null,
 }: CandidateCardProps) {
   const risk = c.riskLevel ? RISK_LABELS[c.riskLevel] : null;
   const hasPeriod = Boolean(c.startsAt || c.endsAt);
@@ -164,12 +183,47 @@ export function CandidateCard({
         </div>
       )}
 
-      {/* Honest future-flow note: the AI verifier (plan A3) doesn't exist
-          yet, so a pending candidate is by definition manually reviewed. */}
-      {status === "pending" && (!c.verificationStatus || c.verificationStatus === "unverified") && (
-        <p className="text-xs text-slate-400 italic">
-          Weryfikacja: ręczna (admin). Raport AI verifiera — wkrótce, w kolejnym etapie automatyzacji.
-        </p>
+      {/* Honest verification note (Sprint 135): a rule-based helper exists
+          now — a pending, unverified candidate can be checked with one
+          click, but review and every decision stay manual. */}
+      {status === "pending" &&
+        !verification &&
+        (!c.verificationStatus || c.verificationStatus === "unverified") && (
+          <p className="text-xs text-slate-400 italic">
+            Weryfikacja: ręczna (admin). Możesz użyć pomocnika „Zweryfikuj” — deterministyczny
+            raport reguł (źródło, data, duplikaty), nie AI. Decyzje zawsze należą do Ciebie.
+          </p>
+        )}
+
+      {/* Verifier report (Sprint 135) — transient panel shown right after a
+          run; the persisted confidence/risk/verification badges above pick
+          the values up from the DB on the next load. */}
+      {verification && (
+        <div className="rounded-lg bg-slate-50 border border-slate-200 px-3 py-2.5">
+          <div className="flex flex-wrap items-center gap-2 mb-1.5">
+            <span className={`text-xs font-medium rounded-full px-2.5 py-0.5 border ${RECOMMENDATION_BADGE_CLASS[verification.recommendation]}`}>
+              {RECOMMENDATION_LABELS[verification.recommendation]}
+            </span>
+            <span className="text-xs text-slate-600">
+              Pewność: {verification.confidence}%
+            </span>
+            <span className="text-xs text-slate-600">
+              Ryzyko: {verification.riskLevel === "low" ? "niskie" : verification.riskLevel === "medium" ? "średnie" : "wysokie"}
+            </span>
+            {verification.detectedCategory && (
+              <span className="text-xs text-slate-600">
+                Kategoria (sugestia): {verification.detectedCategory}
+              </span>
+            )}
+          </div>
+          <p className="text-xs font-medium text-slate-700 mb-1">{verification.summary}</p>
+          <ul className="space-y-0.5 mb-1.5">
+            {verification.reasons.map((r, ri) => (
+              <li key={ri} className="text-xs text-slate-600">• {r}</li>
+            ))}
+          </ul>
+          <p className="text-[11px] text-slate-400 leading-relaxed">{VERIFIER_DISCLAIMER}</p>
+        </div>
       )}
 
       {/* Actions */}
@@ -197,6 +251,15 @@ export function CandidateCard({
 
         {status === "pending" && (
           <>
+            {onVerify && (
+              <button
+                disabled={verifying}
+                onClick={onVerify}
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 transition-colors"
+              >
+                {verifying ? "Weryfikowanie…" : "Zweryfikuj (pomocnik) →"}
+              </button>
+            )}
             {onSendToAiHelper && (
               <button
                 onClick={onSendToAiHelper}
