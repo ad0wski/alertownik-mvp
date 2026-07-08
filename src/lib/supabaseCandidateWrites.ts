@@ -5,24 +5,31 @@ import type {
   SourceCandidateStatus,
 } from "@/types/sourceCandidate";
 
-// Reads/writes for the proposed `source_notice_candidates` table (v2 schema:
-// docs/sprint132_candidate_persistence_schema_proposal.sql). That migration
-// is NOT applied automatically and requires Adam's explicit approval —
-// every function here detects a missing table and returns a calm,
-// explanatory error instead of throwing, so /admin/queue and /admin/sources
-// keep working (showing the existing source_checks-based view) whether or
-// not the migration has been run yet.
+// Reads/writes for the `source_notice_candidates` table (v2 schema:
+// docs/sprint132_candidate_persistence_schema_proposal.sql — approved and
+// run manually by Adam in Sprint 133, 2026-07-08). The missing-table
+// detection below stays: it is what let this code ship before the
+// migration, and it still covers the one realistic post-migration case
+// (PostgREST schema cache not yet reloaded, PGRST205) plus any future
+// environment where the migration hasn't been run — every function
+// returns a calm, explanatory error instead of throwing, so /admin/queue
+// and /admin/sources keep working either way.
 
 const TABLE_MISSING_HINT =
-  "Tabela „source_notice_candidates” jeszcze nie istnieje w Supabase (wymaga zatwierdzenia Adama). " +
-  "Propozycja migracji: docs/sprint132_candidate_persistence_schema_proposal.sql.";
+  "Supabase nie widzi tabeli „source_notice_candidates”. Jeśli migracja " +
+  "(docs/sprint132_candidate_persistence_schema_proposal.sql) została właśnie uruchomiona, " +
+  "cache schematu PostgREST może potrzebować chwili — odśwież stronę za moment " +
+  "(migracja kończy się poleceniem notify pgrst, 'reload schema'). " +
+  "Jeśli migracja nie była uruchamiana, tabela wymaga ręcznego utworzenia w SQL Editorze.";
 
 interface SupabaseErrorLike {
   code?: string;
   message?: string;
 }
 
-function isMissingTableError(error: SupabaseErrorLike | null): boolean {
+// Exported for unit tests (tests/e2e/candidateQueue.spec.ts) — this is the
+// table-detection logic the whole pre/post-migration behavior hinges on.
+export function isMissingTableError(error: SupabaseErrorLike | null): boolean {
   if (!error) return false;
   // Postgres: 42P01 = undefined_table. PostgREST: PGRST205 = table not in
   // its schema cache (the common case right after a migration hasn't run
@@ -44,7 +51,9 @@ export interface CandidateNoticesResult {
   tableMissing?: boolean;
 }
 
-function rowToCandidate(row: Record<string, unknown>): SourceNoticeCandidate {
+// Exported for unit tests (tests/e2e/candidateQueue.spec.ts) — verifies the
+// v2 column mapping against the shape the Sprint 132 migration created.
+export function rowToCandidate(row: Record<string, unknown>): SourceNoticeCandidate {
   return {
     id: row.id as string,
     sourceId: (row.source_id as string) || null,

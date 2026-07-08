@@ -968,14 +968,16 @@ export default function AdminPage() {
         {!sourcesLoading && persistentNotices === null && (
           <div className="mt-3 bg-white rounded-2xl border border-slate-200 p-5">
             <p className="text-sm font-medium text-slate-700 mb-1">
-              Trwali kandydaci nie są jeszcze włączeni — tabela wymaga zatwierdzenia Adama.
+              Supabase nie widzi tabeli kandydatów.
             </p>
             <p className="text-sm text-slate-500 leading-relaxed">
-              Propozycja schematu:{" "}
+              Migracja{" "}
               <span className="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded">
                 docs/sprint132_candidate_persistence_schema_proposal.sql
               </span>{" "}
-              (uruchamiana ręcznie w Supabase SQL Editor, dopiero po zatwierdzeniu).
+              została zatwierdzona i uruchomiona (Sprint 133) — jeśli ten komunikat
+              pojawia się tuż po migracji, odśwież stronę za chwilę (cache schematu
+              PostgREST). W nowym środowisku uruchom migrację ręcznie w SQL Editorze.
               Do tego czasu kandydaci są widoczni tylko w starszym widoku w{" "}
               <Link href="/admin/queue" className="font-medium text-blue-600 hover:underline">
                 Kandydatach

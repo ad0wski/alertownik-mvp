@@ -1083,6 +1083,22 @@ function SourceCard({
                 </p>
               )}
 
+              {/* Sprint 133: with the candidate table live, a successful save
+                  should lead somewhere — straight to the queue where the new
+                  candidate now sits as "Oczekujące". */}
+              {savedCandidateKeys.size > 0 && (
+                <p className="mt-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+                  Kandydat zapisany w kolejce (status „Oczekujące”).{" "}
+                  <Link
+                    href={`/admin/queue?source=${source.id}`}
+                    className="font-medium text-emerald-800 underline hover:text-emerald-900"
+                  >
+                    Zobacz w kolejce →
+                  </Link>{" "}
+                  Publikacja nadal wyłącznie ręczna — z Kreatora.
+                </p>
+              )}
+
               {/* Inline AI draft result */}
               {inlineDraft.status === "error" && (
                 <div className="mt-3 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-600">

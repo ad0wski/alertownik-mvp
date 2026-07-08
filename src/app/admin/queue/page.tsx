@@ -17,6 +17,7 @@ import {
 } from "@/lib/supabaseCandidateWrites";
 import { getAdminSupabaseAlerts, type AdminAlert } from "@/lib/getAdminSupabaseAlerts";
 import { getCandidateWarnings, trimAtWord } from "@/lib/candidateWarnings";
+import { CANDIDATE_STATUS_LABELS } from "@/lib/candidateStatusLabels";
 import type { SourceCheck } from "@/types/alertSource";
 import type { SourceNoticeCandidate, SourceCandidateStatus } from "@/types/sourceCandidate";
 import type { AlertCategory } from "@/types/alert";
@@ -46,18 +47,8 @@ const resultLabels: Record<string, { label: string; color: string }> = {
   needs_followup: { label: "Wymaga późniejszego sprawdzenia", color: "text-amber-600 bg-amber-50 border-amber-200" },
 };
 
-// v2 status enum (Sprint 132 schema proposal) — needs_review/approved are
-// set only by future flows (AI verifier A3, one-click approve A4), so they
-// have labels here but no tab below yet.
-const CANDIDATE_STATUS_LABELS: Record<SourceCandidateStatus, string> = {
-  pending: "Oczekujące",
-  needs_review: "Do przeglądu",
-  approved: "Zatwierdzone",
-  rejected: "Odrzucone",
-  converted_to_draft: "Przekształcone w draft",
-  published: "Opublikowane",
-  archived: "Zarchiwizowane",
-};
+// v2 status labels moved to src/lib/candidateStatusLabels.ts (Sprint 133)
+// so unit tests can verify the map without importing this client page.
 
 const SEVERITY_LABELS: Record<string, string> = {
   info: "Info",
@@ -431,17 +422,18 @@ function QueueContent() {
         {noticesTableMissing ? (
           <div className="bg-white rounded-2xl border border-slate-200 p-5">
             <p className="text-sm font-medium text-slate-700 mb-1">
-              Trwali kandydaci nie są jeszcze włączeni — tabela kandydatów wymaga
-              zatwierdzenia Adama.
+              Supabase nie widzi tabeli kandydatów.
             </p>
             <p className="text-sm text-slate-500 leading-relaxed">
-              Propozycja schematu czeka w{" "}
+              Migracja{" "}
               <span className="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded">
                 docs/sprint132_candidate_persistence_schema_proposal.sql
-              </span>
-              . Po zatwierdzeniu i ręcznym uruchomieniu w Supabase SQL Editor kandydaci
-              zaczną się zapisywać na trwałe (przycisk „Zapisz jako kandydata” w Źródłach).
-              Do tego czasu działa tylko starszy widok poniżej.
+              </span>{" "}
+              została zatwierdzona i uruchomiona (Sprint 133). Jeśli widzisz ten
+              komunikat tuż po migracji, cache schematu PostgREST mógł się jeszcze
+              nie odświeżyć — odśwież stronę za chwilę. Jeśli to nowe środowisko,
+              uruchom migrację ręcznie w SQL Editorze. Do tego czasu działa tylko
+              starszy widok poniżej.
             </p>
           </div>
         ) : (
@@ -452,9 +444,21 @@ function QueueContent() {
               </div>
             )}
 
-            {/* Status tabs */}
+            {/* Status tabs — needs_review/approved appear only when such a
+                candidate actually exists (no process sets them yet, but a
+                candidate must never become invisible because of its status). */}
             <div className="flex flex-wrap items-center gap-2 mb-4">
-              {(["pending", "rejected", "converted_to_draft", "published", "archived"] as SourceCandidateStatus[]).map((s) => (
+              {(
+                [
+                  "pending",
+                  ...(noticeCounts.needs_review > 0 ? ["needs_review" as const] : []),
+                  ...(noticeCounts.approved > 0 ? ["approved" as const] : []),
+                  "rejected",
+                  "converted_to_draft",
+                  "published",
+                  "archived",
+                ] as SourceCandidateStatus[]
+              ).map((s) => (
                 <button
                   key={s}
                   onClick={() => setNoticeStatusFilter(s)}
