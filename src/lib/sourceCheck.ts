@@ -50,23 +50,51 @@ export interface CheckProposal {
   hasDate: boolean;
 }
 
-const MAX_PROPOSALS = 6;
-const MIN_TEXT_LENGTH = 60;
+// Exported so tests pin the caps by name instead of magic numbers.
+export const MAX_CHECK_PROPOSALS = 6;
+export const MIN_PROPOSAL_TEXT_LENGTH = 60;
+
+// Consent-banner / page-chrome fragments that can survive tag stripping on
+// municipal CMS pages. A proposal whose text matches is dropped — an admin
+// should never be asked to review a cookie banner as a notice. Genuine
+// notices don't talk about cookies or privacy policies, so a false positive
+// here is theoretical; determinism matters more.
+const BOILERPLATE_RX = [
+  /używa\s+plik[óo]w\s+cookie/i,
+  /polityk[aęi]\s+(?:prywatno[śs]ci|cookies)/i,
+  /deklaracja\s+dost[ęe]pno[śs]ci/i,
+  /^czytaj\s+więcej$/i,
+];
+
+function looksLikeBoilerplate(text: string): boolean {
+  return BOILERPLATE_RX.some((re) => re.test(text));
+}
 
 // Turns a parsed page into candidate proposals. Deliberately dumb and
 // deterministic: no fetching, no scoring, no AI — the admin reads each
 // proposal and decides. Duplicate/stale warnings are applied client-side
 // with the existing candidateWarnings helpers, where the admin's session
 // can see current candidates and alerts.
+//
+// Sprint 138 defensive layer: too-short fragments and boilerplate are
+// skipped, repeated titles are proposed once (CMS list pages sometimes pin
+// the same notice twice), and the count is capped — so a broken or
+// boilerplate-heavy page degrades to fewer/zero proposals, never to junk.
 export function buildCheckProposals(parse: PageParseResult): CheckProposal[] {
   const proposals: CheckProposal[] = [];
+  const seenTitles = new Set<string>();
 
   for (const c of parse.candidates) {
-    if (proposals.length >= MAX_PROPOSALS) break;
+    if (proposals.length >= MAX_CHECK_PROPOSALS) break;
     const text = c.text.trim();
-    if (text.length < MIN_TEXT_LENGTH) continue;
+    if (text.length < MIN_PROPOSAL_TEXT_LENGTH) continue;
+    if (looksLikeBoilerplate(text)) continue;
 
     const title = (c.heading?.trim() || trimAtWord(text, 80)).trim();
+    const titleKey = title.toLowerCase().replace(/\s+/g, " ");
+    if (seenTitles.has(titleKey)) continue;
+    seenTitles.add(titleKey);
+
     proposals.push({
       title,
       excerpt: trimAtWord(text, 300),

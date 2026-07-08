@@ -116,6 +116,58 @@ function buildCandidates(blocks: Block[]): PageCandidate[] {
   return candidates;
 }
 
+// ── CMS news-list extraction (Sprint 138) ────────────────────────────────────
+
+// Municipal CMS listing pages (michalowice.pl among them) render each notice
+// as a <div class="news-item"> block with NO <h1-3>/<p> tags anywhere on the
+// page, so the generic heading/paragraph extractor above sees an empty page —
+// verified against the live Michałowice komunikaty markup in Sprint 138. Each
+// block carries the notice date in <div class="date">, the title as a link
+// inside <div class="h3 …">, and a teaser in <div class="description-body">.
+// This targeted pass reads those fields directly; "czytaj więcej" link chrome
+// sits outside description-body and is never captured.
+
+const MAX_NEWS_ITEMS = 8;
+
+function extractNewsListItems(html: string): PageCandidate[] {
+  // Each split segment starts inside one news-item and runs until the next
+  // one opens, so the FIRST date/title/body match in a segment belongs to
+  // that item — no need to balance nested <div>s with regex.
+  const segments = html.split(/<div[^>]*class="[^"]*\bnews-item\b[^"]*"[^>]*>/i);
+  const items: PageCandidate[] = [];
+
+  for (const seg of segments.slice(1)) {
+    if (items.length >= MAX_NEWS_ITEMS) break;
+
+    const dateMatch = seg.match(/<div[^>]*class="[^"]*\bdate\b[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+    const titleMatch = seg.match(
+      /<div[^>]*class="[^"]*\b(?:h3|title)[^"]*"[^>]*>[\s\S]*?<a[^>]*>([\s\S]*?)<\/a>/i
+    );
+    const bodyMatch = seg.match(
+      /<div[^>]*class="[^"]*\bdescription-body\b[^"]*"[^>]*>([\s\S]*?)<\/div>/i
+    );
+
+    const heading = titleMatch
+      ? stripTags(titleMatch[1]).replace(/\s+/g, " ").trim().slice(0, 120) || undefined
+      : undefined;
+    const date = dateMatch ? stripTags(dateMatch[1]).replace(/\s+/g, " ").trim() : "";
+    const body = bodyMatch ? stripTags(bodyMatch[1]).replace(/\s+/g, " ").trim().slice(0, 600) : "";
+
+    const text = [date, body].filter(Boolean).join("\n");
+    // Empty shells (image-only teasers, malformed blocks) carry nothing an
+    // admin could review — skip instead of proposing noise.
+    if (!heading && text.length < 40) continue;
+
+    items.push({
+      heading,
+      text,
+      hasDate: detectDateInText(`${heading ?? ""} ${text}`),
+    });
+  }
+
+  return items;
+}
+
 // Lightweight RSS/Atom autodiscovery — only looks at the page's own <head>
 // <link> tags already present in the HTML we already fetched. Never
 // fetches or parses the feed itself.
@@ -181,13 +233,24 @@ export function parsePageHtml(html: string, baseUrl: string): PageParseResult {
     stripped.match(/<div[^>]*class="[^"]*\bcontent\b[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
 
   const content = mainMatch ? mainMatch[1] : stripped;
-  const blocks = extractBlocks(content);
-  const candidates = buildCandidates(blocks);
 
-  const rawText = blocks
-    .filter((b) => b.text.length > 30)
-    .map((b) => (b.type === "heading" ? "\n" + b.text + "\n" : b.text))
-    .join("\n")
+  // CMS news-list markup hides notices from the block extractor entirely
+  // (div-only, see extractNewsListItems) — prefer that targeted pass when it
+  // finds items, and search the whole stripped page rather than `content`:
+  // the class="content" fallback match above can truncate at the first
+  // nested </div> and lose items.
+  const newsItems = extractNewsListItems(stripped);
+  const blocks = extractBlocks(content);
+  const candidates = newsItems.length > 0 ? newsItems : buildCandidates(blocks);
+
+  const rawText = (
+    newsItems.length > 0
+      ? newsItems.map((c) => (c.heading ? c.heading + "\n" : "") + c.text).join("\n\n")
+      : blocks
+          .filter((b) => b.text.length > 30)
+          .map((b) => (b.type === "heading" ? "\n" + b.text + "\n" : b.text))
+          .join("\n")
+  )
     .replace(/\n{3,}/g, "\n\n")
     .slice(0, 5000)
     .trim();

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>Komunikaty - Aktualności - Dzieje się ... - Gmina Testowa</title>
+</head>
+<body>
+<!--
+  Fixture (Sprint 138): boilerplate-heavy page with ZERO real notices — the
+  komunikaty list is empty (e.g. filtered date range with no results), only
+  page chrome remains. The one long <p> is a cookie-consent text that the
+  block extractor WILL pick up as a paragraph candidate; buildCheckProposals
+  must drop it as boilerplate. Expected end result: zero proposals, no crash.
+-->
+<header>
+<div class="top-menu">
+<ul>
+<li><a href="/">Strona główna</a></li>
+<li><a href="/dzieje-sie">Dzieje się</a></li>
+<li><a href="/dzieje-sie/aktualnosci">Aktualności</a></li>
+<li><a href="/kontakt">Kontakt</a></li>
+</ul>
+</div>
+</header>
+<div id="cookies-alert">
+<p>Ta strona używa plików cookies w celu zapewnienia prawidłowego działania serwisu oraz w celach statystycznych. Korzystając ze strony wyrażasz zgodę na ich zapisywanie. Zapoznaj się z polityką prywatności serwisu.</p>
+</div>
+<div class="page-wrap">
+<div id="cmsContent" class="col-md-9 col-sm-9">
+<div class="row">
+</div>
+</div>
+</div>
+<footer>
+<div>Urząd Gminy Testowa · Deklaracja dostępności · Polityka prywatności</div>
+</footer>
+</body>
+</html>
