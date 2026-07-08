@@ -1,0 +1,118 @@
+import {
+  OFFICIAL_SOURCE_CHECKS,
+  type OfficialSourceCheck,
+} from "@/lib/officialSourceChecklist";
+import type { PageParseResult } from "@/lib/sourceParsers/pageParser";
+import type { SourceCheckResult } from "@/types/alertSource";
+import { trimAtWord } from "@/lib/candidateWarnings";
+
+// Sprint 134 (A2) — deterministic layer of the manual Source Check API.
+//
+// The /api/sources/check route is a thin fetch wrapper around this module:
+// everything that decides WHAT gets checked and WHAT comes back as a
+// candidate proposal lives here as pure functions, so tests run on fixture
+// HTML with zero live-site dependencies (same split as pageParser vs
+// fetch-preview, Sprint 76).
+//
+// Hard scope rules for this stage (see Obsidian: Automation Implementation
+// Plan § A2): exactly ONE safe source, manual trigger only, the API only
+// PROPOSES — saving a candidate always happens in the admin's browser
+// through their authenticated session (status `pending`, human review
+// required). No cron, no AI verifier, no autopublish, no second source.
+
+// ── Safe-source allowlist ─────────────────────────────────────────────────────
+
+// Exactly one source for A2. The entry itself comes from the canonical
+// checklist config (officialSourceChecklist.ts) so name/URL/category can
+// never drift between the checklist card and the API. Growing this list is
+// a deliberate per-source decision in a future sprint, not a config tweak:
+// each source needs a parse check + risk review first (e.g. pruszkow.pl is
+// bot-blocked, PGE needs a region picker — both unsuitable).
+export const SAFE_CHECK_SOURCE_IDS = ["michalowice-komunikaty"] as const;
+
+export type SafeCheckSourceId = (typeof SAFE_CHECK_SOURCE_IDS)[number];
+
+export function getSafeCheckSource(key: string): OfficialSourceCheck | null {
+  if (!(SAFE_CHECK_SOURCE_IDS as readonly string[]).includes(key)) return null;
+  return OFFICIAL_SOURCE_CHECKS.find((s) => s.id === key) ?? null;
+}
+
+// ── Candidate proposals ───────────────────────────────────────────────────────
+
+export interface CheckProposal {
+  /** Heading of the notice, or the trimmed first words when headingless. */
+  title: string;
+  /** Short display excerpt (≤300 chars, word-trimmed). */
+  excerpt: string;
+  /** Fuller text to persist as the candidate's raw_text. */
+  rawText: string;
+  /** Whether a date was detected in the block (pageParser heuristic). */
+  hasDate: boolean;
+}
+
+const MAX_PROPOSALS = 6;
+const MIN_TEXT_LENGTH = 60;
+
+// Turns a parsed page into candidate proposals. Deliberately dumb and
+// deterministic: no fetching, no scoring, no AI — the admin reads each
+// proposal and decides. Duplicate/stale warnings are applied client-side
+// with the existing candidateWarnings helpers, where the admin's session
+// can see current candidates and alerts.
+export function buildCheckProposals(parse: PageParseResult): CheckProposal[] {
+  const proposals: CheckProposal[] = [];
+
+  for (const c of parse.candidates) {
+    if (proposals.length >= MAX_PROPOSALS) break;
+    const text = c.text.trim();
+    if (text.length < MIN_TEXT_LENGTH) continue;
+
+    const title = (c.heading?.trim() || trimAtWord(text, 80)).trim();
+    proposals.push({
+      title,
+      excerpt: trimAtWord(text, 300),
+      rawText: text,
+      hasDate: c.hasDate,
+    });
+  }
+
+  return proposals;
+}
+
+// Suggested source_checks result for logging this check in history —
+// "nothing found" is a loggable result too (checklist policy since 129).
+export function suggestCheckResult(proposalCount: number): SourceCheckResult {
+  return proposalCount > 0 ? "found_notice" : "no_changes";
+}
+
+// ── Registry matching ─────────────────────────────────────────────────────────
+
+function normalizeUrl(url: string): string {
+  try {
+    const u = new URL(url.trim());
+    return `${u.hostname.toLowerCase().replace(/^www\./, "")}${u.pathname.replace(/\/+$/, "")}`;
+  } catch {
+    return url.trim().toLowerCase().replace(/\/+$/, "");
+  }
+}
+
+// Finds the alert_sources registry row matching an official checklist URL,
+// so an API check can attach source_id to saved candidates and log to the
+// check history. Match is by normalized host+path (www. and trailing
+// slashes ignored) — no match is fine: candidates save with source_id null
+// and history logging is simply unavailable until the source is registered.
+export function findMatchingRegistrySource<T extends { url: string }>(
+  registrySources: T[],
+  officialUrl: string
+): T | null {
+  const target = normalizeUrl(officialUrl);
+  return registrySources.find((s) => normalizeUrl(s.url) === target) ?? null;
+}
+
+// ── Copy (kept here so tests can pin it against automation-promise drift) ────
+
+export const MANUAL_CHECK_DISCLAIMER =
+  "Check jest ręczny — uruchamiasz go przyciskiem, nic nie sprawdza się samo. " +
+  "Znalezione propozycje wymagają Twojego przeglądu; zapis kandydata i publikacja " +
+  "to zawsze osobne, ręczne decyzje (publikacja wyłącznie z Kreatora).";
+
+export const CHECK_BUTTON_LABEL = "Sprawdź teraz przez aplikację";

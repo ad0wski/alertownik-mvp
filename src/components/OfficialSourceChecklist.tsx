@@ -9,11 +9,19 @@ import {
   RISK_LABELS,
   type OfficialSourceCheck,
 } from "@/lib/officialSourceChecklist";
+import { getSafeCheckSource } from "@/lib/sourceCheck";
+import { SourceApiCheckPanel } from "@/components/SourceApiCheckPanel";
 import type { AlertCategory } from "@/types/alert";
+import type { AlertSource } from "@/types/alertSource";
 
 // Sprint 129 — Source Checker Dashboard v1 (admin-only, rendered on
 // /admin/sources). Static checklist of official sources to check BY HAND —
-// honest manual workflow, no fetching, no monitoring, no autopublish.
+// honest manual workflow, no monitoring, no autopublish.
+//
+// Sprint 134 (A2): sources on the safe-check allowlist (today exactly one:
+// Gmina Michałowice — komunikaty) additionally get a manual in-app check
+// button (SourceApiCheckPanel → /api/sources/check). Still admin-triggered
+// only; every other card stays check-by-hand.
 
 const categoryLabels: Record<AlertCategory, string> = {
   transport: "Transport",
@@ -39,7 +47,16 @@ const riskBadgeClass: Record<OfficialSourceCheck["risk"], string> = {
   high:   "bg-red-50 text-red-700 ring-1 ring-red-200",
 };
 
-function ChecklistCard({ source }: { source: OfficialSourceCheck }) {
+function ChecklistCard({
+  source,
+  registrySources,
+  dedupTexts,
+}: {
+  source: OfficialSourceCheck;
+  registrySources: AlertSource[];
+  dedupTexts: string[];
+}) {
+  const safeCheckSource = getSafeCheckSource(source.id);
   return (
     <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
       <div className="flex flex-wrap items-center gap-1.5 mb-2">
@@ -94,11 +111,27 @@ function ChecklistCard({ source }: { source: OfficialSourceCheck }) {
           Kreator →
         </Link>
       </div>
+
+      {safeCheckSource && (
+        <SourceApiCheckPanel
+          source={safeCheckSource}
+          registrySources={registrySources}
+          dedupTexts={dedupTexts}
+        />
+      )}
     </div>
   );
 }
 
-export function OfficialSourceChecklist() {
+export function OfficialSourceChecklist({
+  registrySources = [],
+  dedupTexts = [],
+}: {
+  /** alert_sources rows — lets the API-check panel attach source_id + log history. */
+  registrySources?: AlertSource[];
+  /** Existing candidate texts + alert titles for the duplicate heuristic. */
+  dedupTexts?: string[];
+}) {
   return (
     <section id="checklista" className="mb-8 rounded-2xl border border-blue-200 bg-blue-50/50 p-4 sm:p-5">
       <details open>
@@ -146,7 +179,12 @@ export function OfficialSourceChecklist() {
 
         <div className="grid grid-cols-1 gap-3">
           {OFFICIAL_SOURCE_CHECKS.map((source) => (
-            <ChecklistCard key={source.id} source={source} />
+            <ChecklistCard
+              key={source.id}
+              source={source}
+              registrySources={registrySources}
+              dedupTexts={dedupTexts}
+            />
           ))}
         </div>
 

@@ -1604,8 +1604,14 @@ export default function SourcesPage() {
       </div>
 
       {/* Source Checker Dashboard v1 (Sprint 129) — static, code-defined
-          checklist of official sources to check by hand; no DB, no fetching */}
-      <OfficialSourceChecklist />
+          checklist of official sources to check by hand. Sprint 134: the
+          allowlisted safe source additionally gets a manual in-app check
+          (registry rows + dedup pool passed for source_id matching,
+          check-history logging and duplicate warnings). */}
+      <OfficialSourceChecklist
+        registrySources={sources}
+        dedupTexts={[...existingCandidateTexts, ...alertTitles]}
+      />
 
       {/* Add button + pilot suggestions toggle */}
       <div className="mb-5 flex flex-wrap items-center gap-2">
