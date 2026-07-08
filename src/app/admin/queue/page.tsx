@@ -388,9 +388,10 @@ function QueueContent() {
             <p className="text-sm font-semibold text-slate-400">wkrótce</p>
             <p className="text-xs text-slate-400 mt-1 leading-snug">Do przeglądu (AI verifier)</p>
           </div>
-          <div className="bg-slate-50 rounded-2xl border border-dashed border-slate-300 p-4">
-            <p className="text-sm font-semibold text-slate-400">wkrótce</p>
-            <p className="text-xs text-slate-400 mt-1 leading-snug">Zatwierdzone</p>
+          {/* Live since Sprint 136 — the manual "Zatwierdź" action sets it. */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
+            <p className="text-2xl font-bold text-emerald-600">{noticeCounts.approved}</p>
+            <p className="text-xs text-slate-500 mt-1 leading-snug">Zatwierdzone</p>
           </div>
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
             <p className="text-2xl font-bold text-slate-700">{noticeCounts.rejected}</p>
@@ -435,8 +436,10 @@ function QueueContent() {
             klikniesz „Zapisz jako kandydata” przy fragmencie z „Sprawdź stronę” — trwały
             wpis z akcjami ignoruj/przywróć/archiwizuj — albo (2) automatycznie, gdy w
             Historii sprawdzenia zapiszesz wynik „Znaleziono komunikat” albo „Wymaga
-            późniejszego sprawdzenia” (starszy widok, bez tych akcji). Z każdego kandydata:
-            otwórz źródło → AI Helper / Kreator → ręczna publikacja.{" "}
+            późniejszego sprawdzenia” (starszy widok, bez tych akcji). Ścieżka przeglądu
+            kandydata: „Zweryfikuj (pomocnik)” podpowiada → Ty klikasz „Zatwierdź” albo
+            „Odrzuć” → z zatwierdzonego „Utwórz draft z kandydata” (draft NIE jest
+            publiczny) → ręczna publikacja z Kreatora.{" "}
             <strong className="font-semibold text-slate-800">
               AI nigdy nie publikuje samodzielnie — zatwierdzenie i publikacja zawsze należą do admina.
             </strong>
@@ -506,7 +509,9 @@ function QueueContent() {
                 [
                   "pending",
                   ...(noticeCounts.needs_review > 0 ? ["needs_review" as const] : []),
-                  ...(noticeCounts.approved > 0 ? ["approved" as const] : []),
+                  // approved is a standard tab since Sprint 136 — the
+                  // "Zatwierdź" action can produce it any time.
+                  "approved",
                   "rejected",
                   "converted_to_draft",
                   "published",
@@ -593,7 +598,14 @@ function QueueContent() {
                             : null,
                       }}
                       status={n.status}
-                      warnings={n.status === "pending" ? noticeWarningsFor(n) : []}
+                      warnings={
+                        // Warnings matter wherever a review decision is still
+                        // ahead (pending/needs_review/approved) — not on
+                        // rejected/converted/archived cards.
+                        ["pending", "needs_review", "approved"].includes(n.status)
+                          ? noticeWarningsFor(n)
+                          : []
+                      }
                       convertedAlertTitle={
                         convertedAlert ? convertedAlert.title || "Bez tytułu" : null
                       }

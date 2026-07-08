@@ -10,6 +10,19 @@ import {
   VERIFIER_DISCLAIMER,
   type CandidateVerification,
 } from "@/lib/candidateVerifier";
+import {
+  canVerify,
+  canApprove,
+  canReject,
+  canArchive,
+  canRestore,
+  canConvertToDraft,
+  canSendToAiHelper,
+  suggestedActionFor,
+  APPROVED_CARD_NOTE,
+  APPROVE_BUTTON_LABEL,
+  CONVERT_FROM_APPROVED_LABEL,
+} from "@/lib/candidateReviewActions";
 
 // Sprint 131 — reusable candidate card for /admin/queue (and, later, any
 // automation surface that shows candidates). Sprint 132 aligned it with
@@ -183,10 +196,18 @@ export function CandidateCard({
         </div>
       )}
 
+      {/* Sprint 136: approved cards say explicitly what "approved" means —
+          and what it does NOT mean (no publication). */}
+      {status === "approved" && (
+        <p className="text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+          {APPROVED_CARD_NOTE}
+        </p>
+      )}
+
       {/* Honest verification note (Sprint 135): a rule-based helper exists
           now — a pending, unverified candidate can be checked with one
           click, but review and every decision stay manual. */}
-      {status === "pending" &&
+      {canVerify(status) &&
         !verification &&
         (!c.verificationStatus || c.verificationStatus === "unverified") && (
           <p className="text-xs text-slate-400 italic">
@@ -222,6 +243,11 @@ export function CandidateCard({
               <li key={ri} className="text-xs text-slate-600">• {r}</li>
             ))}
           </ul>
+          {/* Sprint 136: point at the matching button — the click is still
+              the admin's; nothing below happens automatically. */}
+          <p className="text-xs font-medium text-slate-700 mb-1.5">
+            {suggestedActionFor(verification.recommendation).hint}
+          </p>
           <p className="text-[11px] text-slate-400 leading-relaxed">{VERIFIER_DISCLAIMER}</p>
         </div>
       )}
@@ -249,61 +275,68 @@ export function CandidateCard({
           </a>
         )}
 
-        {status === "pending" && (
-          <>
-            {onVerify && (
-              <button
-                disabled={verifying}
-                onClick={onVerify}
-                className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 transition-colors"
-              >
-                {verifying ? "Weryfikowanie…" : "Zweryfikuj (pomocnik) →"}
-              </button>
-            )}
-            {onSendToAiHelper && (
-              <button
-                onClick={onSendToAiHelper}
-                className="inline-flex items-center gap-1 rounded-lg border border-purple-200 bg-purple-50 px-3 py-1.5 text-sm font-medium text-purple-700 hover:bg-purple-100 transition-colors"
-              >
-                Wyślij do AI Helpera →
-              </button>
-            )}
-            {onCreateBuilderDraft && (
-              <button
-                onClick={onCreateBuilderDraft}
-                className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-700 hover:bg-amber-100 transition-colors"
-              >
-                Utwórz szkic w Kreatorze →
-              </button>
-            )}
-            {onSetStatus && (
-              <>
-                <button
-                  disabled={busy}
-                  onClick={() => onSetStatus("rejected")}
-                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors"
-                >
-                  Odrzuć
-                </button>
-                <button
-                  disabled={busy}
-                  onClick={() => onSetStatus("archived")}
-                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-500 hover:bg-slate-50 disabled:opacity-50 transition-colors"
-                >
-                  Archiwizuj
-                </button>
-              </>
-            )}
-          </>
+        {/* Sprint 136: buttons are gated by the pure transition predicates
+            in src/lib/candidateReviewActions.ts — every status change is an
+            explicit admin click; the verifier only suggests. */}
+        {canVerify(status) && onVerify && (
+          <button
+            disabled={verifying}
+            onClick={onVerify}
+            className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 transition-colors"
+          >
+            {verifying ? "Weryfikowanie…" : "Zweryfikuj (pomocnik) →"}
+          </button>
         )}
-
-        {(status === "rejected" || status === "archived") && onSetStatus && (
+        {canApprove(status) && onSetStatus && (
+          <button
+            disabled={busy}
+            onClick={() => onSetStatus("approved")}
+            className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 transition-colors"
+          >
+            {APPROVE_BUTTON_LABEL} →
+          </button>
+        )}
+        {canSendToAiHelper(status) && onSendToAiHelper && (
+          <button
+            onClick={onSendToAiHelper}
+            className="inline-flex items-center gap-1 rounded-lg border border-purple-200 bg-purple-50 px-3 py-1.5 text-sm font-medium text-purple-700 hover:bg-purple-100 transition-colors"
+          >
+            Wyślij do AI Helpera →
+          </button>
+        )}
+        {canConvertToDraft(status) && onCreateBuilderDraft && (
+          <button
+            onClick={onCreateBuilderDraft}
+            className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-700 hover:bg-amber-100 transition-colors"
+          >
+            {status === "approved" ? CONVERT_FROM_APPROVED_LABEL : "Utwórz szkic w Kreatorze"} →
+          </button>
+        )}
+        {canReject(status) && onSetStatus && (
+          <button
+            disabled={busy}
+            onClick={() => onSetStatus("rejected")}
+            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors"
+          >
+            Odrzuć
+          </button>
+        )}
+        {canArchive(status) && onSetStatus && (
+          <button
+            disabled={busy}
+            onClick={() => onSetStatus("archived")}
+            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-500 hover:bg-slate-50 disabled:opacity-50 transition-colors"
+          >
+            Archiwizuj
+          </button>
+        )}
+        {canRestore(status) && onSetStatus && (
           <button
             disabled={busy}
             onClick={() => onSetStatus("pending")}
             className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors"
           >
-            Przywróć do oczekujących
+            {status === "approved" ? "Cofnij do oczekujących" : "Przywróć do oczekujących"}
           </button>
         )}
 
