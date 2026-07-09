@@ -6,11 +6,13 @@ import {
 import {
   getSafeCheckSource,
   buildCheckProposals,
+  UNSUPPORTED_SOURCE_ERROR,
   type CheckProposal,
 } from "@/lib/sourceCheck";
 
-// Sprint 134 (A2) — manual Source Check API for exactly ONE safe official
-// source. Twin of /api/sources/fetch-preview with one deliberate hardening:
+// Sprint 134 (A2) — manual Source Check API for allowlisted safe official
+// sources (Sprint 139: exactly two — Gmina Michałowice komunikaty + WKD
+// aktualności). Twin of /api/sources/fetch-preview with one deliberate hardening:
 // the client sends only a sourceKey — the URL comes exclusively from the
 // server-side allowlist (src/lib/sourceCheck.ts), so this route can never
 // be pointed at an arbitrary address.
@@ -44,13 +46,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<SourceCheckAp
   const source = getSafeCheckSource(sourceKey);
   if (!source) {
     return NextResponse.json(
-      {
-        ok: false,
-        error:
-          "To źródło nie jest jeszcze obsługiwane przez check w aplikacji. " +
-          "Na tym etapie działa wyłącznie „Gmina Michałowice — komunikaty”; " +
-          "pozostałe źródła sprawdzaj ręcznie w przeglądarce (checklista).",
-      },
+      { ok: false, error: UNSUPPORTED_SOURCE_ERROR },
       { status: 422 }
     );
   }

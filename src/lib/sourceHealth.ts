@@ -52,7 +52,7 @@ export interface SourceHealthRow {
   name: string;
   category: OfficialSourceCheck["category"];
   officialUrl: string;
-  /** True only for sources on the safe-check allowlist (today: exactly one). */
+  /** True only for sources on the safe-check allowlist (Sprint 139: two). */
   apiSupported: boolean;
   /** Matched alert_sources row id, or null when the source isn't registered. */
   registrySourceId: string | null;
@@ -196,9 +196,9 @@ export const HEALTH_DASHBOARD_DISCLAIMER =
   "WKD, PGE ani żadnej gminy.";
 
 export const HEALTH_API_SUPPORT_NOTE =
-  "Check przez aplikację działa dziś dla dokładnie jednego źródła: " +
-  "„Gmina Michałowice — komunikaty”. Pozostałe źródła sprawdzasz ręcznie " +
-  "w przeglądarce według checklisty.";
+  "Check przez aplikację działa dziś dla dokładnie dwóch źródeł: " +
+  "„Gmina Michałowice — komunikaty” oraz „WKD — aktualności”. Pozostałe " +
+  "źródła sprawdzasz ręcznie w przeglądarce według checklisty.";
 
 // Honest fallback for "last error" (Sprint 137 req. 9): failed fetches are
 // shown in the moment of the check but are NOT persisted anywhere —

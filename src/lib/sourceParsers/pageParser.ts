@@ -168,6 +168,52 @@ function extractNewsListItems(html: string): PageCandidate[] {
   return items;
 }
 
+// ── Joomla blog-listing extraction (Sprint 139) ──────────────────────────────
+
+// wkd.com.pl/aktualnosci (Joomla) renders each notice as a div carrying
+// itemprop="blogPost", with the publish date in <p class="published"><time>,
+// the title as a link inside <div class="item-header"><h2> and the teaser in
+// <div class="item-introtext"> — a <div>, not a <p>, and with no <main> or
+// <article> wrapper, so the generic heading/paragraph extractor pairs the
+// <h2>s with nothing and drops them. Verified against the live WKD
+// aktualności markup in Sprint 139. Same segment strategy as
+// extractNewsListItems: the first date/title/teaser match after each
+// blogPost open tag belongs to that item.
+
+function extractBlogPostItems(html: string): PageCandidate[] {
+  const segments = html.split(/<div[^>]*itemprop="blogPost"[^>]*>/i);
+  const items: PageCandidate[] = [];
+
+  for (const seg of segments.slice(1)) {
+    if (items.length >= MAX_NEWS_ITEMS) break;
+
+    const dateMatch = seg.match(/<time[^>]*>([\s\S]*?)<\/time>/i);
+    const titleMatch = seg.match(/<h2[^>]*>[\s\S]*?<a[^>]*>([\s\S]*?)<\/a>/i);
+    const bodyMatch = seg.match(
+      /<div[^>]*class="[^"]*\bitem-introtext\b[^"]*"[^>]*>([\s\S]*?)<\/div>/i
+    );
+
+    const heading = titleMatch
+      ? stripTags(titleMatch[1]).replace(/\s+/g, " ").trim().slice(0, 120) || undefined
+      : undefined;
+    const date = dateMatch ? stripTags(dateMatch[1]).replace(/\s+/g, " ").trim() : "";
+    const body = bodyMatch ? stripTags(bodyMatch[1]).replace(/\s+/g, " ").trim().slice(0, 600) : "";
+
+    const text = [date, body].filter(Boolean).join("\n");
+    // Image-only teasers and malformed blocks carry nothing an admin could
+    // review — skip instead of proposing noise (same rule as news-item pass).
+    if (!heading && text.length < 40) continue;
+
+    items.push({
+      heading,
+      text,
+      hasDate: detectDateInText(`${heading ?? ""} ${text}`),
+    });
+  }
+
+  return items;
+}
+
 // Lightweight RSS/Atom autodiscovery — only looks at the page's own <head>
 // <link> tags already present in the HTML we already fetched. Never
 // fetches or parses the feed itself.
@@ -234,18 +280,19 @@ export function parsePageHtml(html: string, baseUrl: string): PageParseResult {
 
   const content = mainMatch ? mainMatch[1] : stripped;
 
-  // CMS news-list markup hides notices from the block extractor entirely
-  // (div-only, see extractNewsListItems) — prefer that targeted pass when it
-  // finds items, and search the whole stripped page rather than `content`:
-  // the class="content" fallback match above can truncate at the first
-  // nested </div> and lose items.
+  // CMS list markup hides notices from the block extractor entirely
+  // (div-only, see extractNewsListItems / extractBlogPostItems) — prefer a
+  // targeted pass when it finds items, and search the whole stripped page
+  // rather than `content`: the class="content" fallback match above can
+  // truncate at the first nested </div> and lose items.
   const newsItems = extractNewsListItems(stripped);
+  const listItems = newsItems.length > 0 ? newsItems : extractBlogPostItems(stripped);
   const blocks = extractBlocks(content);
-  const candidates = newsItems.length > 0 ? newsItems : buildCandidates(blocks);
+  const candidates = listItems.length > 0 ? listItems : buildCandidates(blocks);
 
   const rawText = (
-    newsItems.length > 0
-      ? newsItems.map((c) => (c.heading ? c.heading + "\n" : "") + c.text).join("\n\n")
+    listItems.length > 0
+      ? listItems.map((c) => (c.heading ? c.heading + "\n" : "") + c.text).join("\n\n")
       : blocks
           .filter((b) => b.text.length > 30)
           .map((b) => (b.type === "heading" ? "\n" + b.text + "\n" : b.text))

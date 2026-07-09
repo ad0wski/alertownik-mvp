@@ -15,20 +15,26 @@ import { trimAtWord } from "@/lib/candidateWarnings";
 // fetch-preview, Sprint 76).
 //
 // Hard scope rules for this stage (see Obsidian: Automation Implementation
-// Plan § A2): exactly ONE safe source, manual trigger only, the API only
-// PROPOSES — saving a candidate always happens in the admin's browser
-// through their authenticated session (status `pending`, human review
-// required). No cron, no AI verifier, no autopublish, no second source.
+// Plan § A2/A4): only allowlisted safe sources (Sprint 139: exactly two),
+// manual trigger only, the API only PROPOSES — saving a candidate always
+// happens in the admin's browser through their authenticated session
+// (status `pending`, human review required). No cron, no autopublish.
 
 // ── Safe-source allowlist ─────────────────────────────────────────────────────
 
-// Exactly one source for A2. The entry itself comes from the canonical
-// checklist config (officialSourceChecklist.ts) so name/URL/category can
-// never drift between the checklist card and the API. Growing this list is
-// a deliberate per-source decision in a future sprint, not a config tweak:
-// each source needs a parse check + risk review first (e.g. pruszkow.pl is
-// bot-blocked, PGE needs a region picker — both unsuitable).
-export const SAFE_CHECK_SOURCE_IDS = ["michalowice-komunikaty"] as const;
+// The entries themselves come from the canonical checklist config
+// (officialSourceChecklist.ts) so name/URL/category can never drift between
+// the checklist card and the API. Growing this list is a deliberate
+// per-source decision, not a config tweak — each source needs a parse check
+// + risk review first (e.g. pruszkow.pl is bot-blocked, PGE needs a region
+// picker — both still unsuitable). Sprint 134 started with Michałowice;
+// Sprint 139 added WKD after verifying the live page fetches cleanly (HTTP
+// 200 for our UA) and its Joomla blogPost markup parses deterministically
+// (pageParser.extractBlogPostItems, fixture-tested).
+export const SAFE_CHECK_SOURCE_IDS = [
+  "michalowice-komunikaty",
+  "wkd-aktualnosci",
+] as const;
 
 export type SafeCheckSourceId = (typeof SAFE_CHECK_SOURCE_IDS)[number];
 
@@ -137,6 +143,16 @@ export function findMatchingRegistrySource<T extends { url: string }>(
 }
 
 // ── Copy (kept here so tests can pin it against automation-promise drift) ────
+
+// 422 copy for /api/sources/check — the supported-source names are built
+// from the allowlist + canonical checklist config, so this message can
+// never drift from what the API actually accepts.
+export const UNSUPPORTED_SOURCE_ERROR =
+  "To źródło nie jest jeszcze obsługiwane przez check w aplikacji. " +
+  `Na tym etapie działają wyłącznie: ${SAFE_CHECK_SOURCE_IDS.map(
+    (id) => `„${OFFICIAL_SOURCE_CHECKS.find((s) => s.id === id)?.name ?? id}”`
+  ).join(" oraz ")}. ` +
+  "Pozostałe źródła sprawdzaj ręcznie w przeglądarce (checklista).";
 
 export const MANUAL_CHECK_DISCLAIMER =
   "Check jest ręczny — uruchamiasz go przyciskiem, nic nie sprawdza się samo. " +

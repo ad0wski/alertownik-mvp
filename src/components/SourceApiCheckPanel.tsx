@@ -17,8 +17,8 @@ import { createSourceCheck } from "@/lib/supabaseSourceWrites";
 import { findSimilarText } from "@/lib/candidateWarnings";
 
 // Sprint 134 (A2) — the manual trigger for /api/sources/check, rendered only
-// on checklist cards whose source is on the safe-source allowlist (today:
-// exactly Gmina Michałowice — komunikaty). The route only proposes; every
+// on checklist cards whose source is on the safe-source allowlist (Sprint
+// 139: Gmina Michałowice komunikaty + WKD aktualności). The route only proposes; every
 // write below (candidate save, check-history log) runs in this browser
 // through the admin's authenticated session — nothing is saved or published
 // automatically, and each proposal needs its own explicit click.

@@ -18,10 +18,10 @@ import type { AlertSource } from "@/types/alertSource";
 // /admin/sources). Static checklist of official sources to check BY HAND —
 // honest manual workflow, no monitoring, no autopublish.
 //
-// Sprint 134 (A2): sources on the safe-check allowlist (today exactly one:
-// Gmina Michałowice — komunikaty) additionally get a manual in-app check
-// button (SourceApiCheckPanel → /api/sources/check). Still admin-triggered
-// only; every other card stays check-by-hand.
+// Sprint 134 (A2): sources on the safe-check allowlist (Sprint 139: two —
+// Gmina Michałowice komunikaty + WKD aktualności) additionally get a manual
+// in-app check button (SourceApiCheckPanel → /api/sources/check). Still
+// admin-triggered only; every other card stays check-by-hand.
 
 const categoryLabels: Record<AlertCategory, string> = {
   transport: "Transport",

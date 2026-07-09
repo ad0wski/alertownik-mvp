@@ -60,11 +60,11 @@ test.describe("buildSourceHealthRows — coverage and API-support flags", () => 
     expect(rows.map((r) => r.checklistId)).toEqual(OFFICIAL_SOURCE_CHECKS.map((s) => s.id));
   });
 
-  test("exactly one source is API-supported: Gmina Michałowice — komunikaty", () => {
+  test("exactly two sources are API-supported after Sprint 139: WKD + Michałowice", () => {
     const rows = rowsFor();
-    const supported = rows.filter((r) => r.apiSupported);
-    expect(supported.length).toBe(1);
-    expect(supported[0].checklistId).toBe("michalowice-komunikaty");
+    const supported = rows.filter((r) => r.apiSupported).map((r) => r.checklistId);
+    // Checklist order: WKD is listed first in officialSourceChecklist.ts.
+    expect(supported).toEqual(["wkd-aktualnosci", "michalowice-komunikaty"]);
   });
 
   test("registry matching ignores www. and trailing slash", () => {
@@ -146,7 +146,7 @@ test.describe("summarizeSourceHealth", () => {
     });
     const summary = summarizeSourceHealth(rows);
     expect(summary.total).toBe(OFFICIAL_SOURCE_CHECKS.length);
-    expect(summary.apiSupported).toBe(1);
+    expect(summary.apiSupported).toBe(2);
     expect(summary.checkedRecently).toBe(1); // only reg-mich has a fresh check
     expect(summary.needsAttention).toBe(summary.total - summary.checkedRecently);
   });
@@ -167,6 +167,7 @@ test.describe("dashboard copy (anti-drift — Sprint 137 req. 5/6/7)", () => {
     expect(HEALTH_MANUAL_ONLY_LABEL).toBe("tylko ręczna checklista");
     expect(HEALTH_API_SUPPORTED_LABEL).toContain("check przez aplikację");
     expect(HEALTH_API_SUPPORT_NOTE).toContain("Gmina Michałowice — komunikaty");
+    expect(HEALTH_API_SUPPORT_NOTE).toContain("WKD — aktualności");
     expect(HEALTH_API_SUPPORT_NOTE).toContain("ręcznie");
   });
 

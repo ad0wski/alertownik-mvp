@@ -8,6 +8,7 @@ import {
   findMatchingRegistrySource,
   MANUAL_CHECK_DISCLAIMER,
   CHECK_BUTTON_LABEL,
+  UNSUPPORTED_SOURCE_ERROR,
 } from "@/lib/sourceCheck";
 
 /**
@@ -44,8 +45,8 @@ const FIXTURE_HTML = `
 `;
 
 test.describe("safe-source allowlist (getSafeCheckSource)", () => {
-  test("exactly one safe source at this stage — growing the list is a per-sprint decision", () => {
-    expect(SAFE_CHECK_SOURCE_IDS).toHaveLength(1);
+  test("exactly two safe sources after Sprint 139 — growing the list stays a per-sprint decision", () => {
+    expect(SAFE_CHECK_SOURCE_IDS).toEqual(["michalowice-komunikaty", "wkd-aktualnosci"]);
   });
 
   test("resolves the Michałowice komunikaty source from the canonical checklist config", () => {
@@ -56,9 +57,17 @@ test.describe("safe-source allowlist (getSafeCheckSource)", () => {
     expect(source?.category).toBe("municipal");
   });
 
+  test("resolves the WKD aktualności source from the canonical checklist config (Sprint 139)", () => {
+    const source = getSafeCheckSource("wkd-aktualnosci");
+    expect(source).not.toBeNull();
+    expect(source?.name).toBe("WKD — aktualności");
+    expect(source?.officialUrl).toBe("https://wkd.com.pl/aktualnosci");
+    expect(source?.category).toBe("transport");
+  });
+
   test("rejects unknown, unlisted and empty keys — the API can never fetch an arbitrary source", () => {
-    expect(getSafeCheckSource("wkd-aktualnosci")).toBeNull(); // real source, NOT allowlisted yet
     expect(getSafeCheckSource("pruszkow-aktualnosci")).toBeNull(); // bot-blocked, must stay manual
+    expect(getSafeCheckSource("pge-planowane")).toBeNull(); // region picker, must stay manual
     expect(getSafeCheckSource("https://evil.example/page")).toBeNull();
     expect(getSafeCheckSource("")).toBeNull();
   });
@@ -138,7 +147,7 @@ test.describe("manual-check copy (anti-drift)", () => {
   });
 
   test("no copy promises automation or automatic publication", () => {
-    for (const copy of [MANUAL_CHECK_DISCLAIMER, CHECK_BUTTON_LABEL]) {
+    for (const copy of [MANUAL_CHECK_DISCLAIMER, CHECK_BUTTON_LABEL, UNSUPPORTED_SOURCE_ERROR]) {
       const lower = copy.toLowerCase();
       expect(lower).not.toContain("automatycznie publikuje");
       expect(lower).not.toContain("autopublish");
