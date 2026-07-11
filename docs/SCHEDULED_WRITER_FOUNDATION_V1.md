@@ -103,7 +103,9 @@ A narrow interface, not a generic Supabase wrapper:
 ```ts
 export interface ScheduledSourceWriter {
   findExistingCandidateTexts(sourceKey: string, registrySourceId: string | null): Promise<string[]>;
-  insertPendingCandidate(payload): Promise<{ ok: boolean }>;
+  insertPendingCandidate(payload): Promise<
+    { ok: true } | { ok: false; reason: "duplicate_prevented_by_database" | "unknown_error" }
+  >;
   insertSourceCheck(payload): Promise<{ ok: boolean }>;
 }
 ```
@@ -114,6 +116,21 @@ admin saved manually via "Zapisz jako kandydata" for the same source
 (those never set `source_key`, so the original `source_key`-only query
 missed them) — no RLS/schema change, since the writer's existing SELECT
 policy already grants read access to every row, not just its own.
+
+**Sprint 150A update (proposal — migration NOT applied):**
+`insertPendingCandidate`'s result now distinguishes a Postgres
+unique-constraint conflict (code `23505`, checked by code not by message
+text) from any other insert failure — the future signal that the
+proposed partial unique index (`docs/sql/PROPOSED_SPRINT_150_RACE_
+CONDITION_MIGRATION_V1.sql`) caught a genuine concurrent-invocation race
+loss. `buildPendingCandidateInsert` computes a `content_fingerprint`
+(SHA-256 of the SAME `normalizeForCompare` the fuzzy classifier already
+uses, now exported from `candidateWarnings.ts`) but only includes it in
+the insert payload when `SCHEDULED_WRITER_FINGERPRINT_ENABLED=true` —
+defaults off, so this code is safe to ship to any environment today
+without the migration existing yet (the column doesn't exist on the live
+table until Adam runs it). Schema-first, flag-second — never the
+reverse; see `docs/SPRINT_150_RACE_CONDITION_DEPLOYMENT_RUNBOOK_V1.md`.
 
 Exactly three operations exist, matching the three the scheduled
 writer's live RLS policies actually allow. No update, no delete, no

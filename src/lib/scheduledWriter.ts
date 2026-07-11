@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { textSimilarity } from "@/lib/candidateWarnings";
+import { createHash } from "crypto";
+import { textSimilarity, normalizeForCompare } from "@/lib/candidateWarnings";
 import type { CheckProposal } from "@/lib/sourceCheck";
 import { SAFE_CHECK_SOURCE_IDS } from "@/lib/sourceCheck";
 
@@ -184,6 +185,41 @@ export interface PendingCandidateInput {
   rawText: string;
 }
 
+// Sprint 150A — race-condition closure (proposal, not yet migrated: see
+// docs/SPRINT_150_RACE_CONDITION_DEPLOYMENT_RUNBOOK_V1.md). Two
+// concurrent invocations both fetch-and-parse the SAME live page
+// independently, so a genuine race produces two candidates whose
+// content is identical (or effectively identical) after normalization —
+// this is a narrower, EXACT-match notion of "duplicate" than the
+// existing fuzzy classifyCandidateAgainstExisting() above, and that is
+// intentional: a DB-level unique constraint can only ever enforce exact
+// equality, never a similarity score. Reuses normalizeForCompare()
+// (src/lib/candidateWarnings.ts) verbatim — the SAME function the
+// in-memory fuzzy classifier already relies on — so there is exactly one
+// definition of "normalized text" in this codebase, never a second one
+// (e.g. in SQL) that could silently drift out of sync. SHA-256 keeps the
+// stored value a fixed 64 hex characters regardless of how long the
+// source notice's raw text ever gets — safe to index unconditionally,
+// unlike the raw text itself.
+export function computeContentFingerprint(input: Pick<PendingCandidateInput, "title" | "excerpt" | "rawText">): string {
+  const basis = input.rawText || input.excerpt || input.title;
+  return createHash("sha256").update(normalizeForCompare(basis)).digest("hex");
+}
+
+/** Expand/contract deploy safety (Sprint 150A): `content_fingerprint`
+ *  does not exist as a column on the live database until the proposed
+ *  migration (docs/sql/PROPOSED_SPRINT_150_RACE_CONDITION_MIGRATION_V1.sql)
+ *  is actually run — NOT done as part of this sprint. Sending an unknown
+ *  column to Supabase's insert would fail every single write. This flag
+ *  therefore defaults OFF (identical behavior to before this sprint) and
+ *  must only ever be flipped on AFTER Adam has verified the migration is
+ *  live (docs/sql/VERIFY_SPRINT_150_RACE_CONDITION_MIGRATION_READ_ONLY_V1.sql).
+ *  This is the "expand" step's code half — schema first, this flag second,
+ *  never the reverse. */
+export function isContentFingerprintEnabled(): boolean {
+  return process.env.SCHEDULED_WRITER_FINGERPRINT_ENABLED === "true";
+}
+
 export function buildPendingCandidateInsert(input: PendingCandidateInput) {
   return {
     source_id: input.sourceId,
@@ -193,6 +229,13 @@ export function buildPendingCandidateInsert(input: PendingCandidateInput) {
     title: input.title,
     excerpt: input.excerpt,
     raw_text: input.rawText,
+    // Only included once the migration is confirmed live AND the flag is
+    // explicitly turned on — see isContentFingerprintEnabled() above.
+    // Spreading an empty object when disabled means the key is entirely
+    // absent from the payload (not `content_fingerprint: undefined`,
+    // which some client libraries still serialize) — old-schema-safe by
+    // construction, not just by convention.
+    ...(isContentFingerprintEnabled() ? { content_fingerprint: computeContentFingerprint(input) } : {}),
     status: "pending",
     verification_status: "unverified",
     confidence_score: null,
@@ -324,11 +367,32 @@ export function getRegistrySourceId(sourceKey: string): string | null {
 // access — none of those have a method here to call, structurally, not
 // just by policy.
 
+// Sprint 150A: insertPendingCandidate's result distinguishes a database-
+// enforced unique-constraint conflict (Postgres error code 23505 — the
+// proposed migration's partial unique index rejecting a genuine race
+// loss) from any other insert failure. This is "duplicate_prevented_by_
+// database" — distinct from the EXISTING "duplicate_detected_before_
+// insert" case, which is the in-memory classifyCandidateAgainstExisting()
+// call already skipping a proposal before ever attempting an insert (see
+// writeCandidatesForSource below). Both are safe, both skip silently
+// from the caller's perspective (no retry, no crash), but they are
+// counted separately in the result so a human reading the response can
+// tell "we saw this coming" apart from "we lost a race."
+export type InsertPendingCandidateResult =
+  | { ok: true }
+  | { ok: false; reason: "duplicate_prevented_by_database" | "unknown_error" };
+
 export interface ScheduledSourceWriter {
   findExistingCandidateTexts(sourceKey: string, registrySourceId: string | null): Promise<string[]>;
-  insertPendingCandidate(payload: ReturnType<typeof buildPendingCandidateInsert>): Promise<{ ok: boolean }>;
+  insertPendingCandidate(payload: ReturnType<typeof buildPendingCandidateInsert>): Promise<InsertPendingCandidateResult>;
   insertSourceCheck(payload: ReturnType<typeof buildAutomatedSourceCheckInsert>): Promise<{ ok: boolean }>;
 }
+
+/** Postgres unique_violation — the exact code the proposed migration's
+ *  partial unique index would raise on a genuine race loss. Checked by
+ *  code, never by parsing the error message text (message wording is not
+ *  a stable contract; the SQLSTATE code is). */
+const POSTGRES_UNIQUE_VIOLATION = "23505";
 
 interface CandidateTextRow {
   title?: string;
@@ -370,7 +434,11 @@ export function createSupabaseScheduledWriter(client: SupabaseClient): Scheduled
     },
     async insertPendingCandidate(payload) {
       const { error } = await client.from("source_notice_candidates").insert(payload);
-      return { ok: !error };
+      if (!error) return { ok: true };
+      if (error.code === POSTGRES_UNIQUE_VIOLATION) {
+        return { ok: false, reason: "duplicate_prevented_by_database" };
+      }
+      return { ok: false, reason: "unknown_error" };
     },
     async insertSourceCheck(payload) {
       const { error } = await client.from("source_checks").insert(payload);
@@ -398,6 +466,14 @@ export interface WriteCandidatesForSourceResult {
   ambiguousCandidates: number;
   cappedSkipped: number;
   sourceChecksInserted: number;
+  /** Sprint 150A: count of inserts rejected by the database's own unique
+   *  constraint (once the proposed migration is live and
+   *  SCHEDULED_WRITER_FINGERPRINT_ENABLED=true) — a genuine concurrent-
+   *  invocation race loss, distinct from duplicatesSkipped (which is the
+   *  in-memory fuzzy check catching a duplicate BEFORE ever attempting an
+   *  insert). Always 0 today, since the migration has not been applied
+   *  and the flag defaults off. */
+  duplicatesPreventedByDatabase: number;
 }
 
 /** Given already-fetched-and-parsed proposals for one source, decides what
@@ -431,7 +507,14 @@ export async function writeCandidatesForSource(
       );
       if (result.ok) sourceChecksInserted = 1;
     }
-    return { candidatesInserted: 0, duplicatesSkipped: 0, ambiguousCandidates: 0, cappedSkipped: 0, sourceChecksInserted };
+    return {
+      candidatesInserted: 0,
+      duplicatesSkipped: 0,
+      ambiguousCandidates: 0,
+      cappedSkipped: 0,
+      sourceChecksInserted,
+      duplicatesPreventedByDatabase: 0,
+    };
   }
 
   const existingTexts = await writer.findExistingCandidateTexts(input.sourceKey, input.registrySourceId);
@@ -440,6 +523,7 @@ export async function writeCandidatesForSource(
   let duplicatesSkipped = 0;
   let ambiguousCandidates = 0;
   let cappedSkipped = 0;
+  let duplicatesPreventedByDatabase = 0;
   for (const proposal of input.proposals) {
     const text = proposal.rawText || proposal.excerpt || proposal.title;
     const classification = classifyCandidateAgainstExisting(text, existingTexts);
@@ -479,7 +563,20 @@ export async function writeCandidatesForSource(
     if (result.ok) {
       candidatesInserted++;
       existingTexts.push(text);
+    } else if (result.reason === "duplicate_prevented_by_database") {
+      // A genuine race loss: our in-memory check said "new" (it could not
+      // see the other invocation's not-yet-committed row), but the
+      // database's own unique constraint caught it. Safe by design: no
+      // retry (the other invocation already has this content pending),
+      // no 500, no draft, no publish, no update to the row that won —
+      // just counted, honestly, as a distinct outcome from an ordinary
+      // in-memory duplicate. Deliberately does NOT count against
+      // maxCandidatesToInsert — zero rows were created by this attempt.
+      duplicatesPreventedByDatabase++;
     }
+    // result.reason === "unknown_error": silently not inserted, not
+    // counted anywhere — identical to this function's pre-Sprint-150A
+    // behavior for any other Postgrest error, unchanged.
   }
 
   let sourceChecksInserted = 0;
@@ -494,5 +591,12 @@ export async function writeCandidatesForSource(
     if (result.ok) sourceChecksInserted = 1;
   }
 
-  return { candidatesInserted, duplicatesSkipped, ambiguousCandidates, cappedSkipped, sourceChecksInserted };
+  return {
+    candidatesInserted,
+    duplicatesSkipped,
+    ambiguousCandidates,
+    cappedSkipped,
+    sourceChecksInserted,
+    duplicatesPreventedByDatabase,
+  };
 }

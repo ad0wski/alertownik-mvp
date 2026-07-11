@@ -166,6 +166,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
             ambiguousCandidates: 0,
             cappedSkipped: 0,
             sourceChecksInserted: 0,
+            duplicatesPreventedByDatabase: 0,
           };
         }
 
@@ -201,6 +202,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
           ambiguousCandidates: 0,
           cappedSkipped: 0,
           sourceChecksInserted: 0,
+          duplicatesPreventedByDatabase: 0,
         };
       }
     })
@@ -221,6 +223,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     ambiguousCandidates: results.reduce((sum, r) => sum + r.ambiguousCandidates, 0),
     cappedSkipped: results.reduce((sum, r) => sum + r.cappedSkipped, 0),
     sourceChecksInserted: results.reduce((sum, r) => sum + r.sourceChecksInserted, 0),
+    duplicatesPreventedByDatabase: results.reduce((sum, r) => sum + r.duplicatesPreventedByDatabase, 0),
     published: false,
     message:
       "Zapisano wyłącznie kandydatów ze statusem 'pending' i wpisy historii sprawdzeń — " +

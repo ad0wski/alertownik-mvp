@@ -7,6 +7,52 @@ action item below is explicitly a future, separately-approved step.
 
 ---
 
+## 🔒 Update (Sprint 150A, 2026-07-11): RACE CONDITION MIGRATION REQUIRED BEFORE FIRST SCHEDULE
+
+**Gate status change: this readiness assessment's biggest open risk
+(§3 in the original text below) now has a fully prepared, reviewed
+closure package — not yet applied.** See
+`docs/SPRINT_150_RACE_CONDITION_DEPLOYMENT_RUNBOOK_V1.md` for the full
+mechanism (a database-level partial unique index on a content
+fingerprint, Variant B of 4 compared), the exact SQL (proposed, not
+run), and the required deploy order.
+
+**No variant in §4 below should be activated until all of the following
+are true:**
+
+- [ ] Duplicate preflight run and reviewed (`docs/sql/VERIFY_SOURCE_
+      NOTICE_CANDIDATE_DUPLICATES_READ_ONLY_V1.sql`) — `SAFE TO MIGRATE`
+      confirmed, or any `DUPLICATES REQUIRE REVIEW` result resolved by
+      hand
+- [ ] Migration deployed (`docs/sql/PROPOSED_SPRINT_150_RACE_CONDITION_
+      MIGRATION_V1.sql`, both steps, separately approved)
+- [ ] Migration verified (`docs/sql/VERIFY_SPRINT_150_RACE_CONDITION_
+      MIGRATION_READ_ONLY_V1.sql`, checks #1–#3 PASS)
+- [ ] Concurrency-safe insert verified — either via the one controlled
+      test in the deployment runbook's §5 step 6, or by trusting the
+      concurrency test suite (`tests/e2e/scheduledWriterConcurrency.spec.ts`,
+      17 tests, simulates the database's own unique-constraint behavior)
+- [ ] Writer remains Michałowice only (unchanged — confirmed again in
+      Sprint 150A, `DEFAULT_ALLOWED_WRITE_SOURCE_IDS` untouched)
+- [ ] Max 1 candidate per invocation (unchanged — `DEFAULT_MAX_
+      CANDIDATES_PER_INVOCATION` untouched; the new database-prevented-
+      duplicate outcome does not count against this cap, by design)
+- [ ] Pending only, `published: false` (unchanged — no new code path
+      touches either)
+- [ ] Write kill switch (`SCHEDULED_WRITES_ENABLED`) tested — unchanged
+      behavior, re-confirmed by the full Sprint 150A test run
+- [ ] Production/env decision still requires separate approval (§7 of
+      this document, unchanged)
+- [ ] Cron activation still requires separate approval (§7 of this
+      document, unchanged)
+
+This checklist is a **precondition for the "Rekomendacja techniczna"
+(§5) below**, not a replacement for it — the variant choice (B vs. C vs.
+D vs. staying manual) is still Adam's decision, informed by source
+audit frequency, made separately.
+
+---
+
 ## 1. Aktualny stan bezpieczeństwa (jak jest dziś)
 
 - **Trzy niezależne bramki**, wszystkie muszą być prawdziwe jednocześnie

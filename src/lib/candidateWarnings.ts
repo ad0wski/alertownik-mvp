@@ -33,7 +33,11 @@ const POLISH_MAP: Record<string, string> = {
   ą: "a", ć: "c", ę: "e", ł: "l", ń: "n", ó: "o", ś: "s", ź: "z", ż: "z",
 };
 
-function normalizeForCompare(text: string): string {
+// Exported (Sprint 150A) so src/lib/scheduledWriter.ts can derive a
+// deterministic content fingerprint from EXACTLY this normalization —
+// single source of truth, never a second reimplementation (e.g. in SQL)
+// that could silently drift out of sync with this one over time.
+export function normalizeForCompare(text: string): string {
   return text
     .toLowerCase()
     .split("")
