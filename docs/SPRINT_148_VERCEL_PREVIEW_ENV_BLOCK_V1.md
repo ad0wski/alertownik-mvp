@@ -78,3 +78,37 @@ Przejdź do Kroku 7 runbooku (`docs/SPRINT_148_CONTROLLED_WRITE_TEST_RUNBOOK_V1.
 nigdy bez tego parametru. Weryfikacja przez
 `docs/sql/VERIFY_SPRINT_148_CONTROLLED_WRITE_TEST_READ_ONLY_V1.sql` (Krok 8),
 wyłączenie `SCHEDULED_WRITES_ENABLED` po teście (Krok 9).
+
+**Status (2026-07-11): Krok 7 wykonany, Krok 8 zweryfikowany —
+CONTROLLED WRITER TEST VERIFIED ✅.** Pierwsza próba została przechwycona
+przez Vercel Deployment Protection (HTML zamiast JSON, zero zapisu w
+bazie — potwierdzone). Druga próba, z dodatkowym nagłówkiem
+`x-vercel-protection-bypass` (osobny sekret Vercela, nigdy `CRON_SECRET`),
+zakończyła się sukcesem: `candidatesInserted: 1`, `published: false`,
+zweryfikowane 1:1 przez
+`docs/sql/VERIFY_SPRINT_148_CONTROLLED_WRITE_TEST_SINGLE_RESULT_READ_ONLY_V1.sql`.
+
+---
+
+## Krok 9 — Zamknięcie testu (checklist)
+
+- [ ] W Vercel: `SCHEDULED_WRITES_ENABLED` → `false` (lub usuń zmienną),
+      scope nadal **Preview only**, gałąź
+      `sprint-148-controlled-writer-preview`. `SCHEDULED_CHECKS_ENABLED`
+      może zostać `true` (sam dry-run nigdy nic nie zapisuje) — ale
+      bezpieczniej ustawić też `false`, jeśli nie planujesz kolejnych
+      dry-runów w najbliższym czasie.
+- [ ] Wyzwól nowy Preview deployment, żeby zmiana weszła w życie
+      (redeploy bez zmiany kodu — sama zmienna env).
+- [ ] **Decyzja o Protection Bypass secret** (rekomendacja: **usuń go
+      po tym teście**). Uzasadnienie: był potrzebny wyłącznie do tego
+      jednego kontrolowanego wywołania; pozostawienie go czynnym w
+      Vercelu bez aktywnego przypadku użycia to niepotrzebna ekspozycja
+      — ten sam "safer resting state" co przy `SCHEDULED_WRITES_ENABLED`.
+      Jeśli planujesz kolejny kontrolowany test w najbliższych dniach,
+      możesz go zostawić — to Twoja decyzja, nie blokuje niczego
+      technicznie.
+- [ ] Production: bez zmian (nic tam nigdy nie było ustawione w ramach
+      Sprintu 148).
+- [ ] Brak Vercel Cron, brak `vercel.json`, brak harmonogramu — potwierdzone
+      ponownie w repo audycie.

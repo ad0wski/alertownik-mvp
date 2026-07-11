@@ -29,6 +29,50 @@ automatic invocations, WKD in this first write, `service_role`, any
 `alerts`/`admin_profiles` change, the `alert_sources` cleanup, auto-draft,
 autopublish, publishing, ads/analytics/push/payments.
 
+**Update 2026-07-11 — first Step 7 attempt: REQUEST BLOCKED BEFORE
+APPLICATION ✅ (not a failure of the writer itself).** Adam configured
+Vercel Preview env vars correctly (all 6 variables, Preview-only, scoped
+to `sprint-148-controlled-writer-preview`, commit `b711520` confirmed
+Ready) and made exactly one manual call to
+`?sourceKey=michalowice-komunikaty`. The response was an HTML document
+referencing `_next/static/` instead of the route's JSON — impossible for
+this route to produce by its own code (every path in `route.ts` returns
+`NextResponse.json(...)`, statically confirmed). Verified via a single
+read-only SQL check
+(`docs/sql/VERIFY_SPRINT_148_CONTROLLED_WRITE_TEST_SINGLE_RESULT_READ_ONLY_V1.sql`):
+**zero** `source_checks` rows attributable to the technical writer
+account for Michałowice — decisive, since `writeCandidatesForSource()`
+always logs a check (`no_changes` or `found_notice`) on every successful
+run, regardless of whether new content exists. Zero candidates, zero WKD
+activity, zero `alerts` activity — consistent with the request never
+reaching the Next.js application at all. Likely cause: **Vercel
+Deployment Protection** (Preview deployments are authenticated by
+default) intercepted the request before it reached the app. No code
+change needed, no live write occurred, no rollback needed. Next step:
+Step 7 must be retried using Vercel's own **Protection Bypass for
+Automation** header (a separate Vercel-issued secret, distinct from
+`CRON_SECRET`, sent as `x-vercel-protection-bypass`) — not yet
+generated or used as of this update.
+
+**Update 2026-07-11 — Step 7 retried with the bypass header: SUCCESS.
+CONTROLLED WRITER TEST VERIFIED ✅ (Step 8 complete).** Adam generated a
+separate Vercel Protection Bypass for Automation secret (never
+`CRON_SECRET`, never written to any file), sent it as
+`x-vercel-protection-bypass` alongside the existing `Authorization:
+Bearer <CRON_SECRET>`, and made exactly one call to
+`?sourceKey=michalowice-komunikaty`. Endpoint responded with real JSON:
+`checkedSources: 1, successfulSources: 1, proposalsFound: 6,
+candidatesInserted: 1, cappedSkipped: 5, sourceChecksInserted: 1,
+published: false`. Verified against
+`docs/sql/VERIFY_SPRINT_148_CONTROLLED_WRITE_TEST_SINGLE_RESULT_READ_ONLY_V1.sql`
+— all 6 checks **PASS**: writer-authored `source_checks` row exists
+(`result=found_notice`), exactly 1 new candidate (`status=pending`, every
+sensitive/publishing field null/unverified), zero WKD activity, zero
+`alerts` activity. Fully consistent with the endpoint's own JSON — no
+discrepancy. **This closes Step 8.** Step 9 (disable
+`SCHEDULED_WRITES_ENABLED` in Preview) is next, tracked in
+`docs/SPRINT_148_VERCEL_PREVIEW_ENV_BLOCK_V1.md`'s closure checklist.
+
 **Hard rule for this entire runbook: no real password, token, or secret
 value is ever pasted into this repository, into any Obsidian note, into
 any chat message, or into any log.** Every step below that produces a
