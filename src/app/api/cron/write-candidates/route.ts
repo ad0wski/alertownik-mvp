@@ -139,16 +139,62 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const allowedWriteSourceIds = new Set(getAllowedWriteSourceIds());
   const sources = resolveCronSources(sourceKeyFilter).filter((source) => allowedWriteSourceIds.has(source.id));
 
+  // Sprint 149 hardening: one source's failure must never take down the
+  // whole batch response. fetchAndParseProposals already turns network/
+  // parse failures into a plain result object (never throws) — but
+  // writeCandidatesForSource's own Supabase calls could still throw at
+  // the network layer (DNS/connection failure, not just a Postgrest
+  // error, which already resolves as { ok: false } without throwing).
+  // Wrapping each source's whole pipeline in try/catch means a database
+  // network error degrades to the same safe, honest per-source failure
+  // shape as a source-page fetch failure — never an uncaught exception
+  // that could turn this route's response into a framework error page.
   const results = await Promise.all(
     sources.map(async (source) => {
       const sourceKey = source.id as SafeCheckSourceId;
-      const fetched = await fetchAndParseProposals(source.officialUrl);
-      if (!fetched.ok) {
+      try {
+        const fetched = await fetchAndParseProposals(source.officialUrl);
+        if (!fetched.ok) {
+          return {
+            sourceKey,
+            sourceName: source.name,
+            outcome: fetched.outcome,
+            diagnostic: fetched.diagnostic,
+            proposalsFound: 0,
+            candidatesInserted: 0,
+            duplicatesSkipped: 0,
+            ambiguousCandidates: 0,
+            cappedSkipped: 0,
+            sourceChecksInserted: 0,
+          };
+        }
+
+        const registrySourceId = getRegistrySourceId(sourceKey);
+        const written = await writeCandidatesForSource(writer, {
+          sourceKey,
+          sourceName: source.name,
+          sourceUrl: source.officialUrl,
+          proposals: fetched.proposals,
+          registrySourceId,
+          writerUserId: signIn.userId,
+        });
+
         return {
           sourceKey,
           sourceName: source.name,
-          outcome: fetched.outcome,
-          diagnostic: fetched.diagnostic,
+          outcome: fetched.proposals.length > 0 ? ("success" as const) : ("no_proposals" as const),
+          proposalsFound: fetched.proposals.length,
+          ...written,
+        };
+      } catch {
+        // Deliberately no exception detail in the response (no stack
+        // trace, no error message) — same "safe, generic diagnostic
+        // only" principle already applied to sign-in failures above.
+        return {
+          sourceKey,
+          sourceName: source.name,
+          outcome: "write_error" as const,
+          diagnostic: "unexpected_error",
           proposalsFound: 0,
           candidatesInserted: 0,
           duplicatesSkipped: 0,
@@ -157,28 +203,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
           sourceChecksInserted: 0,
         };
       }
-
-      const registrySourceId = getRegistrySourceId(sourceKey);
-      const written = await writeCandidatesForSource(writer, {
-        sourceKey,
-        sourceName: source.name,
-        sourceUrl: source.officialUrl,
-        proposals: fetched.proposals,
-        registrySourceId,
-        writerUserId: signIn.userId,
-      });
-
-      return {
-        sourceKey,
-        sourceName: source.name,
-        outcome: fetched.proposals.length > 0 ? ("success" as const) : ("no_proposals" as const),
-        proposalsFound: fetched.proposals.length,
-        ...written,
-      };
     })
   );
 
-  const failedOutcomes = new Set(["fetch_error", "timeout", "parse_error"]);
+  const failedOutcomes = new Set(["fetch_error", "timeout", "parse_error", "write_error"]);
 
   return NextResponse.json({
     ok: true,

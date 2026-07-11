@@ -33,6 +33,8 @@ import { findSimilarText, trimAtWord } from "@/lib/candidateWarnings";
 import { OfficialSourceChecklist } from "@/components/OfficialSourceChecklist";
 import { SourceHealthDashboard } from "@/components/SourceHealthDashboard";
 import { buildSourceHealthRows, type HealthCandidate } from "@/lib/sourceHealth";
+import { ScheduledWriterMonitoring } from "@/components/ScheduledWriterMonitoring";
+import { buildScheduledWriterActivity, type WriterActivityCandidateInput } from "@/lib/writerCandidateActivity";
 import {
   detectParserStrategy,
   PARSER_STRATEGY_LABELS,
@@ -1354,6 +1356,11 @@ export default function SourcesPage() {
   // same fetch as candidateCounts, no extra query.
   const [healthCandidates, setHealthCandidates] = useState<HealthCandidate[]>([]);
 
+  // Sprint 149: same persistent-candidate fetch as healthCandidates above,
+  // projected down to what the Scheduled Writer monitoring panel needs
+  // (source_key + status) — no extra query.
+  const [writerActivityCandidates, setWriterActivityCandidates] = useState<WriterActivityCandidateInput[]>([]);
+
   // ── Auth ────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -1438,6 +1445,17 @@ export default function SourcesPage() {
       // "what still needs action?" (that's candidateCounts above).
       setHealthCandidates(
         persistent.candidates.map((c) => ({ sourceId: c.sourceId, detectedAt: c.detectedAt }))
+      );
+      // Sprint 149: sourceKey is set ONLY by the scheduled writer's own
+      // insert path (never by this page's own "Zapisz jako kandydata"
+      // save) — the unambiguous signal the monitoring panel uses to
+      // attribute a candidate to automation rather than to an admin.
+      setWriterActivityCandidates(
+        persistent.candidates.map((c) => ({
+          sourceKey: c.sourceKey,
+          status: c.status,
+          detectedAt: c.detectedAt,
+        }))
       );
     }
     setExistingCandidateTexts(dedupTexts);
@@ -1630,6 +1648,19 @@ export default function SourcesPage() {
             checks: Object.values(sourceChecks).flat(),
             candidates: healthCandidates,
           })}
+        />
+      )}
+
+      {/* Scheduled Writer Monitoring v1 (Sprint 149) — read-only, admin-only
+          overview of what the scheduled writer itself has produced, built
+          entirely from the same persistent-candidate fetch as the Source
+          Health Dashboard above (no new query, no schema change). Honestly
+          labeled where the underlying schema cannot show more (per-run
+          counters, who authored a check-only run) — see
+          src/lib/writerCandidateActivity.ts for the full reasoning. */}
+      {loadState === "ready" && (
+        <ScheduledWriterMonitoring
+          rows={buildScheduledWriterActivity(writerActivityCandidates)}
         />
       )}
 

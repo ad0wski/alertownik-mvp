@@ -102,11 +102,18 @@ A narrow interface, not a generic Supabase wrapper:
 
 ```ts
 export interface ScheduledSourceWriter {
-  findExistingCandidateTexts(sourceKey: string): Promise<string[]>;
+  findExistingCandidateTexts(sourceKey: string, registrySourceId: string | null): Promise<string[]>;
   insertPendingCandidate(payload): Promise<{ ok: boolean }>;
   insertSourceCheck(payload): Promise<{ ok: boolean }>;
 }
 ```
+
+**Sprint 149 update:** `findExistingCandidateTexts` also takes the
+registry `source_id`, so the dedup comparison pool includes rows an
+admin saved manually via "Zapisz jako kandydata" for the same source
+(those never set `source_key`, so the original `source_key`-only query
+missed them) — no RLS/schema change, since the writer's existing SELECT
+policy already grants read access to every row, not just its own.
 
 Exactly three operations exist, matching the three the scheduled
 writer's live RLS policies actually allow. No update, no delete, no

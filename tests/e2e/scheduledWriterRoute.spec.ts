@@ -140,6 +140,36 @@ test.describe("static import audit — zero privileged/alert-publishing code rea
   });
 });
 
+test.describe("Sprint 149 — per-source failure isolation (Section E item 9: one source's error never crashes the batch)", () => {
+  const routeSrc = readFileSync(
+    path.join(process.cwd(), "src/app/api/cron/write-candidates/route.ts"),
+    "utf8"
+  );
+
+  test("each source's whole pipeline (fetch + write) is wrapped in try/catch, not left to propagate", () => {
+    // A textual, structural check (same convention as the existing
+    // "published: false" literal audit above) — asserts the catch
+    // branch exists and degrades to the same safe result shape as an
+    // ordinary fetch failure, rather than re-deriving this from a live
+    // request (this codebase deliberately does not mock a full Supabase
+    // sign-in for route-level tests — see the "source restriction"
+    // describe block below for the same rationale).
+    expect(routeSrc).toMatch(/try\s*\{[\s\S]*?\}\s*catch[\s\S]*?write_error/);
+  });
+
+  test("write_error is counted as a failure, never as success, and never marks published true", () => {
+    expect(routeSrc).toMatch(/failedOutcomes\s*=\s*new Set\(\[[^\]]*"write_error"[^\]]*\]\)/);
+    expect(routeSrc).not.toMatch(/write_error[\s\S]{0,80}published:\s*true/);
+  });
+
+  test("the catch branch never includes exception detail (no error message, no stack) in the response", () => {
+    const catchBlockMatch = routeSrc.match(/\}\s*catch\s*\{([\s\S]*?)\n\s*\}\s*\}\)\s*\);/);
+    expect(catchBlockMatch).not.toBeNull();
+    const catchBlock = catchBlockMatch![1];
+    expect(catchBlock).not.toMatch(/\.message|\.stack|String\(err/i);
+  });
+});
+
 test.describe("GET /api/cron/write-candidates — two independent kill switches (write mode disabled by default)", () => {
   test("no env configured at all → 503 disabled, nothing fetched", async () => {
     await withEnv(

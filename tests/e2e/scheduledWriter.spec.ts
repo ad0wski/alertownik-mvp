@@ -251,8 +251,10 @@ test.describe("classifyCandidateAgainstExisting — conservative, three-way, no 
 function makeFakeWriter(existingTexts: string[] = []) {
   const insertedCandidates: ReturnType<typeof buildPendingCandidateInsert>[] = [];
   const insertedChecks: ReturnType<typeof buildAutomatedSourceCheckInsert>[] = [];
+  const findExistingCandidateTextsCalls: { sourceKey: string; registrySourceId: string | null }[] = [];
   const writer: ScheduledSourceWriter = {
-    async findExistingCandidateTexts() {
+    async findExistingCandidateTexts(sourceKey, registrySourceId) {
+      findExistingCandidateTextsCalls.push({ sourceKey, registrySourceId });
       return [...existingTexts];
     },
     async insertPendingCandidate(payload) {
@@ -264,7 +266,7 @@ function makeFakeWriter(existingTexts: string[] = []) {
       return { ok: true };
     },
   };
-  return { writer, insertedCandidates, insertedChecks };
+  return { writer, insertedCandidates, insertedChecks, findExistingCandidateTextsCalls };
 }
 
 const baseSourceInfo = {

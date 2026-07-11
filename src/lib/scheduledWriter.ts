@@ -325,7 +325,7 @@ export function getRegistrySourceId(sourceKey: string): string | null {
 // just by policy.
 
 export interface ScheduledSourceWriter {
-  findExistingCandidateTexts(sourceKey: string): Promise<string[]>;
+  findExistingCandidateTexts(sourceKey: string, registrySourceId: string | null): Promise<string[]>;
   insertPendingCandidate(payload: ReturnType<typeof buildPendingCandidateInsert>): Promise<{ ok: boolean }>;
   insertSourceCheck(payload: ReturnType<typeof buildAutomatedSourceCheckInsert>): Promise<{ ok: boolean }>;
 }
@@ -342,13 +342,28 @@ interface CandidateTextRow {
  *  testable with no network involved. */
 export function createSupabaseScheduledWriter(client: SupabaseClient): ScheduledSourceWriter {
   return {
-    async findExistingCandidateTexts(sourceKey) {
-      const { data } = await client
+    // Sprint 149 idempotency hardening: the writer's SELECT policy on
+    // source_notice_candidates (docs/sql/PROPOSED_SCHEDULED_WRITER_RLS_
+    // MIGRATION_V1.sql §3) is not filtered by source_key — it grants
+    // read access to every row, admin-created or writer-created alike.
+    // The original query only ever compared against OTHER
+    // writer-created rows (source_key match), leaving a blind spot: a
+    // notice an admin had already saved manually via "Zapisz jako
+    // kandydata" (which never sets source_key, per
+    // src/lib/supabaseCandidateWrites.ts) was invisible to this dedup
+    // check. Matching on source_id as well (when a registry id is
+    // configured) closes that gap without any RLS/schema change — pure
+    // widening of an already-permitted read.
+    async findExistingCandidateTexts(sourceKey, registrySourceId) {
+      let query = client
         .from("source_notice_candidates")
         .select("title, excerpt, raw_text")
-        .eq("source_key", sourceKey)
         .order("detected_at", { ascending: false })
         .limit(50);
+      query = registrySourceId
+        ? query.or(`source_key.eq.${sourceKey},source_id.eq.${registrySourceId}`)
+        : query.eq("source_key", sourceKey);
+      const { data } = await query;
       return ((data as CandidateTextRow[] | null) ?? [])
         .map((r) => r.raw_text || r.excerpt || r.title || "")
         .filter(Boolean);
@@ -419,7 +434,7 @@ export async function writeCandidatesForSource(
     return { candidatesInserted: 0, duplicatesSkipped: 0, ambiguousCandidates: 0, cappedSkipped: 0, sourceChecksInserted };
   }
 
-  const existingTexts = await writer.findExistingCandidateTexts(input.sourceKey);
+  const existingTexts = await writer.findExistingCandidateTexts(input.sourceKey, input.registrySourceId);
 
   let candidatesInserted = 0;
   let duplicatesSkipped = 0;
