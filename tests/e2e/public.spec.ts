@@ -43,6 +43,24 @@ test.describe("Public homepage", () => {
     await expect(page.getByRole("link", { name: /Zgłoś brakujące źródło lub błąd/ })).toBeVisible();
   });
 
+  // Sprint 140 — Trust & Source UX v1: the "not an official app" disclaimer
+  // must be visible on first landing, not just one click away on /zasady.
+  test("homepage status card states Alertownik is independent, not an official app", async ({ page }) => {
+    await page.goto("/");
+    await expect(
+      page.getByText(/niezależnym projektem — nie jest oficjalną aplikacją WKD, PGE ani żadnej gminy/)
+    ).toBeVisible();
+  });
+
+  // Sprint 140 — same disclaimer restated in the sitewide footer, since not
+  // every page renders BetaStatusCard.
+  test("footer states Alertownik is independent, not an official app", async ({ page }) => {
+    await page.goto("/");
+    await expect(
+      page.getByText(/Niezależny projekt — nie jest oficjalną aplikacją żadnej gminy, WKD ani PGE/)
+    ).toBeVisible();
+  });
+
   test("search input accepts text without crashing", async ({ page }) => {
     await page.goto("/");
     const input = page.getByPlaceholder(/Szukaj po miejscowości/);

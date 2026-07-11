@@ -21,6 +21,7 @@ export function BetaStatusCard() {
         <li>Każdy alert jest sprawdzany i publikowany ręcznie przez administratora.</li>
         <li>AI może pomagać w przygotowaniu treści, ale nigdy nie publikuje samodzielnie.</li>
         <li>Oficjalne źródło zawsze ma pierwszeństwo przed szybkością Alertownika.</li>
+        <li>Alertownik jest niezależnym projektem — nie jest oficjalną aplikacją WKD, PGE ani żadnej gminy.</li>
       </ul>
       <div className="flex flex-wrap items-center gap-3 mt-3">
         <Link href="/about" className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline">
