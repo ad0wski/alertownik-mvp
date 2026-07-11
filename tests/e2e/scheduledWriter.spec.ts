@@ -9,6 +9,10 @@ import {
   writeCandidatesForSource,
   DUPLICATE_CONFIDENCE_THRESHOLD,
   AMBIGUOUS_SIMILARITY_THRESHOLD,
+  DEFAULT_MAX_CANDIDATES_PER_INVOCATION,
+  getMaxCandidatesPerInvocation,
+  DEFAULT_ALLOWED_WRITE_SOURCE_IDS,
+  getAllowedWriteSourceIds,
   type ScheduledSourceWriter,
 } from "@/lib/scheduledWriter";
 
@@ -301,19 +305,27 @@ test.describe("writeCandidatesForSource — zero proposals", () => {
 });
 
 test.describe("writeCandidatesForSource — proposals present, no duplicates", () => {
-  test("found_notice insert mapping: inserts every new proposal as pending and logs found_notice", async () => {
+  test("found_notice insert mapping: inserts every new proposal as pending and logs found_notice (cap explicitly raised for this test)", async () => {
     const { writer, insertedCandidates, insertedChecks } = makeFakeWriter();
-    const result = await writeCandidatesForSource(writer, {
-      ...baseSourceInfo,
-      proposals: [
-        { title: "Komunikat A", excerpt: "Wycinek A", rawText: "Pełna treść A o czymś unikalnym", hasDate: true },
-        { title: "Komunikat B", excerpt: "Wycinek B", rawText: "Zupełnie inna treść B o czymś innym", hasDate: false },
-      ],
-      registrySourceId: "fake-source-uuid",
-    });
+    // maxCandidatesToInsert explicitly raised above the default (1) to
+    // exercise "insert every new proposal" in isolation from the cap,
+    // which has its own dedicated test group below.
+    const result = await writeCandidatesForSource(
+      writer,
+      {
+        ...baseSourceInfo,
+        proposals: [
+          { title: "Komunikat A", excerpt: "Wycinek A", rawText: "Pełna treść A o czymś unikalnym", hasDate: true },
+          { title: "Komunikat B", excerpt: "Wycinek B", rawText: "Zupełnie inna treść B o czymś innym", hasDate: false },
+        ],
+        registrySourceId: "fake-source-uuid",
+      },
+      10
+    );
     expect(result.candidatesInserted).toBe(2);
     expect(result.duplicatesSkipped).toBe(0);
     expect(result.ambiguousCandidates).toBe(0);
+    expect(result.cappedSkipped).toBe(0);
     expect(result.sourceChecksInserted).toBe(1);
     expect(insertedCandidates).toHaveLength(2);
     expect(insertedChecks).toEqual([
@@ -426,5 +438,133 @@ test.describe("writeCandidatesForSource — ambiguous duplicates are never silen
     expect(result.candidatesInserted).toBe(0);
     expect(result.duplicatesSkipped).toBe(0);
     expect(insertedCandidates).toHaveLength(0);
+  });
+});
+
+// ── First-live-write safety cap (Sprint 148) — server-side, never
+// caller-controlled ─────────────────────────────────────────────────────────
+
+test.describe("getMaxCandidatesPerInvocation — server-side cap, env-controlled only", () => {
+  test("defaults to 1 (the conservative first-live-write value) when unset", () => {
+    withEnv({ SCHEDULED_WRITER_MAX_CANDIDATES_PER_RUN: undefined }, () => {
+      expect(getMaxCandidatesPerInvocation()).toBe(DEFAULT_MAX_CANDIDATES_PER_INVOCATION);
+      expect(DEFAULT_MAX_CANDIDATES_PER_INVOCATION).toBe(1);
+    });
+  });
+
+  test("falls back to the default for a non-numeric or negative value, never throws", () => {
+    withEnv({ SCHEDULED_WRITER_MAX_CANDIDATES_PER_RUN: "not-a-number" }, () => {
+      expect(getMaxCandidatesPerInvocation()).toBe(DEFAULT_MAX_CANDIDATES_PER_INVOCATION);
+    });
+    withEnv({ SCHEDULED_WRITER_MAX_CANDIDATES_PER_RUN: "-5" }, () => {
+      expect(getMaxCandidatesPerInvocation()).toBe(DEFAULT_MAX_CANDIDATES_PER_INVOCATION);
+    });
+  });
+
+  test("honors an explicit, valid env override", () => {
+    withEnv({ SCHEDULED_WRITER_MAX_CANDIDATES_PER_RUN: "3" }, () => {
+      expect(getMaxCandidatesPerInvocation()).toBe(3);
+    });
+  });
+});
+
+test.describe("getAllowedWriteSourceIds — server-side source restriction, never caller-controlled", () => {
+  test("defaults to Michałowice only when unset", () => {
+    withEnv({ SCHEDULED_WRITER_ALLOWED_SOURCE_IDS: undefined }, () => {
+      expect(getAllowedWriteSourceIds()).toEqual(DEFAULT_ALLOWED_WRITE_SOURCE_IDS);
+      expect(DEFAULT_ALLOWED_WRITE_SOURCE_IDS).toEqual(["michalowice-komunikaty"]);
+    });
+  });
+
+  test("falls back to the default for malformed JSON, never throws", () => {
+    withEnv({ SCHEDULED_WRITER_ALLOWED_SOURCE_IDS: "{not valid" }, () => {
+      expect(getAllowedWriteSourceIds()).toEqual(DEFAULT_ALLOWED_WRITE_SOURCE_IDS);
+    });
+  });
+
+  test("an override can never include a source outside the existing safe-check allowlist", () => {
+    withEnv(
+      { SCHEDULED_WRITER_ALLOWED_SOURCE_IDS: JSON.stringify(["michalowice-komunikaty", "https://evil.example/page"]) },
+      () => {
+        expect(getAllowedWriteSourceIds()).toEqual(["michalowice-komunikaty"]);
+      }
+    );
+  });
+
+  test("an explicit, valid override can widen to include WKD (a future, separate decision — not exercised by default)", () => {
+    withEnv(
+      { SCHEDULED_WRITER_ALLOWED_SOURCE_IDS: JSON.stringify(["michalowice-komunikaty", "wkd-aktualnosci"]) },
+      () => {
+        expect(getAllowedWriteSourceIds()).toEqual(["michalowice-komunikaty", "wkd-aktualnosci"]);
+      }
+    );
+  });
+});
+
+test.describe("writeCandidatesForSource — first-live-write cap enforcement", () => {
+  test("default cap (1): a second genuinely-new proposal is withheld, not inserted, not silently dropped", async () => {
+    const { writer, insertedCandidates, insertedChecks } = makeFakeWriter();
+    // No third argument passed — exercises the real default
+    // (getMaxCandidatesPerInvocation(), which is 1 unless an env var is
+    // set, and none is set in this test).
+    const result = await writeCandidatesForSource(writer, {
+      ...baseSourceInfo,
+      proposals: [
+        { title: "Komunikat A", excerpt: "e", rawText: "Zamknięcie przejazdu kolejowego na ulicy Kolejowej w Komorowie od piątku", hasDate: true },
+        { title: "Komunikat B", excerpt: "e", rawText: "Przerwa w dostawie prądu w Nowej Wsi zaplanowana na środę wieczorem", hasDate: false },
+      ],
+      registrySourceId: "fake-source-uuid",
+    });
+    expect(result.candidatesInserted).toBe(1);
+    expect(result.cappedSkipped).toBe(1);
+    expect(result.duplicatesSkipped).toBe(0);
+    expect(result.ambiguousCandidates).toBe(0);
+    expect(insertedCandidates).toHaveLength(1);
+    // A source_checks row is still logged — the cap only limits candidate
+    // inserts, not the honest record that a check happened and found
+    // notices.
+    expect(insertedChecks).toHaveLength(1);
+  });
+
+  test("an explicit cap of 0 inserts nothing at all, but still classifies and logs honestly", async () => {
+    const { writer, insertedCandidates } = makeFakeWriter();
+    const result = await writeCandidatesForSource(
+      writer,
+      {
+        ...baseSourceInfo,
+        proposals: [{ title: "T", excerpt: "e", rawText: "Zupełnie nowa treść testowa", hasDate: false }],
+        registrySourceId: "fake-source-uuid",
+      },
+      0
+    );
+    expect(result.candidatesInserted).toBe(0);
+    expect(result.cappedSkipped).toBe(1);
+    expect(insertedCandidates).toHaveLength(0);
+  });
+
+  test("the cap does not affect duplicate or ambiguous classification — only genuinely new proposals count against it", async () => {
+    const existing = ["Testowe uruchomienie syren alarmowych w gminie 16 lipca 2026 roku o godzinie 12:00"];
+    const { writer, insertedCandidates } = makeFakeWriter(existing);
+    const result = await writeCandidatesForSource(
+      writer,
+      {
+        ...baseSourceInfo,
+        proposals: [
+          {
+            title: "Duplikat",
+            excerpt: "e",
+            rawText: "Testowe uruchomienie syren alarmowych w gminie 16 lipca 2026 roku o godzinie 12:00",
+            hasDate: true,
+          },
+          { title: "Nowy", excerpt: "e", rawText: "Zupełnie nowa, inna treść o awarii wodociągu", hasDate: false },
+        ],
+        registrySourceId: "fake-source-uuid",
+      },
+      1
+    );
+    expect(result.duplicatesSkipped).toBe(1);
+    expect(result.candidatesInserted).toBe(1);
+    expect(result.cappedSkipped).toBe(0);
+    expect(insertedCandidates).toHaveLength(1);
   });
 });

@@ -133,7 +133,16 @@ test.describe("Public homepage", () => {
 
     await openLink.click();
     await expect(page).not.toHaveURL("/", { timeout: 15_000 });
-    await expect(page.getByText(/nie zastępuje/)).toBeVisible();
+    // Sprint 148: AlertDetailClient fetches its data client-side in a
+    // useEffect after navigation (not embedded in the initial SSR
+    // payload) — under load, that fetch can occasionally take longer
+    // than Playwright's default assertion timeout, which previously
+    // caused this test to fail intermittently even when a published
+    // alert existed (a timing flake, not a real data-dependency issue —
+    // the graceful skip above already handles the "no alert exists"
+    // case correctly). Matches the same 15s allowance the sibling
+    // "does not crash" test already uses for this identical navigation.
+    await expect(page.getByText(/nie zastępuje/)).toBeVisible({ timeout: 15_000 });
   });
 
   // Sprint 96 — Real Data Readiness Audit: an alert needs to state plainly
@@ -154,7 +163,9 @@ test.describe("Public homepage", () => {
 
     await openLink.click();
     await expect(page).not.toHaveURL("/", { timeout: 15_000 });
-    await expect(page.getByText(/Zatwierdzone ręcznie przez administratora/)).toBeVisible();
+    // Sprint 148: same client-side-fetch timing allowance as the
+    // trust-disclaimer test above — see that test's comment.
+    await expect(page.getByText(/Zatwierdzone ręcznie przez administratora/)).toBeVisible({ timeout: 15_000 });
   });
 
   test("about page loads with project info and feedback link", async ({ page }) => {
@@ -281,7 +292,9 @@ test.describe("Public homepage", () => {
 
     await openLink.click();
     await expect(page).not.toHaveURL("/", { timeout: 15_000 });
-    await expect(page.getByRole("link", { name: /Zgłoś/ })).toBeVisible();
+    // Sprint 148: same client-side-fetch timing allowance as the other
+    // alert-detail tests above.
+    await expect(page.getByRole("link", { name: /Zgłoś/ })).toBeVisible({ timeout: 15_000 });
   });
 
   // Sprint 92 — beta-readiness check: AppHeader/AppFooter gate every admin

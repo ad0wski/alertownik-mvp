@@ -142,10 +142,46 @@ no arbitrary URL possible) still contains both safe sources. For a
 **Gmina Michałowice — komunikaty** is the intended first target
 (lowest-risk, per its `risk: low` checklist entry). **WKD remains
 dry-run capable but must not be included in that first write test**
-unless separately approved later — this is a procedural/operational
-note for whoever runs Sprint 148's first test, not a code-level
-restriction, since write mode is entirely disabled regardless of source
-today.
+unless separately approved later — as of Sprint 148 this is enforced
+in code (see F¹ below), not left as an operational note only.
+
+---
+
+## F¹. First-live-write safety caps (Sprint 148)
+
+Added during Sprint 148's Phase 1 audit, which found that Sprint 147's
+code, while default-disabled at three independent layers, did **not**
+by itself guarantee a small, single-source first write once those gates
+were someday satisfied: `writeCandidatesForSource()` had no upper bound
+on candidates inserted per call, and the route's source list came from
+`resolveCronSources()` unfiltered — a bare call with no `?sourceKey=`
+would have resolved **both** safe sources, including WKD. Both gaps are
+closed with two new, server-side-only, env-controlled mechanisms —
+neither is settable by the caller/query string:
+
+1. **`getMaxCandidatesPerInvocation()`** — reads
+   `SCHEDULED_WRITER_MAX_CANDIDATES_PER_RUN`; defaults to **`1`** if
+   unset or invalid. `writeCandidatesForSource()` stops inserting once
+   this many `new`-classified candidates have been inserted in that
+   call; every further `new` candidate in the same run is counted in a
+   new `cappedSkipped` field (visible in the response) instead of being
+   inserted or silently dropped.
+2. **`getAllowedWriteSourceIds()`** — reads
+   `SCHEDULED_WRITER_ALLOWED_SOURCE_IDS` as a JSON array of source ids,
+   filtered through the existing `SAFE_CHECK_SOURCE_IDS` allowlist;
+   defaults to **`["michalowice-komunikaty"]`** (Michałowice only) if
+   unset, invalid, or the filtered result is empty. The route applies
+   this as a filter on top of `resolveCronSources()`'s result — so even
+   a bare call with no `?sourceKey=` can never include WKD unless an
+   operator deliberately widens this env var later.
+
+Both defaults mean: with no new env var configured at all, a first live
+invocation (once the three Sprint 147 gates are also satisfied) can
+insert **at most one** candidate, for **Gmina Michałowice — komunikaty**
+only. Covered by dedicated tests in `tests/e2e/scheduledWriter.spec.ts`
+(cap/allowlist unit behavior) and
+`tests/e2e/scheduledWriterRoute.spec.ts` (route-level source filtering,
+including the "bare call excludes WKD" case).
 
 ---
 
@@ -238,6 +274,10 @@ the technical Supabase Auth account (manual, dashboard-only), adding it
 to `public.automation_identities` (manual SQL, reviewed), generating real
 credentials (never entering this repository), adding them to Vercel as
 environment variables, configuring `SCHEDULED_WRITER_SOURCE_REGISTRY_IDS`,
-and finally setting `SCHEDULED_WRITES_ENABLED=true`. Cron activation and
+and finally setting `SCHEDULED_WRITES_ENABLED=true`. The two Sprint 148
+caps (`SCHEDULED_WRITER_MAX_CANDIDATES_PER_RUN`,
+`SCHEDULED_WRITER_ALLOWED_SOURCE_IDS`) are safe to leave unset for a
+first test — their defaults already enforce "at most one candidate, for
+Michałowice only" without any further configuration. Cron activation and
 autopublish remain distinct, later, unapproved decisions on top of all
 of the above.

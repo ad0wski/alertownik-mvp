@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { textSimilarity } from "@/lib/candidateWarnings";
 import type { CheckProposal } from "@/lib/sourceCheck";
+import { SAFE_CHECK_SOURCE_IDS } from "@/lib/sourceCheck";
 
 // Sprint 147 — Scheduled Writer Foundation v1.
 //
@@ -224,6 +225,62 @@ export function buildAutomatedSourceCheckInsert(input: AutomatedSourceCheckInput
   } as const;
 }
 
+// ── First-live-write safety caps — server-side, never caller-controlled ────
+//
+// Sprint 148 audit finding: without these, a single call could insert up
+// to MAX_CHECK_PROPOSALS (6, src/lib/sourceCheck.ts) candidates in one
+// invocation, and a bare call (no `?sourceKey=`) would attempt to write
+// for BOTH allowlisted sources — including WKD, which this sprint's
+// approval explicitly excludes from the first live write. Both caps
+// below are read from environment variables that only Adam controls
+// (via Vercel's dashboard), never from the incoming HTTP request itself
+// (no query parameter or header can raise either limit) — this is the
+// literal meaning of "enforced server-side, not by a caller-supplied
+// parameter." Neither variable needs to be set for the safe default to
+// apply: an unconfigured deployment is automatically the most
+// conservative one.
+
+/** Default, conservative cap on how many NEW candidates a single
+ *  invocation may insert — deliberately 1 for the first controlled live
+ *  write. Proposals beyond this cap are neither inserted nor silently
+ *  dropped: they are counted separately (`cappedSkipped`) and reported
+ *  in the response, the same "never silently resolve an uncertain case"
+ *  principle already applied to ambiguous-duplicate handling. */
+export const DEFAULT_MAX_CANDIDATES_PER_INVOCATION = 1;
+
+export function getMaxCandidatesPerInvocation(): number {
+  const raw = process.env.SCHEDULED_WRITER_MAX_CANDIDATES_PER_RUN;
+  if (!raw) return DEFAULT_MAX_CANDIDATES_PER_INVOCATION;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed < 0) return DEFAULT_MAX_CANDIDATES_PER_INVOCATION;
+  return Math.floor(parsed);
+}
+
+/** Default, conservative source restriction for the WRITE route
+ *  specifically — narrower than the dry-run route's full
+ *  SAFE_CHECK_SOURCE_IDS allowlist. Defaults to Michałowice only,
+ *  regardless of what `resolveCronSources()` would otherwise resolve
+ *  (which still includes WKD, correctly, for the harmless dry-run
+ *  route). Any value supplied via the env var is still filtered through
+ *  SAFE_CHECK_SOURCE_IDS — this can only ever narrow within the existing
+ *  safe allowlist, never add an arbitrary source. */
+export const DEFAULT_ALLOWED_WRITE_SOURCE_IDS: readonly string[] = ["michalowice-komunikaty"];
+
+export function getAllowedWriteSourceIds(): readonly string[] {
+  const raw = process.env.SCHEDULED_WRITER_ALLOWED_SOURCE_IDS;
+  if (!raw) return DEFAULT_ALLOWED_WRITE_SOURCE_IDS;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.every((v) => typeof v === "string")) {
+      const filtered = parsed.filter((id) => (SAFE_CHECK_SOURCE_IDS as readonly string[]).includes(id));
+      return filtered.length > 0 ? filtered : DEFAULT_ALLOWED_WRITE_SOURCE_IDS;
+    }
+  } catch {
+    // fall through to default
+  }
+  return DEFAULT_ALLOWED_WRITE_SOURCE_IDS;
+}
+
 // ── Registry source id resolution (NOT a database read) ─────────────────────
 //
 // `source_checks.source_id` is NOT NULL (docs/supabase_source_checks.sql) —
@@ -324,19 +381,28 @@ export interface WriteCandidatesForSourceResult {
   candidatesInserted: number;
   duplicatesSkipped: number;
   ambiguousCandidates: number;
+  cappedSkipped: number;
   sourceChecksInserted: number;
 }
 
 /** Given already-fetched-and-parsed proposals for one source, decides what
  *  to insert and does so through the injected writer. Contains ALL of
  *  this module's actual decision logic (three-way dedup classification,
- *  no-proposals → 'no_changes' log, found proposals → 'found_notice' log,
- *  graceful skip of check-logging when no registry id is configured) —
- *  the route itself only fetches/parses pages and wires the real
- *  Supabase-backed writer in. */
+ *  the per-invocation insert cap, no-proposals → 'no_changes' log, found
+ *  proposals → 'found_notice' log, graceful skip of check-logging when no
+ *  registry id is configured) — the route itself only fetches/parses
+ *  pages and wires the real Supabase-backed writer in.
+ *
+ *  `maxCandidatesToInsert` defaults to `getMaxCandidatesPerInvocation()`
+ *  (env-controlled, conservative default 1) rather than being left to the
+ *  caller to remember — callers may still override it explicitly (tests
+ *  do, to exercise the cap deterministically without mutating env vars),
+ *  but production call sites (the route) always get the safe default
+ *  unless Adam has explicitly configured a higher one. */
 export async function writeCandidatesForSource(
   writer: ScheduledSourceWriter,
-  input: WriteCandidatesForSourceInput
+  input: WriteCandidatesForSourceInput,
+  maxCandidatesToInsert: number = getMaxCandidatesPerInvocation()
 ): Promise<WriteCandidatesForSourceResult> {
   if (input.proposals.length === 0) {
     let sourceChecksInserted = 0;
@@ -350,7 +416,7 @@ export async function writeCandidatesForSource(
       );
       if (result.ok) sourceChecksInserted = 1;
     }
-    return { candidatesInserted: 0, duplicatesSkipped: 0, ambiguousCandidates: 0, sourceChecksInserted };
+    return { candidatesInserted: 0, duplicatesSkipped: 0, ambiguousCandidates: 0, cappedSkipped: 0, sourceChecksInserted };
   }
 
   const existingTexts = await writer.findExistingCandidateTexts(input.sourceKey);
@@ -358,6 +424,7 @@ export async function writeCandidatesForSource(
   let candidatesInserted = 0;
   let duplicatesSkipped = 0;
   let ambiguousCandidates = 0;
+  let cappedSkipped = 0;
   for (const proposal of input.proposals) {
     const text = proposal.rawText || proposal.excerpt || proposal.title;
     const classification = classifyCandidateAgainstExisting(text, existingTexts);
@@ -371,6 +438,15 @@ export async function writeCandidatesForSource(
       // duplicates" requirement — but also not silently discarded: it is
       // counted and reported distinctly in the run's result.
       ambiguousCandidates++;
+      continue;
+    }
+
+    // classification === "new" from here on.
+    if (candidatesInserted >= maxCandidatesToInsert) {
+      // Genuinely new, but withheld purely by the per-invocation cap —
+      // not silently dropped: counted and reported distinctly, the same
+      // "never silently resolve an uncertain/limited case" principle.
+      cappedSkipped++;
       continue;
     }
 
@@ -403,5 +479,5 @@ export async function writeCandidatesForSource(
     if (result.ok) sourceChecksInserted = 1;
   }
 
-  return { candidatesInserted, duplicatesSkipped, ambiguousCandidates, sourceChecksInserted };
+  return { candidatesInserted, duplicatesSkipped, ambiguousCandidates, cappedSkipped, sourceChecksInserted };
 }

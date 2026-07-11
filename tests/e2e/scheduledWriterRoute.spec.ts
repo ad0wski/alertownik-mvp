@@ -3,6 +3,8 @@ import { readFileSync, readdirSync, statSync } from "fs";
 import path from "path";
 import { NextRequest } from "next/server";
 import { GET } from "@/app/api/cron/write-candidates/route";
+import { resolveCronSources } from "@/lib/cronCheckSources";
+import { getAllowedWriteSourceIds } from "@/lib/scheduledWriter";
 
 /**
  * Sprint 147 — route-level tests for GET /api/cron/write-candidates.
@@ -347,5 +349,37 @@ test.describe("no publication — every response states published: false", () =>
     for (const assignment of publishedAssignments) {
       expect(assignment).toBe("published: false");
     }
+  });
+});
+
+test.describe("Sprint 148 — source restriction is enforced server-side, not by the caller", () => {
+  // Exercises the exact same two production functions the route combines
+  // (`resolveCronSources` from Sprint 142 + `getAllowedWriteSourceIds`
+  // from Sprint 147/148) the same way route.ts does — this is the actual
+  // security property "WKD cannot be included accidentally in the first
+  // live test," verified directly against the real filtering logic
+  // rather than through a full mocked sign-in flow.
+
+  function sourcesRouteWouldWriteFor(sourceKeyFilter: string | null): string[] {
+    const allowed = new Set(getAllowedWriteSourceIds());
+    return resolveCronSources(sourceKeyFilter)
+      .filter((s) => allowed.has(s.id))
+      .map((s) => s.id);
+  }
+
+  test("a bare call (no ?sourceKey=) resolves to Michałowice only, never WKD, under the default restriction", () => {
+    expect(sourcesRouteWouldWriteFor(null)).toEqual(["michalowice-komunikaty"]);
+  });
+
+  test("an explicit ?sourceKey=wkd-aktualnosci is excluded by the default write-source restriction", () => {
+    expect(sourcesRouteWouldWriteFor("wkd-aktualnosci")).toEqual([]);
+  });
+
+  test("an explicit ?sourceKey=michalowice-komunikaty resolves correctly", () => {
+    expect(sourcesRouteWouldWriteFor("michalowice-komunikaty")).toEqual(["michalowice-komunikaty"]);
+  });
+
+  test("an arbitrary/unlisted sourceKey resolves to nothing, same as before this sprint's changes", () => {
+    expect(sourcesRouteWouldWriteFor("https://evil.example/page")).toEqual([]);
   });
 });

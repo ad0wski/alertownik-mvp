@@ -12,6 +12,7 @@ import {
   getScheduledWriterCredentials,
   signInScheduledWriter,
   getRegistrySourceId,
+  getAllowedWriteSourceIds,
   createSupabaseScheduledWriter,
   writeCandidatesForSource,
 } from "@/lib/scheduledWriter";
@@ -129,7 +130,14 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
   const writer = createSupabaseScheduledWriter(signIn.client);
   const sourceKeyFilter = req.nextUrl.searchParams.get("sourceKey");
-  const sources = resolveCronSources(sourceKeyFilter);
+  // Server-side source restriction, independent of the caller: even a
+  // bare call (no ?sourceKey=, which would otherwise resolve every
+  // allowlisted source including WKD) is narrowed down to only the
+  // sources Adam has explicitly allowed for writing
+  // (SCHEDULED_WRITER_ALLOWED_SOURCE_IDS — defaults to Michałowice only).
+  // This cannot be widened by anything in the request itself.
+  const allowedWriteSourceIds = new Set(getAllowedWriteSourceIds());
+  const sources = resolveCronSources(sourceKeyFilter).filter((source) => allowedWriteSourceIds.has(source.id));
 
   const results = await Promise.all(
     sources.map(async (source) => {
@@ -145,6 +153,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
           candidatesInserted: 0,
           duplicatesSkipped: 0,
           ambiguousCandidates: 0,
+          cappedSkipped: 0,
           sourceChecksInserted: 0,
         };
       }
@@ -182,6 +191,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     candidatesInserted: results.reduce((sum, r) => sum + r.candidatesInserted, 0),
     duplicatesSkipped: results.reduce((sum, r) => sum + r.duplicatesSkipped, 0),
     ambiguousCandidates: results.reduce((sum, r) => sum + r.ambiguousCandidates, 0),
+    cappedSkipped: results.reduce((sum, r) => sum + r.cappedSkipped, 0),
     sourceChecksInserted: results.reduce((sum, r) => sum + r.sourceChecksInserted, 0),
     published: false,
     message:
