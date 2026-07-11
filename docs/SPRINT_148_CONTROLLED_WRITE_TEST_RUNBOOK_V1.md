@@ -1,12 +1,26 @@
 # Sprint 148 — Controlled Write Test Runbook v1
 
-**Status: approval recorded, execution PENDING (Adam only).** Nothing in
-this document has been executed by Claude Code. Every step below
-requires a real Supabase/Vercel action that only Adam can perform —
-account creation, credential generation, and Vercel environment
+**Status: Steps 1–3 done and verified. Steps 4–9 PENDING (Adam only).**
+Every remaining step requires a real Supabase/Vercel action that only
+Adam can perform — credential generation and Vercel environment
 variables are explicitly reserved to the human operator by this
 project's standing rules (`CLAUDE.md` § MCP rules, § Security Rules) and
 were not delegated by Adam's approval message.
+
+**Update 2026-07-11:** Steps 1–3 are complete. Grant hardening (Step 1)
+applied and verified — `authenticated` now holds SELECT only on
+`automation_identities`. **TECHNICAL IDENTITY VERIFIED ✅** for Step 2–3
+as well, but with a correction along the way: the UUID first supplied
+for the technical account turned out to be an existing admin account,
+added by mistake. Caught by verification (not assumed safe), fixed with
+a guardrailed transaction
+(`docs/sql/FIX_SCHEDULED_WRITER_AUTOMATION_IDENTITY_V1.sql`) that
+removed only the mistaken row from `automation_identities` — leaving
+its admin membership and its `auth.users` row completely untouched —
+and inserted the correct, separate technical account's UUID
+(`104b2caa-2443-4d17-90cc-f10cd41da746`). Re-verified clean: this UUID
+exists in `auth.users` and `automation_identities`, and does **not**
+exist in `admin_profiles`.
 
 **Approved scope (2026-07-15):** items 1–9 below, in Vercel **Preview**
 only, targeting **Gmina Michałowice — komunikaty only**.
@@ -44,7 +58,7 @@ if ever needed:
 `docs/sql/PROPOSED_AUTOMATION_IDENTITIES_GRANT_HARDENING_ROLLBACK_V1.sql`
 (not expected to be needed).
 
-## Step 2 — Create the technical Supabase Auth account
+## Step 2 — Create the technical Supabase Auth account [✅ DONE]
 
 In the Supabase dashboard (Authentication → Users → Add user), create
 **one** account dedicated to the scheduled writer — e.g.
@@ -60,7 +74,7 @@ recorded the admin's own id in Obsidian for reference), but the account's
 **password** absolutely must never appear anywhere but Supabase's own
 dashboard and your password manager.
 
-## Step 3 — Add the account's id to `automation_identities`
+## Step 3 — Add the account's id to `automation_identities` [✅ DONE — with a corrected UUID, see the 2026-07-11 update above]
 
 In the Supabase SQL Editor, run (substituting the real UUID from Step 2
 — **do not paste that UUID into this repo's files**, run it directly in
