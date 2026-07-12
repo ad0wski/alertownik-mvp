@@ -1,10 +1,35 @@
 # Sprint 151 — Production Smoke Test Runbook v1
 
-**Status: PLAN PREPARED, NOT EXECUTED.** No Production test has been
-run by this document. This runbook is for Adam to execute by hand,
-after the code release (`docs/SPRINT_151_FIRST_DRY_RUN_CRON_RUNBOOK_V1.md`
-§1–3) and before any cron env is configured — it is the gate between
-those two steps.
+**Status: EXECUTED, VERIFIED (2026-07-12).** Production deployment
+confirmed: `Environment: Production`, `Branch: main`, `Commit:
+4ce2f4a`, status `Ready Latest`, URL `https://alertownik-mvp.vercel.app`.
+Executed non-invasively via a real headless browser (Playwright,
+read-only navigation only — no form submission, no data mutation) plus
+direct HTTP checks for status codes; not a manual click-through by
+Adam, since this pass was run by Claude in-session. **All 9 checks
+below PASS — see the result table under each item.** No cron env was
+configured before or during this test; both cron-route checks (items
+8–9) confirm fail-closed behavior via code audit rather than a live
+authenticated request, since none was needed or performed.
+
+## Result (2026-07-12)
+
+| # | Check | Result |
+|---|---|---|
+| 1 | Homepage | HTTP 200; brand "Alertownik" present; trust disclaimer present; category filters ("Wszystkie", category words) present; search present; zero crash markers |
+| 2 | Alerts list | Same homepage load — no separate list route; category/list rendering confirmed present, no application-error text |
+| 3 | Alert detail (real slug) | `/alerts/wkd-ograniczenia-predkosci-2026-06-29` → HTTP 200; genuine rendered content confirmed via real-browser text extraction (title, KIEDY/GDZIE/CO SIĘ ZMIENIA fields, source name) — not a false-positive 200 shell |
+| 3b | Alert detail (fake slug, control) | `/alerts/nonexistent-slug-zzz-999` → HTTP 200 shell, but browser-rendered text correctly shows "Nie znaleziono alertu" — confirms the real slug's content above is genuine, not a shared not-found template |
+| 4 | `/odpady` | HTTP 200; waste-schedule heading present; zero crash markers |
+| 5 | Public trust UX | Independence/non-official disclaimer text present on homepage and on the alert-detail page footer ("Niezależny projekt — nie jest...") |
+| 6 | Basic navigation | `href="/odpady"`, `href="/about"`, `href="/"` all present in homepage HTML |
+| 7 | Admin protection (no credentials) | `/admin` → HTTP 200 shell, but real-browser-rendered body shows the login-gate state (`zaloguj`/`login` text) and **zero** leaked admin data (`source_url`, "Publikuj w Supabase", "Kolejka kandydatów" all absent) |
+| 8 | `/api/cron/check-sources` fail-closed | Confirmed by code audit on the exact deployed commit: the `SCHEDULED_CHECKS_ENABLED` kill-switch check is the literal first statement in `GET`, unconditionally returning `503` before any fetch — no live request made, none needed |
+| 9 | `/api/cron/write-candidates` fail-closed | Same audit: both kill switches (`SCHEDULED_CHECKS_ENABLED`, `SCHEDULED_WRITES_ENABLED`) checked first, `503` before `checkCronAuth`, before writer credentials, before any fetch/insert — no live request made |
+
+**Verdict: PRODUCTION RELEASE SMOKE VERIFIED ✅.**
+
+---
 
 **Do not use real secrets in any test in this runbook.** Steps 8–9
 specifically test the *absence* of configuration (fail-closed

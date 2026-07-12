@@ -1,11 +1,21 @@
 # Sprint 151A — Production Release & First Dry-Run Schedule Safety Audit v1
 
-**Status: AUDIT AND PLANNING ONLY. No merge to `main`, no Production
-change, no Vercel env change, no cron activation, no live request, no
-live SQL was performed by this document or this sprint.** Every action
-item below is a future, separately-approved step — this document exists
-so that when Adam decides to release, every step is already reviewed,
-ordered, and reversible.
+**Status: RELEASED TO PRODUCTION AND SMOKE-TESTED (2026-07-12).**
+`main` was fast-forwarded to `4ce2f4a` (Sprint 151B, `git merge
+--ff-only`, zero conflicts as predicted below) and pushed to `origin`.
+Vercel deployed it to Production — confirmed `Ready`, `Environment:
+Production`, `Branch: main`, `Commit: 4ce2f4a`. A full, non-invasive
+Production smoke test (real-browser, via Playwright against the live
+URL — not just HTTP status codes) found zero regressions: homepage,
+`/odpady`, `/about`, a real alert detail page, and the not-found state
+for a fake slug all render correctly; `/admin` shows the login gate
+with zero data leak to anonymous visitors. **`SCHEDULED_CHECKS_ENABLED`
+and `SCHEDULED_WRITES_ENABLED` are still unset in Production** — both
+cron routes remain fail-closed by construction, confirmed against the
+exact deployed code, not by a live request. No cron is active, no
+`vercel.json` exists, no live write, no SQL, no autopublish. Full
+result: `docs/SPRINT_151_PRODUCTION_SMOKE_TEST_RUNBOOK_V1.md` update
+section and Obsidian `Sprint 151 Production Release Candidate`.
 
 Branch: `sprint-151-production-release-schedule-safety-v1`, created
 directly from `sprint-150-race-condition-closure-package-v1` at commit
