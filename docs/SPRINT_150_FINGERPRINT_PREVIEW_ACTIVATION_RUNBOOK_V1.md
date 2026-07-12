@@ -1,10 +1,13 @@
 # Sprint 150D — Fingerprint Preview Activation Runbook v1
 
-**Status: FAZA A EXECUTED — `SCHEDULED_WRITER_FINGERPRINT_ENABLED=true`
-in Preview.** `SCHEDULED_WRITES_ENABLED` remains `false`. No live write
-has been made beyond the one already verified in Sprint 148. FAZA B (one
-controlled write) and FAZA C (verify + return to resting state) remain
-separate, not-yet-executed decisions — see §5.
+**Status: FAZA A + FAZA B EXECUTED AND VERIFIED (2026-07-12).**
+`SCHEDULED_WRITER_FINGERPRINT_ENABLED=true` in Preview. One controlled
+write to Michałowice inserted exactly 1 pending candidate with a
+verified SHA-256 `content_fingerprint`; the read-only verify SQL's 13
+checks all PASS/INFO, zero FAIL/WARN. `SCHEDULED_WRITES_ENABLED` is
+currently still `true` in Preview — returning it to `false` (FAZA C's
+resting-state steps) is Adam's next manual action, not yet done. No
+Production change, no cron, no WKD, no autopublish at any point.
 
 ---
 
@@ -135,7 +138,7 @@ deployments are authenticated by default (discovered during the Sprint
    attempted — confirms the deployment builds and starts cleanly with
    the new variable present.
 
-### FAZA B — one controlled write, Michałowice only
+### FAZA B — one controlled write, Michałowice only — ✅ EXECUTED AND VERIFIED 2026-07-12
 
 1. Only after Phase A's deployment is confirmed Ready, set
    `SCHEDULED_WRITES_ENABLED=true`.
@@ -152,16 +155,38 @@ deployments are authenticated by default (discovered during the Sprint
    WKD independently of the query parameter — belt-and-suspenders,
    confirmed in `src/lib/scheduledWriter.ts`.
 
-### FAZA C — verify, then return to the safer resting state
+**Actual result:** one request made, `candidatesInserted: 1`,
+`duplicatesSkipped: 1`, `cappedSkipped: 4` (of 6 `proposalsFound` —
+arithmetic checks out), `sourceChecksInserted: 1`,
+`duplicatesPreventedByDatabase: 0` (no concurrent conflict occurred —
+expected for a single sequential call; the unique index's conflict path
+was validated separately during the migration, not by this test),
+`published: false`. WKD untouched, no Production change, no cron.
+
+### FAZA C — verify, then return to the safer resting state — verify step ✅ DONE, resting-state steps still Adam's manual action
 
 1. Run `docs/sql/VERIFY_SPRINT_150_FINGERPRINT_CONTROLLED_TEST_SINGLE_RESULT_READ_ONLY_V1.sql`
-   (SELECT-only) in the Supabase SQL Editor.
+   (SELECT-only) in the Supabase SQL Editor. **Done 2026-07-12 — all 13
+   checks PASS or INFO, zero FAIL/WARN:** column + index checks #1–5
+   PASS; #6 found exactly 1 fingerprinted Michałowice candidate; #7
+   `status = pending`; #8 fingerprint is valid 64-char lowercase hex
+   (genuine SHA-256); #9 `converted_alert_id` is `null`; #10 WKD
+   fingerprinted count `0`; #11 `alerts` row count `6` (INFO only — no
+   pre-test baseline was captured this session to diff against, but the
+   route imports no alert-publishing/draft/candidate-approval helper by
+   construction, so it cannot have touched `alerts` regardless of the
+   count); #12 confirms the candidates table has no publish column by
+   design; #13 found 2 matching `source_checks` rows (cumulative across
+   this run and the earlier Sprint 148 one, joined by `source_id` — not
+   a per-run count, so `2` is expected, not an anomaly).
 2. Set `SCHEDULED_WRITES_ENABLED=false` again (the safer resting state
-   between tests, same principle as Sprint 148's own Step 9).
-3. Trigger a final redeploy so the env change takes effect.
+   between tests, same principle as Sprint 148's own Step 9). **Adam's
+   manual step — not yet done.**
+3. Trigger a final redeploy so the env change takes effect. **Adam's
+   manual step — not yet done.**
 4. Remove the temporary Vercel Protection Bypass secret if it was
    created solely for this test (same recommendation Sprint 148 made —
-   Adam's call, not a blocker).
+   Adam's call, not a blocker). **Adam's manual step — not yet done.**
 
 ## 6. What this runbook does NOT authorize
 
