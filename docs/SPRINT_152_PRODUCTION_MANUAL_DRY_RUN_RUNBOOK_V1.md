@@ -1,11 +1,15 @@
 # Sprint 152A — Production Manual Dry-Run Runbook v1
 
-**Status: PLAN PREPARED, NOT EXECUTED.** No Vercel environment variable
-has been set or changed for this. No Production redeploy has been
-triggered. No request has been made. This document exists so that,
-WHEN Adam decides to run the first manual Production validation of
-`/api/cron/check-sources`, every step is already reviewed, ordered,
-and reversible — not so that it happens automatically.
+**Status: FAZA A + FAZA B EXECUTED AND VERIFIED (2026-07-12).** Adam
+configured the 2 required Production env variables, redeployed, and
+ran `scripts/invoke-sprint-152-production-dry-run.ps1` exactly once
+against the real Production deployment. Result: HTTP `200`,
+`{"ok":true,"dryRun":true,"checkedSources":1,"successfulSources":1,"failedSources":0,"totalProposalCount":6,"savedCandidates":0,"savedSourceChecks":0,"published":false}`
+for `michalowice-komunikaty` (`outcome: success`, `proposalsFound: 6`).
+Script printed `PASS`. **PRODUCTION MANUAL DRY-RUN VERIFIED ✅.**
+FAZA C (return `SCHEDULED_CHECKS_ENABLED` to `false`, keep
+`CRON_SECRET`) remains Adam's next manual step — see the checklist at
+the end of this file.
 
 See `docs/SPRINT_151_PRODUCTION_RELEASE_AUDIT_V1.md` and
 `docs/SPRINT_152_PRODUCTION_MANUAL_DRY_RUN_RUNBOOK_V1.md` (this file)
@@ -111,7 +115,7 @@ are load-bearing safety fields that must be exactly `0`/`0`/`false`.
 
 ---
 
-## FAZA A — configure, deploy, inspect only (no request)
+## FAZA A — configure, deploy, inspect only (no request) — ✅ EXECUTED
 
 1. In Vercel, add to **Production** environment variables (Production
    scope only, never copied from Preview):
@@ -131,7 +135,7 @@ are load-bearing safety fields that must be exactly `0`/`0`/`false`.
    `Branch: main`, commit matches the currently-released one, status
    `Ready Latest`.
 
-## FAZA B — one manual request
+## FAZA B — one manual request — ✅ EXECUTED AND VERIFIED
 
 1. Run `scripts/invoke-sprint-152-production-dry-run.ps1` exactly
    once. It will prompt only for the Production `CRON_SECRET` (via
@@ -142,7 +146,16 @@ are load-bearing safety fields that must be exactly `0`/`0`/`false`.
 3. Do not re-run the script "just to be sure" — a second invocation is
    a fresh, separate decision, not a retry.
 
-## FAZA C — after a positive result
+**Actual result:** one request made against real Production. HTTP
+`200`, `Content-Type: application/json`. `ok: true`, `dryRun: true`,
+`checkedSources: 1`, `successfulSources: 1`, `failedSources: 0`,
+`totalProposalCount: 6`, `savedCandidates: 0`, `savedSourceChecks: 0`,
+`published: false`. Per-source detail: `sourceKey:
+michalowice-komunikaty`, `outcome: success`, `proposalsFound: 6`.
+Script printed `PASS — genuine Production dry-run confirmed` and `DO
+NOT RUN AGAIN`. No second request was made.
+
+## FAZA C — after a positive result — Adam's next manual step, not yet done
 
 1. Set `SCHEDULED_CHECKS_ENABLED=false` in Production.
 2. Trigger a final Production redeploy so the change takes effect.

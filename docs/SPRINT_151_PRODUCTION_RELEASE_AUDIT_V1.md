@@ -17,6 +17,14 @@ exact deployed code, not by a live request. No cron is active, no
 result: `docs/SPRINT_151_PRODUCTION_SMOKE_TEST_RUNBOOK_V1.md` update
 section and Obsidian `Sprint 151 Production Release Candidate`.
 
+**Update (Sprint 152A/B):** the manual, one-off Production dry-run of
+`/api/cron/check-sources?sourceKey=michalowice-komunikaty` has since
+been executed and verified — HTTP 200, `savedCandidates: 0`,
+`savedSourceChecks: 0`, `published: false`, 6 proposals found on the
+live source. See `docs/SPRINT_152_PRODUCTION_MANUAL_DRY_RUN_RUNBOOK_V1.md`
+for the full result. `SCHEDULED_CHECKS_ENABLED` was `true` during that
+test; returning it to `false` is Adam's next manual step.
+
 Branch: `sprint-151-production-release-schedule-safety-v1`, created
 directly from `sprint-150-race-condition-closure-package-v1` at commit
 `bff725a` (Sprint 150 CLOSED — see
