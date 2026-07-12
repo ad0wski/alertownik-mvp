@@ -68,9 +68,13 @@ automation_identities_check as (
 -- RLS policy count on source_notice_candidates — expect the SAME count
 -- as before this migration (this migration adds no policy, drops no
 -- policy). Compare this number by eye against the Sprint 145/146
--- verification's own policy count (8: 4 admin + 2 scheduled-writer... see
--- docs/sql/VERIFY_SCHEDULED_WRITER_RLS_READ_ONLY_V1.sql for the
--- authoritative baseline count).
+-- verification's own policy count (SIX: 4 admin, one per command, + 2
+-- scheduled-writer — see docs/sql/VERIFY_SCHEDULED_WRITER_RLS_READ_ONLY_V1.sql
+-- §5 for the authoritative baseline count. NOTE, Sprint 150D: this comment
+-- previously said "8", a self-contradicting arithmetic error — 4+2=6, not
+-- 8 — caught when the live Sprint 150 verify run legitimately returned 6
+-- and was cross-checked against the cited baseline file, which itself
+-- says "SIX policies". Corrected here; no RLS was ever actually wrong).
 policy_count as (
   select count(*) as cnt
   from pg_policies

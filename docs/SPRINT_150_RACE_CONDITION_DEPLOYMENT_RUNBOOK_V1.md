@@ -1,10 +1,53 @@
 # Sprint 150A — Race Condition Deployment Runbook v1
 
-**Status: PACKAGE PREPARED, NOT EXECUTED.** No SQL in this package has
-been run against any database. No RLS has been changed. No Vercel
-environment variable has been set. No cron activated. This document
-exists so that, WHEN Adam approves, every step is already reviewed,
-ordered, and reversible — not so that it happens automatically.
+**Status: MIGRATION APPLIED AND VERIFIED (2026-07-12).** Adam approved
+("CONTROLLED SPRINT 150 MIGRATION APPROVED") and ran the schema change.
+
+**Exact execution history:**
+1. `docs/sql/APPLY_SPRINT_150_STEP_1_ADD_FINGERPRINT_COLUMN_V1.sql` (column
+   + comment, wrapped in `begin/commit`) — ✅ `Success. No rows returned`.
+2. First attempt at Step 2 used a combined file containing BOTH
+   `CREATE UNIQUE INDEX CONCURRENTLY` and a trailing `COMMENT ON INDEX`
+   pasted together in one Supabase SQL Editor query box. This failed:
+   ```
+   ERROR: 25001: CREATE INDEX CONCURRENTLY cannot run inside a
+   transaction block
+   ```
+   No literal `BEGIN` was ever written for this step. Root cause: Postgres
+   treats a query STRING containing more than one statement as a single
+   implicit transaction, and `CREATE INDEX CONCURRENTLY` refuses to run in
+   ANY transaction context, explicit or implicit. **No partial change
+   occurred** — the error is raised before the index creation completes;
+   confirmed clean by the later verify run finding the index in exactly
+   its final, correct state, nothing to roll back.
+3. Corrected `docs/sql/APPLY_SPRINT_150_STEP_2_CREATE_UNIQUE_INDEX_V1.sql`,
+   rewritten to contain **only** the single `CREATE UNIQUE INDEX
+   CONCURRENTLY` statement, pasted and run alone — ✅ `Success. No rows
+   returned`.
+4. `docs/sql/APPLY_SPRINT_150_STEP_2B_COMMENT_ON_INDEX_V1.sql` — the
+   `COMMENT ON INDEX` statement, split into its own file/execution for the
+   same reason — ✅ `Success. No rows returned`.
+5. `docs/sql/VERIFY_SPRINT_150_RACE_CONDITION_MIGRATION_READ_ONLY_V1.sql` —
+   checks #1–#3 **PASS** (column exists as `text`; index exists; index is
+   genuinely `UNIQUE` and genuinely partial, `WHERE (source_key IS NOT
+   NULL) AND (content_fingerprint IS NOT NULL)`); #7 **PASS**
+   (`automation_identities` = 1, the technical writer account). #4 showed
+   6 RLS policies on `source_notice_candidates` — **resolved, not a
+   discrepancy**: this file's own comment previously cited "8" as the
+   Sprint 145/146 baseline, but that number was a self-contradicting
+   arithmetic typo (4 admin + 2 scheduled-writer = 6, not 8) — the cited
+   baseline file (`VERIFY_SCHEDULED_WRITER_RLS_READ_ONLY_V1.sql` §5)
+   itself says "SIX policies". The comment has been corrected; the live
+   result of 6 was correct all along, and this migration's SQL never
+   touched RLS in any case.
+
+RLS unchanged, `alerts`/`admin_profiles`/`automation_identities`
+untouched, no Vercel/env change, `SCHEDULED_WRITER_FINGERPRINT_ENABLED`
+still OFF, no cron, no live write beyond the one already verified in
+Sprint 148. Turning the flag on, any cron, and any further live write
+are separate, still-unapproved decisions — see §5 steps 4–6, and the new
+`docs/SPRINT_150_FINGERPRINT_PREVIEW_ACTIVATION_RUNBOOK_V1.md` for the
+prepared (not yet executed) activation plan.
 
 ---
 
@@ -82,16 +125,28 @@ surface: one nullable column, one partial unique index, zero RLS change,
 a single normalization function reused (not reimplemented), and a fully
 reversible rollback.
 
-## 4. Duplicate preflight (run before any migration decision)
+## 4. Duplicate preflight — RUN, result: SAFE TO MIGRATE ✅ (2026-07-12)
 
-`docs/sql/VERIFY_SOURCE_NOTICE_CANDIDATE_DUPLICATES_READ_ONLY_V1.sql` —
+`docs/sql/VERIFY_SOURCE_NOTICE_CANDIDATE_DUPLICATES_SINGLE_RESULT_READ_ONLY_V1.sql`
+(Sprint 150B single-result consolidation of the original
+`VERIFY_SOURCE_NOTICE_CANDIDATE_DUPLICATES_READ_ONLY_V1.sql` — the
+original splits into two SELECT statements, which Supabase SQL Editor
+only partially displays; the single-result version fixes that) —
 SELECT-only, scoped to writer-created rows (`source_key is not null`),
-groups by a best-effort normalized text, reports `SAFE TO MIGRATE` or
-`DUPLICATES REQUIRE REVIEW` with the specific colliding row ids. **Not
-run this session** (no live database access from this environment) —
-Adam must run this and review the result before proceeding, even though
-(see the file's own header) the migration technically cannot fail
-because of historical data given the partial-index scoping.
+groups by a best-effort normalized text.
+
+Adam ran it 2026-07-12 in Supabase SQL Editor. Result: `duplicate_group_count = 0`,
+`writer_created_candidates_scanned = 1` (matches the one verified
+Sprint 148 candidate — no unexpected extra rows), verdict row =
+**SAFE TO MIGRATE**. No duplicate groups to review. Per the file's own
+header, the migration would have succeeded either way given the
+partial-index scoping — this result is the data-quality gate for
+enabling the writer fingerprint flag later, not a precondition for the
+index itself.
+
+This preflight result is **not** itself approval to run the migration —
+see §5 and the separate `CONTROLLED SPRINT 150 MIGRATION APPROVED` text
+required before Step 2 below.
 
 ## 5. Deploy order — schema-first, then flag, never the reverse
 
