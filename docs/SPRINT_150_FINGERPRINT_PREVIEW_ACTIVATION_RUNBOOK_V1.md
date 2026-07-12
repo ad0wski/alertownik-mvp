@@ -1,13 +1,39 @@
 # Sprint 150D — Fingerprint Preview Activation Runbook v1
 
-**Status: PLAN PREPARED, NOT EXECUTED.** No Vercel environment variable
-has been set or changed for this. No flag is on. No live write has been
-made beyond the one already verified in Sprint 148. This document exists
-so that, WHEN Adam decides to activate the fingerprint in Preview, every
-step is already reviewed, ordered, and reversible — not so that it
-happens automatically.
+**Status: FAZA A EXECUTED — `SCHEDULED_WRITER_FINGERPRINT_ENABLED=true`
+in Preview.** `SCHEDULED_WRITES_ENABLED` remains `false`. No live write
+has been made beyond the one already verified in Sprint 148. FAZA B (one
+controlled write) and FAZA C (verify + return to resting state) remain
+separate, not-yet-executed decisions — see §5.
 
 ---
+
+## 0. Phase A fail-closed preflight — VERIFIED (2026-07-12)
+
+Before any env-var change described in §5's FAZA A, a separate safety
+preflight confirmed the endpoint fails closed as expected in its current
+(untouched) Preview state. `scripts/invoke-sprint-150-writes-disabled-
+preflight.ps1` made exactly ONE GET request to
+`/api/cron/write-candidates?sourceKey=michalowice-komunikaty` on the
+`sprint-150-race-condition-closure-package-v1` Preview deployment.
+
+Result: HTTP `503`, `Content-Type: application/json`,
+`{"ok":false,"error":"Tryb zapisu jest wyłączony."}` — no
+`candidatesInserted`/`published`/`results` fields. Confirmed against
+`src/app/api/cron/write-candidates/route.ts` lines 99–106: the two
+kill-switch checks (`SCHEDULED_CHECKS_ENABLED`,
+`SCHEDULED_WRITES_ENABLED`) are the first statement in `GET`, executed
+before `checkCronAuth`, before the technical-writer sign-in, before any
+source fetch, and before any `source_check`/candidate insert. The
+JSON-not-HTML response also confirms the request passed Vercel
+Deployment Protection rather than being blocked at that layer.
+
+No live write, no SQL, no Supabase change, no further redeploy, no
+Production change, no cron. `DO NOT RUN AGAIN` per the script's own
+one-off-preflight design — a second run would require a fresh, separate
+decision. `SCHEDULED_WRITER_FINGERPRINT_ENABLED` remains `true` (from
+its earlier Preview activation) and `SCHEDULED_WRITES_ENABLED` remains
+`false`, unchanged by this preflight.
 
 ## 1. Current state (2026-07-12)
 
@@ -17,9 +43,10 @@ happens automatically.
   the partial unique index
   `source_notice_candidates_writer_fingerprint_uniq` exists, confirmed
   genuinely `UNIQUE` and genuinely partial.
-- `SCHEDULED_WRITER_FINGERPRINT_ENABLED` — **not set anywhere** (defaults
-  to OFF; `isContentFingerprintEnabled()` in `src/lib/scheduledWriter.ts`
-  requires the literal string `"true"`).
+- `SCHEDULED_WRITER_FINGERPRINT_ENABLED` — **`true` in Preview** (FAZA A
+  of §5 executed; `isContentFingerprintEnabled()` in
+  `src/lib/scheduledWriter.ts` requires the literal string `"true"`,
+  confirmed set).
 - `SCHEDULED_WRITES_ENABLED` — **`false`/unset in Preview** (turned off
   at the close of the Sprint 148 controlled test, per that runbook's Step
   9 checklist).
@@ -92,7 +119,7 @@ deployments are authenticated by default (discovered during the Sprint
 
 ## 5. Safe activation plan
 
-### FAZA A — configure, deploy, inspect only (no write)
+### FAZA A — configure, deploy, inspect only (no write) — ✅ EXECUTED 2026-07-12
 
 1. In Vercel, confirm/re-add all variables from §4 for Preview
    deployments of `sprint-150-race-condition-closure-package-v1`
