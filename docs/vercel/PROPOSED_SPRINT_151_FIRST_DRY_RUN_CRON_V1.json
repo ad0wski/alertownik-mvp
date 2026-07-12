@@ -1,0 +1,12 @@
+{
+  "_comment_1": "PROPOSAL ONLY. Not a live vercel.json. This file must NOT be copied to the repo root as-is — doing so would make Vercel treat 'crons' as active configuration on the next Production deploy. See docs/SPRINT_151_FIRST_DRY_RUN_CRON_RUNBOOK_V1.md for the full activation sequence and required approvals before this content is ever merged into a real root vercel.json.",
+  "_comment_2": "Targets the dry-run endpoint only (Variant A, docs/SPRINT_151_PRODUCTION_RELEASE_AUDIT_V1.md §E). Does NOT target /api/cron/write-candidates. Zero DB writes possible from this schedule by construction of the target route.",
+  "_comment_3": "Schedule is once daily, 05:00 UTC (see §F of the audit doc for the frequency/time reasoning) — this is the finest granularity Vercel's Hobby plan allows for a single cron job (max 1/day, hour precision only).",
+  "_comment_4": "Auth: this route requires 'Authorization: Bearer <CRON_SECRET>'. Per docs/SCHEDULED_CHECKS_ARCHITECTURE_V1.md §4.2, Vercel Cron injects this header automatically once a Production CRON_SECRET env var exists and the cron config targets this path — no manual header wiring needed here, but the Production CRON_SECRET value must exist before this schedule is added, or every invocation will 503/401.",
+  "crons": [
+    {
+      "path": "/api/cron/check-sources",
+      "schedule": "0 5 * * *"
+    }
+  ]
+}
