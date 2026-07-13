@@ -1,12 +1,13 @@
 # Sprint 153 — First Production Dry-Run Cron Activation Runbook v1
 
-**Status: PACKAGE PREPARED, NOT EXECUTED.** Branch
-`sprint-153-first-production-dry-run-cron-v1` only — no merge to
-`main`, no push of `main`, no Production deploy, no Vercel env
-change, no cron activation, no manual request, no SQL, no RLS change.
-Two separate approval gates below must each be explicitly cleared by
-Adam before their respective phase proceeds — neither is implied by
-the other.
+**Status (2026-07-13): PHASE A COMPLETE AND VERIFIED.** `main` (commit
+`dc6bb53`) is deployed to Production — `Ready Latest`. Vercel Cron
+Jobs shows exactly one entry: path `/api/cron/check-michalowice`,
+schedule `0 5 * * *`. `SCHEDULED_CHECKS_ENABLED=false` in Production,
+so the route remains fail-closed. **Phase B (observation window) has
+NOT been activated** — no Vercel env change, no manual request, no
+live write, no SQL, no RLS change. The Phase B approval gate below is
+separate and still required.
 
 ## 0. Context
 
@@ -122,7 +123,7 @@ Sources:
 
 ## 4. Three-phase safe release plan
 
-### 🔒 FIRST CRON CONFIG PRODUCTION RELEASE APPROVAL REQUIRED
+### 🔒 FIRST CRON CONFIG PRODUCTION RELEASE APPROVAL REQUIRED — CLEARED 2026-07-13
 
 Covers Phase A only — merging `vercel.json` (and the
 `check-michalowice` route) to `main` and deploying to Production.
@@ -131,71 +132,81 @@ registering the cron changes nothing observable: every scheduled
 invocation still 503s at the kill switch, same as every manual
 request has since Sprint 142.
 
-### Phase A — release cron config, checks OFF
+### Phase A — release cron config, checks OFF — ✅ DONE 2026-07-13
 
-1. Fast-forward `main` to this branch's tip — a **separate approval**,
-   requested explicitly, not implied by Sprint 153A's package
-   preparation.
-2. Confirm Production env still has `SCHEDULED_CHECKS_ENABLED=false`
-   (Sprint 152's resting state) before and immediately after deploy.
-3. Deploy the merged `main` (which now contains root `vercel.json`)
-   to Production.
-4. In Vercel Dashboard → Project Settings → Cron Jobs, confirm exactly
-   one entry appears: path `/api/cron/check-michalowice`, schedule
-   `0 5 * * *`.
-5. The cron being registered does not mean it is "live" in any
-   writing sense — the route itself still fail-closes on
-   `SCHEDULED_CHECKS_ENABLED=false`.
-6. No writer env, no `SCHEDULED_WRITES_ENABLED`, no new secret is
-   touched in this phase.
+1. ~~Fast-forward `main` to this branch's tip~~ — done locally then
+   pushed by Adam. `main` = `origin/main` = `dc6bb53`.
+2. ~~Confirm Production env still has `SCHEDULED_CHECKS_ENABLED=false`~~
+   — confirmed manually by Adam before and after deploy.
+3. ~~Deploy the merged `main`~~ — confirmed: Production, Branch main,
+   Commit `dc6bb53`, Status Ready Latest, Current: yes.
+4. ~~Confirm exactly one Cron Jobs entry~~ — confirmed manually:
+   path `/api/cron/check-michalowice`, schedule `0 5 * * *`, Global
+   Cron Jobs toggle Enabled.
+5. Confirmed: the cron being registered does not mean it is "live" in
+   any writing sense — the route itself still fail-closes on
+   `SCHEDULED_CHECKS_ENABLED=false` (verified against the committed
+   code: the kill-switch check runs before auth, before fetch, before
+   the parser — there is no write or publish call anywhere in the file
+   or its import chain).
+6. Confirmed: no writer env, no `SCHEDULED_WRITES_ENABLED`, no new
+   secret was touched in this phase.
 
-### 🔒 FIRST CRON OBSERVATION WINDOW APPROVAL REQUIRED
+### 🔒 FIRST CRON OBSERVATION WINDOW APPROVAL REQUIRED — NOT YET CLEARED
 
 Covers Phase B only — flipping `SCHEDULED_CHECKS_ENABLED=true` for a
 single scheduled cron run. Requested and granted separately from
 Phase A, and only after Phase A's Production deploy is confirmed
-`Ready`.
+`Ready` (now true). **Not activated as of this update.**
 
-### Phase B — single observation window
+### Phase B — single observation window (planned, not activated)
 
-1. Before the chosen day's 05:00 UTC hour, set
-   `SCHEDULED_CHECKS_ENABLED=true` in Production only.
-2. Redeploy Production so the new env value takes effect.
-3. Do **not** send a manual request to trigger or "test" the route
-   during this window — the whole point is observing the real
-   scheduler-triggered call.
-4. Watch Vercel Dashboard → Cron Jobs → View Logs (Runtime Logs) for
-   an invocation between 05:00:00 and 05:59:59 UTC.
-5. Expected successful response shape (same as the Sprint 152 manual
-   verification, but for the Michałowice-only wrapper):
-   `ok=true, dryRun=true, checkedSources=1, savedCandidates=0,
-   savedSourceChecks=0, published=false`.
-6. Vercel does not guarantee the exact minute — don't treat an
-   invocation at, say, 05:47 UTC as anomalous.
-7. **Missed delivery**: if no invocation appears by 06:00 UTC, do not
-   manually retry as a substitute. Note the missed delivery, review
-   the logs for any partial/error entry, and make a separate decision
-   about the next day's window — don't compress two decisions into
-   one.
-8. **Duplicate delivery**: if two invocations appear for the same
+Current schedule `0 5 * * *` = 05:00–05:59 UTC. Poland is on CEST in
+July, so the Hobby-plan hour window currently maps to
+**07:00–07:59 Polish time** (this shifts to 06:00–06:59 Polish time
+once CET returns in late October — re-check the offset before any
+future-dated window).
+
+**B1 — before the window**
+1. Set `SCHEDULED_CHECKS_ENABLED=true` in Production only.
+2. Redeploy Production.
+3. Confirm: Environment Production, Branch main, Commit `dc6bb53`,
+   Status Ready Latest.
+4. Do **not** send a manual request — the whole point is observing the
+   real scheduler-triggered call.
+
+**B2 — observation**
+1. Wait for a single automatic invocation in the window
+   05:00–05:59 UTC (currently 07:00–07:59 Polish time).
+2. Check Cron Jobs → View Logs, and Runtime Logs.
+3. Record: timestamp, HTTP status, `ok`, `dryRun`, `checkedSources`,
+   `successfulSources`, `failedSources`, `totalProposalCount`,
+   `savedCandidates`, `savedSourceChecks`, `published`.
+4. Expected: `HTTP 200`, `ok=true`, `dryRun=true`, `checkedSources=1`,
+   `savedCandidates=0`, `savedSourceChecks=0`, `published=false`.
+5. Vercel does not guarantee the exact minute — don't treat an
+   invocation at, say, 07:47 Polish time as anomalous.
+6. **Missed delivery**: if no invocation appears by the end of the
+   hour, do not manually retry as a substitute and do not click Run as
+   a stand-in. Note the missed delivery, review the logs for any
+   partial/error entry, and make a separate decision about the next
+   day's window — don't compress two decisions into one.
+7. **Duplicate delivery**: if two invocations appear for the same
    scheduled run, this is not a DB risk (the route is zero-write) —
-   note it as an observed duplicate delivery per §3 item 5 above and
-   move on.
+   note it as an observed duplicate delivery and move on.
 
-### Phase C — safe resting state
+**B3 — return to resting state (= Phase C)**
 
 Immediately after one confirmed cron run (success, missed, or
 duplicate — any of the three closes the observation window):
-
 1. Set `SCHEDULED_CHECKS_ENABLED=false` in Production.
 2. Redeploy Production.
-3. The cron entry may remain registered in Vercel's Cron Jobs list —
-   that's fine; the route stays fail-closed regardless of whether the
-   cron itself is still scheduled to fire.
-4. `CRON_SECRET` remains configured (needed for any future real
-   activation).
-5. No writer env is introduced at any point in this runbook.
-6. No autopublish path exists or is touched.
+3. `CRON_SECRET` remains configured. The cron entry may remain
+   registered in Vercel's Cron Jobs list — that's fine, the route
+   stays fail-closed regardless of whether the cron itself is still
+   scheduled to fire.
+4. No writer env is introduced at any point in this runbook.
+5. No autopublish path exists or is touched.
 
 ## 5. Rollback
 
@@ -218,12 +229,17 @@ deployment rollback is ever used for an unrelated reason while this
 cron is registered, the Cron Jobs dashboard state must be checked
 independently — don't assume the rollback also reverted the cron.
 
-Rollback is **not executed** as part of Sprint 153A — this section is
-documentation only.
+Rollback has **not been needed or executed** — this section remains
+documentation only. No rollback trigger occurred during Phase A.
 
-## 6. What Sprint 153A does not do
+## 6. Status summary (2026-07-13)
 
-No merge to `main`. No push of `main`. No Production env change. No
-Production deploy. No cron activation. No manual or scheduled request
-against Production. No live write. No SQL. No RLS change. No WKD
-write. No autopublish. No `SCHEDULED_WRITES_ENABLED`. No new secret.
+**Done (Phase A):** merge to `main`, push of `main`, Production
+deploy, cron registered in Vercel (`SCHEDULED_CHECKS_ENABLED` stayed
+`false` throughout, so the route stayed fail-closed the entire time).
+
+**Still not done (Phase B, separately gated):** no
+`SCHEDULED_CHECKS_ENABLED=true`, no observation window activated, no
+manual or scheduled request has run against the wrapper route in
+Production, no live write, no SQL, no RLS change, no WKD write, no
+autopublish, no `SCHEDULED_WRITES_ENABLED`, no new secret.

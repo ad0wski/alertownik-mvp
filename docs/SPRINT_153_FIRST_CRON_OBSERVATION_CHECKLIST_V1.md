@@ -3,7 +3,18 @@
 Use this during Phase B of
 `docs/SPRINT_153_FIRST_PRODUCTION_DRY_RUN_CRON_ACTIVATION_RUNBOOK_V1.md`,
 once the **FIRST CRON OBSERVATION WINDOW APPROVAL REQUIRED** gate has
-been explicitly cleared. Not executed as part of Sprint 153A.
+been explicitly cleared.
+
+**Status (2026-07-13): Phase A (cron config release) is done and
+verified** — `main`/`origin/main` @ `dc6bb53` deployed to Production,
+Cron Jobs shows one entry (`/api/cron/check-michalowice`,
+`0 5 * * *`), `SCHEDULED_CHECKS_ENABLED=false`. **This checklist's
+Phase B itself has NOT been activated or executed.**
+
+Current schedule window `0 5 * * *` = 05:00–05:59 UTC. Poland is on
+CEST in July, so this currently maps to **07:00–07:59 Polish time**
+(re-check the offset if the window is used after CET returns in late
+October — it would shift to 06:00–06:59 Polish time).
 
 ## Before the window
 
