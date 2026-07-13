@@ -1,15 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { parsePageHtml } from "@/lib/sourceParsers/pageParser";
 import {
   checkCronAuth,
   isScheduledChecksEnabled,
   resolveCronSources,
-  summarizeParseResult,
-  errorResult,
   buildDryRunSummary,
-  CRON_FETCH_TIMEOUT_MS,
-  type CronSourceResult,
-  type CronDiagnosticCode,
+  checkOneSource,
 } from "@/lib/cronCheckSources";
 import type { SafeCheckSourceId } from "@/lib/sourceCheck";
 
@@ -30,54 +25,6 @@ import type { SafeCheckSourceId } from "@/lib/sourceCheck";
 // tests/e2e/cronCheckSourcesRoute.spec.ts's static import audit).
 
 export const dynamic = "force-dynamic";
-
-function classifyFetchError(err: unknown): CronDiagnosticCode {
-  if (err instanceof Error && err.name === "AbortError") return "timeout_10s";
-  return "network_error";
-}
-
-async function checkOneSource(sourceKey: SafeCheckSourceId, name: string, officialUrl: string): Promise<CronSourceResult> {
-  const startedAt = Date.now();
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), CRON_FETCH_TIMEOUT_MS);
-
-  let html: string;
-  try {
-    const response = await fetch(officialUrl, {
-      signal: controller.signal,
-      headers: {
-        "User-Agent": "Alertownik-Monitor/1.0 (scheduled dry-run check)",
-        Accept: "text/html,application/xhtml+xml,*/*;q=0.8",
-      },
-    });
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      const diagnostic: CronDiagnosticCode = response.status >= 500 ? "http_5xx" : "http_4xx";
-      return errorResult(sourceKey, name, "fetch_error", diagnostic, Date.now() - startedAt);
-    }
-
-    const contentType = response.headers.get("content-type") ?? "";
-    if (!contentType.includes("html")) {
-      return errorResult(sourceKey, name, "fetch_error", "non_html_content_type", Date.now() - startedAt);
-    }
-
-    const raw = await response.text();
-    html = raw.slice(0, 500_000);
-  } catch (err) {
-    clearTimeout(timeoutId);
-    const diagnostic = classifyFetchError(err);
-    const outcome = diagnostic === "timeout_10s" ? "timeout" : "fetch_error";
-    return errorResult(sourceKey, name, outcome, diagnostic, Date.now() - startedAt);
-  }
-
-  try {
-    const parse = parsePageHtml(html, officialUrl);
-    return summarizeParseResult(sourceKey, name, parse, Date.now() - startedAt);
-  } catch {
-    return errorResult(sourceKey, name, "parse_error", "parse_exception", Date.now() - startedAt);
-  }
-}
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
   // Kill switch first — cheapest check, and independent of whether the

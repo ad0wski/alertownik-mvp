@@ -1,5 +1,5 @@
 import { createHash, timingSafeEqual } from "crypto";
-import type { PageParseResult } from "@/lib/sourceParsers/pageParser";
+import { parsePageHtml, type PageParseResult } from "@/lib/sourceParsers/pageParser";
 import {
   SAFE_CHECK_SOURCE_IDS,
   getSafeCheckSource,
@@ -226,3 +226,63 @@ export function buildDryRunSummary(
 }
 
 export const CRON_FETCH_TIMEOUT_MS = 10_000;
+
+// ── Shared per-source fetch + parse (used by every cron/dry-run route) ────────
+//
+// Moved here (Sprint 153) so a second route — the Michałowice-only cron
+// wrapper — can reuse the exact same fetch/parse/error-classification logic
+// with zero duplication, rather than each route.ts file reimplementing it.
+// Next.js route.ts files may only export HTTP method handlers and the small
+// set of special route config values, so this cannot live in a route.ts.
+
+function classifyFetchError(err: unknown): CronDiagnosticCode {
+  if (err instanceof Error && err.name === "AbortError") return "timeout_10s";
+  return "network_error";
+}
+
+export async function checkOneSource(
+  sourceKey: SafeCheckSourceId,
+  name: string,
+  officialUrl: string
+): Promise<CronSourceResult> {
+  const startedAt = Date.now();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), CRON_FETCH_TIMEOUT_MS);
+
+  let html: string;
+  try {
+    const response = await fetch(officialUrl, {
+      signal: controller.signal,
+      headers: {
+        "User-Agent": "Alertownik-Monitor/1.0 (scheduled dry-run check)",
+        Accept: "text/html,application/xhtml+xml,*/*;q=0.8",
+      },
+    });
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const diagnostic: CronDiagnosticCode = response.status >= 500 ? "http_5xx" : "http_4xx";
+      return errorResult(sourceKey, name, "fetch_error", diagnostic, Date.now() - startedAt);
+    }
+
+    const contentType = response.headers.get("content-type") ?? "";
+    if (!contentType.includes("html")) {
+      return errorResult(sourceKey, name, "fetch_error", "non_html_content_type", Date.now() - startedAt);
+    }
+
+    const raw = await response.text();
+    html = raw.slice(0, 500_000);
+  } catch (err) {
+    clearTimeout(timeoutId);
+    const diagnostic = classifyFetchError(err);
+    const outcome = diagnostic === "timeout_10s" ? "timeout" : "fetch_error";
+    return errorResult(sourceKey, name, outcome, diagnostic, Date.now() - startedAt);
+  }
+
+  try {
+    const parse = parsePageHtml(html, officialUrl);
+    return summarizeParseResult(sourceKey, name, parse, Date.now() - startedAt);
+  } catch {
+    return errorResult(sourceKey, name, "parse_error", "parse_exception", Date.now() - startedAt);
+  }
+}
