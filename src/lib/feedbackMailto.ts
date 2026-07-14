@@ -6,7 +6,7 @@
 // because the brief explicitly asked to improve the *existing*
 // implementation rather than build a new one.
 
-export const FEEDBACK_EMAIL = "ak.jurkowski@gmail.com";
+export const FEEDBACK_EMAIL = "alertownik.kontakt@gmail.com";
 
 export const FEEDBACK_QUESTIONS = [
   "Czy od razu rozumiesz, do czego służy aplikacja?",

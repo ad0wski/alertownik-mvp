@@ -36,11 +36,15 @@ cron, or data changes were made to produce this checklist.
 
 ## REQUIRES ADAM
 
-- **Privacy controller identity** — `/prywatnosc` currently discloses
-  no name/address for the data controller (self-flagged in the page
-  itself). Decision package with 3 variants prepared, no wording
-  chosen or published:
-  `docs/SPRINT_154_PRIVACY_CONTROLLER_IDENTITY_DECISION_V1.md`.
+- ~~**Privacy controller identity**~~ — **RESOLVED in Sprint 155**
+  (2026-07-14). `/prywatnosc` now names Adam Jurkowski as data
+  controller and links a dedicated project contact address
+  (`alertownik.kontakt@gmail.com`), replacing the previous anonymous
+  wording and the general feedback mailbox. See
+  `docs/SPRINT_155_PRIVACY_VARIANT_A_IMPLEMENTATION_PACKAGE_V1.md`.
+  `REQUIRES LEGAL WORDING VERIFICATION BEFORE PUBLIC RELEASE` still
+  applies — this is an implementation of the approved wording, not a
+  legal sign-off.
 - **Data freshness judgment call** — one active alert
   (`wkd-ograniczenia-predkosci-2026-06-29`) has no end date and has
   been active 15 days; Adam should confirm it's still accurate.

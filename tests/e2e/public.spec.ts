@@ -420,6 +420,23 @@ test.describe("Legal pages (/prywatnosc, /zasady)", () => {
     }
   });
 
+  // Sprint 155 — Variant A: named data controller + dedicated project
+  // contact address, replacing the previous anonymous-operator wording.
+  test("privacy policy names the data controller and dedicated project contact", async ({ page }) => {
+    await page.goto("/prywatnosc");
+    await expect(page.getByText("Adam Jurkowski")).toBeVisible();
+    await expect(page.getByText(/Administratorem danych osobowych/)).toBeVisible();
+    await expect(page.getByRole("link", { name: "alertownik.kontakt@gmail.com" })).toBeVisible();
+    await expect(page.getByText(/niezależny, niekomercyjny projekt/)).toBeVisible();
+    await expect(page.getByText(/nie jest oficjalnym\s+serwisem żadnej gminy/)).toBeVisible();
+  });
+
+  test("privacy policy does not expose the previous private contact address", async ({ page }) => {
+    await page.goto("/prywatnosc");
+    const html = await page.content();
+    expect(html).not.toContain("ak.jurkowski@gmail.com");
+  });
+
   test("terms page leads with the not-an-emergency-service disclaimer and 112", async ({ page }) => {
     await page.goto("/zasady");
     await expect(page.locator("h1")).toContainText("Zasady korzystania");

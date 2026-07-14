@@ -39,17 +39,19 @@ export default function PrivacyPage() {
         <section className={sectionClass}>
           <h2 className={h2Class}>Kto prowadzi serwis</h2>
           <p className={pClass}>
-            Alertownik to niekomercyjny projekt pilotażowy prowadzony przez
-            osobę prywatną (administratora projektu). Kontakt we wszystkich
-            sprawach, w tym dotyczących prywatności:{" "}
+            Alertownik to niezależny, niekomercyjny projekt pilotażowy.
+            Administratorem danych osobowych w rozumieniu RODO jest{" "}
+            <span className="font-medium">Adam Jurkowski</span>, prowadzący
+            ten projekt jako osoba fizyczna. Alertownik nie jest oficjalnym
+            serwisem żadnej gminy, urzędu, WKD, PGE ani innej instytucji.
+            Kontakt we wszystkich sprawach, w tym dotyczących prywatności:{" "}
             <a
               href={`mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent("Alertownik — prywatność")}`}
               className="font-medium text-blue-600 hover:underline"
             >
-              napisz e-mail
+              {FEEDBACK_EMAIL}
             </a>
-            . Docelowy, dedykowany adres kontaktowy zostanie uruchomiony wraz z
-            rozwojem projektu.
+            .
           </p>
         </section>
 

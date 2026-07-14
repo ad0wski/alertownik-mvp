@@ -11,7 +11,7 @@ import { buildFeedbackMailto, buildAlertReportMailto, FEEDBACK_QUESTIONS } from 
 test.describe("buildFeedbackMailto", () => {
   test("targets the feedback email with the opinion subject", () => {
     const href = buildFeedbackMailto();
-    expect(href).toContain("mailto:ak.jurkowski@gmail.com");
+    expect(href).toContain("mailto:alertownik.kontakt@gmail.com");
     expect(href).toContain(encodeURIComponent("Alertownik — opinia o pilotażu"));
   });
 
