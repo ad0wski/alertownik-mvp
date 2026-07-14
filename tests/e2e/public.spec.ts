@@ -440,23 +440,41 @@ test.describe("Legal pages (/prywatnosc, /zasady)", () => {
     }
   });
 
-  // Sprint 156C-2 — evidence-based international-transfer disclosure.
-  // Scoped to Vercel only: confirmed Hobby plan (Sprint 153 docs) + Vercel's
-  // own DPA text (fetched 2026-07-14) explicitly excludes Hobby-tier
-  // customers + no `regions` override in vercel.json (defaults to Vercel's
-  // US region). Supabase's project region could not be confirmed from code
-  // (Supabase offers both EU and non-EU regions) — deliberately NOT
-  // mentioned here rather than guessed. Anthropic confirmed to receive only
-  // admin-pasted public source text, never personal data — also not listed
-  // as a transfer-relevant recipient.
-  test("privacy policy discloses Vercel's US location and the Hobby-plan DPA gap, without guessing about Supabase or Anthropic", async ({ page }) => {
+  // Sprint 156C-2/156C-3 — evidence-based international-transfer disclosure.
+  // Sprint 156C-2's first draft said the Hobby plan has "no DPA/SCC
+  // safeguard" — too broad, per Adam's manual panel verification (Sprint
+  // 156C-3): confirmed facts are Vercel Hobby plan, Function Region iad1
+  // (USA), and Vercel's own privacy policy declares it uses the EU-U.S. DPF
+  // and other transfer mechanisms where applicable — the corrected wording
+  // states the confirmed region/mechanism facts without claiming Alertownik
+  // has an active DPA, and without claiming no protections exist at all.
+  test("privacy policy discloses Vercel's iad1/USA region and declared transfer mechanisms, without overclaiming an active DPA or claiming no protections exist", async ({ page }) => {
     await page.goto("/prywatnosc");
-    await expect(page.getByText(/Vercel Inc\. ma siedzibę w USA/)).toBeVisible();
+    await expect(page.getByText(/iad1/)).toBeVisible();
+    await expect(page.getByText(/Stany Zjednoczone/)).toBeVisible();
     await expect(page.getByText(/poza Europejskim\s+Obszarem Gospodarczym/)).toBeVisible();
-    await expect(page.getByText(/nie obejmuje formalnej umowy powierzenia przetwarzania danych/)).toBeVisible();
-    // No fabricated claim that a transfer safeguard is in place for Vercel.
+    await expect(page.getByText(/EU–U\.S\. Data Privacy Framework/)).toBeVisible();
+    await expect(page.getByText(/bezpłatnego planu Vercel \(Hobby\)/)).toBeVisible();
     const html = await page.content();
-    expect(html).not.toContain("standardowych klauzul umownych stosowanych przez tych dostawców");
+    // No overclaim that Alertownik has an active Vercel DPA...
+    expect(html).not.toContain("Alertownik ma aktywny DPA Vercela");
+    // ...and no claim that zero transfer protections exist at all (the
+    // Sprint 156C-2 draft's "nie obejmuje formalnej umowy powierzenia
+    // przetwarzania danych ani standardowych klauzul umownych" phrasing
+    // read as exactly that overly broad claim).
+    expect(html).not.toContain(
+      "nie obejmuje formalnej umowy powierzenia przetwarzania danych ani standardowych klauzul umownych"
+    );
+  });
+
+  // Sprint 156C-3 — Supabase region confirmed by Adam's manual panel check
+  // (eu-west-2, London) — not presented as an unprotected transfer solely
+  // because the UK is outside the EEA, since the UK has a current EU
+  // adequacy decision.
+  test("privacy policy names Supabase's UK region and the UK adequacy decision", async ({ page }) => {
+    await page.goto("/prywatnosc");
+    await expect(page.getByText(/Londyn/)).toBeVisible();
+    await expect(page.getByText(/decyzj[aęi] o\s+adekwatności/)).toBeVisible();
   });
 
   // Sprint 155 — Variant A: named data controller + dedicated project

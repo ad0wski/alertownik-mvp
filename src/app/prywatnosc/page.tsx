@@ -119,18 +119,24 @@ export default function PrivacyPage() {
           <ul className={listClass}>
             <li>
               <span className="font-medium">Vercel</span> — hosting aplikacji
-              (logi techniczne, np. adres IP). Vercel Inc. ma siedzibę w USA;
-              w ramach standardowej infrastruktury hostingowej logi
-              techniczne mogą być przetwarzane na serwerach poza Europejskim
-              Obszarem Gospodarczym. Alertownik korzysta obecnie z
-              bezpłatnego planu Vercel, który — zgodnie z warunkami Vercel —
-              nie obejmuje formalnej umowy powierzenia przetwarzania danych
-              ani standardowych klauzul umownych; zostanie to uregulowane
-              przed szerszym startem publicznym.
+              (logi techniczne, np. adres IP). Funkcje serwerowe są obecnie
+              wykonywane w regionie iad1 (Stany Zjednoczone) — w związku z
+              tym techniczne dane obsługi żądania mogą być przetwarzane poza
+              Europejskim Obszarem Gospodarczym. Vercel deklaruje w swojej
+              dokumentacji prywatności stosowanie mechanizmów ochrony
+              transferu danych (m.in. EU–U.S. Data Privacy Framework oraz
+              odpowiednie klauzule umowne, gdy mają zastosowanie). Alertownik
+              korzysta obecnie z bezpłatnego planu Vercel (Hobby); dokładny
+              zakres obowiązującej relacji umownej wymaga ponownej
+              weryfikacji przed szerszym startem publicznym.
             </li>
             <li>
               <span className="font-medium">Supabase</span> — baza danych
-              (treść alertów; konta wyłącznie administratorów).
+              (treść alertów; konta wyłącznie administratorów), region
+              Europa Zachodnia (Londyn, Wielka Brytania). Wielka Brytania
+              nie należy do EOG, ale Komisja Europejska uznaje ją za kraj
+              zapewniający odpowiedni poziom ochrony danych (decyzja o
+              adekwatności).
             </li>
             <li>
               <span className="font-medium">Dostawca poczty</span> — jeśli

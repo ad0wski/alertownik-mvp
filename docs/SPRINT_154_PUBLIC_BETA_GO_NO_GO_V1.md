@@ -51,14 +51,19 @@ cron, or data changes were made to produce this checklist.
   `REQUIRES LEGAL WORDING VERIFICATION BEFORE PUBLIC RELEASE` still
   applies. Sprint 156C-1 flagged a material international-transfer gap
   using an over-broad "US company → gap" simplification; Sprint 156C-2
-  (2026-07-14) re-derived it from actual evidence and **implemented** a
-  narrow, evidence-based Vercel-only disclosure (confirmed Hobby plan +
-  Vercel's own DPA excludes that tier + default US compute region) —
-  Supabase and Anthropic were deliberately **not** mentioned, since the
-  evidence doesn't support a specific claim about either (Supabase's
-  region is a genuine open fact for Adam to confirm; Anthropic
-  receives no personal data at all). See
-  `docs/SPRINT_156C2_PRIVACY_DATA_FLOW_AND_TRANSFER_EVIDENCE_V1.md`.
+  (2026-07-14) re-derived it from actual evidence and implemented a
+  narrow, evidence-based Vercel-only disclosure. **Sprint 156C-3
+  (2026-07-14)** then corrected Sprint 156C-2's own wording after Adam
+  manually verified two dashboard facts: **Vercel Function Region
+  `iad1` (USA)** confirmed, and **Supabase project region `eu-west-2`
+  (London, UK)** confirmed — the UK has a current EU adequacy decision,
+  so no additional transfer safeguard is required to be disclosed for
+  Supabase on that basis alone. Sprint 156C-2's phrase "no DPA/SCC
+  safeguard" for Vercel was itself too broad (Vercel's privacy policy
+  declares use of the EU-U.S. Data Privacy Framework and other
+  mechanisms where applicable) and has been replaced with precise,
+  non-overclaiming wording. See
+  `docs/SPRINT_156C3_VERIFIED_HOSTING_REGIONS_PRIVACY_WORDING_V1.md`.
 - **Data freshness judgment call** — one active alert
   (`wkd-ograniczenia-predkosci-2026-06-29`) has no end date and has
   been active 15 days; Adam should confirm it's still accurate.
@@ -79,11 +84,10 @@ cron, or data changes were made to produce this checklist.
   end date given, no follow-up "restriction lifted" notice found either.
   **REQUIRES HUMAN JUDGMENT** — keep active / update / archive, Adam's
   call. See `docs/SPRINT_156C_PUBLIC_BETA_FINAL_OPERATIONAL_GATES_AUDIT_V1.md` §5.2.
-- **Supabase project region** (Sprint 156C-2, 2026-07-14) — genuinely
-  unknown from code; Supabase offers both EU and non-EU regions.
-  Check: Dashboard → project → Settings → General → "Region." If EU,
-  no further privacy-policy change needed for Supabase; if non-EU, a
-  parallel sentence to the new Vercel disclosure should be added.
+- ~~**Supabase project region**~~ — **RESOLVED (Sprint 156C-3,
+  2026-07-14):** confirmed `eu-west-2` (London, UK) via Adam's
+  dashboard screenshot. UK adequacy decision applies; documented on
+  `/prywatnosc`.
 - **Merge and deploy** — Sprints 154, 155, and 156B are all still
   unmerged feature branches; `main`/Production remain at the Sprint 153
   commit. Nothing above actually reaches a public visitor until Adam

@@ -15,6 +15,33 @@ evidenced, and in one respect more concerning** conclusion than Sprint
 `REQUIRES LEGAL WORDING VERIFICATION BEFORE PUBLIC RELEASE` is
 unchanged and carried forward.
 
+**Correction (Sprint 156C-3, 2026-07-14):** Adam manually verified the
+two facts this document had flagged as unconfirmed/hedged, via
+screenshots from the Vercel and Supabase dashboards:
+
+- **Vercel Function Region: `iad1` (USA)** — confirms the default this
+  document inferred from the absence of a `regions` key in
+  `vercel.json`, now a directly confirmed dashboard fact rather than an
+  inference.
+- **Supabase project region: `eu-west-2` (London, UK)** — resolves §6's
+  "MANUAL FACT REQUIRED" open question. The UK is outside the EEA but
+  has a current EU adequacy decision, so Supabase's London region does
+  not, by itself, require an additional transfer safeguard to be
+  disclosed the way a non-adequate country would.
+
+Sprint 156C-3 also corrected this document's own wording: the phrase
+"no DPA/SCC safeguard" (§1 and the implemented text in §10) was **itself
+too broad** — Vercel's privacy policy declares it uses the EU-U.S. Data
+Privacy Framework and other transfer mechanisms where applicable;
+Alertownik's Hobby plan doesn't get Vercel's formal Enterprise/Pro DPA,
+but that is not the same as "no mechanism exists at all." The live
+wording on `/prywatnosc` has been corrected accordingly — see
+`docs/SPRINT_156C3_VERIFIED_HOSTING_REGIONS_PRIVACY_WORDING_V1.md` for
+the exact correction. Sections below are left as originally written,
+for an accurate history of this document's own reasoning; treat §§5–6
+and §10 as **superseded** by the 156C-3 correction where they discuss
+the Vercel DPA gap or Supabase's region.
+
 ---
 
 ## 1. Executive conclusion
