@@ -3,6 +3,13 @@
 Read-only. Fetched via the public anon-key REST endpoint (same access
 as the live homepage). No data changed.
 
+**Update (Sprint 156C-1, 2026-07-14):** the underlying assessment below
+is unchanged and independently confirmed by cross-checking WKD's
+official notice page directly this sprint — see
+`docs/SPRINT_156C_PUBLIC_BETA_FINAL_OPERATIONAL_GATES_AUDIT_V1.md` §5.2
+for the official-source evidence. Final status: **REQUIRES HUMAN
+JUDGMENT** (not resolved either way — still no data changed).
+
 ## The record
 
 `wkd-ograniczenia-predkosci-2026-06-29`

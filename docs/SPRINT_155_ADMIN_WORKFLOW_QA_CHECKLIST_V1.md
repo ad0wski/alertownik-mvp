@@ -5,6 +5,14 @@ For Adam. Covers `docs/QA_MANUAL_CHECKLIST.md` §§3–8, which Sprint
 Claude this sprint by design). Not executed by Claude. Nothing below
 is marked done.
 
+**Update (Sprint 156C-1, 2026-07-14):** still not executed by anyone as
+of this update. Sprint 156C-1 additionally mapped the full admin
+workflow read-only (which steps write, which tables, which need a real
+session) and produced a gated, click-by-click controlled runbook — see
+`docs/SPRINT_156C_PUBLIC_BETA_FINAL_OPERATIONAL_GATES_AUDIT_V1.md` §§3–4.
+That runbook and this checklist cover the same ground; use whichever
+you prefer, or both.
+
 Run this once, end to end, using a real admin session on Production
 (or a throwaway test alert if you'd rather not touch real data — your
 call, either satisfies the checklist).

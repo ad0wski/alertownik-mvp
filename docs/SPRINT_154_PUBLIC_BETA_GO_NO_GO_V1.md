@@ -38,15 +38,19 @@ cron, or data changes were made to produce this checklist.
 
 ## REQUIRES ADAM
 
-- ~~**Privacy controller identity**~~ — **RESOLVED in Sprint 155**
-  (2026-07-14). `/prywatnosc` now names Adam Jurkowski as data
-  controller and links a dedicated project contact address
-  (`alertownik.kontakt@gmail.com`), replacing the previous anonymous
-  wording and the general feedback mailbox. See
-  `docs/SPRINT_155_PRIVACY_VARIANT_A_IMPLEMENTATION_PACKAGE_V1.md`.
+- **Privacy controller identity** — ⚠️ **CORRECTED 2026-07-14 (Sprint
+  156C-1): code-complete in Sprint 155, but NOT YET LIVE.** A read-only
+  fetch of Production this sprint confirmed `/prywatnosc` still shows
+  the old anonymous text and the old private contact address — Sprints
+  154/155/156B are three unmerged commits ahead of `main`, never
+  deployed. The fix exists and is tested on
+  `sprint-156-mobile-first-product-polish-v1`; it only becomes real for
+  a public visitor once merged and deployed. See
+  `docs/SPRINT_155_PRIVACY_VARIANT_A_IMPLEMENTATION_PACKAGE_V1.md` and
+  `docs/SPRINT_156C_PUBLIC_BETA_FINAL_OPERATIONAL_GATES_AUDIT_V1.md` §1.
   `REQUIRES LEGAL WORDING VERIFICATION BEFORE PUBLIC RELEASE` still
-  applies — this is an implementation of the approved wording, not a
-  legal sign-off.
+  applies, and Sprint 156C-1 additionally found a material gap
+  (international data-transfer disclosure) — see that document §6.
 - **Data freshness judgment call** — one active alert
   (`wkd-ograniczenia-predkosci-2026-06-29`) has no end date and has
   been active 15 days; Adam should confirm it's still accurate.
@@ -58,11 +62,20 @@ cron, or data changes were made to produce this checklist.
   `docs/QA_MANUAL_CHECKLIST.md` §§3–8 for real before wide public
   exposure.
 - ~~**Real-device smoke test**~~ — **DONE**, see BLOCKED section above.
-- ~~**Beta-status prominence**~~ — **RESOLVED in Sprint 156B**
-  (2026-07-14): the status card was compacted from a 5-line bullet list
-  to two lines specifically so it no longer dominates the first mobile
-  viewport, per the real-device finding. See
-  `docs/SPRINT_156B_MOBILE_FIRST_PRODUCT_VALUE_AND_PERSONALIZATION_V1.md`.
+- **Beta-status prominence** — code-complete in Sprint 156B (status
+  card compacted to two lines), same **not-yet-live** caveat as above —
+  the deployed Production card is still the original 5-bullet version.
+  See `docs/SPRINT_156B_MOBILE_FIRST_PRODUCT_VALUE_AND_PERSONALIZATION_V1.md`.
+- **Open-ended WKD delay alert** (`wkd-ograniczenia-predkosci-2026-06-29`) —
+  Sprint 156C-1 cross-checked WKD's official notice page directly: no
+  end date given, no follow-up "restriction lifted" notice found either.
+  **REQUIRES HUMAN JUDGMENT** — keep active / update / archive, Adam's
+  call. See `docs/SPRINT_156C_PUBLIC_BETA_FINAL_OPERATIONAL_GATES_AUDIT_V1.md` §5.2.
+- **Merge and deploy** — Sprints 154, 155, and 156B are all still
+  unmerged feature branches; `main`/Production remain at the Sprint 153
+  commit. Nothing above actually reaches a public visitor until Adam
+  approves a merge + Production deploy. This is the top-line finding of
+  Sprint 156C-1.
 
 ## DEFERRED TO BETA (explicitly not blocking, per this sprint's scope)
 
@@ -93,7 +106,8 @@ reason to expect that.
 
 ## Verdict
 
-**PUBLIC BETA CONDITIONAL GO ⚠️**
+**CONDITIONAL GO — FINAL MANUAL GATES REMAIN** (updated 2026-07-14,
+Sprint 156C-1 — see correction above)
 
 The product itself (public-facing routes, trust messaging, feedback
 channel, admin-write protection) is in good shape and did not surface
@@ -106,9 +120,18 @@ require new engineering scope — they require Adam's time and
 decisions, not more code.
 
 **Update (Sprint 156B, 2026-07-14):** the privacy controller-identity
-decision (Sprint 155) and the real-device check are now both resolved.
-Remaining: full admin-workflow QA pass, the data-freshness judgment
-call, the open-ended WKD alert review, and final legal wording
-verification. See
-`docs/SPRINT_156B_MOBILE_FIRST_PRODUCT_VALUE_AND_PERSONALIZATION_V1.md`
-for what this sprint changed and an updated honest readiness estimate.
+decision (Sprint 155) and the real-device check were addressed in code.
+Remaining at that point: full admin-workflow QA pass, the data-freshness
+judgment call, the open-ended WKD alert review, and final legal wording
+verification.
+
+**Correction (Sprint 156C-1, 2026-07-14):** none of Sprints 154, 155,
+or 156B has actually been merged to `main` or deployed — confirmed via
+`git log` and a direct read-only fetch of Production, which still
+serves pre-Sprint-154 content. The verdict below reflects this: ceiling
+is **CONDITIONAL GO — FINAL MANUAL GATES REMAIN**, not a plain
+conditional go, because "resolved" so far means "resolved in code,"
+not "live for a real visitor." Full detail, including a 30-item gate
+matrix, the WKD alert findings, a legal-wording completeness check, and
+a controlled admin-workflow runbook:
+`docs/SPRINT_156C_PUBLIC_BETA_FINAL_OPERATIONAL_GATES_AUDIT_V1.md`.
