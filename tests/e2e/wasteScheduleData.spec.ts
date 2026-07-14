@@ -173,7 +173,8 @@ test.describe("/odpady data state (mocked Supabase response)", () => {
  * Inline area-preference editor — Sprint 86.
  *
  * Before this sprint, the only way to set/change the "Moja okolica" value
- * consumed by /odpady was the homepage's "Moje alerty" panel — both
+ * consumed by /odpady was the homepage's "Moja okolica" panel (named "Moje
+ * alerty" at the time, renamed in Sprint 156B) — both
  * NextCollectionCard and WasteScheduleSection read localStorage
  * independently on their own mount. This sprint added AreaPreferenceBar +
  * OdpadyClient (a shared state owner) so the value can be set/changed/

@@ -75,7 +75,7 @@ export default function PrivacyPage() {
               wyłącznie do działania i bezpieczeństwa serwisu.
             </li>
             <li>
-              <span className="font-medium">Preferencje lokalne („Moje alerty")</span>{" "}
+              <span className="font-medium">Preferencje lokalne („Moja okolica")</span>{" "}
               — wybrana okolica i kategorie są zapisywane wyłącznie w Twojej
               przeglądarce (localStorage) i nie są wysyłane na nasz serwer.
             </li>

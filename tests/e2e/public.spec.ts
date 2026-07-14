@@ -197,10 +197,30 @@ test.describe("Public homepage", () => {
     await expect(page.getByRole("link", { name: "Dane są nieaktualne" })).toBeVisible();
   });
 
-  test("My Alerty toggle opens the local preferences panel", async ({ page }) => {
+  // Sprint 156B — renamed from "Moje alerty" to "Moja okolica" for
+  // consistency with the label already used everywhere else in the app for
+  // this exact same location filter (PreferencesSection's field,
+  // AreaPreferenceBar, the /odpady "Moja okolica" toggle).
+  test("Moja okolica toggle opens the local preferences panel", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: "Moje alerty" }).click();
+    await page.getByRole("button", { name: "Moja okolica", exact: true }).click();
     await expect(page.getByText(/preferencje|okolic/i).first()).toBeVisible();
+  });
+
+  test("Wszystkie alerty / Moja okolica toggle has no regression: both modes still show the alert-list area", async ({ page }) => {
+    await page.goto("/");
+    const allBtn = page.getByRole("button", { name: "Wszystkie alerty" });
+    const myBtn = page.getByRole("button", { name: "Moja okolica", exact: true });
+    await expect(allBtn).toBeVisible();
+    await expect(myBtn).toBeVisible();
+
+    await myBtn.click();
+    await expect(page.getByRole("heading", { name: "Moja okolica" })).toBeVisible();
+
+    await allBtn.click();
+    await expect(
+      page.getByText(/Wszystkich alertów|Brak aktualnych alertów/)
+    ).toBeVisible({ timeout: 15_000 });
   });
 
   test("homepage links to the about page", async ({ page }) => {
@@ -453,5 +473,172 @@ test.describe("Legal pages (/prywatnosc, /zasady)", () => {
     await page.goto("/");
     await expect(page.getByRole("link", { name: "Prywatność" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Zasady" })).toBeVisible();
+  });
+});
+
+// Sprint 156B — mobile-first product value + personalization polish.
+// Real-device (iPhone Safari) smoke found the first viewport dominated by
+// explanatory text/status card, personalization not discoverable enough,
+// category filters hidden behind an undiscoverable horizontal scroll, and
+// the waste page leading with too much text before the actual schedule.
+test.describe("Sprint 156B — homepage value-first + personalization", () => {
+  test("hero is short (two sentences) and states the covered area", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByText(/Sprawdź, co może dziś wpłynąć na Twój dzień/)).toBeVisible();
+    await expect(page.getByText(/Komorowa, Pruszkowa i okolic/)).toBeVisible();
+  });
+
+  test("compact beta status card keeps the independence disclaimer and a link to the full explanation", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByText("Status pilotażu")).toBeVisible();
+    await expect(
+      page.getByText(/niezależnym projektem — nie jest oficjalną aplikacją WKD, PGE ani żadnej gminy/)
+    ).toBeVisible();
+    await expect(page.getByRole("link", { name: /Jak działa pilotaż/ })).toBeVisible();
+  });
+
+  test("alert list is visible immediately, with no blocking onboarding modal", async ({ page }) => {
+    await page.goto("/");
+    await expect(
+      page.getByText(/Wszystkich alertów|Brak aktualnych alertów/)
+    ).toBeVisible({ timeout: 15_000 });
+    // No dialog/modal should intercept the page on first load.
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  });
+
+  test("locality quick-pick CTA is visible and does not require login or an exact address", async ({ page }) => {
+    await page.goto("/");
+    await expect(
+      page.getByText(/Ustaw swoją okolicę, aby widzieć tylko alerty/)
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Ustaw moją okolicę" })).toBeVisible();
+    // Skipping personalization must still show the full alert list.
+    await expect(
+      page.getByText(/Wszystkich alertów|Brak aktualnych alertów/)
+    ).toBeVisible({ timeout: 15_000 });
+  });
+
+  test("locality quick-pick reveals PILOT_LOCALITIES chips and selecting one saves the preference and switches mode", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Ustaw moją okolicę" }).click();
+    const localityChip = page.getByRole("button", { name: "Komorów", exact: true });
+    await expect(localityChip).toBeVisible();
+    await localityChip.click();
+
+    // Preference saved via the existing localStorage mechanism.
+    const saved = await page.evaluate(() =>
+      localStorage.getItem("alertownik-user-preferences")
+    );
+    expect(saved).toContain("Komorów");
+    const mode = await page.evaluate(() => localStorage.getItem("alertownik-alert-mode"));
+    expect(mode).toBe("my");
+
+    // Selected locality is shown, with an easy way to change it.
+    await expect(page.getByText(/Twoja okolica:/)).toBeVisible();
+    await expect(page.getByText(/Twoja okolica:\s*Komorów/)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Zmień" })).toBeVisible();
+  });
+
+  test("locality can be changed after being set", async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        "alertownik-user-preferences",
+        JSON.stringify({ locationKeywords: "Komorów", categories: [] })
+      );
+      localStorage.setItem("alertownik-alert-mode", "my");
+    });
+    await page.goto("/");
+    await expect(page.getByText(/Twoja okolica:/)).toBeVisible();
+    await page.getByRole("button", { name: "Zmień" }).click();
+    const pruszkowChip = page.getByRole("button", { name: "Pruszków", exact: true });
+    await expect(pruszkowChip).toBeVisible();
+    await pruszkowChip.click();
+    const saved = await page.evaluate(() =>
+      localStorage.getItem("alertownik-user-preferences")
+    );
+    expect(saved).toContain("Pruszków");
+  });
+
+  test("category filters wrap and are all visible on a narrow mobile viewport, with no hidden horizontal scroll", async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto("/");
+    const categories = ["Wszystkie", "Transport", "Woda", "Prąd", "Odpady", "Drogi", "Komunikaty"];
+    for (const label of categories) {
+      await expect(page.getByRole("button", { name: label, exact: true })).toBeVisible();
+    }
+    // The category-filter row itself must not require horizontal scrolling —
+    // every button wraps onto additional rows instead of overflowing.
+    const overflowsHorizontally = await page.evaluate(() => {
+      const btn = Array.from(document.querySelectorAll("button")).find(
+        (b) => b.textContent?.trim() === "Wszystkie"
+      );
+      const row = btn?.parentElement;
+      if (!row) return true;
+      return row.scrollWidth > row.clientWidth + 1;
+    });
+    expect(overflowsHorizontally).toBe(false);
+  });
+});
+
+// Sprint 156B — real-device (iPhone Safari) smoke flagged the mobile header
+// as visually cramped at 375px; verifying no regression at the three
+// standard iPhone widths and no unwanted page-level horizontal scroll.
+test.describe("Sprint 156B — mobile header widths", () => {
+  for (const width of [375, 390, 414]) {
+    test(`header shows all public links without horizontal scroll at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 812 });
+      await page.goto("/");
+      for (const label of ["Alerty", "Odpady", "O projekcie"]) {
+        await expect(page.getByRole("link", { name: label, exact: true }).first()).toBeVisible();
+      }
+      const bodyOverflows = await page.evaluate(
+        () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1
+      );
+      expect(bodyOverflows).toBe(false);
+    });
+  }
+});
+
+// Sprint 156B — waste page hierarchy: locality/next-pickup/upcoming-terms
+// must appear before the longer explanatory sections, with nothing removed.
+test.describe("Sprint 156B — waste page hierarchy", () => {
+  test("locality picker and next-collection card appear before the longer info sections", async ({ page }) => {
+    await page.goto("/odpady");
+    // With no saved locality (this test's default state), AreaPreferenceBar
+    // renders its "Wybierz swoją okolicę" prompt — the "Moja okolica" label
+    // only appears once a value is already set, and also happens to be the
+    // exact text of an unrelated filter toggle further down the page
+    // (WasteScheduleSection's "Wszystkie okolice"/"Moja okolica" pair), so
+    // "Najbliższy odbiór" (NextCollectionCard's heading, always rendered,
+    // unambiguous) is used as the structural marker instead.
+    const localityHeading = page.getByText("Wybierz swoją okolicę");
+    const nextCollectionHeading = page.getByText("Najbliższy odbiór");
+    const howItWorksHeading = page.getByText("Jak to ma działać");
+    await expect(localityHeading).toBeVisible();
+    await expect(nextCollectionHeading).toBeVisible();
+    await expect(howItWorksHeading).toBeVisible();
+
+    const localityBox = await localityHeading.boundingBox();
+    const nextCollectionBox = await nextCollectionHeading.boundingBox();
+    const howItWorksBox = await howItWorksHeading.boundingBox();
+    expect(localityBox).not.toBeNull();
+    expect(nextCollectionBox).not.toBeNull();
+    expect(howItWorksBox).not.toBeNull();
+    expect(localityBox!.y).toBeLessThan(howItWorksBox!.y);
+    expect(nextCollectionBox!.y).toBeLessThan(howItWorksBox!.y);
+  });
+
+  test("waste page intro is a single short sentence, with all disclaimers and sources preserved lower on the page", async ({ page }) => {
+    await page.goto("/odpady");
+    await expect(
+      page.getByText(/ręcznie przepisane z oficjalnych harmonogramów, zawsze z linkiem do źródła/)
+    ).toBeVisible();
+    // Nothing was removed — official sources and the independence
+    // disclaimer are still present, just further down the page.
+    await expect(page.getByText("Pełny harmonogram znajdziesz w oficjalnym źródle")).toBeVisible();
+    await expect(page.getByText("Źródła pozostają najważniejsze")).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: /Eco-Harmonogram/ })
+    ).toHaveAttribute("href", /pruszkow\.pl/);
   });
 });

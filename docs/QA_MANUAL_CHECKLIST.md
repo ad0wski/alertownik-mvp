@@ -62,7 +62,7 @@ See `docs/AUTOMATED_CHECKS.md` for details on what each step covers and what it 
 - ➖ "Wszystkie" resets the filter — not exercised this run.
 - ➖ Counter reflects the filtered count — not exercised this run.
 
-### Moje alerty (user preferences)
+### Moje alerty (user preferences) — renamed to "Moja okolica" in Sprint 156B; entries below quote the button's label at the time this run was recorded
 
 - ✅ "Wszystkie alerty" / "Moje alerty" toggle is visible — confirmed present.
 - ✅ Switching to "Moje alerty" without saved preferences shows a preferences-related empty prompt — confirmed: after clicking, page body contained preferences-related text (consistent with "Nie ustawiono jeszcze preferencji.").

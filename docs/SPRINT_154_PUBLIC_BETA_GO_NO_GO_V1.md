@@ -30,9 +30,11 @@ cron, or data changes were made to produce this checklist.
   actual write action, both out of scope for this sprint. Not a
   defect — just untested this sprint. See `docs/QA_MANUAL_CHECKLIST.md`
   §§3–8.
-- **Real mobile device testing** — no physical device available to
-  Claude. Checklist prepared for Adam:
-  `docs/SPRINT_154_REAL_DEVICE_SMOKE_CHECKLIST_V1.md`.
+- ~~**Real mobile device testing**~~ — **DONE.** Adam ran the checklist
+  on iPhone Safari: technical PASS ✅ (no unwanted horizontal scroll,
+  readable text, search/filters/alerts/odpady/feedback all worked,
+  add-to-home-screen worked, icon correct). UX findings from that run
+  are addressed in Sprint 156B — see REQUIRES ADAM below.
 
 ## REQUIRES ADAM
 
@@ -55,14 +57,19 @@ cron, or data changes were made to produce this checklist.
   explicit go-ahead to use a real/test admin session) should run
   `docs/QA_MANUAL_CHECKLIST.md` §§3–8 for real before wide public
   exposure.
-- **Real-device smoke test** — `docs/SPRINT_154_REAL_DEVICE_SMOKE_CHECKLIST_V1.md`.
-- **Beta-status prominence** — optional copy/placement tweak proposed
-  (not applied) in `docs/SPRINT_154_COLD_USER_BETA_FRAMING_AUDIT_V1.md`;
-  Adam's call whether it's worth doing before or during beta.
+- ~~**Real-device smoke test**~~ — **DONE**, see BLOCKED section above.
+- ~~**Beta-status prominence**~~ — **RESOLVED in Sprint 156B**
+  (2026-07-14): the status card was compacted from a 5-line bullet list
+  to two lines specifically so it no longer dominates the first mobile
+  viewport, per the real-device finding. See
+  `docs/SPRINT_156B_MOBILE_FIRST_PRODUCT_VALUE_AND_PERSONALIZATION_V1.md`.
 
 ## DEFERRED TO BETA (explicitly not blocking, per this sprint's scope)
 
-- Locality quick-select chips (replace free-text "Moja okolica").
+- ~~Locality quick-select chips (replace free-text "Moja okolica").~~
+  **Done in Sprint 156B** — a compact PILOT_LOCALITIES chip picker was
+  added on the homepage, reusing the existing free-text field/mechanism
+  rather than replacing it.
 - `loading.tsx`/`error.tsx` route boundaries.
 - Soft-404 → real HTTP 404 fix for invalid alert slugs.
 - Trust-messaging consolidation (currently repetitive, not incorrect).
@@ -97,3 +104,11 @@ end-to-end admin-workflow QA pass, a human judgment call on current
 data freshness/coverage, and a real-device check. None of these
 require new engineering scope — they require Adam's time and
 decisions, not more code.
+
+**Update (Sprint 156B, 2026-07-14):** the privacy controller-identity
+decision (Sprint 155) and the real-device check are now both resolved.
+Remaining: full admin-workflow QA pass, the data-freshness judgment
+call, the open-ended WKD alert review, and final legal wording
+verification. See
+`docs/SPRINT_156B_MOBILE_FIRST_PRODUCT_VALUE_AND_PERSONALIZATION_V1.md`
+for what this sprint changed and an updated honest readiness estimate.

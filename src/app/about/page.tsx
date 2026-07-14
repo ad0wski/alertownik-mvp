@@ -107,7 +107,7 @@ export default function AboutPage() {
             o co chodzi w aplikacji:
           </p>
           <ol className="text-sm text-slate-600 space-y-1.5 list-decimal list-inside leading-relaxed">
-            <li>Sprawdź swoją okolicę — w „Moje alerty" wpisz miejscowość albo zaznacz kategorie.</li>
+            <li>Sprawdź swoją okolicę — w „Moja okolica" wpisz miejscowość albo zaznacz kategorie.</li>
             <li>Zobacz aktualne alerty na liście.</li>
             <li>Sprawdź „Odpady" albo źródło przy wybranym alercie („Zobacz źródło →").</li>
             <li>Wyślij jedną krótką opinię — wystarczy jedno zdanie.</li>

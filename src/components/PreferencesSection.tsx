@@ -54,7 +54,7 @@ export function PreferencesSection({ savedPrefs, onSave, onClear }: Props) {
     <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-4 sm:p-5 mb-5 flex flex-col gap-4">
       {/* Header */}
       <div>
-        <h2 className="text-base font-semibold text-slate-900">Moje alerty</h2>
+        <h2 className="text-base font-semibold text-slate-900">Moja okolica</h2>
         <p className="text-sm text-slate-500 mt-0.5 leading-relaxed">
           Wybierz swoją okolicę i kategorie, które Cię interesują. Nie wymaga
           konta — preferencje zapisują się tylko w tej przeglądarce.

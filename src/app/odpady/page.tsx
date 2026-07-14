@@ -59,15 +59,8 @@ export default function OdpadyPage() {
           </span>
         </div>
         <p className="text-sm sm:text-base text-slate-500 leading-relaxed">
-          Alertownik pokazuje najbliższe terminy odbioru odpadów dla Twojej
-          okolicy — bez przeszukiwania harmonogramów PDF. Sekcja poniżej
-          pokazuje wyłącznie terminy przepisane ręcznie z oficjalnych
-          harmonogramów i zweryfikowane przed publikacją — każdy z linkiem do
-          źródła. Zaczynamy od{" "}
-          <span className="font-medium text-slate-600">Komorowa</span> (zabudowa
-          jednorodzinna, harmonogram Gminy Michałowice na 2026 rok); jeśli
-          Twojej okolicy jeszcze tu nie ma, skorzystaj z oficjalnych źródeł
-          poniżej.
+          Najbliższe terminy odbioru odpadów dla Twojej okolicy — ręcznie
+          przepisane z oficjalnych harmonogramów, zawsze z linkiem do źródła.
         </p>
       </div>
 
@@ -84,6 +77,11 @@ export default function OdpadyPage() {
             <li>Widzisz najbliższe terminy odbioru, podzielone według rodzaju odpadów.</li>
             <li>Każdy termin wskazuje źródło, z którego pochodzi — to ono jest najważniejsze, nie ta strona.</li>
             <li>Przypomnienia (np. dzień wcześniej) są planowane na później — na razie strona pokazuje tylko terminy.</li>
+            <li>
+              Zaczynamy od <span className="font-medium text-slate-700">Komorowa</span> (zabudowa
+              jednorodzinna, harmonogram Gminy Michałowice na 2026 rok) — jeśli
+              Twojej okolicy jeszcze tu nie ma, skorzystaj z oficjalnych źródeł poniżej.
+            </li>
           </ul>
           <p className="text-sm text-slate-500 mt-3 leading-relaxed">
             Planowane rodzaje odpadów: {PLANNED_WASTE_TYPES.join(", ")}.
@@ -127,7 +125,7 @@ export default function OdpadyPage() {
             <Link href="/" className="font-medium text-blue-600 hover:underline">
               stronie głównej
             </Link>{" "}
-            albo zaznaczyć kategorię „Odpady" w „Moje alerty", żeby widzieć
+            albo zaznaczyć kategorię „Odpady" w „Moja okolica", żeby widzieć
             tylko je.
           </p>
         </section>

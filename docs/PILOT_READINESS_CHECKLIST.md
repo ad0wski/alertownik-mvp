@@ -21,7 +21,7 @@ Last updated: June 2026
 - [ ] Każda karta alertu pokazuje tytuł, kategorię, poziom ważności, miejsce, daty
 - [ ] Filtry kategorii działają (Transport, Woda, Prąd, Odpady, Drogi, Komunikaty)
 - [ ] Wyszukiwanie po tytule/miejscu działa
-- [ ] Tryb „Moje alerty" — zapisywanie i wczytywanie preferencji działa
+- [ ] Tryb „Moja okolica" — zapisywanie i wczytywanie preferencji działa
 - [ ] Stan pusty (brak alertów / brak wyników) wyświetla czytelny komunikat
 - [ ] Skeleton ładowania pojawia się przy wolnym połączeniu
 - [ ] Błąd połączenia z serwerem wyświetla czytelny komunikat

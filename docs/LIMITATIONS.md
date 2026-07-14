@@ -36,13 +36,13 @@ Supabase Auth gates `/admin`, `/admin/sources`, `/ai-helper`, and `/builder`, bu
 
 Residents have to open the app to see new alerts. There's no email, SMS, or push notification when something new is published.
 
-**Consequence:** A resident only learns about a new alert by checking the homepage themselves, or via "Moje alerty" filtering down what they see once they do check.
+**Consequence:** A resident only learns about a new alert by checking the homepage themselves, or via "Moja okolica" filtering down what they see once they do check.
 
 ---
 
-## "Moje alerty" Preferences Are Local-Only
+## "Moja okolica" Preferences Are Local-Only
 
-Category and location-keyword preferences set in "Moje alerty" are saved in the browser's `localStorage`, not in an account.
+Category and location-keyword preferences set in "Moja okolica" are saved in the browser's `localStorage`, not in an account.
 
 **Consequence:** Preferences don't sync across devices and are lost if the user clears browser data or switches browsers/phones. There's no account system to fix this — by design, for now (no login required for residents).
 

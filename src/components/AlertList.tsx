@@ -7,6 +7,7 @@ import { PreferencesSection } from "@/components/PreferencesSection";
 import { getSupabaseAlerts } from "@/lib/getSupabaseAlerts";
 import { getAlertTimeStatus } from "@/lib/getAlertTimeStatus";
 import { buildFeedbackQuickReasons } from "@/lib/feedbackMailto";
+import { PILOT_LOCALITIES } from "@/lib/officialSourceChecklist";
 import {
   loadPreferences,
   savePreferences,
@@ -121,6 +122,13 @@ export function AlertList() {
   // can't dominate the page even before old rows get archived in the DB.
   const [showEnded, setShowEnded] = useState(false);
 
+  // Sprint 156B — compact, non-blocking locality quick-pick (real-device
+  // finding: personalization wasn't discoverable enough). Reuses the same
+  // UserPreferences/localStorage mechanism as PreferencesSection below —
+  // this is just a faster entry point for the locationKeywords field, not
+  // a second location system.
+  const [showLocalityPicker, setShowLocalityPicker] = useState(false);
+
   useEffect(() => {
     // Fetch alerts
     getSupabaseAlerts()
@@ -152,7 +160,14 @@ export function AlertList() {
     setPrefs({ locationKeywords: "", categories: [] });
   }
 
+  function handleSelectLocality(locality: string) {
+    handleSavePrefs({ ...prefs, locationKeywords: locality });
+    handleSetMode("my");
+    setShowLocalityPicker(false);
+  }
+
   const prefsSet = hasPreferences(prefs);
+  const localitySet = prefs.locationKeywords.trim().length > 0;
 
   // ── "Co sprawdzić teraz" status (Sprint 96) ─────────────────────────────────
   // A practical "reason to return" line, independent of whatever category/
@@ -218,7 +233,7 @@ export function AlertList() {
     <>
       {/* ── Mode toggle ─────────────────────────────────────────────────── */}
       {prefsReady && (
-        <div className="flex items-center gap-2 mb-5">
+        <div className="flex items-center gap-2 mb-2">
           <button
             onClick={() => handleSetMode("all")}
             className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
@@ -237,7 +252,7 @@ export function AlertList() {
                 : "bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:text-slate-900"
             }`}
           >
-            Moje alerty
+            Moja okolica
             {/* Small dot indicator when prefs are saved but mode is "all" */}
             {mode === "all" && prefsSet && (
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" aria-hidden="true" />
@@ -246,35 +261,92 @@ export function AlertList() {
         </div>
       )}
 
-      {/* ── "Co sprawdzić teraz" status (Sprint 96, +freshness Sprint 97) ─ */}
-      {!loading && (
-        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 mb-5 flex flex-col gap-2">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-slate-600">
-              <span className="font-semibold text-slate-800">
-                {liveAlertsForMe.length}
-              </span>{" "}
-              {liveAlertsForMe.length === 1 ? "aktywny lub nadchodzący alert" : "aktywnych lub nadchodzących alertów"}
-              {prefsSet ? " w Twojej okolicy" : " w tej chwili"}.
-            </p>
-            <Link
-              href="/odpady"
-              className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline shrink-0"
-            >
-              Sprawdź najbliższy odbiór odpadów →
-            </Link>
-          </div>
-          {recentlyTouched.length > 0 && (
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Nowe albo zmienione w tym tygodniu:{" "}
-              {recentlyTouched.slice(0, 2).map((a, i) => (
-                <span key={a.id}>
-                  {i > 0 && ", "}
-                  <span className="font-medium text-slate-600">{a.title}</span>
-                </span>
-              ))}
-              {recentlyTouched.length > 2 && ` i ${recentlyTouched.length - 2} więcej`}.
-            </p>
+      {/* ── Locality quick-pick + "Co sprawdzić teraz" status ───────────── */}
+      {/* Sprint 156B: these were two separate bordered cards; merged into one
+          shared card (divided by a hairline) so mobile viewports reach the
+          top of the first alert card without scrolling — pure spacing
+          change, no information removed. Compact, non-blocking
+          personalization CTA reuses PILOT_LOCALITIES and the existing
+          preferences mechanism; skipping it leaves everything as before. */}
+      {(prefsReady || !loading) && (
+        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 mb-2 flex flex-col gap-1.5">
+          {prefsReady && (
+            <>
+              {!localitySet ? (
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm text-slate-600">
+                    Ustaw swoją okolicę, aby widzieć tylko alerty, które mogą Cię dotyczyć.
+                  </p>
+                  <button
+                    onClick={() => setShowLocalityPicker((v) => !v)}
+                    aria-expanded={showLocalityPicker}
+                    className="shrink-0 rounded-lg bg-blue-600 px-3.5 py-1.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+                  >
+                    Ustaw moją okolicę
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
+                  <span>
+                    Twoja okolica:{" "}
+                    <span className="font-medium text-slate-800">{prefs.locationKeywords}</span>
+                  </span>
+                  <button
+                    onClick={() => setShowLocalityPicker((v) => !v)}
+                    aria-expanded={showLocalityPicker}
+                    className="font-medium text-blue-600 hover:underline"
+                  >
+                    Zmień
+                  </button>
+                </div>
+              )}
+              {showLocalityPicker && (
+                <div className="flex flex-wrap gap-2">
+                  {PILOT_LOCALITIES.map((locality) => (
+                    <button
+                      key={locality}
+                      onClick={() => handleSelectLocality(locality)}
+                      className="px-3.5 py-1.5 rounded-full text-sm font-medium border border-slate-200 bg-white text-slate-600 hover:border-blue-400 hover:text-blue-700 transition-colors"
+                    >
+                      {locality}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* ── "Co sprawdzić teraz" status (Sprint 96, +freshness Sprint 97) ─ */}
+          {!loading && (
+            <div className={`flex flex-col gap-2 ${prefsReady ? "pt-2 border-t border-slate-200" : ""}`}>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm text-slate-600">
+                  <span className="font-semibold text-slate-800">
+                    {liveAlertsForMe.length}
+                  </span>{" "}
+                  {liveAlertsForMe.length === 1 ? "aktywny lub nadchodzący alert" : "aktywnych lub nadchodzących alertów"}
+                  {prefsSet ? " w Twojej okolicy" : " w tej chwili"}.
+                </p>
+                <Link
+                  href="/odpady"
+                  className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline shrink-0"
+                >
+                  Sprawdź najbliższy odbiór odpadów →
+                </Link>
+              </div>
+              {recentlyTouched.length > 0 && (
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Nowe albo zmienione w tym tygodniu:{" "}
+                  {recentlyTouched.slice(0, 2).map((a, i) => (
+                    <span key={a.id}>
+                      {i > 0 && ", "}
+                      <span className="font-medium text-slate-600">{a.title}</span>
+                    </span>
+                  ))}
+                  {recentlyTouched.length > 2 && ` i ${recentlyTouched.length - 2} więcej`}.
+                </p>
+              )}
+            </div>
           )}
         </div>
       )}
@@ -305,7 +377,7 @@ export function AlertList() {
       {(loading || mode === "all" || prefsSet) && (
         <>
           {/* Search input */}
-          <div className="relative mb-4">
+          <div className="relative mb-2">
             <input
               type="text"
               value={query}
@@ -326,16 +398,19 @@ export function AlertList() {
             )}
           </div>
 
-          {/* Category filters — scrolls horizontally on mobile, wraps on desktop */}
-          <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 mb-5">
-            <div className="flex gap-2 min-w-max sm:min-w-0 sm:flex-wrap pb-1 sm:pb-0">
+          {/* Category filters — wraps on all screen sizes (Sprint 156B: the
+              previous mobile-only horizontal scroll hid categories off-screen
+              with no visible affordance that more existed; wrapping keeps
+              every category visible and tappable at once). */}
+          <div className="mb-2">
+            <div className="flex flex-wrap gap-1.5">
               {categoryFilters.map((filter) => {
                 const isActive = filter.value === selected;
                 return (
                   <button
                     key={filter.value}
                     onClick={() => setSelected(filter.value)}
-                    className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors whitespace-nowrap ${
+                    className={`px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors whitespace-nowrap ${
                       isActive
                         ? "bg-blue-600 text-white border-blue-600"
                         : "bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:text-slate-900"

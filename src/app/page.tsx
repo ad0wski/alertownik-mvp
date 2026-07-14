@@ -4,39 +4,30 @@ import { BetaStatusCard } from "@/components/BetaStatusCard";
 
 export default function Home() {
   return (
-    <main className="max-w-3xl mx-auto w-full px-4 sm:px-6 py-6 sm:py-10">
+    <main className="max-w-3xl mx-auto w-full px-4 sm:px-6 py-3 sm:py-10">
 
-      {/* Hero */}
-      <div className="mb-6 sm:mb-10">
+      {/* Hero — Sprint 156B: value-first, shortened to two short sentences
+          so a mobile visitor reaches the actual alert list without a long
+          scroll (real-device finding: text used to dominate the first
+          viewport). Category chips and the 60s-explainer row were dropped
+          from the hero itself — the category filter buttons right below
+          already show every category, and /about still carries the longer
+          explainer for anyone who wants it. Margins/padding on this page
+          and in AlertList/BetaStatusCard were also tightened on mobile so
+          the top of the first alert card clears the fold at 390×844
+          (real-device requirement — verified via screenshot). */}
+      <div className="mb-2 sm:mb-6">
         <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight leading-snug mb-2">
           Lokalne zmiany i utrudnienia w prostym formacie.
         </h1>
-        <p className="text-sm sm:text-base text-slate-500 mb-4 sm:mb-5 leading-relaxed">
-          Alertownik zbiera w jednym miejscu informacje o utrudnieniach w transporcie,
-          dostawach wody i prądu, drogach, odpadach i komunikatach gminnych dla{" "}
-          <span className="font-medium text-slate-600">Komorowa, Pruszkowa i okolic</span> —
-          bez przeszukiwania długich ogłoszeń.
+        <p className="text-sm sm:text-base text-slate-500 leading-relaxed">
+          Sprawdź, co może dziś wpłynąć na Twój dzień w okolicy. Alertownik
+          zbiera w jednym miejscu komunikaty o transporcie, wodzie, prądzie,
+          drogach i odpadach dla{" "}
+          <span className="font-medium text-slate-600">Komorowa, Pruszkowa i okolic</span>.
         </p>
-        <div className="flex flex-wrap gap-2 mb-4 sm:mb-5">
-          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-full px-3 py-1.5 shadow-sm">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" aria-hidden="true" />
-            Transport
-          </span>
-          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-full px-3 py-1.5 shadow-sm">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" aria-hidden="true" />
-            Awarie
-          </span>
-          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-full px-3 py-1.5 shadow-sm">
-            <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0" aria-hidden="true" />
-            Komunikaty lokalne
-          </span>
-        </div>
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-slate-400 mt-1.5">
           Wczesny pilotaż —{" "}
-          <Link href="/about#jak-testowac" className="font-medium text-slate-500 hover:text-blue-700 underline">
-            sprawdź w 60 sekund, jak to działa
-          </Link>
-          {" "}albo{" "}
           <Link href="/about#chce-testowac" className="font-medium text-emerald-600 hover:text-emerald-800 underline">
             zgłoś się jako tester
           </Link>

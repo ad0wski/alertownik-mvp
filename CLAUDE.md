@@ -20,7 +20,7 @@ Alertownik is a Polish local civic alerts web app. Residents see published alert
 ```
 /src
   /app
-    page.tsx                — Public homepage (alert list, search, Moje alerty)
+    page.tsx                — Public homepage (alert list, search, Moja okolica)
     layout.tsx              — Root layout, metadata, viewport
     manifest.ts             — PWA manifest
     /alerts/[slug]/page.tsx — Public alert detail page (dynamic)
@@ -119,7 +119,7 @@ Only the **anon/publishable key** is used (named `NEXT_PUBLIC_SUPABASE_PUBLISHAB
 
 | Route | Visibility | Purpose |
 |---|---|---|
-| `/` | Public | Alert list, search, category filter, Moje alerty |
+| `/` | Public | Alert list, search, category filter, Moja okolica |
 | `/alerts/[slug]` | Public | Alert detail page |
 | `/login` | Public | Admin login form |
 | `/admin` | Admin | Dashboard: stats, sources-to-check, recent checks |

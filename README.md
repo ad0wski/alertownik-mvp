@@ -44,7 +44,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | Feature | Location |
 |---|---|
 | Public alert list, search, category filters | `/` |
-| "Moje alerty" user preferences (localStorage) | `/` |
+| "Moja okolica" user preferences (localStorage) | `/` |
 | Alert detail pages | `/alerts/[slug]` |
 | Admin login (Supabase Auth) | `/login` |
 | Admin dashboard with stats and source overview | `/admin` |

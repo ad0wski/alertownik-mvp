@@ -55,6 +55,17 @@ export function AppHeader() {
         : "text-slate-700 hover:text-slate-900 hover:bg-slate-100"
     }`;
 
+  // Sprint 156B — real-device finding: the 3 public links + logo were tight
+  // at 375px, forcing a horizontal scroll for the last item ("O projekcie").
+  // Slightly smaller padding/text on mobile only (desktop nav unaffected)
+  // recovers enough width to fit all three without scrolling.
+  const mobilePublicNavLinkClass = (href: string) =>
+    `px-2 py-1.5 rounded-lg text-xs font-semibold transition-colors shrink-0 whitespace-nowrap ${
+      isActive(href)
+        ? "bg-blue-50 text-blue-700"
+        : "text-slate-700 hover:text-slate-900 hover:bg-slate-100"
+    }`;
+
   return (
     <header className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
@@ -138,13 +149,13 @@ export function AppHeader() {
                 wrapping/overflowing the header (3 links + logo no longer fit
                 on a 375px screen) — same pattern as the category-filter row. */}
             <div className="flex items-center gap-1 min-w-0 overflow-x-auto">
-              <Link href="/" className={publicNavLinkClass("/") + " shrink-0 whitespace-nowrap"}>
+              <Link href="/" className={mobilePublicNavLinkClass("/")}>
                 Alerty
               </Link>
-              <Link href="/odpady" className={publicNavLinkClass("/odpady") + " shrink-0 whitespace-nowrap"}>
+              <Link href="/odpady" className={mobilePublicNavLinkClass("/odpady")}>
                 Odpady
               </Link>
-              <Link href="/about" className={publicNavLinkClass("/about") + " shrink-0 whitespace-nowrap"}>
+              <Link href="/about" className={mobilePublicNavLinkClass("/about")}>
                 O projekcie
               </Link>
             </div>

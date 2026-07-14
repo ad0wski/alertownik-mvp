@@ -8,34 +8,43 @@ import { buildFeedbackQuickReasons } from "@/lib/feedbackMailto";
 // in the app (hero's pilot line, /about's "Kto przygotowuje alerty" and
 // "Źródła pozostają najważniejsze" sections, the per-alert "Zatwierdzone
 // ręcznie" line added Sprint 96).
+//
+// Sprint 156B — real-device smoke found this card, in its original
+// 5-bullet form, dominating the first mobile viewport and pushing actual
+// alerts below the fold. Compacted to two lines: a one-line status
+// summary linking to /about (which still carries the full detail — manual
+// publish, AI never auto-publishes, source precedence — nothing removed,
+// just not repeated on first paint) plus the independence line, kept
+// verbatim since it's asserted directly on the homepage.
 export function BetaStatusCard() {
   const missingSourceReason = buildFeedbackQuickReasons().find((r) => r.id === "missing-alert");
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white px-4 py-3.5 mb-5">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">
-        Status pilotażu
-      </p>
-      <ul className="text-sm text-slate-600 space-y-1 leading-relaxed list-disc list-inside">
-        <li>Alertownik jest w kontrolowanej becie — liczba alertów i okolic stale rośnie.</li>
-        <li>Każdy alert jest sprawdzany i publikowany ręcznie przez administratora.</li>
-        <li>AI może pomagać w przygotowaniu treści, ale nigdy nie publikuje samodzielnie.</li>
-        <li>Oficjalne źródło zawsze ma pierwszeństwo przed szybkością Alertownika.</li>
-        <li>Alertownik jest niezależnym projektem — nie jest oficjalną aplikacją WKD, PGE ani żadnej gminy.</li>
-      </ul>
-      <div className="flex flex-wrap items-center gap-3 mt-3">
-        <Link href="/about" className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline">
-          Więcej o pilotażu →
+    <div className="rounded-xl border border-slate-200 bg-white px-4 py-1.5 mb-2">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+        <span className="font-semibold uppercase tracking-wide text-slate-400">
+          Status pilotażu
+        </span>
+        <span className="text-slate-300" aria-hidden="true">•</span>
+        <span className="text-slate-500">Wczesna beta, alerty sprawdzane ręcznie</span>
+        <Link href="/about" className="font-medium text-blue-600 hover:text-blue-800 hover:underline">
+          Jak działa pilotaż →
         </Link>
-        {missingSourceReason && (
-          <a
-            href={missingSourceReason.mailto}
-            className="text-sm font-medium text-slate-500 hover:text-blue-700 hover:underline"
-          >
-            Zgłoś brakujące źródło lub błąd →
-          </a>
-        )}
       </div>
+      <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+        Alertownik jest niezależnym projektem — nie jest oficjalną aplikacją WKD, PGE ani żadnej gminy.
+        {missingSourceReason && (
+          <>
+            {" "}
+            <a
+              href={missingSourceReason.mailto}
+              className="font-medium hover:text-blue-700 hover:underline whitespace-nowrap"
+            >
+              Zgłoś brakujące źródło lub błąd →
+            </a>
+          </>
+        )}
+      </p>
     </div>
   );
 }

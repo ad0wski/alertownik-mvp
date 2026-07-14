@@ -149,7 +149,7 @@ Module not found: Can't resolve '@/lib/something'
 ## What These Checks Do NOT Cover
 
 - **Admin workflows** — login, dashboard, builder, AI Helper, sources, source checks — all require manual testing with a real Supabase session. See `docs/QA_MANUAL_CHECKLIST.md`.
-- **Public user flows** — alert rendering, search, category filters, Moje alerty — require manual testing in a browser.
+- **Public user flows** — alert rendering, search, category filters, Moja okolica — require manual testing in a browser.
 - **Supabase data integrity** — whether rows are correctly saved or RLS policies are correctly enforced requires manual inspection in Supabase Table Editor.
 - **Vercel deployment** — a local passing build does not guarantee a successful Vercel deployment. Check the Vercel dashboard after pushing.
 - **Mobile layout** — must be tested manually at a narrow viewport.

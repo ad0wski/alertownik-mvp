@@ -62,7 +62,7 @@ export function AreaPreferenceBar({ value, onChange }: Props) {
         <p className="text-xs text-slate-400 leading-relaxed">
           Nie podawaj dokładnego adresu — wystarczy miejscowość lub grupa ulic.
           Preferencje zapisują się tylko w tej przeglądarce i są też używane
-          w „Moje alerty” na stronie głównej.
+          w „Moja okolica” na stronie głównej.
         </p>
         <div className="flex flex-wrap gap-2">
           <button
@@ -129,7 +129,7 @@ export function AreaPreferenceBar({ value, onChange }: Props) {
         </div>
       </div>
       <p className="text-xs text-slate-400">
-        Ta sama okolica jest też używana w „Moje alerty” na stronie głównej.
+        Ta sama okolica jest też używana w „Moja okolica” na stronie głównej.
       </p>
     </div>
   );
