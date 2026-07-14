@@ -287,6 +287,23 @@ pass if it can't be resolved right now.
 
 ## 6. Legal wording audit (`/prywatnosc`, `/zasady`)
 
+**Correction (Sprint 156C-2, 2026-07-14):** the international-transfer
+finding in this section used an over-broad simplification — "Vercel,
+Supabase, Anthropic are US-domiciled, therefore a gap exists" — that
+treated provider headquarters as sufficient evidence of an actual data
+transfer, without checking actual data flows, actual plan/contract
+terms, or actual infrastructure regions. Sprint 156C-2 re-derived this
+finding from evidence and **implemented** a narrower, more precisely
+scoped disclosure covering Vercel only (confirmed Hobby plan, Vercel's
+own DPA confirmed inapplicable at that tier, confirmed default US
+compute region) — deliberately excluding Supabase (region genuinely
+unconfirmed, not guessed) and Anthropic (confirmed to receive no
+personal data at all). See
+`docs/SPRINT_156C2_PRIVACY_DATA_FLOW_AND_TRANSFER_EVIDENCE_V1.md` for
+the full evidence matrix. The §6.3 proposed paragraph below is
+**superseded** by that implementation — kept here only as a historical
+record of the original (less precise) reasoning.
+
 **Method note:** EUR-Lex's and UODO's own pages did not render usable
 content through this session's fetch tool (empty/404 responses for the
 specific URLs tried) — this is a tooling limitation, not a claim that

@@ -440,6 +440,25 @@ test.describe("Legal pages (/prywatnosc, /zasady)", () => {
     }
   });
 
+  // Sprint 156C-2 — evidence-based international-transfer disclosure.
+  // Scoped to Vercel only: confirmed Hobby plan (Sprint 153 docs) + Vercel's
+  // own DPA text (fetched 2026-07-14) explicitly excludes Hobby-tier
+  // customers + no `regions` override in vercel.json (defaults to Vercel's
+  // US region). Supabase's project region could not be confirmed from code
+  // (Supabase offers both EU and non-EU regions) — deliberately NOT
+  // mentioned here rather than guessed. Anthropic confirmed to receive only
+  // admin-pasted public source text, never personal data — also not listed
+  // as a transfer-relevant recipient.
+  test("privacy policy discloses Vercel's US location and the Hobby-plan DPA gap, without guessing about Supabase or Anthropic", async ({ page }) => {
+    await page.goto("/prywatnosc");
+    await expect(page.getByText(/Vercel Inc\. ma siedzibę w USA/)).toBeVisible();
+    await expect(page.getByText(/poza Europejskim\s+Obszarem Gospodarczym/)).toBeVisible();
+    await expect(page.getByText(/nie obejmuje formalnej umowy powierzenia przetwarzania danych/)).toBeVisible();
+    // No fabricated claim that a transfer safeguard is in place for Vercel.
+    const html = await page.content();
+    expect(html).not.toContain("standardowych klauzul umownych stosowanych przez tych dostawców");
+  });
+
   // Sprint 155 — Variant A: named data controller + dedicated project
   // contact address, replacing the previous anonymous-operator wording.
   test("privacy policy names the data controller and dedicated project contact", async ({ page }) => {

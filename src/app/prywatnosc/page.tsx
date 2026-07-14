@@ -119,7 +119,14 @@ export default function PrivacyPage() {
           <ul className={listClass}>
             <li>
               <span className="font-medium">Vercel</span> — hosting aplikacji
-              (logi techniczne).
+              (logi techniczne, np. adres IP). Vercel Inc. ma siedzibę w USA;
+              w ramach standardowej infrastruktury hostingowej logi
+              techniczne mogą być przetwarzane na serwerach poza Europejskim
+              Obszarem Gospodarczym. Alertownik korzysta obecnie z
+              bezpłatnego planu Vercel, który — zgodnie z warunkami Vercel —
+              nie obejmuje formalnej umowy powierzenia przetwarzania danych
+              ani standardowych klauzul umownych; zostanie to uregulowane
+              przed szerszym startem publicznym.
             </li>
             <li>
               <span className="font-medium">Supabase</span> — baza danych
