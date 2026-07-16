@@ -612,23 +612,24 @@ test.describe("Sprint 156B — homepage value-first + personalization", () => {
     expect(saved).toContain("Pruszków");
   });
 
-  test("category filters wrap and are all visible on a narrow mobile viewport, with no hidden horizontal scroll", async ({ page }) => {
+  // Sprint 158A-2 supersedes this: on narrow viewports the wrapped chip row
+  // (which used to grow to two rows and push the first alert card below the
+  // fold) is replaced by one compact <select>. This test now asserts the
+  // select is what's visible, not the chip row — see the dedicated
+  // "Sprint 158A-2" describe block below for the fuller mobile/desktop
+  // category-control coverage.
+  test("category filters use the compact mobile select (not chips) on a narrow viewport, with no hidden horizontal scroll", async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto("/");
-    const categories = ["Wszystkie", "Transport", "Woda", "Prąd", "Odpady", "Drogi", "Komunikaty"];
-    for (const label of categories) {
-      await expect(page.getByRole("button", { name: label, exact: true })).toBeVisible();
-    }
-    // The category-filter row itself must not require horizontal scrolling —
-    // every button wraps onto additional rows instead of overflowing.
-    const overflowsHorizontally = await page.evaluate(() => {
-      const btn = Array.from(document.querySelectorAll("button")).find(
-        (b) => b.textContent?.trim() === "Wszystkie"
-      );
-      const row = btn?.parentElement;
-      if (!row) return true;
-      return row.scrollWidth > row.clientWidth + 1;
-    });
+    const select = page.locator("#category-select");
+    await expect(select).toBeVisible();
+    const options = await select.locator("option").allTextContents();
+    expect(options).toEqual(["Wszystkie", "Transport", "Woda", "Prąd", "Odpady", "Drogi", "Komunikaty"]);
+    await expect(page.getByRole("button", { name: "Transport", exact: true })).toHaveCount(0);
+
+    const overflowsHorizontally = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1
+    );
     expect(overflowsHorizontally).toBe(false);
   });
 });
@@ -860,4 +861,90 @@ test.describe("Sprint 158A — personalization clarity and empty states", () => 
       expect(bodyOverflows).toBe(false);
     });
   }
+});
+
+// Sprint 158A-2 — Mobile Category Control and First-Viewport Completion.
+// Follow-up to Sprint 158A's own verification, which found two remaining
+// gaps: (1) the category filter still wrapped into two rows of chips on
+// small screens instead of one compact control, and (2) the first alert
+// card's top edge landed at y≈840 on a 390×844 viewport — technically
+// inside the viewport but only ~3.5px of it visible, not a usable "first
+// glance" per the Alerts First requirement. Both are addressed by replacing
+// the mobile chip row with a native <select> (desktop chips unchanged) and
+// trimming redundant vertical spacing above the list.
+test.describe("Sprint 158A-2 — mobile category control and first viewport", () => {
+  for (const width of [375, 390, 414]) {
+    test(`mobile category select works end-to-end at ${width}px: default, change, filter, revert, no scroll`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 812 });
+      await page.goto("/");
+      await expect(
+        page.getByText(/Wszystkich alertów|Brak aktualnych alertów/)
+      ).toBeVisible({ timeout: 15_000 });
+
+      const select = page.getByLabel("Kategoria");
+      await expect(select).toBeVisible();
+      await expect(select).toHaveValue("all");
+
+      // Desktop chips must not be present in this viewport at all.
+      await expect(page.getByRole("button", { name: "Transport", exact: true })).toHaveCount(0);
+
+      await select.selectOption("transport");
+      await expect(select).toHaveValue("transport");
+      // Same filtering model as desktop: switching categories changes what's
+      // counted/listed, mirrored by the existing counter/empty-state copy.
+      await expect(
+        page.getByText(/Wszystkich alertów|Wyświetlane|Brak aktywnych alertów w kategorii|Brak alertów/)
+      ).toBeVisible({ timeout: 15_000 });
+
+      await select.selectOption("all");
+      await expect(select).toHaveValue("all");
+
+      const overflowsHorizontally = await page.evaluate(
+        () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1
+      );
+      expect(overflowsHorizontally).toBe(false);
+    });
+  }
+
+  test("desktop keeps the category chip row; mobile select is hidden (not removed)", async ({ page }) => {
+    // Default project viewport (Desktop Chrome, well above the sm breakpoint).
+    await page.goto("/");
+    const categories = ["Wszystkie", "Transport", "Woda", "Prąd", "Odpady", "Drogi", "Komunikaty"];
+    for (const label of categories) {
+      await expect(page.getByRole("button", { name: label, exact: true })).toBeVisible();
+    }
+    // The select exists in the DOM at every width (CSS-only hide/show, not
+    // conditional rendering) — on desktop it must simply not be visible.
+    await expect(page.locator("#category-select")).toBeHidden();
+
+    const transportBtn = page.getByRole("button", { name: "Transport", exact: true });
+    await transportBtn.click();
+    await expect(page.getByText(/Kategoria:\s*Transport|Wszystkich alertów|Wyświetlane/)).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(transportBtn).toHaveClass(/bg-blue-600/);
+  });
+
+  test("first active alert card starts with a clear, usable margin above the fold at 390×844", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/");
+    await expect(
+      page.getByText(/Wszystkich alertów|Brak aktualnych alertów/)
+    ).toBeVisible({ timeout: 15_000 });
+
+    const firstCard = page.locator("main article").first();
+    if (!(await firstCard.isVisible().catch(() => false))) {
+      // No published alerts in Supabase for this environment — nothing to
+      // measure. The empty-state message assertion above already covers
+      // this branch; this test only pins the layout when a card exists.
+      return;
+    }
+
+    const box = await firstCard.boundingBox();
+    expect(box).not.toBeNull();
+    // "A clear, usable start" means at least 64px of the card's top is
+    // visible before the fold at 390×844 — not just a sliver crossing the
+    // viewport boundary.
+    expect(box!.y).toBeLessThanOrEqual(780);
+  });
 });

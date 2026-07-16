@@ -20,7 +20,7 @@ export function BetaStatusCard() {
   const missingSourceReason = buildFeedbackQuickReasons().find((r) => r.id === "missing-alert");
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white px-4 py-1.5 mb-2">
+    <div className="rounded-xl border border-slate-200 bg-white px-4 py-1 mb-1.5">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
         <span className="font-semibold uppercase tracking-wide text-slate-400">
           Status pilotażu
@@ -31,7 +31,7 @@ export function BetaStatusCard() {
           Jak działa pilotaż →
         </Link>
       </div>
-      <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+      <p className="text-xs text-slate-500 mt-1 leading-snug">
         Alertownik jest niezależnym projektem — nie jest oficjalną aplikacją WKD, PGE ani żadnej gminy.
         {missingSourceReason && (
           <>

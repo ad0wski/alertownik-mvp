@@ -183,7 +183,109 @@ reaches Production until Adam merges and deploys.
   heuristic (`src/lib/pilotCoverage.ts`), not geocoding. Fine for six known
   localities; would need real geodata if the pilot area grows more fragmented.
 
+## SPRINT 158A-2 COMPLETION
+
+A follow-up verification pass on this sprint's own commit (`9147ede`) found
+two remaining gaps against the Alerts First / mobile-hierarchy requirement:
+
+1. Category filters still wrapped into two rows of chips on small screens
+   (a deliberate Sprint 156B decision, kept as-is by 158A), instead of one
+   compact control.
+2. At 390×844, the first alert card's top edge landed at y≈840 — inside
+   the viewport, but with only ~3.5px visible before the fold. Not a
+   comfortable "first glance," even though it technically crossed the
+   viewport boundary.
+
+### Mobile category select (desktop unchanged)
+
+`AlertList.tsx`'s category-filter block now renders two mutually exclusive
+controls sharing the same `selected`/`setSelected` state and the same
+`categoryFilters` list — never both at once:
+
+- **Desktop** (`sm:` and up): the existing chip row, class `hidden sm:flex`,
+  unchanged in behavior, styling, and accessibility.
+- **Mobile** (below `sm`): a single native `<select id="category-select">`
+  labeled "Kategoria", class `sm:hidden`, with one `<option>` per entry in
+  `categoryFilters` (`Wszystkie`, `Transport`, `Woda`, `Prąd`, `Odpady`,
+  `Drogi`, `Komunikaty` — no new category list, no duplicated model).
+
+Because both controls read/write the same state, switching the select
+filters the list exactly like the desktop chips did; there is exactly one
+category-filtering model, not two.
+
+### First-viewport spacing (content preserved, nothing hidden)
+
+Chip→select on mobile alone freed some vertical space, but not enough. The
+remaining gap was closed with small, non-destructive spacing trims — no
+text shortened, no information removed, no sticky/overlapping elements
+introduced:
+
+- `page.tsx`: main container's mobile top padding `py-3` → `py-2`; hero
+  subtitle `leading-relaxed` → `leading-snug` on mobile only (`sm:leading-relaxed`
+  preserved at desktop widths) — the subtitle wraps to 3–4 lines at 390px,
+  so line-height was the single largest lever here.
+- `BetaStatusCard.tsx`: card padding `py-1.5` → `py-1`, outer margin
+  `mb-2` → `mb-1.5`, disclaimer paragraph `leading-relaxed` → `leading-snug`.
+  Same two lines of content, same links, same claims — just tighter line
+  spacing.
+- `AlertList.tsx`: mode-toggle buttons `py-2` → `py-1.5` and row margin
+  `mb-2` → `mb-1.5`; active-scope box padding `py-2` → `py-1.5` and margin
+  `mb-2` → `mb-1.5`; alert counter margin `mb-5` → `mb-3`.
+
+Measured live (Playwright, dev server) at 390×844 before/after:
+
+| | articleTop (first `<article>` top, px) |
+|---|---|
+| Before (two-row chips, original spacing) | 840.5 |
+| After (mobile select only) | 816.5 |
+| After (select + spacing trims) | **771.5** |
+
+771.5 ≤ 780 (the ≥64px-before-fold threshold used by the new automated
+test), with the category badge and the start of the alert title visibly
+readable in the same screenshot, not just technically present. Verified
+with no layout regression at 375×812 and 414×896 (same 771.5, since none of
+the trimmed elements vary by these three widths). No horizontal scroll at
+any of the three widths.
+
+### New automated test
+
+`tests/e2e/public.spec.ts`, `describe("Sprint 158A-2 — mobile category
+control and first viewport")`:
+
+- Mobile select end-to-end at 375/390/414px: visible, default `all`,
+  desktop chips absent, selecting `Transport` updates the list/counter,
+  reverting to `Wszystkie` works, no horizontal scroll.
+- Desktop: chip row visible and functional, mobile select present in the
+  DOM but hidden (CSS-only, not conditionally rendered), active chip class
+  correct.
+- First-viewport: at 390×844, if any alert card exists, its `boundingBox().y`
+  must be `<= 780`; gracefully returns (no failure) when no alerts are
+  published, matching the file's existing pattern for data-dependent
+  assertions.
+
+The pre-existing "category filters wrap … narrow mobile viewport" test
+(Sprint 156B) was updated, not deleted — it now asserts the mobile select
+is what's visible (with all seven options present) and that the desktop
+chip buttons have zero count at that viewport, since asserting chip
+visibility on mobile would directly contradict the behavior this follow-up
+intentionally changed.
+
+### QA results
+
+- `npm run check` — ✅ zero errors, zero warnings, build succeeds (22 routes).
+- `npm run test:e2e` — ✅ **429/429 passing**, 0 failed, 0 flaky (up from
+  424 total before this follow-up: +5 new tests, 1 existing test updated
+  in place). No known regressions.
+- `git diff --check` — clean, no whitespace errors.
+
+### No Production impact
+
+Same as the parent sprint: zero changes to Supabase schema, RLS, env vars,
+Vercel config, or cron. All changes are in `src/app/page.tsx`,
+`src/components/AlertList.tsx`, `src/components/BetaStatusCard.tsx`,
+`tests/e2e/public.spec.ts`, and this doc. No new dependencies.
+
 ## Recommended next step
 
-**Sprint 158B — Installable PWA Foundation.** Not started in this sprint per
-instruction. Awaiting Adam's decision.
+**Sprint 158B — Installable PWA Foundation.** Not started; awaiting Adam's
+decision.

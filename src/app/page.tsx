@@ -4,7 +4,7 @@ import { BetaStatusCard } from "@/components/BetaStatusCard";
 
 export default function Home() {
   return (
-    <main className="max-w-3xl mx-auto w-full px-4 sm:px-6 py-3 sm:py-10">
+    <main className="max-w-3xl mx-auto w-full px-4 sm:px-6 py-2 sm:py-10">
 
       {/* Hero — Sprint 156B: value-first, shortened to two short sentences
           so a mobile visitor reaches the actual alert list without a long
@@ -20,7 +20,7 @@ export default function Home() {
         <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight leading-snug mb-2">
           Lokalne zmiany i utrudnienia w prostym formacie.
         </h1>
-        <p className="text-sm sm:text-base text-slate-500 leading-relaxed">
+        <p className="text-sm sm:text-base text-slate-500 leading-snug sm:leading-relaxed">
           Sprawdź, co może dziś wpłynąć na Twój dzień w okolicy. Alertownik
           zbiera w jednym miejscu komunikaty o transporcie, wodzie, prądzie,
           drogach i odpadach dla{" "}

@@ -270,10 +270,10 @@ export function AlertList() {
     <>
       {/* ── Mode toggle ─────────────────────────────────────────────────── */}
       {prefsReady && (
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex items-center gap-2 mb-1.5">
           <button
             onClick={() => handleSetMode("all")}
-            className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
+            className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
               mode === "all"
                 ? "bg-blue-600 text-white border-blue-600"
                 : "bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:text-slate-900"
@@ -283,7 +283,7 @@ export function AlertList() {
           </button>
           <button
             onClick={() => handleSetMode("my")}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
+            className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
               mode === "my"
                 ? "bg-blue-600 text-white border-blue-600"
                 : "bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:text-slate-900"
@@ -304,7 +304,7 @@ export function AlertList() {
           below. The box itself is the single, unmistakable place that
           answers "what am I looking at right now" (Userbrain finding). */}
       {(prefsReady || !loading) && (
-        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 mb-2 flex flex-col gap-1.5">
+        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-1.5 mb-1.5 flex flex-col gap-1.5">
           {prefsReady && (
             <>
               {!prefsSet ? (
@@ -474,12 +474,16 @@ export function AlertList() {
             </p>
           </div>
 
-          {/* Category filters — wraps on all screen sizes (Sprint 156B: the
-              previous mobile-only horizontal scroll hid categories off-screen
-              with no visible affordance that more existed; wrapping keeps
-              every category visible and tappable at once). */}
+          {/* Category filters — Sprint 156B made these wrap on all screen
+              sizes so nothing hid off-screen. Sprint 158A-2 (Userbrain +
+              mobile-hierarchy follow-up) replaces the wrapped two-row chip
+              set with one compact select on small screens, since the wrap
+              was pushing the first alert card below the fold at 390×844.
+              Desktop keeps the chip row unchanged. Both controls read and
+              write the same `selected` state and the same `categoryFilters`
+              list, so there is exactly one filtering model, never two. */}
           <div className="mb-2">
-            <div className="flex flex-wrap gap-1.5">
+            <div className="hidden sm:flex flex-wrap gap-1.5">
               {categoryFilters.map((filter) => {
                 const isActive = filter.value === selected;
                 return (
@@ -496,6 +500,23 @@ export function AlertList() {
                   </button>
                 );
               })}
+            </div>
+            <div className="sm:hidden">
+              <label htmlFor="category-select" className="block text-xs font-medium text-slate-500 mb-1">
+                Kategoria
+              </label>
+              <select
+                id="category-select"
+                value={selected}
+                onChange={(e) => setSelected(e.target.value as FilterValue)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              >
+                {categoryFilters.map((filter) => (
+                  <option key={filter.value} value={filter.value}>
+                    {filter.label}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -527,7 +548,7 @@ export function AlertList() {
             <>
               {/* Alert counter */}
               {alerts.length > 0 && !isEmpty && (
-                <p className="text-sm text-slate-500 mb-5">
+                <p className="text-sm text-slate-500 mb-3">
                   {hasQuery ? (
                     <>
                       Znaleziono alertów:{" "}
