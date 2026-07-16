@@ -7,7 +7,7 @@ import { PreferencesSection } from "@/components/PreferencesSection";
 import { getSupabaseAlerts } from "@/lib/getSupabaseAlerts";
 import { getAlertTimeStatus } from "@/lib/getAlertTimeStatus";
 import { buildFeedbackQuickReasons } from "@/lib/feedbackMailto";
-import { PILOT_LOCALITIES } from "@/lib/officialSourceChecklist";
+import { matchPilotLocality, pilotLocalitiesLabel } from "@/lib/pilotCoverage";
 import {
   loadPreferences,
   savePreferences,
@@ -122,12 +122,13 @@ export function AlertList() {
   // can't dominate the page even before old rows get archived in the DB.
   const [showEnded, setShowEnded] = useState(false);
 
-  // Sprint 156B — compact, non-blocking locality quick-pick (real-device
-  // finding: personalization wasn't discoverable enough). Reuses the same
-  // UserPreferences/localStorage mechanism as PreferencesSection below —
-  // this is just a faster entry point for the locationKeywords field, not
-  // a second location system.
-  const [showLocalityPicker, setShowLocalityPicker] = useState(false);
+  // Sprint 158A — a single settings panel (PreferencesSection) is now the
+  // only place "Moja okolica" is set or changed. It replaces two previously
+  // separate mechanisms (a compact chip-only picker here, plus a fuller
+  // form only shown once mode==="my") that Userbrain testers (Franklin,
+  // Elizabeth) both found confusing — neither could tell if the search box
+  // was a second way to set the same thing.
+  const [showSettingsPanel, setShowSettingsPanel] = useState(false);
 
   useEffect(() => {
     // Fetch alerts
@@ -153,6 +154,13 @@ export function AlertList() {
   function handleSavePrefs(newPrefs: UserPreferences) {
     savePreferences(newPrefs);
     setPrefs(newPrefs);
+    // Saving from the settings panel always means "personalize now" —
+    // switch into "Moja okolica" mode so the active-scope bar and filtered
+    // list appear immediately instead of leaving the save silently inert.
+    if (hasPreferences(newPrefs)) {
+      handleSetMode("my");
+    }
+    setShowSettingsPanel(false);
   }
 
   function handleClearPrefs() {
@@ -160,14 +168,16 @@ export function AlertList() {
     setPrefs({ locationKeywords: "", categories: [] });
   }
 
-  function handleSelectLocality(locality: string) {
-    handleSavePrefs({ ...prefs, locationKeywords: locality });
-    handleSetMode("my");
-    setShowLocalityPicker(false);
-  }
-
   const prefsSet = hasPreferences(prefs);
   const localitySet = prefs.locationKeywords.trim().length > 0;
+
+  // ── Pilot coverage (Sprint 158A) ────────────────────────────────────────
+  // Only meaningful while actually filtering by area — checking it in
+  // "Wszystkie alerty" mode would flag a saved-but-inactive preference.
+  const areaActive = mode === "my" && prefsSet;
+  const localityStatus = areaActive ? matchPilotLocality(prefs.locationKeywords) : "empty";
+  const localityUnsupported = localityStatus === "unsupported";
+  const localityUnclear = localityStatus === "unclear";
 
   // ── "Co sprawdzić teraz" status (Sprint 96) ─────────────────────────────────
   // A practical "reason to return" line, independent of whatever category/
@@ -175,10 +185,11 @@ export function AlertList() {
   // unfiltered `alerts` list so it answers "what's going on right now,"
   // not "what does my current filter show." Reuses data already fetched by
   // this component (no new Supabase query) — narrowed to the saved
-  // okolica/categories when set, since "X near me" is more actionable than
-  // a global count once a preference exists.
+  // okolica/categories only while that preference is actually active
+  // (mode === "my"), since a saved-but-inactive preference must not claim
+  // to describe what's currently shown (Sprint 158A active-scope clarity).
   const liveAlerts = alerts.filter((a) => getAlertTimeStatus(a.startsAt, a.endsAt) !== "ended");
-  const liveAlertsForMe = prefsSet ? liveAlerts.filter((a) => matchesMyAlerts(a, prefs)) : liveAlerts;
+  const liveAlertsForMe = areaActive ? liveAlerts.filter((a) => matchesMyAlerts(a, prefs)) : liveAlerts;
 
   // Sprint 97 — "what's actually new" is a different, complementary signal
   // from "how many are active right now": a returning visitor with the same
@@ -196,10 +207,9 @@ export function AlertList() {
 
   // ── Filtering pipeline ─────────────────────────────────────────────────────
   // Step 1: "Moje alerty" filter (only when mode=my and preferences exist)
-  const byMyAlerts =
-    mode === "my" && prefsSet
-      ? alerts.filter((a) => matchesMyAlerts(a, prefs))
-      : alerts;
+  const byMyAlerts = areaActive
+    ? alerts.filter((a) => matchesMyAlerts(a, prefs))
+    : alerts;
 
   // Step 2: category button filter (always active)
   const byCategory =
@@ -211,11 +221,38 @@ export function AlertList() {
   const filtered = byCategory.filter((a) => matchesSearch(a, query));
 
   const hasQuery        = query.trim().length > 0;
-  const hasActiveFilters = hasQuery || selected !== "all";
+  const categoryActive  = selected !== "all";
+  const activeAxesCount = [areaActive, categoryActive, hasQuery].filter(Boolean).length;
+  const selectedCategoryLabel = categoryFilters.find((f) => f.value === selected)?.label ?? "";
 
-  // Decide which empty state to show when filtered.length === 0
-  const showMyAlertsEmptyState = mode === "my" && prefsSet && filtered.length === 0 && !loading;
-  const showGenericEmptyState  = filtered.length === 0 && !loading && !showMyAlertsEmptyState;
+  // Sprint 158A — distinct, testable empty states instead of one generic
+  // "no matches" message (Userbrain finding: testers couldn't tell an empty
+  // area from an unsupported one from a search miss).
+  type EmptyStateKind =
+    | "none"             // no filters active, truly nothing to show
+    | "unsupported-area" // area filter set to somewhere outside the pilot
+    | "area-empty"       // area filter active, no matches, area only
+    | "category-empty"   // category filter active, no matches, category only
+    | "search-empty"     // search active, no matches, search only
+    | "combined";         // 2+ of the above active at once
+
+  const isEmpty = filtered.length === 0 && !loading;
+  let emptyStateKind: EmptyStateKind | null = null;
+  if (isEmpty) {
+    if (localityUnsupported) {
+      emptyStateKind = "unsupported-area";
+    } else if (activeAxesCount === 0) {
+      emptyStateKind = "none";
+    } else if (activeAxesCount > 1) {
+      emptyStateKind = "combined";
+    } else if (areaActive) {
+      emptyStateKind = "area-empty";
+    } else if (categoryActive) {
+      emptyStateKind = "category-empty";
+    } else {
+      emptyStateKind = "search-empty";
+    }
+  }
 
   // Sprint 103 — a filtered-empty result during early beta is a coverage
   // gap, not a bug; reuse the existing "add-area" feedback reason instead
@@ -261,56 +298,88 @@ export function AlertList() {
         </div>
       )}
 
-      {/* ── Locality quick-pick + "Co sprawdzić teraz" status ───────────── */}
-      {/* Sprint 156B: these were two separate bordered cards; merged into one
-          shared card (divided by a hairline) so mobile viewports reach the
-          top of the first alert card without scrolling — pure spacing
-          change, no information removed. Compact, non-blocking
-          personalization CTA reuses PILOT_LOCALITIES and the existing
-          preferences mechanism; skipping it leaves everything as before. */}
+      {/* ── Active scope / settings entry point + "Co sprawdzić teraz" ──── */}
+      {/* Sprint 158A: this box now has three distinct states instead of a
+          single "locality set or not" branch — see the three branches
+          below. The box itself is the single, unmistakable place that
+          answers "what am I looking at right now" (Userbrain finding). */}
       {(prefsReady || !loading) && (
         <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 mb-2 flex flex-col gap-1.5">
           {prefsReady && (
             <>
-              {!localitySet ? (
+              {!prefsSet ? (
+                // State 1 — nothing saved yet.
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-sm text-slate-600">
                     Ustaw swoją okolicę, aby widzieć tylko alerty, które mogą Cię dotyczyć.
                   </p>
                   <button
-                    onClick={() => setShowLocalityPicker((v) => !v)}
-                    aria-expanded={showLocalityPicker}
+                    onClick={() => setShowSettingsPanel((v) => !v)}
+                    aria-expanded={showSettingsPanel}
                     className="shrink-0 rounded-lg bg-blue-600 px-3.5 py-1.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
                   >
                     Ustaw moją okolicę
                   </button>
                 </div>
-              ) : (
-                <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
-                  <span>
-                    Twoja okolica:{" "}
-                    <span className="font-medium text-slate-800">{prefs.locationKeywords}</span>
-                  </span>
-                  <button
-                    onClick={() => setShowLocalityPicker((v) => !v)}
-                    aria-expanded={showLocalityPicker}
-                    className="font-medium text-blue-600 hover:underline"
-                  >
-                    Zmień
-                  </button>
-                </div>
-              )}
-              {showLocalityPicker && (
-                <div className="flex flex-wrap gap-2">
-                  {PILOT_LOCALITIES.map((locality) => (
+              ) : areaActive ? (
+                // State 2 — preferences saved AND actively filtering the
+                // list below right now. This is the "active scope" bar
+                // required by Sprint 158A: it must state plainly what the
+                // list underneath is scoped to.
+                <div className="flex flex-col gap-1">
+                  <p className="text-sm text-slate-700">
+                    Pokazujesz alerty dla:{" "}
+                    <span className="font-semibold text-slate-900">
+                      {localitySet ? prefs.locationKeywords : "wszystkich miejscowości w pilotażu"}
+                    </span>
+                  </p>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs text-slate-500">
+                      Kategorie:{" "}
+                      {prefs.categories.length > 0
+                        ? prefs.categories
+                            .map((c) => categoryFilters.find((f) => f.value === c)?.label ?? c)
+                            .join(", ")
+                        : "wszystkie"}
+                    </p>
                     <button
-                      key={locality}
-                      onClick={() => handleSelectLocality(locality)}
-                      className="px-3.5 py-1.5 rounded-full text-sm font-medium border border-slate-200 bg-white text-slate-600 hover:border-blue-400 hover:text-blue-700 transition-colors"
+                      onClick={() => setShowSettingsPanel((v) => !v)}
+                      aria-expanded={showSettingsPanel}
+                      className="font-medium text-blue-600 hover:underline text-sm shrink-0"
                     >
-                      {locality}
+                      Zmień ustawienia
                     </button>
-                  ))}
+                  </div>
+                </div>
+              ) : (
+                // State 3 — preferences saved but currently viewing
+                // "Wszystkie alerty", so the saved area is NOT filtering
+                // anything right now. Says so explicitly instead of
+                // reusing "Pokazujesz alerty dla" wording that would be
+                // misleading in this mode.
+                <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-slate-600">
+                  <span>
+                    Zapisana okolica:{" "}
+                    <span className="font-medium text-slate-800">
+                      {localitySet ? prefs.locationKeywords : "brak, tylko kategorie"}
+                    </span>{" "}
+                    — nieaktywna w widoku „Wszystkie alerty”.
+                  </span>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <button
+                      onClick={() => handleSetMode("my")}
+                      className="font-medium text-blue-600 hover:underline"
+                    >
+                      Włącz Moja okolica
+                    </button>
+                    <button
+                      onClick={() => setShowSettingsPanel((v) => !v)}
+                      aria-expanded={showSettingsPanel}
+                      className="font-medium text-blue-600 hover:underline"
+                    >
+                      Zmień ustawienia
+                    </button>
+                  </div>
                 </div>
               )}
             </>
@@ -325,7 +394,7 @@ export function AlertList() {
                     {liveAlertsForMe.length}
                   </span>{" "}
                   {liveAlertsForMe.length === 1 ? "aktywny lub nadchodzący alert" : "aktywnych lub nadchodzących alertów"}
-                  {prefsSet ? " w Twojej okolicy" : " w tej chwili"}.
+                  {areaActive ? " w Twojej okolicy" : " w tej chwili"}.
                 </p>
                 <Link
                   href="/odpady"
@@ -351,23 +420,21 @@ export function AlertList() {
         </div>
       )}
 
-      {/* ── Preferences panel (only in "Moje alerty" mode) ──────────────── */}
-      {prefsReady && mode === "my" && (
+      {/* ── Settings panel — single place to set/change "Moja okolica" ──── */}
+      {prefsReady && showSettingsPanel && (
         <PreferencesSection
           savedPrefs={prefs}
           onSave={handleSavePrefs}
           onClear={handleClearPrefs}
+          onClose={() => setShowSettingsPanel(false)}
         />
       )}
 
-      {/* ── "No preferences set" message ────────────────────────────────── */}
-      {prefsReady && mode === "my" && !prefsSet && !loading && (
+      {/* ── "No preferences set, in Moja okolica mode" hint ─────────────── */}
+      {prefsReady && mode === "my" && !prefsSet && !loading && !showSettingsPanel && (
         <div className="text-center py-12 bg-white rounded-2xl border border-slate-200 mb-5">
           <p className="text-base font-semibold text-slate-600">
-            Nie ustawiono jeszcze preferencji.
-          </p>
-          <p className="text-sm text-slate-400 mt-2 leading-relaxed">
-            Wpisz swoją okolicę lub zaznacz kategorie powyżej i kliknij „Zapisz preferencje".
+            Ustaw okolicę powyżej, aby zobaczyć spersonalizowaną listę.
           </p>
         </div>
       )}
@@ -377,25 +444,34 @@ export function AlertList() {
       {(loading || mode === "all" || prefsSet) && (
         <>
           {/* Search input */}
-          <div className="relative mb-2">
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Szukaj po miejscowości lub tytule..."
-              className={`w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                hasQuery ? "pr-20" : ""
-              }`}
-            />
-            {hasQuery && (
-              <button
-                onClick={() => setQuery("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 rounded px-2 py-1 text-xs font-medium text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-                aria-label="Wyczyść wyszukiwanie"
-              >
-                Wyczyść
-              </button>
-            )}
+          <div className="mb-2">
+            <label htmlFor="alert-search" className="block text-xs font-medium text-slate-500 mb-1">
+              Szukaj w aktualnym widoku
+            </label>
+            <div className="relative">
+              <input
+                id="alert-search"
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Szukaj po tytule lub treści alertu…"
+                className={`w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                  hasQuery ? "pr-20" : ""
+                }`}
+              />
+              {hasQuery && (
+                <button
+                  onClick={() => setQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded px-2 py-1 text-xs font-medium text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                  aria-label="Wyczyść wyszukiwanie"
+                >
+                  Wyczyść
+                </button>
+              )}
+            </div>
+            <p className="text-xs text-slate-400 mt-1">
+              Przeszukuje tylko alerty pokazane obecnie na liście — nie zmienia zapisanej okolicy.
+            </p>
           </div>
 
           {/* Category filters — wraps on all screen sizes (Sprint 156B: the
@@ -450,7 +526,7 @@ export function AlertList() {
           ) : (
             <>
               {/* Alert counter */}
-              {alerts.length > 0 && !showMyAlertsEmptyState && (
+              {alerts.length > 0 && !isEmpty && (
                 <p className="text-sm text-slate-500 mb-5">
                   {hasQuery ? (
                     <>
@@ -474,16 +550,118 @@ export function AlertList() {
 
               {/* Alert cards */}
               <section className="flex flex-col gap-4">
-                {/* Empty state: preferences set but no matches */}
-                {showMyAlertsEmptyState && (
+                {/* Empty state: area set to somewhere outside the pilot (G2) */}
+                {emptyStateKind === "unsupported-area" && (
                   <div className="text-center py-16 bg-white rounded-2xl border border-slate-200">
                     <p className="text-base font-semibold text-slate-600">
-                      Brak alertów pasujących do Twoich preferencji.
+                      Nie obsługujemy jeszcze tej okolicy.
                     </p>
                     <p className="text-sm text-slate-400 mt-2">
-                      Możesz zmienić okolice lub kategorie w ustawieniach powyżej.
+                      Obecny pilotaż obejmuje: {pilotLocalitiesLabel()}.
                     </p>
-                    <p className="text-xs text-slate-400 mt-3">
+                    <button
+                      onClick={() => setShowSettingsPanel(true)}
+                      className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+                    >
+                      Wybierz obsługiwaną okolicę
+                    </button>
+                  </div>
+                )}
+
+                {/* Empty state: area active, no active alerts there (G1) */}
+                {emptyStateKind === "area-empty" && (
+                  <div className="text-center py-16 bg-white rounded-2xl border border-slate-200">
+                    <p className="text-base font-semibold text-slate-600">
+                      Dobra wiadomość — obecnie nie mamy aktywnych alertów dla{" "}
+                      {localitySet ? prefs.locationKeywords : "wybranych kategorii"}.
+                    </p>
+                    {localityUnclear && (
+                      <p className="text-sm text-slate-400 mt-2">
+                        Nie znaleźliśmy obecnie alertów dla tego ustawienia. Sprawdź, czy
+                        wybrana okolica znajduje się w obszarze pilotażu ({pilotLocalitiesLabel()}).
+                      </p>
+                    )}
+                    <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+                      <button
+                        onClick={() => setShowSettingsPanel(true)}
+                        className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                      >
+                        Zmień okolicę
+                      </button>
+                      <button
+                        onClick={() => handleSetMode("all")}
+                        className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                      >
+                        Pokaż wszystkie alerty
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Empty state: category filter active, no matches (G4) */}
+                {emptyStateKind === "category-empty" && (
+                  <div className="text-center py-16 bg-white rounded-2xl border border-slate-200">
+                    <p className="text-base font-semibold text-slate-600">
+                      Nie ma obecnie aktywnych alertów kategorii {selectedCategoryLabel} w tym widoku.
+                    </p>
+                    <button
+                      onClick={() => setSelected("all")}
+                      className="mt-4 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                    >
+                      Pokaż wszystkie kategorie
+                    </button>
+                  </div>
+                )}
+
+                {/* Empty state: search active, no matches (G3) */}
+                {emptyStateKind === "search-empty" && (
+                  <div className="text-center py-16 bg-white rounded-2xl border border-slate-200">
+                    <p className="text-base font-semibold text-slate-600">
+                      Nie znaleziono alertów pasujących do wpisanej frazy.
+                    </p>
+                    <button
+                      onClick={() => setQuery("")}
+                      className="mt-4 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                    >
+                      Wyczyść wyszukiwanie
+                    </button>
+                  </div>
+                )}
+
+                {/* Empty state: 2+ filters active at once (G5) — name each
+                    active condition explicitly instead of one vague message */}
+                {emptyStateKind === "combined" && (
+                  <div className="text-center py-16 bg-white rounded-2xl border border-slate-200">
+                    <p className="text-base font-semibold text-slate-600">
+                      Brak alertów spełniających kilka aktywnych warunków naraz.
+                    </p>
+                    <ul className="text-sm text-slate-500 mt-3 flex flex-col gap-1.5 items-center">
+                      {areaActive && (
+                        <li>
+                          Okolica: <span className="font-medium text-slate-700">{localitySet ? prefs.locationKeywords : "wybrane kategorie"}</span>{" "}
+                          <button onClick={() => setShowSettingsPanel(true)} className="text-blue-600 hover:underline">
+                            Zmień
+                          </button>
+                        </li>
+                      )}
+                      {categoryActive && (
+                        <li>
+                          Kategoria: <span className="font-medium text-slate-700">{selectedCategoryLabel}</span>{" "}
+                          <button onClick={() => setSelected("all")} className="text-blue-600 hover:underline">
+                            Wyczyść
+                          </button>
+                        </li>
+                      )}
+                      {hasQuery && (
+                        <li>
+                          Szukana fraza: <span className="font-medium text-slate-700">„{query}”</span>{" "}
+                          <button onClick={() => setQuery("")} className="text-blue-600 hover:underline">
+                            Wyczyść
+                          </button>
+                        </li>
+                      )}
+                    </ul>
+                    <p className="text-xs text-slate-400 mt-4">
                       To nie błąd — liczba alertów i okolic w pilotażu jest jeszcze ograniczona.
                       {addAreaReason && (
                         <>
@@ -497,38 +675,16 @@ export function AlertList() {
                   </div>
                 )}
 
-                {/* Empty state: generic (active filters, or just no alerts at all) */}
-                {showGenericEmptyState && (
-                  hasActiveFilters ? (
-                    <div className="text-center py-16 bg-white rounded-2xl border border-slate-200">
-                      <p className="text-base font-semibold text-slate-600">
-                        Brak alertów spełniających wybrane kryteria.
-                      </p>
-                      <p className="text-sm text-slate-400 mt-2">
-                        Spróbuj zmienić kategorię albo wpisać inną lokalizację.
-                      </p>
-                      <p className="text-xs text-slate-400 mt-3">
-                        To nie błąd — liczba alertów i okolic w pilotażu jest jeszcze ograniczona.
-                        {addAreaReason && (
-                          <>
-                            {" "}
-                            <a href={addAreaReason.mailto} className="font-medium text-blue-600 hover:underline">
-                              Zgłoś swoją okolicę →
-                            </a>
-                          </>
-                        )}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="text-center py-16 bg-white rounded-2xl border border-slate-200">
-                      <p className="text-base font-semibold text-slate-600">
-                        Brak aktualnych alertów.
-                      </p>
-                      <p className="text-sm text-slate-400 mt-2">
-                        Gdy pojawią się nowe komunikaty, zobaczysz je tutaj.
-                      </p>
-                    </div>
-                  )
+                {/* Empty state: no filters at all, nothing to show */}
+                {emptyStateKind === "none" && (
+                  <div className="text-center py-16 bg-white rounded-2xl border border-slate-200">
+                    <p className="text-base font-semibold text-slate-600">
+                      Brak aktualnych alertów.
+                    </p>
+                    <p className="text-sm text-slate-400 mt-2">
+                      Gdy pojawią się nowe komunikaty, zobaczysz je tutaj.
+                    </p>
+                  </div>
                 )}
 
                 {/* Notice: only ended alerts match — make this explicit instead of

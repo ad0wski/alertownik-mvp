@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { type UserPreferences, emptyPreferences } from "@/lib/userPreferences";
+import { PILOT_LOCALITIES } from "@/lib/officialSourceChecklist";
+import { matchPilotLocality, pilotLocalitiesLabel } from "@/lib/pilotCoverage";
 import type { AlertCategory } from "@/types/alert";
 
 const categoryOptions: { value: AlertCategory; label: string }[] = [
@@ -17,9 +19,18 @@ interface Props {
   savedPrefs: UserPreferences;
   onSave: (prefs: UserPreferences) => void;
   onClear: () => void;
+  onClose: () => void;
 }
 
-export function PreferencesSection({ savedPrefs, onSave, onClear }: Props) {
+// Sprint 158A — this is now the single place a resident sets "Moja
+// okolica": pilot-locality chips, manual locality/street-group input, and
+// category interests all live in one panel with one save action. Before
+// this sprint, AlertList also rendered a separate compact chip-only picker
+// above this panel — Userbrain testers (Franklin, Elizabeth) both found
+// that redundant pair confusing, unsure whether the search box was a third
+// way to set the same thing. Merging into one panel and clarifying the
+// search box's copy (AlertList.tsx) both address that finding.
+export function PreferencesSection({ savedPrefs, onSave, onClear, onClose }: Props) {
   const [form, setForm] = useState<UserPreferences>(savedPrefs);
   const [saved, setSaved] = useState(false);
 
@@ -38,6 +49,11 @@ export function PreferencesSection({ savedPrefs, onSave, onClear }: Props) {
     }));
   }
 
+  function selectLocality(locality: string) {
+    setSaved(false);
+    setForm((prev) => ({ ...prev, locationKeywords: locality }));
+  }
+
   function handleSave() {
     onSave(form);
     setSaved(true);
@@ -50,21 +66,56 @@ export function PreferencesSection({ savedPrefs, onSave, onClear }: Props) {
     setSaved(false);
   }
 
+  const localityStatus = matchPilotLocality(form.locationKeywords);
+
   return (
     <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-4 sm:p-5 mb-5 flex flex-col gap-4">
       {/* Header */}
-      <div>
-        <h2 className="text-base font-semibold text-slate-900">Moja okolica</h2>
-        <p className="text-sm text-slate-500 mt-0.5 leading-relaxed">
-          Wybierz swoją okolicę i kategorie, które Cię interesują. Nie wymaga
-          konta — preferencje zapisują się tylko w tej przeglądarce.
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-base font-semibold text-slate-900">Moja okolica</h2>
+          <p className="text-sm text-slate-500 mt-0.5 leading-relaxed">
+            Wybierz miejscowość z pilotażu albo wpisz miejscowość lub grupę ulic.
+          </p>
+        </div>
+        <button
+          onClick={onClose}
+          aria-label="Zamknij ustawienia okolicy"
+          className="shrink-0 rounded-lg px-2 py-1 text-sm font-medium text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors"
+        >
+          Zamknij
+        </button>
       </div>
 
-      {/* Location keywords */}
+      {/* Pilot locality chips */}
+      <div className="flex flex-col gap-1.5">
+        <p className="text-sm font-medium text-slate-700">Miejscowości w pilotażu</p>
+        <div className="flex flex-wrap gap-2">
+          {PILOT_LOCALITIES.map((locality) => {
+            const active = form.locationKeywords.trim().toLowerCase() === locality.toLowerCase();
+            return (
+              <button
+                key={locality}
+                type="button"
+                onClick={() => selectLocality(locality)}
+                aria-pressed={active}
+                className={`px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                  active
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "bg-white text-slate-600 border-slate-200 hover:border-blue-300 hover:text-blue-700"
+                }`}
+              >
+                {locality}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Location keywords — manual entry */}
       <div className="flex flex-col gap-1.5">
         <label htmlFor="prefs-location" className="text-sm font-medium text-slate-700">
-          Moja okolica
+          Lub wpisz miejscowość albo grupę ulic
         </label>
         <input
           id="prefs-location"
@@ -83,6 +134,19 @@ export function PreferencesSection({ savedPrefs, onSave, onClear }: Props) {
           <span className="font-medium text-slate-500">Odpady</span>), które
           zawierają te słowa.
         </p>
+        {localityStatus === "unsupported" && (
+          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 leading-relaxed">
+            Nie obsługujemy jeszcze tej okolicy. Obecny pilotaż obejmuje:{" "}
+            {pilotLocalitiesLabel()}.
+          </p>
+        )}
+        {localityStatus === "unclear" && (
+          <p className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 leading-relaxed">
+            Nie mamy pewności, czy ta grupa ulic znajduje się w obszarze
+            pilotażu ({pilotLocalitiesLabel()}). Zapiszemy ją mimo to — jeśli
+            nie zobaczysz alertów, może to być powód.
+          </p>
+        )}
       </div>
 
       {/* Category toggles */}
@@ -133,6 +197,11 @@ export function PreferencesSection({ savedPrefs, onSave, onClear }: Props) {
           </span>
         )}
       </div>
+
+      <p className="text-xs text-slate-400 leading-relaxed border-t border-slate-100 pt-3">
+        Nie podawaj dokładnego adresu. Preferencje zapisujemy tylko w tej
+        przeglądarce.
+      </p>
     </div>
   );
 }

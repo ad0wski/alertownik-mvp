@@ -63,7 +63,7 @@ test.describe("Public homepage", () => {
 
   test("search input accepts text without crashing", async ({ page }) => {
     await page.goto("/");
-    const input = page.getByPlaceholder(/Szukaj po miejscowości/);
+    const input = page.getByPlaceholder(/Szukaj po tytule lub treści/);
     await expect(input).toBeVisible();
     await input.fill("transport");
     await expect(input).toHaveValue("transport");
@@ -201,10 +201,17 @@ test.describe("Public homepage", () => {
   // consistency with the label already used everywhere else in the app for
   // this exact same location filter (PreferencesSection's field,
   // AreaPreferenceBar, the /odpady "Moja okolica" toggle).
-  test("Moja okolica toggle opens the local preferences panel", async ({ page }) => {
+  //
+  // Sprint 158A — the mode pill no longer auto-opens the settings panel
+  // (Userbrain finding: two separate mechanisms for the same thing was
+  // confusing). With no preferences saved yet, switching into "Moja
+  // okolica" mode shows a hint pointing back at the single "Ustaw moją
+  // okolicę" entry point instead.
+  test("Moja okolica toggle shows a hint pointing at the single settings entry point", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("button", { name: "Moja okolica", exact: true }).click();
-    await expect(page.getByText(/preferencje|okolic/i).first()).toBeVisible();
+    await expect(page.getByText(/Ustaw okolicę powyżej/i)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Ustaw moją okolicę" })).toBeVisible();
   });
 
   test("Wszystkie alerty / Moja okolica toggle has no regression: both modes still show the alert-list area", async ({ page }) => {
@@ -215,7 +222,7 @@ test.describe("Public homepage", () => {
     await expect(myBtn).toBeVisible();
 
     await myBtn.click();
-    await expect(page.getByRole("heading", { name: "Moja okolica" })).toBeVisible();
+    await expect(page.getByText(/Ustaw okolicę powyżej/i)).toBeVisible();
 
     await allBtn.click();
     await expect(
@@ -555,12 +562,19 @@ test.describe("Sprint 156B — homepage value-first + personalization", () => {
     ).toBeVisible({ timeout: 15_000 });
   });
 
-  test("locality quick-pick reveals PILOT_LOCALITIES chips and selecting one saves the preference and switches mode", async ({ page }) => {
+  // Sprint 158A — the compact chip-only picker was merged into the single
+  // PreferencesSection panel: clicking a pilot-locality chip now fills the
+  // panel's field (one save action for the whole panel) instead of
+  // instantly saving and switching mode on its own — the previous
+  // instant-save-on-chip behavior was one of the two competing mechanisms
+  // Userbrain testers found confusing.
+  test("settings panel reveals PILOT_LOCALITIES chips and selecting one plus Save saves the preference and switches mode", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("button", { name: "Ustaw moją okolicę" }).click();
     const localityChip = page.getByRole("button", { name: "Komorów", exact: true });
     await expect(localityChip).toBeVisible();
     await localityChip.click();
+    await page.getByRole("button", { name: "Zapisz preferencje" }).click();
 
     // Preference saved via the existing localStorage mechanism.
     const saved = await page.evaluate(() =>
@@ -570,10 +584,11 @@ test.describe("Sprint 156B — homepage value-first + personalization", () => {
     const mode = await page.evaluate(() => localStorage.getItem("alertownik-alert-mode"));
     expect(mode).toBe("my");
 
-    // Selected locality is shown, with an easy way to change it.
-    await expect(page.getByText(/Twoja okolica:/)).toBeVisible();
-    await expect(page.getByText(/Twoja okolica:\s*Komorów/)).toBeVisible();
-    await expect(page.getByRole("button", { name: "Zmień" })).toBeVisible();
+    // Active-scope bar states the current area plainly, with an easy way
+    // to change it.
+    await expect(page.getByText(/Pokazujesz alerty dla:/)).toBeVisible();
+    await expect(page.getByText(/Pokazujesz alerty dla:\s*Komorów/)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Zmień ustawienia" })).toBeVisible();
   });
 
   test("locality can be changed after being set", async ({ page }) => {
@@ -585,11 +600,12 @@ test.describe("Sprint 156B — homepage value-first + personalization", () => {
       localStorage.setItem("alertownik-alert-mode", "my");
     });
     await page.goto("/");
-    await expect(page.getByText(/Twoja okolica:/)).toBeVisible();
-    await page.getByRole("button", { name: "Zmień" }).click();
+    await expect(page.getByText(/Pokazujesz alerty dla:/)).toBeVisible();
+    await page.getByRole("button", { name: "Zmień ustawienia" }).click();
     const pruszkowChip = page.getByRole("button", { name: "Pruszków", exact: true });
     await expect(pruszkowChip).toBeVisible();
     await pruszkowChip.click();
+    await page.getByRole("button", { name: "Zapisz preferencje" }).click();
     const saved = await page.evaluate(() =>
       localStorage.getItem("alertownik-user-preferences")
     );
@@ -678,4 +694,170 @@ test.describe("Sprint 156B — waste page hierarchy", () => {
       page.getByRole("link", { name: /Eco-Harmonogram/ })
     ).toHaveAttribute("href", /pruszkow\.pl/);
   });
+});
+
+// Sprint 158A — Personalization Clarity and Empty States. Source: two
+// professional Userbrain tests (Franklin, Elizabeth). Both testers found
+// "Moja okolica", but after saving preferences were unsure what changed on
+// screen, whether the search box was a second way to set the area, and
+// whether an empty result meant "no alerts" vs. "unsupported area" vs.
+// "bad filter combo". These tests exercise the single settings panel, the
+// active-scope bar, and the distinct empty states that address those
+// findings.
+test.describe("Sprint 158A — personalization clarity and empty states", () => {
+  test("all alerts, no preferences: default view shows the full list with no personalization active", async ({ page }) => {
+    await page.goto("/");
+    await expect(
+      page.getByText(/Wszystkich alertów|Brak aktualnych alertów/)
+    ).toBeVisible({ timeout: 15_000 });
+    // No active-scope bar without saved preferences.
+    await expect(page.getByText(/Pokazujesz alerty dla:/)).toHaveCount(0);
+  });
+
+  test("setting a supported locality manually (typed, not a chip) saves the preference and shows the active-scope bar", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Ustaw moją okolicę" }).click();
+    await page.getByLabel("Lub wpisz miejscowość albo grupę ulic").fill("Pruszków");
+    await page.getByRole("button", { name: "Zapisz preferencje" }).click();
+
+    const saved = await page.evaluate(() =>
+      localStorage.getItem("alertownik-user-preferences")
+    );
+    expect(saved).toContain("Pruszków");
+    await expect(page.getByText(/Pokazujesz alerty dla:\s*Pruszków/)).toBeVisible();
+    await expect(page.getByText(/Kategorie:\s*wszystkie/)).toBeVisible();
+  });
+
+  test("saved preferences persist across a reload (localStorage round-trip)", async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        "alertownik-user-preferences",
+        JSON.stringify({ locationKeywords: "Michałowice", categories: ["water"] })
+      );
+      localStorage.setItem("alertownik-alert-mode", "my");
+    });
+    await page.goto("/");
+    await expect(page.getByText(/Pokazujesz alerty dla:\s*Michałowice/)).toBeVisible();
+    await expect(page.getByText(/Kategorie:\s*Woda/)).toBeVisible();
+  });
+
+  // Warszawa isn't in PILOT_LOCALITIES and isn't street-like, so
+  // matchPilotLocality() confidently classifies it as "unsupported" — this
+  // does not depend on what alerts currently exist in Supabase.
+  test("an area outside the pilot (Warszawa) shows the unsupported-area empty state, not a generic 'no results' message", async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        "alertownik-user-preferences",
+        JSON.stringify({ locationKeywords: "Warszawa", categories: [] })
+      );
+      localStorage.setItem("alertownik-alert-mode", "my");
+    });
+    await page.goto("/");
+    await expect(page.getByText("Nie obsługujemy jeszcze tej okolicy.")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Obecny pilotaż obejmuje:.*Komorów/)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Wybierz obsługiwaną okolicę" })).toBeVisible();
+  });
+
+  // A supported pilot locality with (most likely) no matching live alerts —
+  // real Supabase data varies, so this accepts either honest outcome
+  // instead of asserting one, but always rejects the wrong empty-state copy
+  // (must never claim "unsupported" for a locality that IS in the pilot).
+  test("a supported locality with no active alerts shows the area-empty state, never the unsupported-area message", async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        "alertownik-user-preferences",
+        JSON.stringify({ locationKeywords: "Reguły", categories: [] })
+      );
+      localStorage.setItem("alertownik-alert-mode", "my");
+    });
+    await page.goto("/");
+    await expect(
+      page.getByText(/Pokazujesz alerty dla:\s*Reguły/)
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Nie obsługujemy jeszcze tej okolicy.")).toHaveCount(0);
+
+    const areaEmpty = page.getByText(/Dobra wiadomość — obecnie nie mamy aktywnych alertów/);
+    if (await areaEmpty.isVisible()) {
+      await expect(page.getByRole("button", { name: "Pokaż wszystkie alerty" })).toBeVisible();
+      // Section D/K13 — the empty-state escape hatch actually switches mode.
+      await page.getByRole("button", { name: "Pokaż wszystkie alerty" }).click();
+      const mode = await page.evaluate(() => localStorage.getItem("alertownik-alert-mode"));
+      expect(mode).toBe("all");
+    }
+  });
+
+  test("a search phrase matching nothing shows the search-empty state with a clear-search action", async ({ page }) => {
+    await page.goto("/");
+    await page.getByLabel("Szukaj w aktualnym widoku").fill("zzzz-nieistniejacy-alert-fraza-12345");
+    await expect(
+      page.getByText("Nie znaleziono alertów pasujących do wpisanej frazy.")
+    ).toBeVisible({ timeout: 15_000 });
+    // Two "Wyczyść wyszukiwanie" affordances now exist at once: the small
+    // inline clear button inside the search input itself (aria-label only,
+    // no visible text) and this empty-state's full-text button — the
+    // empty-state one is the last "Wyczyść wyszukiwanie" button in the DOM.
+    const emptyStateClearBtn = page.locator("button", { hasText: "Wyczyść wyszukiwanie" }).last();
+    await expect(emptyStateClearBtn).toBeVisible();
+    await emptyStateClearBtn.click();
+    await expect(page.getByLabel("Szukaj w aktualnym widoku")).toHaveValue("");
+  });
+
+  test("a category filter with no matching alerts shows the category-empty state, never a blank screen", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Woda", exact: true }).click();
+    const categoryEmpty = page.getByText(/Nie ma obecnie aktywnych alertów kategorii Woda w tym widoku\./);
+    if (await categoryEmpty.isVisible()) {
+      await expect(page.getByRole("button", { name: "Pokaż wszystkie kategorie" })).toBeVisible();
+    } else {
+      // Real data has Woda alerts right now — must show the normal list,
+      // not a crash or an empty screen.
+      await expect(
+        page.getByText(/Wszystkich alertów|Znaleziono alertów|Wyświetlane:/)
+      ).toBeVisible();
+    }
+  });
+
+  // Category + search together, forced to zero matches by the bogus search
+  // phrase regardless of real data — this makes the combined (G5) state
+  // deterministic, unlike the single-axis category/area tests above.
+  test("category filter + search active together with no matches shows the combined empty state listing both conditions", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Transport", exact: true }).click();
+    await page.getByLabel("Szukaj w aktualnym widoku").fill("zzzz-nieistniejacy-alert-fraza-12345");
+    await expect(
+      page.getByText("Brak alertów spełniających kilka aktywnych warunków naraz.")
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Kategoria:\s*Transport/)).toBeVisible();
+    await expect(page.getByText(/Szukana fraza:\s*„zzzz-nieistniejacy-alert-fraza-12345”/)).toBeVisible();
+  });
+
+  test("preferences panel shows an inline caution note for street-like input it cannot confidently classify", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Ustaw moją okolicę" }).click();
+    await page.getByLabel("Lub wpisz miejscowość albo grupę ulic").fill("ul. Nieznana 12");
+    await expect(
+      page.getByText(/Nie mamy pewności, czy ta grupa ulic znajduje się w obszarze pilotażu/)
+    ).toBeVisible();
+  });
+
+  test("no forced onboarding: settings panel is closed by default on first visit", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByRole("heading", { name: "Moja okolica" })).toHaveCount(0);
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  });
+
+  for (const width of [375, 390, 414]) {
+    test(`settings panel is usable with no horizontal scroll at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 812 });
+      await page.goto("/");
+      await page.getByRole("button", { name: "Ustaw moją okolicę" }).click();
+      await expect(page.getByRole("heading", { name: "Moja okolica" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Komorów", exact: true })).toBeVisible();
+      await expect(page.getByLabel("Lub wpisz miejscowość albo grupę ulic")).toBeVisible();
+      const bodyOverflows = await page.evaluate(
+        () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1
+      );
+      expect(bodyOverflows).toBe(false);
+    });
+  }
 });

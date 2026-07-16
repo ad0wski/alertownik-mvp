@@ -54,6 +54,20 @@ The homepage search box matches title, place, "co się zmienia," "co zrobić," a
 
 ---
 
+## Pilot Coverage Detection Is a Heuristic, Not Geocoding
+
+Sprint 158A added a check that flags when a typed "Moja okolica" value looks like it's outside the pilot area (`src/lib/pilotCoverage.ts`), so a resident typing e.g. "Warszawa" sees "Nie obsługujemy jeszcze tej okolicy" instead of a generic empty result. This is plain string matching against `PILOT_LOCALITIES`, not real geocoding — a typed street/estate group that doesn't resemble a known locality name gets a cautious "we're not sure" message rather than a confident yes/no, since the app has no way to know which streets fall inside which locality.
+
+**Consequence:** A real street inside the pilot area but far from any recognizable locality name in its spelling could get the cautious message even though it's actually covered. This is intentional — a wrong "unsupported" claim is worse than an occasional over-cautious one.
+
+---
+
+## No English Language Support Yet (Backlog)
+
+The public UI is Polish-only. Two professional Userbrain testers (Franklin, Elizabeth, English-speaking, using Chrome's automatic translation) hit a real language barrier, and Chrome's translation distorted Polish locality names in the process. This is tracked as backlog, not fixed in Sprint 158A — the pilot itself is Polish-language-first, and full i18n needs a dedicated audit of every page's copy, routes, metadata, and alert data (which is entered in Polish by the admin), not a partial toggle. A half-translated UI would likely confuse residents more than the current all-Polish version.
+
+---
+
 ## This Is Early-Stage Software
 
 Alertownik is a pilot-stage MVP, not a mature product. It has had QA passes (see [[Sprint Log]] Sprint 68 in Obsidian) and is now being prepared for its first real testers, but it has not yet been validated under real, sustained usage. See `docs/NEXT_MILESTONES.md` for the planned path (richer source monitoring, notifications, multi-role admin).

@@ -152,3 +152,18 @@ not "live for a real visitor." Full detail, including a 30-item gate
 matrix, the WKD alert findings, a legal-wording completeness check, and
 a controlled admin-workflow runbook:
 `docs/SPRINT_156C_PUBLIC_BETA_FINAL_OPERATIONAL_GATES_AUDIT_V1.md`.
+
+**Update (Sprint 158A, 2026-07-16):** two professional Userbrain tests
+(Franklin, Elizabeth) surfaced a real UX finding after this doc's last
+update — both testers found "Moja okolica" but couldn't tell what
+changed after saving it, whether the search box was a second way to
+set the same area, or why an empty result appeared. Sprint 158A
+addressed this in a feature branch (`sprint-158a-personalization-
+clarity-empty-states-v1`, not merged/deployed) with a single
+settings-panel entry point, an explicit "Pokazujesz alerty dla: …"
+active-scope bar, clearer search copy, and distinct empty states for
+unsupported-area / no-active-alerts / no-search-results /
+no-category-results / combined-filters. See
+`docs/SPRINT_158A_PERSONALIZATION_CLARITY_AND_EMPTY_STATES_V1.md` for
+detail. This does not change the merge/deploy status above — main and
+Production remain unaffected until Adam approves a merge.
