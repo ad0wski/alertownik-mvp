@@ -77,13 +77,14 @@ Stages are intentionally separate — each one can be evaluated and validated be
 
 ---
 
-## Stage 7 — Mobile / PWA
+## Stage 7 — Mobile / PWA 🟡 (installability done, Sprint 158B)
 
-- Make the app installable on Android and iOS as a Progressive Web App (PWA)
-- Offline support for recently viewed alerts
-- Consider a native app if the user base justifies it
+- ✅ Make the app installable on Android and iOS as a Progressive Web App (PWA) — manifest, icon set, service worker, `/instalacja` install guide
+- ✅ Safe offline handling — a standalone "no connection" screen, not stale cached alerts (see `docs/SPRINT_158B_PWA_INSTALLABILITY_AND_SAFE_OFFLINE_FOUNDATION_V1.md`)
+- ❌ Deliberately *not* done: offline caching of alert content. Alert freshness matters more than offline availability for this app — a resident should never see an old alert presented as current just because it was cached. This is a product decision, not a gap to fill later.
+- Consider a native app (Play/App Store wrapper) if the user base justifies it — not started
 
-**Goal:** Reduce friction for daily residents who primarily use mobile devices.
+**Goal:** Reduce friction for daily residents who primarily use mobile devices, without ever risking stale safety-relevant information.
 
 ---
 

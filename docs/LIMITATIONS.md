@@ -62,6 +62,14 @@ Sprint 158A added a check that flags when a typed "Moja okolica" value looks lik
 
 ---
 
+## PWA Offline Mode Never Shows Alert Content (By Design)
+
+Sprint 158B made Alertownik installable (manifest, icons, service worker) and gave it a safe offline fallback. When there's no connection, the app shows a standalone "Brak połączenia z internetem" screen — it deliberately never serves a cached copy of the alert list, an alert detail page, `/admin`, or any API/Supabase response. The service worker's cache holds only the offline screen and the icon it needs.
+
+**Consequence:** Alertownik cannot be browsed offline at all — no "recently viewed alerts while offline" feature exists or is planned as currently scoped. This is intentional: a stale cached alert presented as current could send someone to a road closure or water outage that's already over. Freshness beats offline availability for this app.
+
+---
+
 ## No English Language Support Yet (Backlog)
 
 The public UI is Polish-only. Two professional Userbrain testers (Franklin, Elizabeth, English-speaking, using Chrome's automatic translation) hit a real language barrier, and Chrome's translation distorted Polish locality names in the process. This is tracked as backlog, not fixed in Sprint 158A — the pilot itself is Polish-language-first, and full i18n needs a dedicated audit of every page's copy, routes, metadata, and alert data (which is entered in Polish by the admin), not a partial toggle. A half-translated UI would likely confuse residents more than the current all-Polish version.

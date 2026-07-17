@@ -69,6 +69,12 @@ export function AppFooter() {
               >
                 Panel admina
               </Link>
+              <Link
+                href="/instalacja"
+                className="text-xs text-slate-500 hover:text-slate-800 transition-colors"
+              >
+                Zainstaluj Alertownik
+              </Link>
             </div>
           )}
         </div>

@@ -53,7 +53,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | Source registry — add, edit, monitor sources | `/admin/sources` |
 | Manual source monitoring and check history | `/admin/sources` |
 | Source check → AI Helper shortcut | `/admin/sources` → `/ai-helper` |
-| PWA manifest + mobile-friendly header | all pages |
+| Installable PWA — manifest, icons, service worker, safe offline screen | all public pages, `/instalacja` |
 
 ---
 
@@ -73,6 +73,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | [docs/PRODUCT_NOTES.md](docs/PRODUCT_NOTES.md) | Product thinking and design principles |
 | [docs/DEMO_GUIDE.md](docs/DEMO_GUIDE.md) | How to demo the app |
 | [docs/LIMITATIONS.md](docs/LIMITATIONS.md) | Honest current constraints |
+| [docs/SPRINT_158B_PWA_INSTALLABILITY_AND_SAFE_OFFLINE_FOUNDATION_V1.md](docs/SPRINT_158B_PWA_INSTALLABILITY_AND_SAFE_OFFLINE_FOUNDATION_V1.md) | PWA manifest, icons, service worker, cache policy, offline UX |
 
 ---
 

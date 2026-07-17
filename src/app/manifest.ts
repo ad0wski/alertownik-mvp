@@ -11,9 +11,12 @@ export default function manifest(): MetadataRoute.Manifest {
     // for someone deciding whether to install.
     description:
       "Lokalne alerty w jednym miejscu — transport, woda, prąd, odpady i komunikaty gminne dla Komorowa, Pruszkowa i okolic.",
+    id: "/",
     start_url: "/",
     scope: "/",
     display: "standalone",
+    orientation: "any",
+    lang: "pl-PL",
     background_color: "#f0f9ff",
     theme_color: "#2563eb",
     icons: [

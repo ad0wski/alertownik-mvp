@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AppHeader } from "@/components/AppHeader";
 import { AppFooter } from "@/components/AppFooter";
+import { PwaController } from "@/components/PwaController";
+import { NetworkStatusBanner } from "@/components/NetworkStatusBanner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -44,9 +46,11 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        <NetworkStatusBanner />
         <AppHeader />
         <div className="flex-1 flex flex-col">{children}</div>
         <AppFooter />
+        <PwaController />
       </body>
     </html>
   );

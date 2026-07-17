@@ -99,6 +99,26 @@ export default function PrivacyPage() {
         </section>
 
         <section className={sectionClass}>
+          <h2 className={h2Class}>Instalacja i pamięć techniczna (Cache Storage)</h2>
+          <p className={pClass}>
+            Alertownika można dodać do ekranu głównego telefonu lub
+            zainstalować jako aplikację (zobacz{" "}
+            <Link href="/instalacja" className="font-medium text-blue-600 hover:underline">
+              instrukcję instalacji
+            </Link>
+            ). W tym celu przeglądarka korzysta z technicznej pamięci
+            podręcznej (Cache Storage) i mechanizmu service worker. Zapisujemy
+            w niej wyłącznie samodzielny ekran „Brak połączenia z internetem"
+            i potrzebną do niego ikonę — nigdy listę alertów, treść
+            konkretnych alertów, panel administratora ani odpowiedzi API czy
+            Supabase. Dzięki temu offline nigdy nie pokazujemy starego alertu
+            jako aktualnego. Ta pamięć pozostaje wyłącznie na Twoim
+            urządzeniu i możesz ją usunąć w każdej chwili, czyszcząc dane
+            witryny w przeglądarce albo odinstalowując aplikację.
+          </p>
+        </section>
+
+        <section className={sectionClass}>
           <h2 className={h2Class}>Po co przetwarzamy dane</h2>
           <ul className={listClass}>
             <li>działanie i utrzymanie serwisu,</li>
