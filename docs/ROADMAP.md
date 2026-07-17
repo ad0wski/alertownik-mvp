@@ -4,6 +4,8 @@ This document outlines planned stages for Alertownik beyond the current MVP.
 
 Stages are intentionally separate — each one can be evaluated and validated before moving to the next.
 
+**Sprint 159 closure note:** the current MVP scope (infrastructure, Core MVP, controlled public beta, user-facing pilot readiness, PWA installability) was audited and confirmed 100% complete for its defined boundaries — see `docs/SPRINT_159_MVP_100_PERCENT_CLOSURE_V1.md`. Everything below this point in the roadmap is separately-scoped future work, not unfinished MVP work.
+
 ---
 
 ## Stage 1 — Local MVP ✅ (current)

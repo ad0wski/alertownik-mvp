@@ -79,3 +79,7 @@ The public UI is Polish-only. Two professional Userbrain testers (Franklin, Eliz
 ## This Is Early-Stage Software
 
 Alertownik is a pilot-stage MVP, not a mature product. It has had QA passes (see [[Sprint Log]] Sprint 68 in Obsidian) and is now being prepared for its first real testers, but it has not yet been validated under real, sustained usage. See `docs/NEXT_MILESTONES.md` for the planned path (richer source monitoring, notifications, multi-role admin).
+
+---
+
+**Sprint 159 (MVP 100% closure) note:** every limitation above is a deliberate scope boundary of the current MVP, not an unfinished piece of it — see `docs/SPRINT_159_MVP_100_PERCENT_CLOSURE_V1.md` for the closure audit that confirmed this. Push notifications, app-store distribution, analytics, PL/EN, and geographic expansion are explicitly future, separately-scoped work, not gaps in what's live today.

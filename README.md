@@ -8,6 +8,8 @@ Each alert has a fixed structure: what's happening, where, when, and what to do.
 
 > Early-stage MVP built for learning and product validation. No real user PII is stored or included in this repository.
 
+> **MVP scope closure (Sprint 159):** infrastructure, Core MVP, controlled public beta, user-facing pilot readiness, and PWA installability are each at 100% of their current defined scope. Push notifications, app-store distribution, analytics, and monetization are separate, not-yet-started scopes — see `docs/SPRINT_159_MVP_100_PERCENT_CLOSURE_V1.md`.
+
 ---
 
 ## Tech Stack
@@ -74,6 +76,8 @@ Open [http://localhost:3000](http://localhost:3000).
 | [docs/DEMO_GUIDE.md](docs/DEMO_GUIDE.md) | How to demo the app |
 | [docs/LIMITATIONS.md](docs/LIMITATIONS.md) | Honest current constraints |
 | [docs/SPRINT_158B_PWA_INSTALLABILITY_AND_SAFE_OFFLINE_FOUNDATION_V1.md](docs/SPRINT_158B_PWA_INSTALLABILITY_AND_SAFE_OFFLINE_FOUNDATION_V1.md) | PWA manifest, icons, service worker, cache policy, offline UX |
+| [docs/SPRINT_159_MVP_100_PERCENT_CLOSURE_V1.md](docs/SPRINT_159_MVP_100_PERCENT_CLOSURE_V1.md) | MVP scope closure audit — infrastructure, Core MVP, beta, pilot readiness, PWA |
+| [docs/MVP_INCIDENT_AND_ROLLBACK_RUNBOOK_V1.md](docs/MVP_INCIDENT_AND_ROLLBACK_RUNBOOK_V1.md) | What to do when something breaks in Production |
 
 ---
 
