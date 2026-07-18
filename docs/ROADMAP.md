@@ -90,11 +90,14 @@ Stages are intentionally separate — each one can be evaluated and validated be
 
 ---
 
-## Stage 8 — Security Hardening 🟡 (critical/high closed, Sprint 161)
+## Stage 8 — Security Hardening 🟡 (critical/high closed, Sprints 161–161B)
 
 - ✅ Server-side session verification on the three previously-unauthenticated admin API routes (`fetch-preview`, `sources/check`, `ai/draft-alert`)
+- ✅ Server-side *authorization*, not just authentication — the same three routes now also require an `admin_profiles` row, not merely a valid Supabase Auth session (Sprint 161B; this project has more than one Supabase Auth account, so those two checks are genuinely different)
 - ✅ SSRF defenses on the admin-supplied-URL fetch endpoint (private-IP/DNS/redirect validation)
 - ✅ Real CSP and standard security headers (`X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options`, `Permissions-Policy`, HSTS in production)
+- ✅ Live RLS manually verified for `alerts`, `source_checks`, `source_notice_candidates` — all confirmed correct (Sprint 161B)
+- 🟡 `alert_sources` RLS fix — gap found (still checked only `auth.role() = 'authenticated'`, not `admin_profiles`), SQL written and statically verified, **not yet applied** — needs Adam to run it manually in the Supabase SQL Editor (`docs/sql/SPRINT_161B_ALERT_SOURCES_RLS_HARDENING.sql`)
 - ❌ Credible rate limiting — needs Vercel Firewall or an external store, a manual infrastructure decision, not started (see `docs/SPRINT_161_CRITICAL_SECURITY_HARDENING_V1.md` §5)
 - ❌ Server-side/middleware admin route guard — needs a `@supabase/ssr` cookie-session migration, not started (see the same doc, §9)
 - ❌ Full DNS-rebinding closure on the SSRF guard — needs either a new HTTP-client dependency or a lower-level TCP client, documented as a residual risk for now (§4)

@@ -10,7 +10,7 @@ Each alert has a fixed structure: what's happening, where, when, and what to do.
 
 > **MVP scope closure (Sprint 159):** infrastructure, Core MVP, controlled public beta, user-facing pilot readiness, and PWA installability are each at 100% of their current defined scope. Push notifications, app-store distribution, analytics, and monetization are separate, not-yet-started scopes — see `docs/SPRINT_159_MVP_100_PERCENT_CLOSURE_V1.md`.
 
-> **Security hardening (Sprint 161):** the three admin-triggered API routes now require a verified Supabase session server-side, the source-preview fetch endpoint has SSRF defenses (private-IP/DNS/redirect validation), and the site serves a real CSP plus standard security headers. Rate limiting and a true server-side admin route guard remain open — see `docs/SPRINT_161_CRITICAL_SECURITY_HARDENING_V1.md` and `docs/LIMITATIONS.md`.
+> **Security hardening (Sprints 161–161B):** the three admin-triggered API routes now require a verified *and authorized* Supabase session server-side (a genuine session alone isn't enough — it must also have an `admin_profiles` row), the source-preview fetch endpoint has SSRF defenses (private-IP/DNS/redirect validation), the site serves a real CSP plus standard security headers, and live RLS was manually verified for `alerts`/`source_checks`/`source_notice_candidates` (all correct). One gap remains: `alert_sources`'s RLS policies still only check `auth.role() = 'authenticated'`, not `admin_profiles` — a fix is written but not yet applied (`docs/sql/SPRINT_161B_ALERT_SOURCES_RLS_HARDENING.sql`). Rate limiting and a true server-side admin route guard also remain open — see `docs/SPRINT_161_CRITICAL_SECURITY_HARDENING_V1.md` and `docs/LIMITATIONS.md`.
 
 ---
 

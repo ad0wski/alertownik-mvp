@@ -6,6 +6,19 @@ any further UI, automation, or app-store work. No cosmetic changes, no dark
 mode, no scheduled writes turned on, no push notifications — scope is
 security only, per the sprint brief.
 
+> **Sprint 161B addendum (same branch):** Sprint 161's `requireAdminSession`
+> only checked *authentication* (a genuine Supabase Auth session) — not
+> *authorization* (that account being an administrator). Adam's manual
+> read-only RLS verification found this project has more than one Supabase
+> Auth account, and `alert_sources` still only checked
+> `auth.role() = 'authenticated'` at the database level too, unlike
+> `alerts`/`source_checks`/`source_notice_candidates`, which already gate
+> on `admin_profiles` membership. Sprint 161B closes both: `serverAuth.ts`
+> now additionally checks `admin_profiles` (403 for a valid-but-non-admin
+> session), and a proposed (unexecuted) SQL package brings `alert_sources`
+> in line with the other three tables. See the "Sprint 161B" sections
+> inline below and `docs/sql/SPRINT_161B_ALERT_SOURCES_RLS_HARDENING.sql`.
+
 ---
 
 ## 1. Findings inherited from Sprint 160A
@@ -78,10 +91,6 @@ which every one of the three routes now calls as its first line. It:
    `console.error`s a fixed diagnostic string on the unreachable-Supabase
    path, no token content.
 
-Any authenticated Supabase Auth user counts as admin, which matches the
-existing model everywhere else in the app (CLAUDE.md: "Any authenticated
-user is treated as admin" — there is no public sign-up flow).
-
 All four existing client call sites were switched from `fetch(...)` to
 `authFetch(...)`: `src/app/ai-helper/page.tsx`,
 `src/app/admin/sources/page.tsx` (two call sites),
@@ -89,6 +98,50 @@ All four existing client call sites were switched from `fetch(...)` to
 `src/app/admin/new-alert/page.tsx`. A logged-in admin's existing behavior
 is unchanged — `authFetch` only adds a header, it doesn't change the
 request body, method, or response handling.
+
+### 3a. Sprint 161B — authentication is not authorization
+
+The paragraph above originally read "any authenticated Supabase Auth user
+counts as admin" — Sprint 161B found that claim was true of the *app's*
+existing model (CLAUDE.md) but not actually true of the *database*, and not
+a safe assumption for `requireAdminSession` to keep making. Adam's manual
+read-only RLS verification (`docs/SUPABASE_RLS_SECURITY_VERIFICATION_V1.md`)
+confirmed this project has **more than one Supabase Auth account** — so "a
+valid session exists" (authentication) and "this account is an
+administrator" (authorization) are genuinely different claims here, not a
+distinction without a difference.
+
+The same verification also confirmed `alerts`, `source_checks`, and
+`source_notice_candidates` already gate every admin write on membership in
+a `public.admin_profiles` table (`EXISTS (select 1 from admin_profiles
+where user_id = auth.uid())`) — this is not new infrastructure Sprint 161B
+invents, it's the project's own existing, already-live administrator
+membership mechanism (see `docs/SCHEDULED_WRITER_RLS_MIGRATION_PLAN_V1.md`
+for its original introduction). `requireAdminSession<T>` simply started
+using it too:
+
+1. `getUser(token)` still runs first, exactly as before — confirms the
+   token is genuine and currently valid. A missing, malformed, empty, or
+   invalid token still returns **401**, unchanged.
+2. If the token is valid, a second query now runs — `SELECT user_id FROM
+   admin_profiles WHERE user_id = <the token's user id>` — using the same
+   anon key, but with the caller's own bearer token set as that request's
+   `Authorization` header, so the query runs *as that user* under RLS
+   (via `admin_profiles`' own existing self-row SELECT policy), not as an
+   anonymous or elevated request. `service_role` is never used anywhere in
+   this check.
+3. No matching row → **403** (`{ ok: false, error: "Brak uprawnień
+   administratora." }`) — a deliberately different status than 401, since
+   the token itself was genuinely valid; it's authorization that failed,
+   not authentication. The response never explains *why* beyond that
+   (doesn't confirm/deny whether the account exists, is signed in
+   elsewhere, etc.).
+4. The admin_profiles query result, and the fact that a lookup even
+   happened for a given user id, is never logged.
+
+A currently-working admin's request is unaffected end to end — the same
+`admin_profiles` row that already lets them use `/admin`, `/builder`, and
+the candidate queue today is the row this check now also finds.
 
 ## 4. SSRF defense
 
@@ -305,18 +358,56 @@ tacked-on change here.
 
 ## 10. RLS evidence status
 
-See `docs/SUPABASE_RLS_SECURITY_VERIFICATION_V1.md` (new this sprint) for
-the full breakdown. Summary: `alert_sources`, `source_checks`, and
-`source_notice_candidates` have committed policy SQL in `docs/` matching
-the documented `auth.role() = 'authenticated'` pattern. **The `alerts`
-table's live write policy has no committed SQL anywhere in the repo** —
-this was already flagged by the Sprint 144 audit and remains unconfirmed;
-the new doc points to the pre-existing
-`docs/sql/INSPECT_LIVE_RLS_READ_ONLY.sql` (unexecuted, read-only, SELECT
-statements only) as the exact verification step, plus a Dashboard-only
-alternative that needs no SQL at all. No RLS policy was read, queried, or
-changed this session — no read-only Supabase MCP/CLI connection was
-available.
+**Update (Sprint 161B) — this section originally said the `alerts` write
+policy was unconfirmed from the repo and asked Adam to check it manually.
+He did.** See `docs/SUPABASE_RLS_SECURITY_VERIFICATION_V1.md` for the
+original instructions. The result:
+
+- **`alerts`** — confirmed correct: anon `SELECT` is restricted to
+  `status = 'published'`, every admin operation requires `EXISTS (...
+  admin_profiles ...)`, and RLS is enabled. No action needed.
+- **`source_checks`** and **`source_notice_candidates`** — confirmed
+  correct: admins are checked via `admin_profiles`, the scheduled writer
+  is checked via the separate `automation_identities` table, and the
+  writer's write constraints are exactly as narrow as
+  `docs/sql/PROPOSED_SCHEDULED_WRITER_RLS_MIGRATION_V1.sql` designed them.
+- **`alert_sources`** — **problem found.** Its four admin policies still
+  check only `auth.role() = 'authenticated'` (the original Sprint 42
+  design, `docs/supabase_sources_schema.sql`) — they were never migrated
+  to the `admin_profiles` mechanism the other three tables now use. Since
+  this project has more than one Supabase Auth account, this means any
+  signed-in account — not only the actual administrator — can currently
+  read and write the entire source registry directly against Supabase,
+  bypassing the app (and now also bypassing §3's `requireAdminSession`
+  fix, since RLS is the database-level boundary the API layer sits in
+  front of, not behind).
+
+### 10a. alert_sources fix — proposed, not executed
+
+`docs/sql/SPRINT_161B_ALERT_SOURCES_RLS_HARDENING.sql` (new) replaces the
+four `auth.role() = 'authenticated'` policies with the same
+`admin_profiles` EXISTS check `alerts`/`source_checks`/
+`source_notice_candidates` already use. It does not touch those three
+tables, does not touch `admin_profiles` itself, and does not touch
+`alert_sources`'s separate, already-flagged live anon-read policy (that
+remains its own, separately-proposed cleanup:
+`docs/sql/PROPOSED_ALERT_SOURCES_PUBLIC_READ_CLEANUP_V1.sql`).
+
+**Scheduled writer gets nothing on `alert_sources`, confirmed from the
+application code itself, not assumed:** `src/lib/scheduledWriter.ts:332-346`
+states outright that the scheduled writer has "ZERO access to
+alert_sources ... not even SELECT" by deliberate Sprint 146 design — it
+resolves a source's registry id from a human-maintained environment
+variable instead of querying the table. The hardening SQL grants
+`automation_identities` members nothing on `alert_sources` at all,
+matching that existing design exactly — see §6 below for the full
+required-rights breakdown by actor.
+
+`docs/sql/VERIFY_SPRINT_161B_RLS_READ_ONLY.sql` (new) is the paired
+read-only check — run it before applying (to see the finding directly)
+and after (to confirm the fix landed). Neither file was executed this
+session — no read-only Supabase MCP/CLI connection was available, and
+this sprint's scope explicitly excludes touching live Supabase.
 
 ## 11. Anthropic key abuse review
 
@@ -397,6 +488,28 @@ New Sprint 161 test files (all under `tests/e2e/`, run by the existing
   invariant Sprint 160A found), so a future change that adds a new publish
   path fails this test loudly.
 
+**Sprint 161B additions:**
+
+- `serverAuth.spec.ts` — extended with: a genuinely valid token but no
+  `admin_profiles` row → **403**, not 401, and the `admin_profiles` query
+  is confirmed to actually run (a test fails loudly if it doesn't); the
+  `admin_profiles` query is confirmed to carry the caller's own bearer
+  token, not an anonymous request; a valid token *with* a matching
+  `admin_profiles` row → `ok: true` (the PASS case).
+- `adminApiRouteAuth.spec.ts` — extended with a route-level version of the
+  same 403 case on `fetch-preview`, so the check is proven wired into the
+  actual route, not just the shared helper in isolation.
+- `alertSourcesRlsSqlAntiDrift.spec.ts` (new) — static, file-content-only
+  checks on the two new SQL files (no database involved): the hardening
+  migration references `admin_profiles`, never reintroduces
+  `auth.role() = 'authenticated'` as the CRUD barrier, never mentions
+  `automation_identities` (the scheduled writer gets nothing), never
+  touches `alerts`/`source_checks`/`source_notice_candidates`, never
+  disables RLS, never uses `service_role`, drops exactly the four original
+  policy names and creates exactly four replacements, and is wrapped in a
+  single transaction; the verification file contains only `SELECT`
+  statements and never queries `auth.users`.
+
 ### Results
 
 | Suite | Result |
@@ -434,18 +547,31 @@ surgical change than this sprint's scope called for.
   remains until Vercel Firewall (or equivalent) is configured.
 - **DNS rebinding on `fetch-preview`** — residual TOCTOU gap documented in
   §4, mitigated but not eliminated without a new dependency.
-- **`alerts` table RLS is unverified from the repo** — §10, needs a manual
-  Dashboard/SQL check by Adam (`docs/SUPABASE_RLS_SECURITY_VERIFICATION_V1.md`).
+- **`alert_sources` RLS fix is proposed but not applied** — §10a, SQL
+  written and verified statically, waiting on Adam's manual execution in
+  the Supabase SQL Editor (this sprint's brief explicitly forbids Claude
+  running it).
 - **Admin routes remain client-side gated** — §9, real fix needs a
-  `@supabase/ssr` migration, out of scope for this sprint.
+  `@supabase/ssr` migration, out of scope for this sprint. Note: §10
+  confirmed `alerts`/`source_checks`/`source_notice_candidates` RLS is
+  correct, and §10a's fix brings `alert_sources` in line too, so once that
+  SQL is applied, RLS is a solid boundary for all four tables even while
+  the admin UI itself stays client-gated.
 - **CSP is `'unsafe-inline'`, not nonce-based** — §7, a deliberate,
   documented trade-off against the static-rendering cost of the
   alternative; revisit if the site's rendering strategy changes for other
   reasons anyway.
 
+*(Resolved by Sprint 161B, no longer a risk: "`alerts` table RLS is
+unverified from the repo" — confirmed correct by Adam's manual check, §10.
+"`requireAdminSession` only checks authentication, not admin_profiles
+membership" — fixed, §3a.)*
+
 ## 15. Documentation
 
-This file, plus `docs/SUPABASE_RLS_SECURITY_VERIFICATION_V1.md` (new), and
+This file, plus `docs/SUPABASE_RLS_SECURITY_VERIFICATION_V1.md`,
+`docs/sql/SPRINT_161B_ALERT_SOURCES_RLS_HARDENING.sql`, and
+`docs/sql/VERIFY_SPRINT_161B_RLS_READ_ONLY.sql` (all updated/new), and
 updates to `README.md`, `docs/LIMITATIONS.md`, and `docs/ROADMAP.md`
 noting what changed and what's still open.
 
@@ -456,11 +582,12 @@ Adam's manual steps):
 
 1. Confirm `npm run check`, `npm run test:e2e`, and `npm run test:pwa` all
    pass on the branch (see §12/final report).
-2. Read this document's §9, §10, §14 — none of these are blockers to
-   deploying the routes-level fixes, but all three are open follow-ups.
-3. Run the RLS verification in `docs/SUPABASE_RLS_SECURITY_VERIFICATION_V1.md`
-   before or shortly after deploying — it's independent of this branch's
-   code but closes the last unverified piece of this sprint's threat model.
+2. Read this document's §9, §10, §10a, §14 — §9 and the CSP trade-off in
+   §14 are open follow-ups, not blockers. §10a (the `alert_sources` SQL)
+   should be applied before or shortly after this branch deploys — see
+   step 7 below.
+3. ~~Run the RLS verification in `docs/SUPABASE_RLS_SECURITY_VERIFICATION_V1.md`~~
+   **Done (Sprint 161B)** — see §10 for the result.
 4. After deploying, spot-check in a real browser: log in as admin, use
    "Sprawdź stronę" on `/admin/sources` and "Generuj draft AI" — both
    should work exactly as before (the only change is an added header the
@@ -471,6 +598,17 @@ Adam's manual steps):
 6. Review the Anthropic Console usage graph per §11's checklist a few days
    after deploying to confirm the abuse-surface reduction shows up as
    expected (should trend toward "only real admin activity").
+7. **New (Sprint 161B):** in the Supabase SQL Editor, run
+   `docs/sql/VERIFY_SPRINT_161B_RLS_READ_ONLY.sql` first (confirms the
+   `alert_sources` finding directly), then
+   `docs/sql/SPRINT_161B_ALERT_SOURCES_RLS_HARDENING.sql`, then re-run the
+   verify file to confirm the four new `admin_profiles`-based policies are
+   live. Full manual steps: §13 of the Sprint 161B final report.
+8. **New (Sprint 161B):** after applying that SQL, log in to
+   `/admin/sources` as the real admin and confirm the page still loads,
+   lists sources, and create/edit/delete all still work — the admin's
+   existing `admin_profiles` row already covers this, no new row is
+   needed.
 
 ## 17. Rollback checklist
 
@@ -479,8 +617,8 @@ If anything in this branch needs to be reverted:
 - The three route handlers, `serverAuth.ts`, `apiClientAuth.ts`, and
   `ssrfGuard.ts` are additive/self-contained — reverting the branch
   restores the exact pre-Sprint-161 route behavior (auth removed, SSRF
-  guard removed) with no data-layer or schema changes to undo (this
-  sprint touched zero SQL, zero Supabase config).
+  guard removed) with no data-layer or schema changes to undo for the
+  Sprint 161 portion (it touched zero SQL, zero Supabase config).
 - `next.config.ts`'s header changes are also self-contained — reverting
   restores the single `worker-src 'self'` CSP line and removes the other
   headers. No client code depends on any of the new headers being present
@@ -491,3 +629,16 @@ If anything in this branch needs to be reverted:
 - No environment variables were added, changed, or require rotation as
   part of a rollback — `NEXT_PUBLIC_SUPABASE_URL`/`_PUBLISHABLE_KEY` are
   the same ones already in use.
+- **Sprint 161B code rollback** (`requireAdminSession`'s admin_profiles
+  check): reverting the branch restores the Sprint-161-only behavior
+  (authenticated-but-not-admin sessions would pass again) — this is a code
+  revert only, no SQL to undo, since the admin_profiles check reads an
+  existing table, it doesn't create one.
+- **Sprint 161B SQL rollback** (if
+  `SPRINT_161B_ALERT_SOURCES_RLS_HARDENING.sql` was already applied and
+  needs to be undone): the hardening file's own commented-out ROLLBACK
+  block (in the file itself, near the end) restores the exact four
+  original `auth.role() = 'authenticated'` policies byte-for-byte — run it
+  manually in the SQL Editor, the same way the forward migration is run.
+  This is independent of the code rollback above; either can be reverted
+  without the other.

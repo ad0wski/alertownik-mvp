@@ -26,9 +26,11 @@ The AI Helper and source-card "Generuj draft AI" can call the Claude API (when `
 
 ## Single Admin Role
 
-Supabase Auth gates `/admin`, `/admin/sources`, `/ai-helper`, and `/builder`, but there is no role system — any authenticated user has full admin access (create, edit, publish, archive, delete sources and alerts). There's no separate "editor" vs "approver" role, and no audit trail of who changed what.
+`/admin`, `/admin/sources`, `/ai-helper`, and `/builder` are gated by a Supabase Auth session in the browser, but there is no role *tier* system beyond a single binary: is this account in `public.admin_profiles` or not. Every account in that table has full admin access (create, edit, publish, archive, delete sources and alerts) — there's no separate "editor" vs "approver" role, and no audit trail of who changed what.
 
-**Consequence:** Fine for a single-admin pilot. Would need a real role system before handing edit access to more than one trusted person.
+**Update (Sprint 161B):** this used to be *less* true-to-code than it should have been — the app was documented as "any authenticated Supabase Auth user is admin," but the project already had more than one Supabase Auth account, and the API layer (`requireAdminSession`) was only checking authentication, not `admin_profiles` membership; `alert_sources`'s own RLS policies had the same gap at the database level. Sprint 161B closed the API-layer version of this (a signed-in non-admin account now gets `403`, not access) and proposed (not yet applied) the matching database-layer fix — see `docs/SPRINT_161_CRITICAL_SECURITY_HARDENING_V1.md` §3a/§10a. Membership in `admin_profiles` is genuinely the single source of truth for "is this account an admin" now, at both layers, once that SQL lands — it just still isn't *tiered* (no editor-vs-approver distinction).
+
+**Consequence:** Fine for a pilot with a small, trusted set of full-access admins. Would need a real tiered role system before handing narrower (e.g. review-only) access to a less-trusted person — today it's all-or-nothing per `admin_profiles` row.
 
 ---
 
@@ -74,10 +76,19 @@ session in the browser (`AuthGate`/inline session checks) — there is no
 `middleware.ts` or server-side route guard, because the Supabase session
 is stored in `localStorage`, which a Next.js middleware function cannot
 read. The real access-control boundary for data is Supabase RLS (the
-three admin API routes now additionally require a verified session
-server-side as of Sprint 161 — see
-`docs/SUPABASE_RLS_SECURITY_VERIFICATION_V1.md` for what's confirmed vs.
-unconfirmed about RLS itself).
+three admin API routes now additionally require a verified *and
+authorized* session server-side as of Sprint 161/161B — not just any
+signed-in account, specifically one with an `admin_profiles` row — see
+`docs/SUPABASE_RLS_SECURITY_VERIFICATION_V1.md`).
+
+**Update (Sprint 161B):** RLS itself was manually verified live —
+`alerts`, `source_checks`, and `source_notice_candidates` are confirmed
+correct (admin operations gated on `admin_profiles`); `alert_sources` was
+found still using the older, broader `auth.role() = 'authenticated'`
+check and has a proposed (not yet applied) fix — see
+`docs/SPRINT_161_CRITICAL_SECURITY_HARDENING_V1.md` §10/§10a. Once that
+SQL is applied, RLS is a confirmed-correct boundary for all four
+admin-owned tables even while the routing layer above stays client-gated.
 
 **Consequence:** an unauthenticated visitor's browser still downloads the
 admin pages' JS bundle and gets a brief loading flash before the login

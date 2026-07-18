@@ -52,6 +52,30 @@ function unauthedJsonRequest(url: string, body: Record<string, unknown>): NextRe
   });
 }
 
+function authedJsonRequest(url: string, body: Record<string, unknown>, token: string): NextRequest {
+  return new NextRequest(url, {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+    body: JSON.stringify(body),
+  });
+}
+
+function mockAuthedNonAdmin() {
+  return async (input: RequestInfo | URL) => {
+    const url = typeof input === "string" ? input : input.toString();
+    if (url.includes("/auth/v1/user")) {
+      return new Response(JSON.stringify({ id: "signed-in-non-admin", aud: "authenticated" }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }
+    if (url.includes("/rest/v1/admin_profiles")) {
+      return new Response("[]", { status: 200, headers: { "content-type": "application/json" } });
+    }
+    throw new Error(`unexpected fetch to ${url} — a non-admin session must never reach this`);
+  };
+}
+
 test.describe("POST /api/sources/fetch-preview — requires admin session", () => {
   test("unauthenticated request → 401, the target URL is never fetched", async () => {
     await withEnv(SUPABASE_ENV, async () => {
@@ -68,6 +92,24 @@ test.describe("POST /api/sources/fetch-preview — requires admin session", () =
         );
         expect(res.status).toBe(401);
         expect(fetchCalled).toBe(false);
+      } finally {
+        restore();
+      }
+    });
+  });
+
+  test("Sprint 161B — a genuinely signed-in session with no admin_profiles row → 403, target URL still never fetched", async () => {
+    await withEnv(SUPABASE_ENV, async () => {
+      const restore = mockFetch(mockAuthedNonAdmin());
+      try {
+        const res = await fetchPreviewPost(
+          authedJsonRequest(
+            "http://localhost/api/sources/fetch-preview",
+            { url: "https://example.com/" },
+            "a-genuinely-valid-but-non-admin-token"
+          )
+        );
+        expect(res.status).toBe(403);
       } finally {
         restore();
       }

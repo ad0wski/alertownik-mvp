@@ -16,10 +16,20 @@ import { createClient } from "@supabase/supabase-js";
 // key the browser client already uses, because `getUser(jwt)` validates the
 // JWT against Supabase's Auth server rather than requiring elevated access.
 //
-// Any authenticated Supabase Auth user counts as admin, matching the existing
-// model (see AGENTS.md/CLAUDE.md: "Any authenticated user is treated as
-// admin" — there is no public sign-up flow, so a valid session already
-// implies admin).
+// Sprint 161B — authentication alone is NOT authorization. This project has
+// more than one Supabase Auth account, and being *signed in* only proves an
+// account exists and is currently valid — it does not prove that account is
+// an administrator. The actual admin-membership mechanism, already live and
+// proven for `alerts`/`source_checks`/`source_notice_candidates` (see
+// docs/SCHEDULED_WRITER_RLS_MIGRATION_PLAN_V1.md and
+// docs/SUPABASE_RLS_SECURITY_VERIFICATION_V1.md), is a row in
+// `public.admin_profiles` keyed by `user_id`. After `getUser(token)`
+// confirms the token is a genuine, currently-valid session, this helper
+// additionally checks for that row — using the anon key plus the caller's
+// own bearer token (so the query runs as that user, under RLS, via
+// `admin_profiles`' own existing self-row SELECT policy), never the
+// service_role key. A signed-in non-admin account gets 403, not 401 — the
+// token itself was valid, it's the authorization check that failed.
 
 // Generic over the caller's own response union (e.g. FetchPreviewResponse)
 // so `return auth.response` type-checks directly against each route's own
@@ -36,9 +46,19 @@ function unauthorized<T>(): NextResponse<T> {
   return NextResponse.json({ ok: false, error: "Wymagane logowanie." }, { status: 401 }) as NextResponse<T>;
 }
 
+function forbidden<T>(): NextResponse<T> {
+  // A different status than unauthorized() on purpose (403 vs 401) — the
+  // token was genuinely valid, the account just isn't an admin. Still
+  // never explains *why* beyond that, so this can't be used to enumerate
+  // which Supabase accounts exist vs. which are admins.
+  return NextResponse.json({ ok: false, error: "Brak uprawnień administratora." }, { status: 403 }) as NextResponse<T>;
+}
+
 /**
- * Verifies the admin session on an incoming Route Handler request.
- * Never logs the token, the session, or any cookie value.
+ * Verifies the admin session on an incoming Route Handler request:
+ * (1) the bearer token is a genuine, currently-valid Supabase Auth session,
+ * and (2) that account has a row in `admin_profiles`. Never logs the
+ * token, the session, any cookie value, or the admin_profiles query result.
  */
 export async function requireAdminSession<T>(req: Request): Promise<AdminAuthResult<T>> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -60,14 +80,29 @@ export async function requireAdminSession<T>(req: Request): Promise<AdminAuthRes
   }
 
   try {
+    // Authorization header set globally on this client instance so the
+    // admin_profiles query below runs AS this user (RLS sees their
+    // auth.uid()), not as the anonymous key's default role.
     const client = createClient(url, key, {
       auth: { persistSession: false, autoRefreshToken: false },
+      global: { headers: { Authorization: `Bearer ${token}` } },
     });
-    const { data, error } = await client.auth.getUser(token);
-    if (error || !data.user) {
+
+    const { data: userData, error: userError } = await client.auth.getUser(token);
+    if (userError || !userData.user) {
       return { ok: false, response: unauthorized() };
     }
-    return { ok: true, userId: data.user.id };
+
+    const { data: profileRow, error: profileError } = await client
+      .from("admin_profiles")
+      .select("user_id")
+      .eq("user_id", userData.user.id)
+      .maybeSingle();
+    if (profileError || !profileRow) {
+      return { ok: false, response: forbidden() };
+    }
+
+    return { ok: true, userId: userData.user.id };
   } catch {
     // Supabase unreachable, malformed token, etc. — fail closed, no detail.
     return { ok: false, response: unauthorized() };
