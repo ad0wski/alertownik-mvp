@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
+import { authFetch } from "@/lib/apiClientAuth";
 import { AlertCard } from "@/components/AlertCard";
 import { getPrePublishWarnings } from "@/lib/alertQuality";
 import {
@@ -126,7 +127,7 @@ function NewAlertPageInner() {
     if (publishedDate) parts.push(`Data publikacji komunikatu źródłowego: ${publishedDate}`);
 
     try {
-      const res = await fetch("/api/ai/draft-alert", {
+      const res = await authFetch("/api/ai/draft-alert", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

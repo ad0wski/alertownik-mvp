@@ -90,6 +90,19 @@ Stages are intentionally separate — each one can be evaluated and validated be
 
 ---
 
+## Stage 8 — Security Hardening 🟡 (critical/high closed, Sprint 161)
+
+- ✅ Server-side session verification on the three previously-unauthenticated admin API routes (`fetch-preview`, `sources/check`, `ai/draft-alert`)
+- ✅ SSRF defenses on the admin-supplied-URL fetch endpoint (private-IP/DNS/redirect validation)
+- ✅ Real CSP and standard security headers (`X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options`, `Permissions-Policy`, HSTS in production)
+- ❌ Credible rate limiting — needs Vercel Firewall or an external store, a manual infrastructure decision, not started (see `docs/SPRINT_161_CRITICAL_SECURITY_HARDENING_V1.md` §5)
+- ❌ Server-side/middleware admin route guard — needs a `@supabase/ssr` cookie-session migration, not started (see the same doc, §9)
+- ❌ Full DNS-rebinding closure on the SSRF guard — needs either a new HTTP-client dependency or a lower-level TCP client, documented as a residual risk for now (§4)
+
+**Goal:** Close the gaps a pre-store security review would flag, before any app-store submission work begins.
+
+---
+
 ## Out of Scope (Unlikely to Change)
 
 - The app will always surface alerts from official sources — not crowdsourced reports

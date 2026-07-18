@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import type { AlertCategory, AlertSeverity } from "@/types/alert";
 import { normalizeAlertSeverity } from "@/lib/normalizeAlert";
+import { requireAdminSession } from "@/lib/serverAuth";
 
 // ── Public types ─────────────────────────────────────────────────────────────
 
@@ -314,7 +315,18 @@ function computeWarnings(
 
 // ── Route handler ────────────────────────────────────────────────────────────
 
+// Sprint 161 — this route calls the metered Anthropic API, so an
+// unauthenticated or oversized request is a real cost/abuse exposure, not
+// just a data-integrity one. Both the session check and the length caps
+// below run before any AI call is made.
+const MAX_SOURCE_TEXT_LENGTH = 20_000;
+const MAX_SOURCE_NAME_LENGTH = 200;
+const MAX_SOURCE_URL_LENGTH = 2_000;
+
 export async function POST(req: NextRequest): Promise<NextResponse<DraftAlertResponse>> {
+  const auth = await requireAdminSession<DraftAlertResponse>(req);
+  if (!auth.ok) return auth.response;
+
   let body: Record<string, unknown>;
   try {
     body = await req.json();
@@ -332,13 +344,19 @@ export async function POST(req: NextRequest): Promise<NextResponse<DraftAlertRes
       { status: 422 }
     );
   }
+  if (sourceText.length > MAX_SOURCE_TEXT_LENGTH) {
+    return NextResponse.json(
+      { ok: false, error: `Tekst źródłowy jest za długi (limit ${MAX_SOURCE_TEXT_LENGTH} znaków).` },
+      { status: 413 }
+    );
+  }
 
   const suggestedCategory =
     typeof body.suggestedCategory === "string" ? body.suggestedCategory : undefined;
   const sourceName =
-    typeof body.sourceName === "string" ? body.sourceName.trim() : "";
+    typeof body.sourceName === "string" ? body.sourceName.trim().slice(0, MAX_SOURCE_NAME_LENGTH) : "";
   const sourceUrl =
-    typeof body.sourceUrl === "string" ? body.sourceUrl.trim() : "";
+    typeof body.sourceUrl === "string" ? body.sourceUrl.trim().slice(0, MAX_SOURCE_URL_LENGTH) : "";
   const today = new Date().toISOString().split("T")[0];
 
   // ── Real AI mode (requires ANTHROPIC_API_KEY in server environment) ──────

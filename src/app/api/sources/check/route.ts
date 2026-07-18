@@ -9,6 +9,8 @@ import {
   UNSUPPORTED_SOURCE_ERROR,
   type CheckProposal,
 } from "@/lib/sourceCheck";
+import { requireAdminSession } from "@/lib/serverAuth";
+import { readLimitedText } from "@/lib/ssrfGuard";
 
 // Sprint 134 (A2) — manual Source Check API for allowlisted safe official
 // sources (Sprint 139: exactly two — Gmina Michałowice komunikaty + WKD
@@ -34,7 +36,12 @@ export type SourceCheckApiResponse =
     }
   | { ok: false; error: string };
 
+const MAX_RESPONSE_BYTES = 2_000_000;
+
 export async function POST(req: NextRequest): Promise<NextResponse<SourceCheckApiResponse>> {
+  const auth = await requireAdminSession<SourceCheckApiResponse>(req);
+  if (!auth.ok) return auth.response;
+
   let body: Record<string, unknown>;
   try {
     body = await req.json();
@@ -81,7 +88,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<SourceCheckAp
       });
     }
 
-    const raw = await response.text();
+    const raw = await readLimitedText(response, MAX_RESPONSE_BYTES);
     html = raw.slice(0, 500_000);
   } catch (err) {
     clearTimeout(timeoutId);

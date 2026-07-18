@@ -48,6 +48,46 @@ Category and location-keyword preferences set in "Moja okolica" are saved in the
 
 ---
 
+## No Credible Rate Limiting on Admin API Routes
+
+`/api/sources/fetch-preview`, `/api/sources/check`, and `/api/ai/draft-alert`
+now require a verified admin session (Sprint 161), which closes the
+anonymous-caller version of the abuse risk, but there is still no
+request-volume throttling for a session that is genuinely logged in. A
+credible limiter needs state that survives across serverless instances —
+Vercel Firewall or an external store (Upstash/Vercel KV) — which is a new
+service/config decision, not something Claude can silently add. See
+`docs/SPRINT_161_CRITICAL_SECURITY_HARDENING_V1.md` §5 for the full
+decision record and recommendation.
+
+**Consequence:** a compromised or careless admin session could call these
+routes at high volume — most acutely `ai/draft-alert`, which is billed
+per call. Body/text-length caps and a 10 s timeout limit the damage per
+call, but not the call rate.
+
+---
+
+## Admin Routes Are Client-Side Gated, Not Server-Enforced
+
+`/admin`, `/admin/*`, `/builder`, and `/ai-helper` check the Supabase
+session in the browser (`AuthGate`/inline session checks) — there is no
+`middleware.ts` or server-side route guard, because the Supabase session
+is stored in `localStorage`, which a Next.js middleware function cannot
+read. The real access-control boundary for data is Supabase RLS (the
+three admin API routes now additionally require a verified session
+server-side as of Sprint 161 — see
+`docs/SUPABASE_RLS_SECURITY_VERIFICATION_V1.md` for what's confirmed vs.
+unconfirmed about RLS itself).
+
+**Consequence:** an unauthenticated visitor's browser still downloads the
+admin pages' JS bundle and gets a brief loading flash before the login
+prompt renders, though no protected data is ever fetched or displayed.
+Closing this properly means migrating to `@supabase/ssr`'s cookie-based
+session handling — a real architecture change, planned as a separate,
+not-yet-started follow-up (see `docs/ROADMAP.md`).
+
+---
+
 ## No Search Beyond Keyword Matching
 
 The homepage search box matches title, place, "co się zmienia," "co zrobić," and category label as plain substrings. There's no fuzzy matching, no date-range filter beyond the category buttons, and no geographic/map-based search.

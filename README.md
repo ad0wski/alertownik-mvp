@@ -10,6 +10,8 @@ Each alert has a fixed structure: what's happening, where, when, and what to do.
 
 > **MVP scope closure (Sprint 159):** infrastructure, Core MVP, controlled public beta, user-facing pilot readiness, and PWA installability are each at 100% of their current defined scope. Push notifications, app-store distribution, analytics, and monetization are separate, not-yet-started scopes — see `docs/SPRINT_159_MVP_100_PERCENT_CLOSURE_V1.md`.
 
+> **Security hardening (Sprint 161):** the three admin-triggered API routes now require a verified Supabase session server-side, the source-preview fetch endpoint has SSRF defenses (private-IP/DNS/redirect validation), and the site serves a real CSP plus standard security headers. Rate limiting and a true server-side admin route guard remain open — see `docs/SPRINT_161_CRITICAL_SECURITY_HARDENING_V1.md` and `docs/LIMITATIONS.md`.
+
 ---
 
 ## Tech Stack

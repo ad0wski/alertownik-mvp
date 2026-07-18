@@ -12,6 +12,7 @@ import {
   CHECK_BUTTON_LABEL,
   type CheckProposal,
 } from "@/lib/sourceCheck";
+import { authFetch } from "@/lib/apiClientAuth";
 import { createSourceCandidateNotice } from "@/lib/supabaseCandidateWrites";
 import { createSourceCheck } from "@/lib/supabaseSourceWrites";
 import { findSimilarText } from "@/lib/candidateWarnings";
@@ -65,7 +66,7 @@ export function SourceApiCheckPanel({
     setCheckLogError(null);
 
     try {
-      const res = await fetch("/api/sources/check", {
+      const res = await authFetch("/api/sources/check", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sourceKey: source.id }),

@@ -1105,25 +1105,32 @@ export default function BuilderPage() {
       </section>
       )}
 
-      {/* ── Form actions (lokalne) ────────────────────────────────────── */}
+      {/* ── Form actions (lokalne, test-only) ─────────────────────────── */}
       {view === "tools" && (
       <>
-      <p className="text-xs text-slate-400 mb-2">
-        Zapis lokalny — tylko w tej przeglądarce, niewidoczny dla innych.
-        Przyciski działają na formularzu z zakładki „Edycja i publikacja":
-      </p>
+      <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5 mb-3">
+        <p className="text-xs font-semibold text-amber-900">
+          Tylko lokalny podgląd — to NIE jest publikacja.
+        </p>
+        <p className="text-xs text-amber-700 mt-1">
+          Te dwa przyciski zapisują wyłącznie w pamięci tej przeglądarki
+          (localStorage). Nic nie trafia do Supabase ani na stronę publiczną —
+          żaden mieszkaniec tego nie zobaczy. Jedyny sposób na realną publikację
+          to sekcja „Zapis do Supabase" niżej, przycisk „Opublikuj w Supabase".
+        </p>
+      </div>
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <button
           onClick={saveDraft}
           className="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-colors"
         >
-          Zapisz jako draft
+          Zapisz jako draft (test lokalny)
         </button>
         <button
           onClick={publishAlert}
-          className="rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 transition-colors"
+          className="rounded-lg bg-slate-500 px-5 py-2.5 text-sm font-medium text-white hover:bg-slate-600 transition-colors"
         >
-          Opublikuj lokalnie
+          Zapisz jako opublikowany (test lokalny, nie Supabase)
         </button>
 
         {draftStatus === "saved" && (
@@ -1143,7 +1150,7 @@ export default function BuilderPage() {
         )}
         {publishStatus === "published" && (
           <span className="text-sm font-medium text-emerald-700">
-            Alert opublikowany lokalnie.
+            Zapisano jako lokalny test — to nie jest publikacja w Supabase.
           </span>
         )}
         {publishStatus === "loaded" && (
@@ -1153,7 +1160,7 @@ export default function BuilderPage() {
         )}
         {publishStatus === "deleted" && (
           <span className="text-sm font-medium text-slate-500">
-            Alert usunięty z lokalnie opublikowanych.
+            Alert usunięty z lokalnych testów.
           </span>
         )}
       </div>

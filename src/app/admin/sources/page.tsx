@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import { authFetch } from "@/lib/apiClientAuth";
 import type { Session } from "@supabase/supabase-js";
 import type {
   AlertSource,
@@ -665,7 +666,7 @@ function SourceCard({
     setInlineDraft({ status: "idle" });
     setInlineDraftSent(false);
     try {
-      const res = await fetch("/api/sources/fetch-preview", {
+      const res = await authFetch("/api/sources/fetch-preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: source.url }),
@@ -689,7 +690,7 @@ function SourceCard({
     setInlineDraft({ status: "loading" });
     setInlineDraftSent(false);
     try {
-      const res = await fetch("/api/ai/draft-alert", {
+      const res = await authFetch("/api/ai/draft-alert", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
+import { authFetch } from "@/lib/apiClientAuth";
 import type { AlertCategory } from "@/types/alert";
 import { normalizeAlertSeverity } from "@/lib/normalizeAlert";
 
@@ -265,7 +266,7 @@ export default function AiHelperPage() {
     setAiDraftWarnings([]);
     setJsonCopied(false);
     try {
-      const res = await fetch("/api/ai/draft-alert", {
+      const res = await authFetch("/api/ai/draft-alert", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
