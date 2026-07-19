@@ -62,7 +62,10 @@ export function PwaController() {
     <div
       role="status"
       aria-live="polite"
-      className="fixed bottom-4 inset-x-4 sm:inset-x-auto sm:right-4 sm:left-auto z-50 max-w-sm sm:w-96 mx-auto sm:mx-0 rounded-xl border border-blue-200 bg-white shadow-lg px-4 py-3 flex items-center gap-3 dark:border-blue-500/30 dark:bg-slate-800"
+      // Sprint 163 — bottom-20 (not bottom-4) on mobile so this never sits
+      // on top of the new fixed bottom nav on public pages; sm: and up
+      // reverts to the original bottom-4 since desktop has no bottom nav.
+      className="fixed bottom-20 inset-x-4 sm:bottom-4 sm:inset-x-auto sm:right-4 sm:left-auto z-50 max-w-sm sm:w-96 mx-auto sm:mx-0 rounded-xl border border-blue-200 bg-white shadow-lg px-4 py-3 flex items-center gap-3 dark:border-blue-500/30 dark:bg-slate-800"
     >
       <p className="text-sm text-slate-700 flex-1 dark:text-slate-200">
         Dostępna jest nowa wersja Alertownika.

@@ -125,7 +125,7 @@ export function AlertCard({ alert, isPreview }: { alert: Alert; isPreview?: bool
         <button
           onClick={() => setExpanded((prev) => !prev)}
           aria-expanded={expanded}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 sm:py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:border-slate-300 transition-colors"
+          className="min-h-[44px] inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:border-slate-300 transition-colors"
         >
           {expanded ? "Ukryj szczegóły ▲" : "Szczegóły ▼"}
         </button>
@@ -136,7 +136,7 @@ export function AlertCard({ alert, isPreview }: { alert: Alert; isPreview?: bool
         ) : (
           <Link
             href={`/alerts/${alert.slug}`}
-            className="inline-flex items-center gap-1 rounded-lg border border-blue-100 bg-blue-50 dark:bg-blue-500/15 px-4 py-2.5 sm:py-2 text-sm font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-100 hover:border-blue-200 transition-colors"
+            className="min-h-[44px] inline-flex items-center gap-1 rounded-lg border border-blue-100 bg-blue-50 dark:bg-blue-500/15 px-4 text-sm font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-100 hover:border-blue-200 transition-colors"
           >
             Otwórz alert →
           </Link>

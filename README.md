@@ -47,9 +47,11 @@ Open [http://localhost:3000](http://localhost:3000).
 
 | Feature | Location |
 |---|---|
-| Public alert list, search, category filters | `/` |
-| "Moja okolica" user preferences (localStorage) | `/` |
-| Alert detail pages | `/alerts/[slug]` |
+| "Dzisiaj" — compact daily view (top alert, next waste collection) | `/` |
+| Public alert list, search, category filters, "Moja okolica" | `/alerty` |
+| Mobile bottom navigation (Dzisiaj/Alerty/Odpady/Więcej) | all public pages, mobile only |
+| Settings/info index for mobile ("Więcej" tab) | `/wiecej` |
+| Alert detail pages, incl. native share | `/alerts/[slug]` |
 | Admin login (Supabase Auth) | `/login` |
 | Admin dashboard with stats and source overview | `/admin` |
 | Alert Builder — create, edit, publish, archive | `/builder` |

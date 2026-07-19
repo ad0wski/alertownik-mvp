@@ -273,7 +273,7 @@ export function AlertList() {
         <div className="flex items-center gap-2 mb-1.5">
           <button
             onClick={() => handleSetMode("all")}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+            className={`min-h-[44px] inline-flex items-center px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
               mode === "all"
                 ? "bg-blue-600 dark:bg-blue-500 text-white border-blue-600"
                 : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-slate-400 hover:text-slate-900 dark:hover:text-white"
@@ -283,7 +283,7 @@ export function AlertList() {
           </button>
           <button
             onClick={() => handleSetMode("my")}
-            className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+            className={`min-h-[44px] inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
               mode === "my"
                 ? "bg-blue-600 dark:bg-blue-500 text-white border-blue-600"
                 : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-slate-400 hover:text-slate-900 dark:hover:text-white"
@@ -316,7 +316,7 @@ export function AlertList() {
                   <button
                     onClick={() => setShowSettingsPanel((v) => !v)}
                     aria-expanded={showSettingsPanel}
-                    className="shrink-0 rounded-lg bg-blue-600 dark:bg-blue-500 px-3.5 py-1.5 text-sm font-medium text-white hover:bg-blue-700 dark:hover:bg-blue-400 transition-colors"
+                    className="shrink-0 min-h-[44px] inline-flex items-center rounded-lg bg-blue-600 dark:bg-blue-500 px-3.5 text-sm font-medium text-white hover:bg-blue-700 dark:hover:bg-blue-400 transition-colors"
                   >
                     Ustaw moją okolicę
                   </button>

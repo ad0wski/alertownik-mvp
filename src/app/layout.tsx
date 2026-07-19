@@ -5,6 +5,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { AppFooter } from "@/components/AppFooter";
 import { PwaController } from "@/components/PwaController";
 import { NetworkStatusBanner } from "@/components/NetworkStatusBanner";
+import { BottomNav } from "@/components/BottomNav";
 import { ThemeScript } from "./theme-bootstrap-script";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { THEME_COLOR_DARK, THEME_COLOR_LIGHT } from "@/lib/theme";
@@ -73,6 +74,7 @@ export default function RootLayout({
           <div className="flex-1 flex flex-col">{children}</div>
           <AppFooter />
           <PwaController />
+          <BottomNav />
         </ThemeProvider>
       </body>
     </html>

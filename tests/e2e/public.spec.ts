@@ -10,7 +10,7 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Public homepage", () => {
   test("main heading is visible", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/alerty");
     await expect(page.locator("h1")).toContainText("Lokalne zmiany");
   });
 
@@ -18,7 +18,7 @@ test.describe("Public homepage", () => {
   // does: a visitor deciding "is this for me" in the first few seconds
   // needs the location, not just the category list.
   test("hero states the pilot's covered area", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/alerty");
     await expect(page.getByText(/Komorowa, Pruszkowa i okolic/)).toBeVisible();
   });
 
@@ -26,7 +26,7 @@ test.describe("Public homepage", () => {
   // whatever alerts already loaded; visible even when the count is 0; not
   // tied to a specific published alert existing.
   test("homepage shows a 'co sprawdzić teraz' status line linking to odpady", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/alerty");
     await expect(
       page.getByText(/aktywn(y|ych) lub nadchodząc(y|ych) alert/)
     ).toBeVisible({ timeout: 15_000 });
@@ -62,7 +62,7 @@ test.describe("Public homepage", () => {
   });
 
   test("search input accepts text without crashing", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/alerty");
     const input = page.getByPlaceholder(/Szukaj po tytule lub treści/);
     await expect(input).toBeVisible();
     await input.fill("transport");
@@ -70,7 +70,7 @@ test.describe("Public homepage", () => {
   });
 
   test("category filter buttons are present and clickable", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/alerty");
     const transportBtn = page.getByRole("button", { name: "Transport" });
     await expect(transportBtn).toBeVisible();
     await transportBtn.click();
@@ -79,7 +79,7 @@ test.describe("Public homepage", () => {
   });
 
   test("alert card expands to show detail labels", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/alerty");
 
     // Wait for loading to finish: either the alert counter or the empty-state message appears
     await expect(
@@ -99,7 +99,7 @@ test.describe("Public homepage", () => {
   });
 
   test("opening alert detail page does not crash the app", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/alerty");
 
     await expect(
       page.getByText(/Wszystkich alertów|Brak aktualnych alertów/)
@@ -119,7 +119,7 @@ test.describe("Public homepage", () => {
   });
 
   test("alert detail page shows the official-source trust disclaimer", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/alerty");
 
     await expect(
       page.getByText(/Wszystkich alertów|Brak aktualnych alertów/)
@@ -149,7 +149,7 @@ test.describe("Public homepage", () => {
   // that it was manually approved, not just imply it via /about's general
   // copy — this is the per-alert version of that trust signal.
   test("alert detail page states the alert was manually approved by an admin", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/alerty");
 
     await expect(
       page.getByText(/Wszystkich alertów|Brak aktualnych alertów/)
@@ -208,14 +208,14 @@ test.describe("Public homepage", () => {
   // okolica" mode shows a hint pointing back at the single "Ustaw moją
   // okolicę" entry point instead.
   test("Moja okolica toggle shows a hint pointing at the single settings entry point", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/alerty");
     await page.getByRole("button", { name: "Moja okolica", exact: true }).click();
     await expect(page.getByText(/Ustaw okolicę powyżej/i)).toBeVisible();
     await expect(page.getByRole("button", { name: "Ustaw moją okolicę" })).toBeVisible();
   });
 
   test("Wszystkie alerty / Moja okolica toggle has no regression: both modes still show the alert-list area", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/alerty");
     const allBtn = page.getByRole("button", { name: "Wszystkie alerty" });
     const myBtn = page.getByRole("button", { name: "Moja okolica", exact: true });
     await expect(allBtn).toBeVisible();
@@ -299,13 +299,13 @@ test.describe("Public homepage", () => {
   });
 
   test("homepage links to the tester-interest section", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/alerty");
     await page.getByRole("link", { name: /zgłoś się jako tester/ }).click();
     await expect(page).toHaveURL(/\/about#chce-testowac$/);
   });
 
   test("alert detail page offers a way to report a wrong/outdated alert", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/alerty");
 
     await expect(
       page.getByText(/Wszystkich alertów|Brak aktualnych alertów/)
@@ -527,13 +527,13 @@ test.describe("Legal pages (/prywatnosc, /zasady)", () => {
 // the waste page leading with too much text before the actual schedule.
 test.describe("Sprint 156B — homepage value-first + personalization", () => {
   test("hero is short (two sentences) and states the covered area", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/alerty");
     await expect(page.getByText(/Sprawdź, co może dziś wpłynąć na Twój dzień/)).toBeVisible();
     await expect(page.getByText(/Komorowa, Pruszkowa i okolic/)).toBeVisible();
   });
 
   test("compact beta status card keeps the independence disclaimer and a link to the full explanation", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/alerty");
     await expect(page.getByText("Status pilotażu")).toBeVisible();
     await expect(
       page.getByText(/niezależnym projektem — nie jest oficjalną aplikacją WKD, PGE ani żadnej gminy/)
@@ -542,7 +542,7 @@ test.describe("Sprint 156B — homepage value-first + personalization", () => {
   });
 
   test("alert list is visible immediately, with no blocking onboarding modal", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/alerty");
     await expect(
       page.getByText(/Wszystkich alertów|Brak aktualnych alertów/)
     ).toBeVisible({ timeout: 15_000 });
@@ -551,7 +551,7 @@ test.describe("Sprint 156B — homepage value-first + personalization", () => {
   });
 
   test("locality quick-pick CTA is visible and does not require login or an exact address", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/alerty");
     await expect(
       page.getByText(/Ustaw swoją okolicę, aby widzieć tylko alerty/)
     ).toBeVisible();
@@ -569,7 +569,7 @@ test.describe("Sprint 156B — homepage value-first + personalization", () => {
   // instant-save-on-chip behavior was one of the two competing mechanisms
   // Userbrain testers found confusing.
   test("settings panel reveals PILOT_LOCALITIES chips and selecting one plus Save saves the preference and switches mode", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/alerty");
     await page.getByRole("button", { name: "Ustaw moją okolicę" }).click();
     const localityChip = page.getByRole("button", { name: "Komorów", exact: true });
     await expect(localityChip).toBeVisible();
@@ -599,7 +599,7 @@ test.describe("Sprint 156B — homepage value-first + personalization", () => {
       );
       localStorage.setItem("alertownik-alert-mode", "my");
     });
-    await page.goto("/");
+    await page.goto("/alerty");
     await expect(page.getByText(/Pokazujesz alerty dla:/)).toBeVisible();
     await page.getByRole("button", { name: "Zmień ustawienia" }).click();
     const pruszkowChip = page.getByRole("button", { name: "Pruszków", exact: true });
@@ -620,7 +620,7 @@ test.describe("Sprint 156B — homepage value-first + personalization", () => {
   // category-control coverage.
   test("category filters use the compact mobile select (not chips) on a narrow viewport, with no hidden horizontal scroll", async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
-    await page.goto("/");
+    await page.goto("/alerty");
     const select = page.locator("#category-select");
     await expect(select).toBeVisible();
     const options = await select.locator("option").allTextContents();
@@ -635,15 +635,20 @@ test.describe("Sprint 156B — homepage value-first + personalization", () => {
 });
 
 // Sprint 156B — real-device (iPhone Safari) smoke flagged the mobile header
-// as visually cramped at 375px; verifying no regression at the three
-// standard iPhone widths and no unwanted page-level horizontal scroll.
-test.describe("Sprint 156B — mobile header widths", () => {
+// as visually cramped at 375px. Sprint 163 replaced the header's own public
+// link row on mobile with the fixed bottom navigation (src/components/BottomNav.tsx)
+// — this test now verifies that replacement instead of the removed header
+// row, at the same three standard iPhone widths, still with no page-level
+// horizontal scroll.
+test.describe("Sprint 163 — mobile bottom navigation widths (supersedes Sprint 156B header row)", () => {
   for (const width of [375, 390, 414]) {
-    test(`header shows all public links without horizontal scroll at ${width}px`, async ({ page }) => {
+    test(`bottom nav shows all four tabs without horizontal scroll at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 812 });
-      await page.goto("/");
-      for (const label of ["Alerty", "Odpady", "O projekcie"]) {
-        await expect(page.getByRole("link", { name: label, exact: true }).first()).toBeVisible();
+      await page.goto("/alerty");
+      const nav = page.getByRole("navigation", { name: "Nawigacja główna" });
+      await expect(nav).toBeVisible();
+      for (const label of ["Dzisiaj", "Alerty", "Odpady", "Więcej"]) {
+        await expect(nav.getByRole("link", { name: label, exact: true })).toBeVisible();
       }
       const bodyOverflows = await page.evaluate(
         () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1
@@ -707,7 +712,7 @@ test.describe("Sprint 156B — waste page hierarchy", () => {
 // findings.
 test.describe("Sprint 158A — personalization clarity and empty states", () => {
   test("all alerts, no preferences: default view shows the full list with no personalization active", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/alerty");
     await expect(
       page.getByText(/Wszystkich alertów|Brak aktualnych alertów/)
     ).toBeVisible({ timeout: 15_000 });
@@ -716,7 +721,7 @@ test.describe("Sprint 158A — personalization clarity and empty states", () => 
   });
 
   test("setting a supported locality manually (typed, not a chip) saves the preference and shows the active-scope bar", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/alerty");
     await page.getByRole("button", { name: "Ustaw moją okolicę" }).click();
     await page.getByLabel("Lub wpisz miejscowość albo grupę ulic").fill("Pruszków");
     await page.getByRole("button", { name: "Zapisz preferencje" }).click();
@@ -737,7 +742,7 @@ test.describe("Sprint 158A — personalization clarity and empty states", () => 
       );
       localStorage.setItem("alertownik-alert-mode", "my");
     });
-    await page.goto("/");
+    await page.goto("/alerty");
     await expect(page.getByText(/Pokazujesz alerty dla:\s*Michałowice/)).toBeVisible();
     await expect(page.getByText(/Kategorie:\s*Woda/)).toBeVisible();
   });
@@ -753,7 +758,7 @@ test.describe("Sprint 158A — personalization clarity and empty states", () => 
       );
       localStorage.setItem("alertownik-alert-mode", "my");
     });
-    await page.goto("/");
+    await page.goto("/alerty");
     await expect(page.getByText("Nie obsługujemy jeszcze tej okolicy.")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText(/Obecny pilotaż obejmuje:.*Komorów/)).toBeVisible();
     await expect(page.getByRole("button", { name: "Wybierz obsługiwaną okolicę" })).toBeVisible();
@@ -771,7 +776,7 @@ test.describe("Sprint 158A — personalization clarity and empty states", () => 
       );
       localStorage.setItem("alertownik-alert-mode", "my");
     });
-    await page.goto("/");
+    await page.goto("/alerty");
     await expect(
       page.getByText(/Pokazujesz alerty dla:\s*Reguły/)
     ).toBeVisible({ timeout: 15_000 });
@@ -788,7 +793,7 @@ test.describe("Sprint 158A — personalization clarity and empty states", () => 
   });
 
   test("a search phrase matching nothing shows the search-empty state with a clear-search action", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/alerty");
     await page.getByLabel("Szukaj w aktualnym widoku").fill("zzzz-nieistniejacy-alert-fraza-12345");
     await expect(
       page.getByText("Nie znaleziono alertów pasujących do wpisanej frazy.")
@@ -804,7 +809,7 @@ test.describe("Sprint 158A — personalization clarity and empty states", () => 
   });
 
   test("a category filter with no matching alerts shows the category-empty state, never a blank screen", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/alerty");
     await page.getByRole("button", { name: "Woda", exact: true }).click();
     const categoryEmpty = page.getByText(/Nie ma obecnie aktywnych alertów kategorii Woda w tym widoku\./);
     if (await categoryEmpty.isVisible()) {
@@ -822,7 +827,7 @@ test.describe("Sprint 158A — personalization clarity and empty states", () => 
   // phrase regardless of real data — this makes the combined (G5) state
   // deterministic, unlike the single-axis category/area tests above.
   test("category filter + search active together with no matches shows the combined empty state listing both conditions", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/alerty");
     await page.getByRole("button", { name: "Transport", exact: true }).click();
     await page.getByLabel("Szukaj w aktualnym widoku").fill("zzzz-nieistniejacy-alert-fraza-12345");
     await expect(
@@ -833,7 +838,7 @@ test.describe("Sprint 158A — personalization clarity and empty states", () => 
   });
 
   test("preferences panel shows an inline caution note for street-like input it cannot confidently classify", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/alerty");
     await page.getByRole("button", { name: "Ustaw moją okolicę" }).click();
     await page.getByLabel("Lub wpisz miejscowość albo grupę ulic").fill("ul. Nieznana 12");
     await expect(
@@ -842,7 +847,7 @@ test.describe("Sprint 158A — personalization clarity and empty states", () => 
   });
 
   test("no forced onboarding: settings panel is closed by default on first visit", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/alerty");
     await expect(page.getByRole("heading", { name: "Moja okolica" })).toHaveCount(0);
     await expect(page.getByRole("dialog")).toHaveCount(0);
   });
@@ -850,7 +855,7 @@ test.describe("Sprint 158A — personalization clarity and empty states", () => 
   for (const width of [375, 390, 414]) {
     test(`settings panel is usable with no horizontal scroll at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 812 });
-      await page.goto("/");
+      await page.goto("/alerty");
       await page.getByRole("button", { name: "Ustaw moją okolicę" }).click();
       await expect(page.getByRole("heading", { name: "Moja okolica" })).toBeVisible();
       await expect(page.getByRole("button", { name: "Komorów", exact: true })).toBeVisible();
@@ -876,7 +881,7 @@ test.describe("Sprint 158A-2 — mobile category control and first viewport", ()
   for (const width of [375, 390, 414]) {
     test(`mobile category select works end-to-end at ${width}px: default, change, filter, revert, no scroll`, async ({ page }) => {
       await page.setViewportSize({ width, height: 812 });
-      await page.goto("/");
+      await page.goto("/alerty");
       await expect(
         page.getByText(/Wszystkich alertów|Brak aktualnych alertów/)
       ).toBeVisible({ timeout: 15_000 });
@@ -908,7 +913,7 @@ test.describe("Sprint 158A-2 — mobile category control and first viewport", ()
 
   test("desktop keeps the category chip row; mobile select is hidden (not removed)", async ({ page }) => {
     // Default project viewport (Desktop Chrome, well above the sm breakpoint).
-    await page.goto("/");
+    await page.goto("/alerty");
     const categories = ["Wszystkie", "Transport", "Woda", "Prąd", "Odpady", "Drogi", "Komunikaty"];
     for (const label of categories) {
       await expect(page.getByRole("button", { name: label, exact: true })).toBeVisible();
@@ -927,7 +932,7 @@ test.describe("Sprint 158A-2 — mobile category control and first viewport", ()
 
   test("first active alert card starts with a clear, usable margin above the fold at 390×844", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/");
+    await page.goto("/alerty");
     await expect(
       page.getByText(/Wszystkich alertów|Brak aktualnych alertów/)
     ).toBeVisible({ timeout: 15_000 });
@@ -942,9 +947,13 @@ test.describe("Sprint 158A-2 — mobile category control and first viewport", ()
 
     const box = await firstCard.boundingBox();
     expect(box).not.toBeNull();
-    // "A clear, usable start" means at least 64px of the card's top is
+    // "A clear, usable start" means at least ~50px of the card's top is
     // visible before the fold at 390×844 — not just a sliver crossing the
-    // viewport boundary.
-    expect(box!.y).toBeLessThanOrEqual(780);
+    // viewport boundary. Threshold raised from 780 to 795 in Sprint 163:
+    // the mode-toggle and "Ustaw moją okolicę" controls above the list grew
+    // from ~32px to the required 44px touch-target minimum (spec section
+    // H), pushing the first card down by ~13.5px — an intentional
+    // accessibility improvement, not a regression to chase back to 780.
+    expect(box!.y).toBeLessThanOrEqual(795);
   });
 });

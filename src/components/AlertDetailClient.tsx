@@ -7,6 +7,7 @@ import { getSupabaseAlertBySlug } from "@/lib/getSupabaseAlerts";
 import { formatAlertRange, formatAlertDateTime } from "@/lib/formatAlertDate";
 import { getAlertTimeStatus, type AlertTimeStatus } from "@/lib/getAlertTimeStatus";
 import { buildAlertReportMailto } from "@/lib/feedbackMailto";
+import { ShareAlertButton } from "@/components/ShareAlertButton";
 import type { Alert } from "@/types/alert";
 
 const timeStatusConfig: Record<
@@ -175,6 +176,11 @@ export function AlertDetailClient({ slug }: { slug: string }) {
           {" · "}
           {formatAlertRange(alert.startsAt, alert.endsAt)}
         </p>
+
+        <ShareAlertButton
+          title={alert.title}
+          text={`${alert.title} — ${alert.place || "Alertownik"}`}
+        />
 
         {/* Detail rows — always stacked vertically for clean mobile reading */}
         <dl className="border-t border-slate-100 dark:border-slate-800 pt-4 flex flex-col divide-y divide-slate-100 dark:divide-slate-800">

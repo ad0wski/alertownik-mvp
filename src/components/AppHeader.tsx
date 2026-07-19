@@ -43,24 +43,19 @@ export function AppHeader() {
     router.push("/");
   }
 
+  // Sprint 163 — "/" is now the "Dzisiaj" view and "/alerty" is the full
+  // list (previously "/" was both). Alert detail pages read as "Alerty"
+  // active, matching the mobile bottom nav's same rule
+  // (src/lib/publicNav.ts's activePublicNavKey) so desktop and mobile never
+  // disagree about which top-level section a given page belongs to.
   function isActive(href: string): boolean {
-    if (href === "/") return pathname === "/" || pathname.startsWith("/alerts");
+    if (href === "/") return pathname === "/";
+    if (href === "/alerty") return pathname === "/alerty" || pathname.startsWith("/alerts/");
     return pathname === href;
   }
 
   const publicNavLinkClass = (href: string) =>
     `px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
-      isActive(href)
-        ? "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300"
-        : "text-slate-700 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800"
-    }`;
-
-  // Sprint 156B — real-device finding: the 3 public links + logo were tight
-  // at 375px, forcing a horizontal scroll for the last item ("O projekcie").
-  // Slightly smaller padding/text on mobile only (desktop nav unaffected)
-  // recovers enough width to fit all three without scrolling.
-  const mobilePublicNavLinkClass = (href: string) =>
-    `px-2 py-1.5 rounded-lg text-xs font-semibold transition-colors shrink-0 whitespace-nowrap ${
       isActive(href)
         ? "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300"
         : "text-slate-700 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800"
@@ -98,6 +93,9 @@ export function AppHeader() {
             aria-label="Nawigacja"
           >
             <Link href="/" className={publicNavLinkClass("/")}>
+              Dzisiaj
+            </Link>
+            <Link href="/alerty" className={publicNavLinkClass("/alerty")}>
               Alerty
             </Link>
             <Link href="/odpady" className={publicNavLinkClass("/odpady")}>
@@ -144,28 +142,20 @@ export function AppHeader() {
           </nav>
 
           {/* ── Mobile nav (below sm) ── */}
-          <div className="flex sm:hidden items-center gap-1 flex-1 min-w-0">
-            {/* Public links scroll horizontally if they don't fit, rather than
-                wrapping/overflowing the header (3 links + logo no longer fit
-                on a 375px screen) — same pattern as the category-filter row. */}
-            <div className="flex items-center gap-1 min-w-0 overflow-x-auto">
-              <Link href="/" className={mobilePublicNavLinkClass("/")}>
-                Alerty
-              </Link>
-              <Link href="/odpady" className={mobilePublicNavLinkClass("/odpady")}>
-                Odpady
-              </Link>
-              <Link href="/about" className={mobilePublicNavLinkClass("/about")}>
-                O projekcie
-              </Link>
-            </div>
-
+          {/* Sprint 163 — the public Alerty/Odpady/O projekcie row that used
+              to live here was removed: those destinations (plus Dzisiaj)
+              are now the fixed bottom navigation on every public mobile
+              page (src/components/BottomNav.tsx), so repeating them in the
+              header would just be the same three links twice on screen at
+              once. The admin hamburger stays — an admin browsing a public
+              page on mobile still needs a way back into /admin. */}
+          <div className="flex sm:hidden items-center gap-1 flex-1 justify-end min-w-0">
             {session && (
               <button
                 onClick={() => setMenuOpen((v) => !v)}
                 aria-expanded={menuOpen}
                 aria-label="Menu admina"
-                className="p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors shrink-0 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800"
+                className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors shrink-0 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800"
               >
                 {menuOpen ? (
                   <svg

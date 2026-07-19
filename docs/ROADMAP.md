@@ -120,6 +120,20 @@ Stages are intentionally separate — each one can be evaluated and validated be
 
 ---
 
+## Stage 10 — Mobile App Shell ✅ (Sprint 163)
+
+- ✅ Fixed mobile bottom navigation — Dzisiaj / Alerty / Odpady / Więcej, hidden on desktop, hidden on `/login` and every admin route regardless of session, ≥44px targets, `aria-current`, safe-area-aware
+- ✅ `/` is now a short "Dzisiaj" view (top active alert, next waste collection, up to 3 more alerts) instead of the full scrollable list — no new data source
+- ✅ `/alerty` — the previous full list, moved verbatim (same `AlertList` component, same behavior, new URL)
+- ✅ `/wiecej` — settings/info index, the mobile equivalent of the footer link row
+- ✅ Native share (`navigator.share` + clipboard fallback) on the alert detail page, no new permissions, nothing sent to a server
+- ✅ Touch-target pass to ≥44px on bottom nav, admin hamburger, mode-toggle buttons, alert-card action buttons, `/wiecej` rows
+- ✅ Zero changes to Supabase/RLS/SQL/cron, zero changes to `serverAuth.ts`/`ssrfGuard.ts`, zero PWA cache-policy change
+
+**Goal:** Make the public mobile experience feel like a coherent app shell instead of a scrolled webpage, without touching security, data, or the admin surface.
+
+---
+
 ## Out of Scope (Unlikely to Change)
 
 - The app will always surface alerts from official sources — not crowdsourced reports

@@ -31,8 +31,13 @@ export function AppFooter() {
             {session ? "Alertownik — panel admina" : "Alertownik — wersja pilotażowa"}
           </p>
 
+          {/* Sprint 163 — this full link row is desktop-only now: every one
+              of these destinations is also a row on /wiecej, which is the
+              mobile bottom nav's "Więcej" tab. Repeating the whole list in
+              the footer on mobile would just be the same links twice on a
+              screen with much less room than desktop has. */}
           {!session && (
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="hidden sm:flex flex-wrap items-center gap-3">
               <Link
                 href="/about"
                 className="text-xs text-slate-500 hover:text-slate-800 transition-colors dark:text-slate-400 dark:hover:text-slate-200"
@@ -83,6 +88,14 @@ export function AppFooter() {
               </Link>
             </div>
           )}
+          {!session && (
+            <Link
+              href="/wiecej"
+              className="sm:hidden text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              Więcej →
+            </Link>
+          )}
         </div>
 
         {!session && (
@@ -92,7 +105,7 @@ export function AppFooter() {
         )}
 
         {!session && (
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <p className="hidden sm:block text-xs text-slate-500 dark:text-slate-400">
             Możesz dodać Alertownik do ekranu głównego telefonu —{" "}
             <Link
               href="/about#instalacja"

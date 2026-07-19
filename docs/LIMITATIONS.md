@@ -150,6 +150,21 @@ change, to close this gap.
 
 ---
 
+## "Dzisiaj" Only Surfaces Currently-Active Alerts (Sprint 163)
+
+The new `/` home view's "most important alert" and "other active alerts"
+sections only consider alerts whose time status is currently `active` — an
+*upcoming* alert (e.g. starting tomorrow), even an urgent one, won't appear
+on `/` until it becomes active. This was a deliberate choice to keep
+"Dzisiaj" answering "what's happening right now," not "what's coming up" —
+the full list at `/alerty` always shows upcoming alerts too, unfiltered.
+
+**Consequence:** a resident who only ever looks at `/` could miss an
+important alert the day before it starts. `/alerty`'s "Zobacz wszystkie
+alerty" link is one tap away from `/` specifically to mitigate this.
+
+---
+
 ## This Is Early-Stage Software
 
 Alertownik is a pilot-stage MVP, not a mature product. It has had QA passes (see [[Sprint Log]] Sprint 68 in Obsidian) and is now being prepared for its first real testers, but it has not yet been validated under real, sustained usage. See `docs/NEXT_MILESTONES.md` for the planned path (richer source monitoring, notifications, multi-role admin).

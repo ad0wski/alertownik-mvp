@@ -131,9 +131,10 @@ test.describe("Candidate queue (/admin/queue)", () => {
   test("public homepage has no links into the candidate queue", async ({ page }) => {
     await page.goto("/");
     // Wait for the client-side session check to settle before asserting.
-    await expect(
-      page.getByText(/Wszystkich alertów|Brak aktualnych alertów/)
-    ).toBeVisible({ timeout: 15_000 });
+    // Sprint 163: "/" is now the compact "Dzisiaj" view, not the full
+    // AlertList — "Status pilotażu" (BetaStatusCard) is still rendered
+    // there and is a reliable "client-side render settled" marker.
+    await expect(page.getByText("Status pilotażu")).toBeVisible({ timeout: 15_000 });
     await expect(page.locator('a[href="/admin/queue"]')).toHaveCount(0);
     await expect(page.locator('a[href^="/admin/queue?"]')).toHaveCount(0);
   });
