@@ -381,7 +381,7 @@ function QueueContent() {
       <section className="mb-6">
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4">
-            <p className="text-2xl font-bold text-purple-600">{noticeCounts.pending}</p>
+            <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{noticeCounts.pending}</p>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-snug">Oczekujące</p>
           </div>
           <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 p-4">
@@ -457,13 +457,13 @@ function QueueContent() {
       )}
 
       {sourceFilter && (
-        <div className="rounded-xl border border-purple-200 bg-purple-50 px-4 py-3 mb-6 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm text-purple-800">
+        <div className="rounded-xl border border-purple-200 dark:border-purple-500/30 bg-purple-50 dark:bg-purple-500/15 px-4 py-3 mb-6 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm text-purple-800 dark:text-purple-300">
             Filtr: {filteredSourceName ? <strong className="font-semibold">{filteredSourceName}</strong> : "jedno źródło"}
           </p>
           <button
             onClick={clearSourceFilter}
-            className="text-xs font-medium text-purple-700 hover:text-purple-900 hover:underline"
+            className="text-xs font-medium text-purple-700 dark:text-purple-300 hover:text-purple-900 hover:underline"
           >
             Wyczyść filtr ×
           </button>
@@ -712,7 +712,7 @@ function QueueContent() {
                     )}
                     <button
                       onClick={() => sendToAiHelper(c)}
-                      className="inline-flex items-center gap-1 rounded-lg border border-purple-200 bg-purple-50 px-3 py-1.5 text-sm font-medium text-purple-700 hover:bg-purple-100 transition-colors"
+                      className="inline-flex items-center gap-1 rounded-lg border border-purple-200 dark:border-purple-500/30 bg-purple-50 dark:bg-purple-500/15 px-3 py-1.5 text-sm font-medium text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-500/20 transition-colors"
                     >
                       Wyślij do AI Helpera →
                     </button>

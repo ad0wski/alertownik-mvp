@@ -402,7 +402,7 @@ function WasteAdminContent() {
           {showForm && (
             <form
               onSubmit={handleSubmit}
-              className="rounded-xl border border-blue-200 dark:border-blue-500/30 bg-blue-50/40 p-5 space-y-4 mb-6"
+              className="rounded-xl border border-blue-200 dark:border-blue-500/30 bg-blue-50/40 dark:bg-blue-500/10 p-5 space-y-4 mb-6"
             >
               <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
                 {editingId ? "Edytujesz termin" : "Nowy termin odbioru"}

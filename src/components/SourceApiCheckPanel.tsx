@@ -127,16 +127,16 @@ export function SourceApiCheckPanel({
   }
 
   return (
-    <div className="mt-3 rounded-xl border border-purple-200 bg-purple-50/60 p-3">
+    <div className="mt-3 rounded-xl border border-purple-200 dark:border-purple-500/30 bg-purple-50/60 dark:bg-purple-500/10 p-3">
       <div className="flex flex-wrap items-center gap-2">
         <button
           onClick={runCheck}
           disabled={check.status === "loading"}
-          className="inline-flex items-center gap-1 rounded-lg border border-purple-300 bg-white dark:bg-slate-900 px-3 py-1.5 text-sm font-medium text-purple-700 hover:bg-purple-100 disabled:opacity-50 transition-colors"
+          className="inline-flex items-center gap-1 rounded-lg border border-purple-300 dark:border-purple-500/40 bg-white dark:bg-slate-900 px-3 py-1.5 text-sm font-medium text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-500/20 disabled:opacity-50 transition-colors"
         >
           {check.status === "loading" ? "Sprawdzanie…" : `${CHECK_BUTTON_LABEL} →`}
         </button>
-        <span className="inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 ring-1 ring-purple-200">
+        <span className="inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 ring-1 ring-purple-200 dark:ring-purple-500/30">
           ręczny check — nie cron
         </span>
       </div>

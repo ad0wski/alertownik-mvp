@@ -309,9 +309,9 @@ export default function AdminPage() {
 
   const quickActions = [
     { href: "/builder",       title: "Kreator alertu",      desc: "Twórz, edytuj i publikuj alerty w Supabase.",    border: "border-amber-200 dark:border-amber-500/30 hover:border-amber-300" },
-    { href: "/ai-helper",     title: "AI Helper",           desc: "Przygotuj treść alertu z pomocą AI.",             border: "border-purple-200 hover:border-purple-300" },
+    { href: "/ai-helper",     title: "AI Helper",           desc: "Przygotuj treść alertu z pomocą AI.",             border: "border-purple-200 dark:border-purple-500/30 hover:border-purple-300" },
     { href: "/admin/sources", title: "Źródła",              desc: "Zarządzaj źródłami komunikatów.",                border: "border-slate-200 dark:border-slate-800 hover:border-slate-300" },
-    { href: "/admin/queue",   title: "Kolejka kandydatów",  desc: "Przejrzyj znalezione komunikaty czekające na decyzję.", border: "border-purple-200 hover:border-purple-300" },
+    { href: "/admin/queue",   title: "Kolejka kandydatów",  desc: "Przejrzyj znalezione komunikaty czekające na decyzję.", border: "border-purple-200 dark:border-purple-500/30 hover:border-purple-300" },
     { href: "/",              title: "Publiczna lista alertów", desc: "Sprawdź co widzą mieszkańcy.",               border: "border-blue-200 dark:border-blue-500/30 hover:border-blue-300" },
   ];
 
@@ -924,11 +924,11 @@ export default function AdminPage() {
         ) : (
           <div
             className={`bg-white dark:bg-slate-900 rounded-2xl border shadow-sm p-5 flex flex-col sm:flex-row sm:items-center gap-4 ${
-              pendingCandidates > 0 ? "border-purple-200" : "border-slate-200 dark:border-slate-800"
+              pendingCandidates > 0 ? "border-purple-200 dark:border-purple-500/30" : "border-slate-200 dark:border-slate-800"
             }`}
           >
             <div className="flex-1">
-              <p className={`text-3xl font-bold ${pendingCandidates > 0 ? "text-purple-600" : "text-emerald-600"}`}>
+              <p className={`text-3xl font-bold ${pendingCandidates > 0 ? "text-purple-600 dark:text-purple-400" : "text-emerald-600"}`}>
                 {pendingCandidates}
               </p>
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 leading-snug">
@@ -1076,7 +1076,7 @@ export default function AdminPage() {
                         {lastCheckedLabel(s.lastCheckedAt)}
                         {" · "}
                         {candidateCount > 0 ? (
-                          <span className="text-purple-600 font-medium">{candidateCount} kandydat(ów)</span>
+                          <span className="text-purple-600 dark:text-purple-400 font-medium">{candidateCount} kandydat(ów)</span>
                         ) : (
                           "0 kandydatów"
                         )}
@@ -1094,7 +1094,7 @@ export default function AdminPage() {
                       {candidateCount > 0 && (
                         <Link
                           href={`/admin/queue?source=${s.id}`}
-                          className="rounded-lg border border-purple-200 bg-purple-50 px-2.5 py-1.5 text-xs font-medium text-purple-700 hover:bg-purple-100 transition-colors"
+                          className="rounded-lg border border-purple-200 dark:border-purple-500/30 bg-purple-50 dark:bg-purple-500/15 px-2.5 py-1.5 text-xs font-medium text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-500/20 transition-colors"
                         >
                           Przejrzyj kandydatów →
                         </Link>

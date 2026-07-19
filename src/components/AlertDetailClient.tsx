@@ -230,8 +230,8 @@ export function AlertDetailClient({ slug }: { slug: string }) {
 
         {/* Source box — the single most important trust element on this page:
             where this information comes from, one tap from the official notice */}
-        <div className="rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-3.5">
-          <p className="text-xs font-semibold uppercase tracking-wider text-blue-700/80 mb-1">
+        <div className="rounded-xl border border-blue-100 dark:border-blue-500/30 bg-blue-50/60 dark:bg-blue-500/10 px-4 py-3.5">
+          <p className="text-xs font-semibold uppercase tracking-wider text-blue-700/80 dark:text-blue-300 mb-1">
             Źródło komunikatu
           </p>
           {alert.sourceName ? (

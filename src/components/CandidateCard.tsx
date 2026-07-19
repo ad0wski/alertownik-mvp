@@ -299,7 +299,7 @@ export function CandidateCard({
         {canSendToAiHelper(status) && onSendToAiHelper && (
           <button
             onClick={onSendToAiHelper}
-            className="inline-flex items-center gap-1 rounded-lg border border-purple-200 bg-purple-50 px-3 py-1.5 text-sm font-medium text-purple-700 hover:bg-purple-100 transition-colors"
+            className="inline-flex items-center gap-1 rounded-lg border border-purple-200 dark:border-purple-500/30 bg-purple-50 dark:bg-purple-500/15 px-3 py-1.5 text-sm font-medium text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-500/20 transition-colors"
           >
             Wyślij do AI Helpera →
           </button>

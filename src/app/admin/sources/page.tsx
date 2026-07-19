@@ -352,7 +352,7 @@ interface PilotSourceSuggestionsProps {
 
 function PilotSourceSuggestions({ existingUrls, onFillForm }: PilotSourceSuggestionsProps) {
   return (
-    <div className="rounded-xl border border-blue-200 dark:border-blue-500/30 bg-blue-50/40 p-4 mb-5">
+    <div className="rounded-xl border border-blue-200 dark:border-blue-500/30 bg-blue-50/40 dark:bg-blue-500/10 p-4 mb-5">
       <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-1">
         Pilotażowe źródła — WKD / Komorów / Pruszków
       </p>
@@ -367,7 +367,7 @@ function PilotSourceSuggestions({ existingUrls, onFillForm }: PilotSourceSuggest
           return (
             <div
               key={s.id}
-              className={`rounded-lg border p-3 ${added ? "border-emerald-200 dark:border-emerald-500/30 bg-emerald-50/50" : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"}`}
+              className={`rounded-lg border p-3 ${added ? "border-emerald-200 dark:border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-500/15" : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"}`}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
@@ -752,7 +752,7 @@ function SourceCard({
             <span className="text-xs text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 px-2 py-0.5 rounded-full">
               {sourceTypeLabels[source.sourceType]}
             </span>
-            <span className="text-xs text-indigo-500 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full">
+            <span className="text-xs text-indigo-500 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/15 border border-indigo-100 dark:border-indigo-500/20 px-2 py-0.5 rounded-full">
               {PARSER_STRATEGY_LABELS[detectParserStrategy(source.sourceType)]}
             </span>
             {!source.url && (
@@ -879,7 +879,7 @@ function SourceCard({
           <Link
             href={`/admin/queue?source=${source.id}`}
             className={`text-xs font-medium ${
-              pendingCandidateCount > 0 ? "text-purple-600 hover:text-purple-800" : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400"
+              pendingCandidateCount > 0 ? "text-purple-600 dark:text-purple-400 hover:text-purple-800" : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400"
             } hover:underline`}
           >
             Kandydaci: {pendingCandidateCount} →
@@ -1840,7 +1840,7 @@ export default function SourcesPage() {
             editingId === source.id ? (
               <div
                 key={source.id}
-                className="rounded-xl border border-blue-200 dark:border-blue-500/30 bg-blue-50/40 p-4"
+                className="rounded-xl border border-blue-200 dark:border-blue-500/30 bg-blue-50/40 dark:bg-blue-500/10 p-4"
               >
                 <p className="text-xs font-medium text-blue-700 dark:text-blue-300 mb-3">
                   Edytujesz: {source.name}

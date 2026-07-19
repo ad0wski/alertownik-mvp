@@ -37,7 +37,7 @@ export function ScheduledWriterMonitoring({ rows }: { rows: ScheduledWriterSourc
           <span className="text-base font-semibold text-slate-800 dark:text-slate-100">
             {WRITER_MONITORING_TITLE}
           </span>
-          <span className="ml-2 inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 ring-1 ring-purple-200">
+          <span className="ml-2 inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full bg-purple-50 dark:bg-purple-500/15 text-purple-700 dark:text-purple-300 ring-1 ring-purple-200 dark:ring-purple-500/30">
             published: false
           </span>
         </summary>
@@ -58,7 +58,7 @@ export function ScheduledWriterMonitoring({ rows }: { rows: ScheduledWriterSourc
             return (
               <div
                 key={row.sourceKey}
-                className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 p-3"
+                className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/60 p-3"
               >
                 <div className="flex flex-wrap items-center gap-1.5">
                   <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 mr-1">

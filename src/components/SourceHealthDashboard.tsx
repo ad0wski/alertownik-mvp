@@ -72,7 +72,7 @@ export function SourceHealthDashboard({ rows }: { rows: SourceHealthRow[] }) {
           <span className="ml-2 inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 ring-1 ring-slate-200">
             {HEALTH_BADGE_MANUAL}
           </span>
-          <span className="ml-1.5 inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 ring-1 ring-purple-200">
+          <span className="ml-1.5 inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full bg-purple-50 dark:bg-purple-500/15 text-purple-700 dark:text-purple-300 ring-1 ring-purple-200 dark:ring-purple-500/30">
             {HEALTH_BADGE_NO_CRON}
           </span>
         </summary>
@@ -86,7 +86,7 @@ export function SourceHealthDashboard({ rows }: { rows: SourceHealthRow[] }) {
           <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 rounded-full px-2.5 py-1">
             Źródła oficjalne: <span className="font-semibold text-slate-800 dark:text-slate-100">{summary.total}</span>
           </span>
-          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-full px-2.5 py-1">
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-500/15 border border-purple-200 dark:border-purple-500/30 rounded-full px-2.5 py-1">
             Z checkiem przez aplikację: <span className="font-semibold">{summary.apiSupported}</span>
           </span>
           <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 rounded-full px-2.5 py-1">
@@ -109,7 +109,7 @@ export function SourceHealthDashboard({ rows }: { rows: SourceHealthRow[] }) {
           {rows.map((row) => (
             <div
               key={row.checklistId}
-              className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 p-3"
+              className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/60 p-3"
             >
               <div className="flex flex-wrap items-center gap-1.5">
                 <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 mr-1">
@@ -119,7 +119,7 @@ export function SourceHealthDashboard({ rows }: { rows: SourceHealthRow[] }) {
                   {categoryLabels[row.category]}
                 </span>
                 {row.apiSupported ? (
-                  <span className="inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 ring-1 ring-purple-200">
+                  <span className="inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full bg-purple-50 dark:bg-purple-500/15 text-purple-700 dark:text-purple-300 ring-1 ring-purple-200 dark:ring-purple-500/30">
                     {HEALTH_API_SUPPORTED_LABEL}
                   </span>
                 ) : (
@@ -149,7 +149,7 @@ export function SourceHealthDashboard({ rows }: { rows: SourceHealthRow[] }) {
                 </span>
                 <span className="text-xs text-slate-500 dark:text-slate-400">
                   Kandydaci ({RECENT_CANDIDATE_DAYS} dni):{" "}
-                  <span className={row.recentCandidateCount > 0 ? "font-semibold text-purple-700" : "text-slate-400 dark:text-slate-500"}>
+                  <span className={row.recentCandidateCount > 0 ? "font-semibold text-purple-700 dark:text-purple-300" : "text-slate-400 dark:text-slate-500"}>
                     {row.recentCandidateCount}
                   </span>
                 </span>

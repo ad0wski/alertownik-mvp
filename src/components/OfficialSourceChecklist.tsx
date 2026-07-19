@@ -33,11 +33,11 @@ const categoryLabels: Record<AlertCategory, string> = {
 };
 
 const categoryBadgeClass: Record<AlertCategory, string> = {
-  transport: "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200",
-  water:     "bg-cyan-50 text-cyan-700 ring-1 ring-cyan-200",
+  transport: "bg-indigo-50 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 ring-1 ring-indigo-200 dark:ring-indigo-500/30",
+  water:     "bg-cyan-50 dark:bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 ring-1 ring-cyan-200 dark:ring-cyan-500/30",
   power:     "bg-yellow-50 dark:bg-amber-500/15 text-yellow-700 dark:text-amber-300 ring-1 ring-yellow-200",
-  waste:     "bg-lime-50 text-lime-700 ring-1 ring-lime-200",
-  roads:     "bg-orange-50 text-orange-700 ring-1 ring-orange-200",
+  waste:     "bg-lime-50 dark:bg-lime-500/15 text-lime-700 dark:text-lime-300 ring-1 ring-lime-200 dark:ring-lime-500/30",
+  roads:     "bg-orange-50 dark:bg-orange-500/15 text-orange-700 dark:text-orange-300 ring-1 ring-orange-200 dark:ring-orange-500/30",
   municipal: "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 ring-1 ring-slate-200",
 };
 
@@ -133,7 +133,7 @@ export function OfficialSourceChecklist({
   dedupTexts?: string[];
 }) {
   return (
-    <section id="checklista" className="mb-8 rounded-2xl border border-blue-200 dark:border-blue-500/30 bg-blue-50/50 p-4 sm:p-5">
+    <section id="checklista" className="mb-8 rounded-2xl border border-blue-200 dark:border-blue-500/30 bg-blue-50/50 dark:bg-blue-500/10 p-4 sm:p-5">
       <details open>
         <summary className="cursor-pointer select-none">
           <span className="text-base font-semibold text-slate-800 dark:text-slate-100">
