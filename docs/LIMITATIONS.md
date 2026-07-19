@@ -185,24 +185,35 @@ consider — see `docs/SPRINT_164A_AUTOMATION_LINK_HEALTH_SAFE_FOUNDATION_V1.md`
 
 ---
 
-## Michałowice Candidate Automation Is Built but Not Turned On (Sprint 164A)
+## Michałowice Candidate Automation Is Built but Not Turned On (Sprint 164A/164B)
 
 `GET /api/cron/write-candidates` (Sprint 147–153) can automatically create
 at most one `pending` source-notice candidate per invocation for the
 Michałowice source, behind three independent, all-required kill switches
 (`SCHEDULED_CHECKS_ENABLED`, `SCHEDULED_WRITES_ENABLED`, and a configured
 + RLS-authorized scheduled-writer account). None of the three is
-configured in any environment as of Sprint 164A, and the route is not
+configured in any environment as of Sprint 164B, and the route is not
 wired into `vercel.json` — only the harmless dry-run
 `/api/cron/check-michalowice` is. Turning this on is a manual,
 separately-approved Production activation step for Adam, not something
 any sprint does automatically.
 
+**Sprint 164B update:** a fresh audit against a new safety spec confirmed
+this pipeline already satisfied every requirement (max 1 candidate/run,
+single-source allowlist, pending-only inserts, fail-closed gates,
+conservative dedup) without needing a code change to the write path
+itself. The one real gap — nothing showed *whether* the switches were on
+or off — is now closed by a new read-only "Stan automatyzacji (canary)"
+panel on `/admin/sources`. Still off everywhere; see
+`docs/SPRINT_164B_SAFE_AUTO_CANDIDATE_CANARY_FOUNDATION_V1.md` and its
+paired activation/rollback runbooks for the exact staged path to turning
+it on.
+
 **Consequence:** today, candidate creation for Michałowice is still
 entirely manual (the "Sprawdź stronę" / "Zapisz jako kandydata" flow on
-`/admin/sources`). See
-`docs/SPRINT_164A_AUTOMATION_LINK_HEALTH_SAFE_FOUNDATION_V1.md` for the
-exact activation checklist.
+`/admin/sources`). An admin can now at least *see* the automation's
+current on/off state at a glance instead of having to check Vercel's
+environment variable dashboard.
 
 ---
 

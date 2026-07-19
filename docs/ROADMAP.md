@@ -147,6 +147,18 @@ Stages are intentionally separate — each one can be evaluated and validated be
 
 ---
 
+## Stage 12 — Safe Auto-Candidate Canary Foundation 🟡 (Sprint 164B, branch only)
+
+- ✅ Full re-audit of the Sprint 147–153 Scheduled Writer pipeline against a fresh safety spec — confirmed it already satisfies every requirement (max 1 candidate/run, single-source allowlist defaulting to `michalowice-komunikaty`, pending-only inserts, three independent fail-closed gates, no `service_role`, conservative dedup) without any code change needed to the write path itself
+- ✅ New admin-only, read-only "Stan automatyzacji (canary)" panel on `/admin/sources` — the one genuine gap found: nothing previously showed whether the kill switches were on or off
+- ✅ New tests closing the specific scenarios the spec named by identifier that weren't yet explicit (an already-*converted*, not just already-*pending*, candidate is still deduplicated correctly; the new panel's own auth/no-secret/no-activation-control guarantees)
+- ✅ Activation and rollback runbooks written (`docs/SPRINT_164B_CANARY_ACTIVATION_RUNBOOK_V1.md`, `docs/SPRINT_164B_CANARY_ROLLBACK_AND_KILL_SWITCH_RUNBOOK_V1.md`)
+- ❌ Not merged to `main`, not deployed, no environment variable set anywhere, `vercel.json` unchanged — activation remains Adam's separate, staged, manual decision
+
+**Goal:** make the existing (already-safe) candidate-automation pipeline's state fully visible to the admin before ever turning it on, and give Adam an exact, staged, reversible path to do so when ready — see `docs/SPRINT_164B_SAFE_AUTO_CANDIDATE_CANARY_FOUNDATION_V1.md`.
+
+---
+
 ## Out of Scope (Unlikely to Change)
 
 - The app will always surface alerts from official sources — not crowdsourced reports

@@ -35,6 +35,7 @@ import { OfficialSourceChecklist } from "@/components/OfficialSourceChecklist";
 import { SourceHealthDashboard } from "@/components/SourceHealthDashboard";
 import { buildSourceHealthRows, type HealthCandidate } from "@/lib/sourceHealth";
 import { ScheduledWriterMonitoring } from "@/components/ScheduledWriterMonitoring";
+import { AutomationStatusPanel } from "@/components/AutomationStatusPanel";
 import { LinkHealthPanel } from "@/components/LinkHealthPanel";
 import { buildScheduledWriterActivity, type WriterActivityCandidateInput } from "@/lib/writerCandidateActivity";
 import {
@@ -1664,6 +1665,16 @@ export default function SourcesPage() {
         <ScheduledWriterMonitoring
           rows={buildScheduledWriterActivity(writerActivityCandidates)}
         />
+      )}
+
+      {/* Automation Status Panel (Sprint 164B) — admin-only, read-only
+          summary of the two independent write kill switches, the canary
+          source allowlist, and the per-run insert cap. No button here
+          activates anything — it only reports the current server-side
+          configuration (booleans/counts only, never secret values). See
+          src/lib/automationStatus.ts for the full reasoning. */}
+      {loadState === "ready" && (
+        <AutomationStatusPanel activityRows={buildScheduledWriterActivity(writerActivityCandidates)} />
       )}
 
       {/* Link Health Panel (Sprint 164A) — on-demand, admin-triggered live
