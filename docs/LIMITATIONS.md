@@ -209,11 +209,26 @@ panel on `/admin/sources`. Still off everywhere; see
 paired activation/rollback runbooks for the exact staged path to turning
 it on.
 
+**Sprint 164C update:** a read-only environment audit found that Vercel
+Preview and Production currently share a single Supabase project
+(`NEXT_PUBLIC_SUPABASE_URL` is one shared value, not two separate ones).
+This means **Preview is not a data sandbox for `write-candidates`** — a
+canary run triggered from a Preview URL writes to the exact same
+`source_notice_candidates`/`source_checks` tables as Production. Adam
+decided (Sprint 164C) to keep the shared database for now rather than
+provision a separate Preview project — see
+`docs/SPRINT_164C_CANARY_ENVIRONMENT_SAFETY_AUDIT_V1.md`. The activation
+runbook has been corrected accordingly: the first canary run must be
+treated as a Production-data operation regardless of which URL triggers
+it.
+
 **Consequence:** today, candidate creation for Michałowice is still
 entirely manual (the "Sprawdź stronę" / "Zapisz jako kandydata" flow on
 `/admin/sources`). An admin can now at least *see* the automation's
 current on/off state at a glance instead of having to check Vercel's
-environment variable dashboard.
+environment variable dashboard. When activation does happen, there is no
+"low-risk Preview rehearsal" step available — the pre-flight checklist in
+the activation runbook exists specifically to compensate for that.
 
 ---
 

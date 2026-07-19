@@ -159,6 +159,18 @@ Stages are intentionally separate — each one can be evaluated and validated be
 
 ---
 
+## Stage 12b — Canary Environment Safety Audit ✅ (Sprint 164C, docs only)
+
+- ✅ Read-only audit confirmed Vercel Preview and Production share one Supabase project — `NEXT_PUBLIC_SUPABASE_URL` is a single value scoped to both, not two independent ones
+- ✅ Adam's decision recorded: keep the shared database for now (Option A) — a separate Preview project remains a future option, not a current requirement
+- ✅ Activation runbook corrected to remove any "safely on Preview first" framing and add a mandatory pre-flight checklist (10 items) and post-run verification with explicit PASS/STOP/ROLLBACK criteria
+- ✅ Read-only inventory of 13 orphaned branch-scoped environment variables on two stale branches (`sprint-148-controlled-writer-preview`, `sprint-150-race-condition-closure-package-v1`) — names/scopes only, no values, nothing deleted
+- ❌ Nothing activated — no env var set, no SQL run, no RLS touched, no cron scheduled
+
+**Goal:** make sure nobody — Adam in a future session or a future sprint — treats a Preview canary run as lower-risk than a Production one when it demonstrably is not, before the first real activation happens — see `docs/SPRINT_164C_CANARY_ENVIRONMENT_SAFETY_AUDIT_V1.md`.
+
+---
+
 ## Out of Scope (Unlikely to Change)
 
 - The app will always surface alerts from official sources — not crowdsourced reports
