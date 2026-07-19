@@ -28,7 +28,7 @@ The AI Helper and source-card "Generuj draft AI" can call the Claude API (when `
 
 `/admin`, `/admin/sources`, `/ai-helper`, and `/builder` are gated by a Supabase Auth session in the browser, but there is no role *tier* system beyond a single binary: is this account in `public.admin_profiles` or not. Every account in that table has full admin access (create, edit, publish, archive, delete sources and alerts) — there's no separate "editor" vs "approver" role, and no audit trail of who changed what.
 
-**Update (Sprint 161B):** this used to be *less* true-to-code than it should have been — the app was documented as "any authenticated Supabase Auth user is admin," but the project already had more than one Supabase Auth account, and the API layer (`requireAdminSession`) was only checking authentication, not `admin_profiles` membership; `alert_sources`'s own RLS policies had the same gap at the database level. Sprint 161B closed the API-layer version of this (a signed-in non-admin account now gets `403`, not access) and proposed (not yet applied) the matching database-layer fix — see `docs/SPRINT_161_CRITICAL_SECURITY_HARDENING_V1.md` §3a/§10a. Membership in `admin_profiles` is genuinely the single source of truth for "is this account an admin" now, at both layers, once that SQL lands — it just still isn't *tiered* (no editor-vs-approver distinction).
+**Update (Sprint 161B, closed Sprint 164A):** this used to be *less* true-to-code than it should have been — the app was documented as "any authenticated Supabase Auth user is admin," but the project already had more than one Supabase Auth account, and the API layer (`requireAdminSession`) was only checking authentication, not `admin_profiles` membership; `alert_sources`'s own RLS policies had the same gap at the database level. Sprint 161B closed the API-layer version of this (a signed-in non-admin account now gets `403`, not access) and proposed the matching database-layer fix; **Sprint 164A (2026-07-19) confirms that fix is now live and verified on Production** — see `docs/SPRINT_161_CRITICAL_SECURITY_HARDENING_V1.md` §3a/§10a. Membership in `admin_profiles` is genuinely the single source of truth for "is this account an admin" now, at both layers — it just still isn't *tiered* (no editor-vs-approver distinction).
 
 **Consequence:** Fine for a pilot with a small, trusted set of full-access admins. Would need a real tiered role system before handing narrower (e.g. review-only) access to a less-trusted person — today it's all-or-nothing per `admin_profiles` row.
 
@@ -81,14 +81,15 @@ authorized* session server-side as of Sprint 161/161B — not just any
 signed-in account, specifically one with an `admin_profiles` row — see
 `docs/SUPABASE_RLS_SECURITY_VERIFICATION_V1.md`).
 
-**Update (Sprint 161B):** RLS itself was manually verified live —
-`alerts`, `source_checks`, and `source_notice_candidates` are confirmed
-correct (admin operations gated on `admin_profiles`); `alert_sources` was
-found still using the older, broader `auth.role() = 'authenticated'`
-check and has a proposed (not yet applied) fix — see
-`docs/SPRINT_161_CRITICAL_SECURITY_HARDENING_V1.md` §10/§10a. Once that
-SQL is applied, RLS is a confirmed-correct boundary for all four
-admin-owned tables even while the routing layer above stays client-gated.
+**Update (Sprint 161B, closed Sprint 164A):** RLS itself was manually
+verified live — `alerts`, `source_checks`, and `source_notice_candidates`
+are confirmed correct (admin operations gated on `admin_profiles`);
+`alert_sources` was found still using the older, broader
+`auth.role() = 'authenticated'` check and had a proposed fix. **That fix
+is now confirmed live on Production (2026-07-19)** — see
+`docs/SPRINT_161_CRITICAL_SECURITY_HARDENING_V1.md` §10/§10a. RLS is now a
+confirmed-correct boundary for all four admin-owned tables even while the
+routing layer above stays client-gated.
 
 **Consequence:** an unauthenticated visitor's browser still downloads the
 admin pages' JS bundle and gets a brief loading flash before the login
@@ -162,6 +163,46 @@ the full list at `/alerty` always shows upcoming alerts too, unfiltered.
 **Consequence:** a resident who only ever looks at `/` could miss an
 important alert the day before it starts. `/alerty`'s "Zobacz wszystkie
 alerty" link is one tap away from `/` specifically to mitigate this.
+
+---
+
+## Link Health Checks Are Live but Not Persisted (Sprint 164A)
+
+The Link Health Panel on `/admin/sources` ("Kontrola dostępności linków")
+checks each active source's URL for live HTTP reachability on demand
+(admin clicks a button) — status code, timeout, redirect behavior — via
+the same SSRF-guarded fetch as the source preview feature. The result is
+never written to Supabase; it only exists in that browser tab for that
+session. A page reload loses it, and there is no history of past health
+checks.
+
+**Consequence:** an admin has to re-run the check to see current link
+health; there's no "link has been down for 3 days" trend view. A proposed
+(not applied) forward migration for persisting this exists at
+`docs/sql/PROPOSED_SPRINT_164A_LINK_HEALTH_PERSISTENCE_V1.sql`, with a
+paired rollback and read-only verify file, for a future sprint to
+consider — see `docs/SPRINT_164A_AUTOMATION_LINK_HEALTH_SAFE_FOUNDATION_V1.md`.
+
+---
+
+## Michałowice Candidate Automation Is Built but Not Turned On (Sprint 164A)
+
+`GET /api/cron/write-candidates` (Sprint 147–153) can automatically create
+at most one `pending` source-notice candidate per invocation for the
+Michałowice source, behind three independent, all-required kill switches
+(`SCHEDULED_CHECKS_ENABLED`, `SCHEDULED_WRITES_ENABLED`, and a configured
++ RLS-authorized scheduled-writer account). None of the three is
+configured in any environment as of Sprint 164A, and the route is not
+wired into `vercel.json` — only the harmless dry-run
+`/api/cron/check-michalowice` is. Turning this on is a manual,
+separately-approved Production activation step for Adam, not something
+any sprint does automatically.
+
+**Consequence:** today, candidate creation for Michałowice is still
+entirely manual (the "Sprawdź stronę" / "Zapisz jako kandydata" flow on
+`/admin/sources`). See
+`docs/SPRINT_164A_AUTOMATION_LINK_HEALTH_SAFE_FOUNDATION_V1.md` for the
+exact activation checklist.
 
 ---
 

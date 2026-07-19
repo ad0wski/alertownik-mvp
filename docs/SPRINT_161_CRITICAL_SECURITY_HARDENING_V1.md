@@ -382,16 +382,41 @@ original instructions. The result:
   fix, since RLS is the database-level boundary the API layer sits in
   front of, not behind).
 
-### 10a. alert_sources fix — proposed, not executed
+### 10a. alert_sources fix — CLOSED, LIVE VERIFIED ON PRODUCTION (2026-07-19)
 
-`docs/sql/SPRINT_161B_ALERT_SOURCES_RLS_HARDENING.sql` (new) replaces the
-four `auth.role() = 'authenticated'` policies with the same
-`admin_profiles` EXISTS check `alerts`/`source_checks`/
-`source_notice_candidates` already use. It does not touch those three
-tables, does not touch `admin_profiles` itself, and does not touch
-`alert_sources`'s separate, already-flagged live anon-read policy (that
-remains its own, separately-proposed cleanup:
-`docs/sql/PROPOSED_ALERT_SOURCES_PUBLIC_READ_CLEANUP_V1.sql`).
+**Status update (Sprint 164A):** this gap is closed. Adam ran
+`docs/sql/VERIFY_SPRINT_161B_RLS_READ_ONLY.sql` (read-only) directly
+against Production Supabase and confirmed the fix from
+`docs/sql/SPRINT_161B_ALERT_SOURCES_RLS_HARDENING.sql` is live:
+
+- RLS is enabled on `alert_sources`, `alerts`, `automation_identities`,
+  `source_checks`, and `source_notice_candidates`.
+- All four admin operations on `alert_sources` (`SELECT`, `INSERT`,
+  `UPDATE`, `DELETE`) now require
+  `EXISTS (SELECT 1 FROM admin_profiles WHERE admin_profiles.user_id = auth.uid())`
+  — the same mechanism `alerts`/`source_checks`/`source_notice_candidates`
+  already used, closing the gap this section originally flagged (any
+  signed-in account, not just the administrator, could read/write the
+  source registry directly against Supabase).
+- The separate public anon-read policy (`Public can read alert sources`)
+  remains in place and unchanged, as designed.
+- `alerts` anon `SELECT` remains restricted to `status = 'published'`.
+- Exactly one `admin_profiles` row exists (no unintended additional
+  administrators).
+
+No identifier, email address, or CSV export content from that
+verification is recorded in this repository — only the policy-shape
+result above. Claude did not run any SQL as part of this verification;
+Adam ran the read-only verify file himself in the Supabase SQL editor and
+reported the result for this doc update.
+
+**Original proposal, for reference (superseded by the above):**
+`docs/sql/SPRINT_161B_ALERT_SOURCES_RLS_HARDENING.sql` replaced the four
+`auth.role() = 'authenticated'` policies with the `admin_profiles` EXISTS
+check. It did not touch `alerts`/`source_checks`/`source_notice_candidates`,
+did not touch `admin_profiles` itself, and did not touch `alert_sources`'s
+separate anon-read policy (`docs/sql/PROPOSED_ALERT_SOURCES_PUBLIC_READ_CLEANUP_V1.sql`
+remains its own, still-separately-proposed cleanup, unrelated to this gap).
 
 **Scheduled writer gets nothing on `alert_sources`, confirmed from the
 application code itself, not assumed:** `src/lib/scheduledWriter.ts:332-346`
@@ -402,12 +427,6 @@ variable instead of querying the table. The hardening SQL grants
 `automation_identities` members nothing on `alert_sources` at all,
 matching that existing design exactly — see §6 below for the full
 required-rights breakdown by actor.
-
-`docs/sql/VERIFY_SPRINT_161B_RLS_READ_ONLY.sql` (new) is the paired
-read-only check — run it before applying (to see the finding directly)
-and after (to confirm the fix landed). Neither file was executed this
-session — no read-only Supabase MCP/CLI connection was available, and
-this sprint's scope explicitly excludes touching live Supabase.
 
 ## 11. Anthropic key abuse review
 

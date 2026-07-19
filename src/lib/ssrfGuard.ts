@@ -140,10 +140,11 @@ const REQUEST_USER_AGENT = "Alertownik-Monitor/1.0 (admin source check)";
  */
 export async function guardedFetch(
   startUrl: string,
-  opts: { timeoutMs?: number; maxRedirects?: number } = {},
+  opts: { timeoutMs?: number; maxRedirects?: number; method?: "GET" | "HEAD" } = {},
 ): Promise<GuardedFetchResult> {
   const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const maxRedirects = opts.maxRedirects ?? DEFAULT_MAX_REDIRECTS;
+  const method = opts.method ?? "GET";
 
   let currentUrl = startUrl;
   for (let hop = 0; hop <= maxRedirects; hop++) {
@@ -155,6 +156,7 @@ export async function guardedFetch(
     let response: Response;
     try {
       response = await fetch(currentUrl, {
+        method,
         signal: controller.signal,
         redirect: "manual",
         headers: {

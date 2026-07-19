@@ -97,7 +97,7 @@ Stages are intentionally separate — each one can be evaluated and validated be
 - ✅ SSRF defenses on the admin-supplied-URL fetch endpoint (private-IP/DNS/redirect validation)
 - ✅ Real CSP and standard security headers (`X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options`, `Permissions-Policy`, HSTS in production)
 - ✅ Live RLS manually verified for `alerts`, `source_checks`, `source_notice_candidates` — all confirmed correct (Sprint 161B)
-- 🟡 `alert_sources` RLS fix — gap found (still checked only `auth.role() = 'authenticated'`, not `admin_profiles`), SQL written and statically verified, **not yet applied** — needs Adam to run it manually in the Supabase SQL Editor (`docs/sql/SPRINT_161B_ALERT_SOURCES_RLS_HARDENING.sql`)
+- ✅ `alert_sources` RLS fix — gap found (was checking only `auth.role() = 'authenticated'`, not `admin_profiles`), SQL written, statically verified, and **confirmed live on Production (Sprint 164A, 2026-07-19)** via read-only verification (`docs/sql/SPRINT_161B_ALERT_SOURCES_RLS_HARDENING.sql` / `VERIFY_SPRINT_161B_RLS_READ_ONLY.sql`)
 - ❌ Credible rate limiting — needs Vercel Firewall or an external store, a manual infrastructure decision, not started (see `docs/SPRINT_161_CRITICAL_SECURITY_HARDENING_V1.md` §5)
 - ❌ Server-side/middleware admin route guard — needs a `@supabase/ssr` cookie-session migration, not started (see the same doc, §9)
 - ❌ Full DNS-rebinding closure on the SSRF guard — needs either a new HTTP-client dependency or a lower-level TCP client, documented as a residual risk for now (§4)
@@ -131,6 +131,19 @@ Stages are intentionally separate — each one can be evaluated and validated be
 - ✅ Zero changes to Supabase/RLS/SQL/cron, zero changes to `serverAuth.ts`/`ssrfGuard.ts`, zero PWA cache-policy change
 
 **Goal:** Make the public mobile experience feel like a coherent app shell instead of a scrolled webpage, without touching security, data, or the admin surface.
+
+---
+
+## Stage 11 — Automation & Link Health Safe Foundation 🟡 (Sprint 164A)
+
+- ✅ `alert_sources` RLS gap (Stage 8) closed — confirmed live on Production
+- ✅ Live, on-demand Link Health Panel on `/admin/sources` — SSRF-guarded HEAD/GET reachability check per active source, admin-triggered only, nothing persisted, nothing automatic
+- ✅ Full audit of existing scheduled-check/scheduled-writer automation (Sprints 142–153) re-confirmed still fail-closed and unchanged by this sprint
+- ❌ Michałowice candidate automation (`/api/cron/write-candidates`) remains built but OFF — not in `vercel.json`, no env vars configured; see `docs/LIMITATIONS.md`
+- ❌ Persisted link-health history — proposed, not applied (`docs/sql/PROPOSED_SPRINT_164A_LINK_HEALTH_PERSISTENCE_V1.sql`)
+- ❌ Credible rate limiting — same open item as Stage 8, re-assessed, still not started (no free, credible option on the current Vercel plan without a new external service)
+
+**Goal:** build and prove out the next layer of automation (link health visibility, the first real scheduled-write candidate pipeline) entirely on a feature branch/Preview, with every write path still gated behind manual, separately-approved Production activation — see `docs/SPRINT_164A_AUTOMATION_LINK_HEALTH_SAFE_FOUNDATION_V1.md`.
 
 ---
 

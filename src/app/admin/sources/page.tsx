@@ -35,6 +35,7 @@ import { OfficialSourceChecklist } from "@/components/OfficialSourceChecklist";
 import { SourceHealthDashboard } from "@/components/SourceHealthDashboard";
 import { buildSourceHealthRows, type HealthCandidate } from "@/lib/sourceHealth";
 import { ScheduledWriterMonitoring } from "@/components/ScheduledWriterMonitoring";
+import { LinkHealthPanel } from "@/components/LinkHealthPanel";
 import { buildScheduledWriterActivity, type WriterActivityCandidateInput } from "@/lib/writerCandidateActivity";
 import {
   detectParserStrategy,
@@ -1662,6 +1663,20 @@ export default function SourcesPage() {
       {loadState === "ready" && (
         <ScheduledWriterMonitoring
           rows={buildScheduledWriterActivity(writerActivityCandidates)}
+        />
+      )}
+
+      {/* Link Health Panel (Sprint 164A) — on-demand, admin-triggered live
+          HTTP reachability check of each active source's own URL. Distinct
+          from the Source Health Dashboard above (which only reads past
+          manual check history): this one actually contacts each source
+          right now, through the SSRF-guarded fetch (src/lib/ssrfGuard.ts),
+          and nothing here is persisted. */}
+      {loadState === "ready" && (
+        <LinkHealthPanel
+          targets={sources
+            .filter((s) => s.isActive && s.url)
+            .map((s) => ({ id: s.id, name: s.name, url: s.url }))}
         />
       )}
 
