@@ -48,8 +48,8 @@ const categoryLabels: Record<AlertCategory, string> = {
 };
 
 const resultLabels: Record<string, { label: string; color: string }> = {
-  found_notice: { label: "Znaleziono komunikat", color: "text-blue-600 bg-blue-50 border-blue-200" },
-  needs_followup: { label: "Wymaga późniejszego sprawdzenia", color: "text-amber-600 bg-amber-50 border-amber-200" },
+  found_notice: { label: "Znaleziono komunikat", color: "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/15 border-blue-200 dark:border-blue-500/30" },
+  needs_followup: { label: "Wymaga późniejszego sprawdzenia", color: "text-amber-600 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/15 border-amber-200 dark:border-amber-500/30" },
 };
 
 // v2 status labels moved to src/lib/candidateStatusLabels.ts (Sprint 133)
@@ -361,14 +361,14 @@ function QueueContent() {
       {/* Page header */}
       <div className="mb-6">
         <div className="flex flex-wrap items-center gap-2.5 mb-1">
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
             Kandydaci na alerty
           </h1>
-          <span className="inline-flex items-center text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-0.5">
+          <span className="inline-flex items-center text-xs font-medium text-amber-600 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/15 border border-amber-200 dark:border-amber-500/30 rounded-full px-2.5 py-0.5">
             Admin
           </span>
         </div>
-        <p className="mt-1 text-sm text-slate-500 leading-relaxed">
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
           Tu będą trafiały komunikaty znalezione przez Source Checker / automatyzację.
           Na razie publikacja zawsze wymaga ręcznego zatwierdzenia.
         </p>
@@ -380,44 +380,44 @@ function QueueContent() {
           "wkrótce" instead of showing a made-up zero as if they ran. */}
       <section className="mb-6">
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4">
             <p className="text-2xl font-bold text-purple-600">{noticeCounts.pending}</p>
-            <p className="text-xs text-slate-500 mt-1 leading-snug">Oczekujące</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-snug">Oczekujące</p>
           </div>
-          <div className="bg-slate-50 rounded-2xl border border-dashed border-slate-300 p-4">
-            <p className="text-sm font-semibold text-slate-400">wkrótce</p>
-            <p className="text-xs text-slate-400 mt-1 leading-snug">Do przeglądu (AI verifier)</p>
+          <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 p-4">
+            <p className="text-sm font-semibold text-slate-400 dark:text-slate-500">wkrótce</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 leading-snug">Do przeglądu (AI verifier)</p>
           </div>
           {/* Live since Sprint 136 — the manual "Zatwierdź" action sets it. */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4">
             <p className="text-2xl font-bold text-emerald-600">{noticeCounts.approved}</p>
-            <p className="text-xs text-slate-500 mt-1 leading-snug">Zatwierdzone</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-snug">Zatwierdzone</p>
           </div>
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
-            <p className="text-2xl font-bold text-slate-700">{noticeCounts.rejected}</p>
-            <p className="text-xs text-slate-500 mt-1 leading-snug">Odrzucone</p>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4">
+            <p className="text-2xl font-bold text-slate-700 dark:text-slate-300">{noticeCounts.rejected}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-snug">Odrzucone</p>
           </div>
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
-            <p className="text-2xl font-bold text-emerald-700">{noticeCounts.converted_to_draft + noticeCounts.published}</p>
-            <p className="text-xs text-slate-500 mt-1 leading-snug">Przekształcone w draft</p>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4">
+            <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">{noticeCounts.converted_to_draft + noticeCounts.published}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-snug">Przekształcone w draft</p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 mt-3">
           <Link
             href="/admin/sources"
-            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"
+            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-1.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:border-slate-300 transition-colors"
           >
             Sprawdź źródła →
           </Link>
           <Link
             href="/admin/new-alert"
-            className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-100 transition-colors"
+            className="inline-flex items-center gap-1 rounded-lg border border-blue-200 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-500/15 px-3 py-1.5 text-sm font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-100 transition-colors"
           >
             Utwórz draft ze źródła →
           </Link>
           <Link
             href="/builder"
-            className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-700 hover:bg-amber-100 transition-colors"
+            className="inline-flex items-center gap-1 rounded-lg border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/15 px-3 py-1.5 text-sm font-medium text-amber-700 dark:text-amber-300 hover:bg-amber-100 transition-colors"
           >
             Otwórz Builder →
           </Link>
@@ -426,11 +426,11 @@ function QueueContent() {
 
       {/* Workflow explanation */}
       <section className="mb-6">
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-          <h2 className="text-sm font-semibold text-slate-800 mb-2">Jak to działa</h2>
-          <p className="text-sm text-slate-600 leading-relaxed">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
+          <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-2">Jak to działa</h2>
+          <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
             Kandydaci trafiają tutaj w dwóch miejscach: (1) gdy w{" "}
-            <Link href="/admin/sources" className="font-medium text-blue-600 hover:underline">
+            <Link href="/admin/sources" className="font-medium text-blue-600 dark:text-blue-400 hover:underline">
               Źródłach
             </Link>{" "}
             klikniesz „Zapisz jako kandydata” przy fragmencie z „Sprawdź stronę” — trwały
@@ -440,7 +440,7 @@ function QueueContent() {
             kandydata: „Zweryfikuj (pomocnik)” podpowiada → Ty klikasz „Zatwierdź” albo
             „Odrzuć” → z zatwierdzonego „Utwórz draft z kandydata” (draft NIE jest
             publiczny) → ręczna publikacja z Kreatora.{" "}
-            <strong className="font-semibold text-slate-800">
+            <strong className="font-semibold text-slate-800 dark:text-slate-100">
               AI nigdy nie publikuje samodzielnie — zatwierdzenie i publikacja zawsze należą do admina.
             </strong>
           </p>
@@ -448,8 +448,8 @@ function QueueContent() {
       </section>
 
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 mb-6">
-          <p className="text-sm font-medium text-red-700">
+        <div className="rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 mb-6">
+          <p className="text-sm font-medium text-red-700 dark:text-red-400">
             Nie udało się pobrać kandydatów z Supabase.
           </p>
           <p className="text-xs text-red-500 mt-1 font-mono">{error}</p>
@@ -474,16 +474,16 @@ function QueueContent() {
           Kandydaci (trwali) — Sprint 78, source_notice_candidates
       ════════════════════════════════════════════════════════════════════ */}
       <section className="mb-10">
-        <h2 className="text-base font-semibold text-slate-800 mb-4">Kandydaci (trwali)</h2>
+        <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100 mb-4">Kandydaci (trwali)</h2>
 
         {noticesTableMissing ? (
-          <div className="bg-white rounded-2xl border border-slate-200 p-5">
-            <p className="text-sm font-medium text-slate-700 mb-1">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
+            <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
               Supabase nie widzi tabeli kandydatów.
             </p>
-            <p className="text-sm text-slate-500 leading-relaxed">
+            <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
               Migracja{" "}
-              <span className="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded">
+              <span className="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
                 docs/sprint132_candidate_persistence_schema_proposal.sql
               </span>{" "}
               została zatwierdzona i uruchomiona (Sprint 133). Jeśli widzisz ten
@@ -496,8 +496,8 @@ function QueueContent() {
         ) : (
           <>
             {noticesError && (
-              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 mb-4">
-                <p className="text-sm font-medium text-red-700">{noticesError}</p>
+              <div className="rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 mb-4">
+                <p className="text-sm font-medium text-red-700 dark:text-red-400">{noticesError}</p>
               </div>
             )}
 
@@ -524,7 +524,7 @@ function QueueContent() {
                   className={`px-3 py-1.5 text-sm rounded-full font-medium transition-colors ${
                     noticeStatusFilter === s
                       ? "bg-slate-800 text-white"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200"
                   }`}
                 >
                   {CANDIDATE_STATUS_LABELS[s]} ({noticeCounts[s]})
@@ -535,27 +535,27 @@ function QueueContent() {
             {loading ? (
               <div className="flex flex-col gap-3">
                 {[1, 2].map((i) => (
-                  <div key={i} className="bg-white rounded-2xl border border-slate-200 p-4 animate-pulse">
-                    <div className="h-4 w-2/3 bg-slate-100 rounded mb-2" />
-                    <div className="h-3 w-1/3 bg-slate-100 rounded" />
+                  <div key={i} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 animate-pulse">
+                    <div className="h-4 w-2/3 bg-slate-100 dark:bg-slate-800 rounded mb-2" />
+                    <div className="h-3 w-1/3 bg-slate-100 dark:bg-slate-800 rounded" />
                   </div>
                 ))}
               </div>
             ) : filteredNotices.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-slate-200 p-5">
-                <p className="text-sm text-slate-500">
+              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
+                <p className="text-sm text-slate-500 dark:text-slate-400">
                   {noticeStatusFilter === "pending"
                     ? "Brak kandydatów. Na tym etapie źródła sprawdzamy ręcznie lub przez Draft from Source."
                     : `Brak kandydatów ze statusem „${CANDIDATE_STATUS_LABELS[noticeStatusFilter]}”.`}
                 </p>
                 {noticeStatusFilter === "pending" && (
-                  <p className="text-sm text-slate-500 mt-2 leading-relaxed">
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
                     Zapisz fragment komunikatu jako kandydata w{" "}
-                    <Link href="/admin/sources" className="font-medium text-blue-600 hover:underline">
+                    <Link href="/admin/sources" className="font-medium text-blue-600 dark:text-blue-400 hover:underline">
                       Źródłach
                     </Link>{" "}
                     albo przygotuj szkic przez{" "}
-                    <Link href="/admin/new-alert" className="font-medium text-blue-600 hover:underline">
+                    <Link href="/admin/new-alert" className="font-medium text-blue-600 dark:text-blue-400 hover:underline">
                       Draft from Source
                     </Link>
                     .
@@ -630,34 +630,34 @@ function QueueContent() {
           Starsze (z historii sprawdzeń źródeł) — Sprint 74/75, unchanged
       ════════════════════════════════════════════════════════════════════ */}
       <section className="mb-8">
-        <h2 className="text-base font-semibold text-slate-800 mb-1">
+        <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100 mb-1">
           Starsze (z historii sprawdzeń źródeł)
         </h2>
-        <p className="text-xs text-slate-400 mb-4">
+        <p className="text-xs text-slate-400 dark:text-slate-500 mb-4">
           Wykryte automatycznie z wyników sprawdzenia źródła — bez statusu ignoruj/archiwizuj
           (patrz wyjaśnienie powyżej).
         </p>
 
-        <h3 className="text-sm font-semibold text-slate-700 mb-3">
+        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
           Do przygotowania {!loading && `(${pending.length})`}
         </h3>
 
         {loading ? (
           <div className="flex flex-col gap-3">
             {[1, 2].map((i) => (
-              <div key={i} className="bg-white rounded-2xl border border-slate-200 p-4 animate-pulse">
-                <div className="h-4 w-2/3 bg-slate-100 rounded mb-2" />
-                <div className="h-3 w-1/3 bg-slate-100 rounded" />
+              <div key={i} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 animate-pulse">
+                <div className="h-4 w-2/3 bg-slate-100 dark:bg-slate-800 rounded mb-2" />
+                <div className="h-3 w-1/3 bg-slate-100 dark:bg-slate-800 rounded" />
               </div>
             ))}
           </div>
         ) : pending.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-slate-200 p-5">
-            <p className="text-sm font-medium text-emerald-700">Brak kandydatów na alerty.</p>
-            <p className="text-sm text-slate-500 mt-1 leading-relaxed">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
+            <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">Brak kandydatów na alerty.</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
               Gdy podczas sprawdzania źródła zapiszesz wynik „Znaleziono komunikat” albo
               „Wymaga późniejszego sprawdzenia” w{" "}
-              <Link href="/admin/sources" className="font-medium text-blue-600 hover:underline">
+              <Link href="/admin/sources" className="font-medium text-blue-600 dark:text-blue-400 hover:underline">
                 Źródłach
               </Link>
               , kandydat pojawi się tutaj automatycznie.
@@ -666,34 +666,34 @@ function QueueContent() {
         ) : (
           <div className="flex flex-col gap-3">
             {pending.map((c) => {
-              const cfg = resultLabels[c.result] ?? { label: c.result, color: "text-slate-600 bg-slate-50 border-slate-200" };
+              const cfg = resultLabels[c.result] ?? { label: c.result, color: "text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-800" };
               const isRealLink = Boolean(c.sourceUrl);
               const warnings = warningsFor(c);
               return (
-                <div key={c.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 flex flex-col gap-3">
+                <div key={c.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 sm:p-5 flex flex-col gap-3">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-medium text-slate-600 bg-slate-100 rounded-full px-2.5 py-1">
+                    <span className="text-xs font-medium text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 rounded-full px-2.5 py-1">
                       {categoryLabels[c.sourceCategory] ?? c.sourceCategory}
                     </span>
                     <span className={`text-xs font-medium rounded-full px-2.5 py-1 border ${cfg.color}`}>
                       {cfg.label}
                     </span>
-                    <span className="text-xs text-slate-400">{formatCheckedAt(c.checkedAt)}</span>
+                    <span className="text-xs text-slate-400 dark:text-slate-500">{formatCheckedAt(c.checkedAt)}</span>
                   </div>
 
-                  <p className="text-sm font-semibold text-slate-900">{c.sourceName}</p>
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white">{c.sourceName}</p>
 
                   {c.notes ? (
-                    <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">{c.notes}</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed whitespace-pre-wrap">{c.notes}</p>
                   ) : (
-                    <p className="text-sm text-slate-400 italic">Brak zapisanej notatki z tego sprawdzenia.</p>
+                    <p className="text-sm text-slate-400 dark:text-slate-500 italic">Brak zapisanej notatki z tego sprawdzenia.</p>
                   )}
 
                   {warnings.length > 0 && (
-                    <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2">
+                    <div className="rounded-lg bg-amber-50 dark:bg-amber-500/15 border border-amber-200 dark:border-amber-500/30 px-3 py-2">
                       <ul className="space-y-0.5">
                         {warnings.map((w, wi) => (
-                          <li key={wi} className="text-xs text-amber-700">⚠ {w}</li>
+                          <li key={wi} className="text-xs text-amber-700 dark:text-amber-300">⚠ {w}</li>
                         ))}
                       </ul>
                     </div>
@@ -705,7 +705,7 @@ function QueueContent() {
                         href={c.sourceUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"
+                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-1.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:border-slate-300 transition-colors"
                       >
                         Otwórz źródło →
                       </a>
@@ -718,19 +718,19 @@ function QueueContent() {
                     </button>
                     <button
                       onClick={() => createBuilderDraft(c)}
-                      className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-700 hover:bg-amber-100 transition-colors"
+                      className="inline-flex items-center gap-1 rounded-lg border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/15 px-3 py-1.5 text-sm font-medium text-amber-700 dark:text-amber-300 hover:bg-amber-100 transition-colors"
                     >
                       Utwórz szkic w Kreatorze →
                     </button>
                     {sentId === c.id && (
-                      <span className="text-xs text-emerald-700 font-medium">Wysłano ✓</span>
+                      <span className="text-xs text-emerald-700 dark:text-emerald-300 font-medium">Wysłano ✓</span>
                     )}
                   </div>
                 </div>
               );
             })}
 
-            <p className="text-xs text-slate-400 leading-relaxed mt-1">
+            <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed mt-1">
               Ten widok nie obsługuje ignorowania/archiwizacji (brak statusu w
               <span className="font-mono"> source_checks</span>) — zapisz fragment jako
               trwałego kandydata w Źródłach, aby zarządzać nim w sekcji „Kandydaci (trwali)” powyżej.
@@ -741,27 +741,27 @@ function QueueContent() {
         {/* Converted candidates — de-emphasized, shown for reference only */}
         {!loading && converted.length > 0 && (
           <div className="mt-6">
-            <h3 className="text-sm font-semibold text-slate-700 mb-3">
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
               Wykorzystane ({converted.length})
             </h3>
             <div className="flex flex-col gap-3 opacity-70">
               {converted.map((c) => {
                 const alert = alertFor(c.relatedAlertId);
                 return (
-                  <div key={c.id} className="bg-white rounded-2xl border border-slate-200 p-4 flex flex-wrap items-center justify-between gap-3">
+                  <div key={c.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 flex flex-wrap items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-slate-700 truncate">{c.sourceName}</p>
-                      <p className="text-xs text-slate-400">{formatCheckedAt(c.checkedAt)}</p>
+                      <p className="text-sm font-medium text-slate-700 dark:text-slate-300 truncate">{c.sourceName}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">{formatCheckedAt(c.checkedAt)}</p>
                     </div>
                     {alert ? (
                       <Link
                         href={`/builder?edit=${alert.slug}`}
-                        className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+                        className="shrink-0 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors"
                       >
                         {alert.title || "Bez tytułu"} →
                       </Link>
                     ) : (
-                      <span className="shrink-0 text-xs text-slate-400 italic">Alert niedostępny</span>
+                      <span className="shrink-0 text-xs text-slate-400 dark:text-slate-500 italic">Alert niedostępny</span>
                     )}
                   </div>
                 );

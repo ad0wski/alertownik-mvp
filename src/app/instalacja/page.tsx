@@ -7,26 +7,26 @@ export const metadata = {
     "Jak dodać Alertownik do ekranu głównego telefonu lub zainstalować jako aplikację na komputerze.",
 };
 
-const sectionClass = "bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5";
-const h2Class = "text-base font-semibold text-slate-900 mb-2";
-const listClass = "text-sm text-slate-600 space-y-1.5 list-decimal list-inside leading-relaxed";
+const sectionClass = "bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 sm:p-5";
+const h2Class = "text-base font-semibold text-slate-900 dark:text-white mb-2";
+const listClass = "text-sm text-slate-600 dark:text-slate-400 space-y-1.5 list-decimal list-inside leading-relaxed";
 
 export default function InstalacjaPage() {
   return (
     <main className="max-w-3xl mx-auto w-full px-4 sm:px-6 py-8 sm:py-10">
       <Link
         href="/"
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-blue-700 transition-colors mb-5 sm:mb-6 group"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors mb-5 sm:mb-6 group"
       >
         <span className="group-hover:-translate-x-0.5 transition-transform inline-block">←</span>
         Wróć do listy alertów
       </Link>
 
       <div className="mb-6">
-        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight mb-2">
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight mb-2">
           Zainstaluj Alertownik
         </h1>
-        <p className="text-sm text-slate-500 leading-relaxed">
+        <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
           Alertownik działa w przeglądarce i możesz dodać go do ekranu
           głównego telefonu lub zainstalować na komputerze — będzie otwierał
           się jak osobna aplikacja, bez pobierania czegokolwiek ze sklepu.
@@ -78,8 +78,8 @@ export default function InstalacjaPage() {
           </ol>
         </section>
 
-        <section className="bg-slate-50 rounded-2xl border border-slate-200 p-4 sm:p-5">
-          <p className="text-xs text-slate-400 leading-relaxed">
+        <section className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5">
+          <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed">
             Nazwy opcji mogą się nieznacznie różnić w zależności od wersji
             telefonu i przeglądarki. Zainstalowana ikona otwiera zwykłą
             stronę Alertownika — nie instaluje niczego dodatkowego poza tym,

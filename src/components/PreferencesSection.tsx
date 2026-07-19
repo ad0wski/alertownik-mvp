@@ -69,19 +69,19 @@ export function PreferencesSection({ savedPrefs, onSave, onClear, onClose }: Pro
   const localityStatus = matchPilotLocality(form.locationKeywords);
 
   return (
-    <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-4 sm:p-5 mb-5 flex flex-col gap-4">
+    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-blue-100 shadow-sm p-4 sm:p-5 mb-5 flex flex-col gap-4">
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-base font-semibold text-slate-900">Moja okolica</h2>
-          <p className="text-sm text-slate-500 mt-0.5 leading-relaxed">
+          <h2 className="text-base font-semibold text-slate-900 dark:text-white">Moja okolica</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
             Wybierz miejscowość z pilotażu albo wpisz miejscowość lub grupę ulic.
           </p>
         </div>
         <button
           onClick={onClose}
           aria-label="Zamknij ustawienia okolicy"
-          className="shrink-0 rounded-lg px-2 py-1 text-sm font-medium text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors"
+          className="shrink-0 rounded-lg px-2 py-1 text-sm font-medium text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors"
         >
           Zamknij
         </button>
@@ -89,7 +89,7 @@ export function PreferencesSection({ savedPrefs, onSave, onClear, onClose }: Pro
 
       {/* Pilot locality chips */}
       <div className="flex flex-col gap-1.5">
-        <p className="text-sm font-medium text-slate-700">Miejscowości w pilotażu</p>
+        <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Miejscowości w pilotażu</p>
         <div className="flex flex-wrap gap-2">
           {PILOT_LOCALITIES.map((locality) => {
             const active = form.locationKeywords.trim().toLowerCase() === locality.toLowerCase();
@@ -101,8 +101,8 @@ export function PreferencesSection({ savedPrefs, onSave, onClear, onClose }: Pro
                 aria-pressed={active}
                 className={`px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors ${
                   active
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-white text-slate-600 border-slate-200 hover:border-blue-300 hover:text-blue-700"
+                    ? "bg-blue-600 dark:bg-blue-500 text-white border-blue-600"
+                    : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-blue-300 hover:text-blue-700 dark:hover:text-blue-300"
                 }`}
               >
                 {locality}
@@ -114,7 +114,7 @@ export function PreferencesSection({ savedPrefs, onSave, onClear, onClose }: Pro
 
       {/* Location keywords — manual entry */}
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="prefs-location" className="text-sm font-medium text-slate-700">
+        <label htmlFor="prefs-location" className="text-sm font-medium text-slate-700 dark:text-slate-300">
           Lub wpisz miejscowość albo grupę ulic
         </label>
         <input
@@ -126,22 +126,22 @@ export function PreferencesSection({ savedPrefs, onSave, onClear, onClose }: Pro
             setForm((p) => ({ ...p, locationKeywords: e.target.value }));
           }}
           placeholder="Np. Komorów, Pruszków, ul. Raszyńska"
-          className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+          className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 transition-colors"
         />
-        <p className="text-xs text-slate-400 leading-relaxed">
+        <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed">
           Nie podawaj dokładnego adresu — wystarczy miejscowość lub grupa
           ulic. Alertownik pokaże alerty i terminy odbioru odpadów (strona{" "}
-          <span className="font-medium text-slate-500">Odpady</span>), które
+          <span className="font-medium text-slate-500 dark:text-slate-400">Odpady</span>), które
           zawierają te słowa.
         </p>
         {localityStatus === "unsupported" && (
-          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 leading-relaxed">
+          <p className="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/15 border border-amber-100 rounded-lg px-3 py-2 leading-relaxed">
             Nie obsługujemy jeszcze tej okolicy. Obecny pilotaż obejmuje:{" "}
             {pilotLocalitiesLabel()}.
           </p>
         )}
         {localityStatus === "unclear" && (
-          <p className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 leading-relaxed">
+          <p className="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 leading-relaxed">
             Nie mamy pewności, czy ta grupa ulic znajduje się w obszarze
             pilotażu ({pilotLocalitiesLabel()}). Zapiszemy ją mimo to — jeśli
             nie zobaczysz alertów, może to być powód.
@@ -151,7 +151,7 @@ export function PreferencesSection({ savedPrefs, onSave, onClear, onClose }: Pro
 
       {/* Category toggles */}
       <div className="flex flex-col gap-2">
-        <p className="text-sm font-medium text-slate-700">Interesujące kategorie</p>
+        <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Interesujące kategorie</p>
         <div className="flex flex-wrap gap-2">
           {categoryOptions.map((opt) => {
             const active = form.categories.includes(opt.value);
@@ -163,8 +163,8 @@ export function PreferencesSection({ savedPrefs, onSave, onClear, onClose }: Pro
                 aria-pressed={active}
                 className={`px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors ${
                   active
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-white text-slate-600 border-slate-200 hover:border-blue-300 hover:text-blue-700"
+                    ? "bg-blue-600 dark:bg-blue-500 text-white border-blue-600"
+                    : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-blue-300 hover:text-blue-700 dark:hover:text-blue-300"
                 }`}
               >
                 {opt.label}
@@ -172,7 +172,7 @@ export function PreferencesSection({ savedPrefs, onSave, onClear, onClose }: Pro
             );
           })}
         </div>
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-slate-400 dark:text-slate-500">
           Brak zaznaczenia oznacza wszystkie kategorie.
         </p>
       </div>
@@ -181,24 +181,24 @@ export function PreferencesSection({ savedPrefs, onSave, onClear, onClose }: Pro
       <div className="flex flex-wrap items-center gap-3 pt-0.5">
         <button
           onClick={handleSave}
-          className="rounded-lg bg-blue-600 px-4 py-2.5 sm:py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+          className="rounded-lg bg-blue-600 dark:bg-blue-500 px-4 py-2.5 sm:py-2 text-sm font-medium text-white hover:bg-blue-700 dark:hover:bg-blue-400 transition-colors"
         >
           Zapisz preferencje
         </button>
         <button
           onClick={handleClear}
-          className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 sm:py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors"
+          className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 sm:py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:border-slate-300 transition-colors"
         >
           Wyczyść preferencje
         </button>
         {saved && (
-          <span className="text-sm font-medium text-emerald-700">
+          <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
             Preferencje zapisane — tylko w tej przeglądarce.
           </span>
         )}
       </div>
 
-      <p className="text-xs text-slate-400 leading-relaxed border-t border-slate-100 pt-3">
+      <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed border-t border-slate-100 dark:border-slate-800 pt-3">
         Nie podawaj dokładnego adresu. Preferencje zapisujemy tylko w tej
         przeglądarce.
       </p>

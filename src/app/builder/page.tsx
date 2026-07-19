@@ -43,11 +43,11 @@ const severityOptions: { value: AlertSeverity; label: string }[] = [
 ];
 
 const inputClass =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500";
+  "w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500";
 
-const labelClass = "text-sm font-medium text-slate-700";
+const labelClass = "text-sm font-medium text-slate-700 dark:text-slate-300";
 
-const sectionTitleClass = "text-base font-semibold text-slate-800";
+const sectionTitleClass = "text-base font-semibold text-slate-800 dark:text-slate-100";
 
 const initialForm = {
   category: "transport" as AlertCategory,
@@ -189,10 +189,10 @@ function formatItemDate(iso: string): string {
 
 function statusBadgeClass(status: AdminAlert["status"]): string {
   if (status === "published")
-    return "inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700";
+    return "inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300";
   if (status === "archived")
-    return "inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700";
-  return "inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600";
+    return "inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300";
+  return "inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400";
 }
 
 function statusLabel(status: AdminAlert["status"]): string {
@@ -784,17 +784,17 @@ export default function BuilderPage() {
       {/* Page title */}
       <div className="mb-8">
         <div className="flex flex-wrap items-center gap-2.5 mb-1">
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
             Kreator alertu
           </h1>
-          <span className="inline-flex items-center text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-0.5">
+          <span className="inline-flex items-center text-xs font-medium text-amber-600 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/15 border border-amber-200 dark:border-amber-500/30 rounded-full px-2.5 py-0.5">
             Admin
           </span>
         </div>
-        <p className="mt-1 text-sm text-slate-500 leading-relaxed">
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
           Tu weryfikujesz i publikujesz alerty. Masz link z nowym komunikatem?
           Najbezpieczniejszy start to{" "}
-          <Link href="/admin/new-alert" className="font-medium text-blue-700 hover:underline">
+          <Link href="/admin/new-alert" className="font-medium text-blue-700 dark:text-blue-300 hover:underline">
             Nowy alert ze źródła
           </Link>{" "}
           — najpierw szkic, potem ręczna publikacja tutaj.
@@ -814,7 +814,7 @@ export default function BuilderPage() {
             className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
               view === t.value
                 ? "bg-slate-800 text-white border-slate-800"
-                : "bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:text-slate-900"
+                : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-slate-400 hover:text-slate-900 dark:hover:text-white"
             }`}
           >
             {t.label}
@@ -824,10 +824,10 @@ export default function BuilderPage() {
 
       {/* ── JSON import ───────────────────────────────────────────────── */}
       {view === "tools" && (
-      <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-4 mb-6">
+      <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 flex flex-col gap-4 mb-6">
         <div>
           <h2 className={sectionTitleClass}>Wczytaj alert z JSON</h2>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             Wklej tutaj JSON wygenerowany przez AI Helper, aby automatycznie
             uzupełnić formularz alertu.
           </p>
@@ -847,18 +847,18 @@ export default function BuilderPage() {
         <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={importFromJson}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+            className="rounded-lg bg-blue-600 dark:bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 dark:hover:bg-blue-400 transition-colors"
           >
             Wczytaj JSON do formularza
           </button>
 
           {importStatus === "success" && (
-            <span className="text-sm font-medium text-emerald-700">
+            <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
               Alert wczytany do formularza.
             </span>
           )}
           {importStatus === "error" && (
-            <span className="text-sm font-medium text-red-600">
+            <span className="text-sm font-medium text-red-600 dark:text-red-400">
               Nie udało się wczytać JSON. Sprawdź, czy format jest poprawny.
             </span>
           )}
@@ -868,14 +868,14 @@ export default function BuilderPage() {
 
       {/* ── Manual form ───────────────────────────────────────────────── */}
       {view === "edit" && (
-      <section ref={formSectionRef} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-5 mb-6">
+      <section ref={formSectionRef} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 flex flex-col gap-5 mb-6">
 
         {aiHelperLoadedMsg && (
-          <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+          <div className="rounded-xl border border-blue-200 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-500/15 px-4 py-3">
             <p className="text-sm font-semibold text-blue-800">
               Alert z AI Helpera wczytany do formularza.
             </p>
-            <p className="text-xs text-blue-700 mt-1">
+            <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
               To wciąż tylko propozycja — zweryfikuj daty, lokalizację i link do źródła
               przed publikacją.
             </p>
@@ -883,7 +883,7 @@ export default function BuilderPage() {
         )}
 
         {supabaseLoadedMsg && !editingSupabaseAlert && (
-          <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+          <div className="rounded-xl border border-blue-200 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-500/15 px-4 py-3">
             <p className="text-sm font-semibold text-blue-800">
               Alert wczytany do edycji.
             </p>
@@ -891,23 +891,23 @@ export default function BuilderPage() {
         )}
 
         {editingSupabaseAlert && (
-          <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3.5 flex flex-col gap-1">
+          <div className="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-500/15 px-4 py-3.5 flex flex-col gap-1">
             <p className="text-sm font-bold text-amber-900">
               Edytujesz alert z Supabase: {editingSupabaseAlert.title}
             </p>
-            <p className="text-xs font-medium text-amber-700">
+            <p className="text-xs font-medium text-amber-700 dark:text-amber-300">
               Po zmianach kliknij „Zapisz zmiany w Supabase".
             </p>
-            <p className="text-xs text-amber-600 mt-0.5">
+            <p className="text-xs text-amber-600 dark:text-amber-300 mt-0.5">
               Status: {statusLabel(editingSupabaseAlert.status)}
             </p>
           </div>
         )}
 
         {urlEditError && (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3">
-            <p className="text-sm font-semibold text-red-700">{urlEditError}</p>
-            <p className="text-xs text-red-600 mt-1">
+          <div className="rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3">
+            <p className="text-sm font-semibold text-red-700 dark:text-red-400">{urlEditError}</p>
+            <p className="text-xs text-red-600 dark:text-red-400 mt-1">
               Sprawdź czy slug jest prawidłowy lub wybierz alert ręcznie z listy poniżej.
             </p>
           </div>
@@ -917,7 +917,7 @@ export default function BuilderPage() {
 
         {/* Source info note — shown when alert is linked to a registered source */}
         {form.sourceId && (
-          <div className="rounded-lg bg-blue-50 border border-blue-200 px-3 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <div className="rounded-lg bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 px-3 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1">
             <p className="text-sm text-blue-800">
               <span className="font-medium">Źródło:</span>{" "}
               {form.sourceName || "—"}
@@ -927,7 +927,7 @@ export default function BuilderPage() {
                 href={form.sourceUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-blue-600 hover:underline"
+                className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
               >
                 Otwórz źródło ↗
               </a>
@@ -993,7 +993,7 @@ export default function BuilderPage() {
             placeholder="np. zmiana-ruchu-wkd-komorow"
             className={inputClass + " font-mono text-xs"}
           />
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-400 dark:text-slate-500">
             Unikalny adres alertu, np. zmiana-ruchu-wkd-komorow. Wypełnia się automatycznie z tytułu.
           </p>
         </div>
@@ -1026,7 +1026,7 @@ export default function BuilderPage() {
           <div className="flex flex-col gap-2">
             <label className={labelClass}>
               Data do{" "}
-              <span className="font-normal text-slate-400">(opcjonalnie)</span>
+              <span className="font-normal text-slate-400 dark:text-slate-500">(opcjonalnie)</span>
             </label>
             <input
               type="date"
@@ -1080,7 +1080,7 @@ export default function BuilderPage() {
           <div className="flex flex-col gap-2">
             <label className={labelClass}>
               Link do źródła{" "}
-              <span className="font-normal text-amber-600">(wymagany dla realnego alertu)</span>
+              <span className="font-normal text-amber-600 dark:text-amber-300">(wymagany dla realnego alertu)</span>
             </label>
             <input
               type="url"
@@ -1095,7 +1095,7 @@ export default function BuilderPage() {
                 href={form.sourceUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline self-start"
+                className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline self-start"
               >
                 Sprawdź ten link →
               </a>
@@ -1108,11 +1108,11 @@ export default function BuilderPage() {
       {/* ── Form actions (lokalne, test-only) ─────────────────────────── */}
       {view === "tools" && (
       <>
-      <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5 mb-3">
+      <div className="rounded-lg bg-amber-50 dark:bg-amber-500/15 border border-amber-200 dark:border-amber-500/30 px-3 py-2.5 mb-3">
         <p className="text-xs font-semibold text-amber-900">
           Tylko lokalny podgląd — to NIE jest publikacja.
         </p>
-        <p className="text-xs text-amber-700 mt-1">
+        <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
           Te dwa przyciski zapisują wyłącznie w pamięci tej przeglądarki
           (localStorage). Nic nie trafia do Supabase ani na stronę publiczną —
           żaden mieszkaniec tego nie zobaczy. Jedyny sposób na realną publikację
@@ -1122,7 +1122,7 @@ export default function BuilderPage() {
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <button
           onClick={saveDraft}
-          className="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-colors"
+          className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-5 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:border-slate-400 transition-colors"
         >
           Zapisz jako draft (test lokalny)
         </button>
@@ -1134,32 +1134,32 @@ export default function BuilderPage() {
         </button>
 
         {draftStatus === "saved" && (
-          <span className="text-sm font-medium text-emerald-700">
+          <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
             Draft zapisany lokalnie.
           </span>
         )}
         {draftStatus === "loaded" && (
-          <span className="text-sm font-medium text-blue-700">
+          <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
             Draft wczytany do formularza.
           </span>
         )}
         {draftStatus === "deleted" && (
-          <span className="text-sm font-medium text-slate-500">
+          <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
             Draft usunięty.
           </span>
         )}
         {publishStatus === "published" && (
-          <span className="text-sm font-medium text-emerald-700">
+          <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
             Zapisano jako lokalny test — to nie jest publikacja w Supabase.
           </span>
         )}
         {publishStatus === "loaded" && (
-          <span className="text-sm font-medium text-blue-700">
+          <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
             Alert wczytany do edycji.
           </span>
         )}
         {publishStatus === "deleted" && (
-          <span className="text-sm font-medium text-slate-500">
+          <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
             Alert usunięty z lokalnych testów.
           </span>
         )}
@@ -1169,10 +1169,10 @@ export default function BuilderPage() {
 
       {/* ── Supabase save / edit ──────────────────────────────────────── */}
       {view === "edit" && (editingSupabaseAlert ? (
-        <section className="bg-amber-50 border border-amber-200 rounded-2xl p-6 flex flex-col gap-4 mb-10">
+        <section className="bg-amber-50 dark:bg-amber-500/15 border border-amber-200 dark:border-amber-500/30 rounded-2xl p-6 flex flex-col gap-4 mb-10">
           <div>
             <h2 className="text-base font-semibold text-amber-900">Edycja alertu w Supabase</h2>
-            <p className="text-sm text-amber-700 mt-1">
+            <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
               Zmiany zostaną zapisane w istniejącym wierszu bazy danych. Status alertu pozostaje bez zmian.
             </p>
           </div>
@@ -1188,31 +1188,31 @@ export default function BuilderPage() {
             <button
               onClick={cancelSupabaseEdit}
               disabled={supabaseUpdateSaving}
-              className="rounded-lg border border-amber-300 bg-white px-5 py-2.5 text-sm font-medium text-amber-700 hover:bg-amber-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="rounded-lg border border-amber-300 bg-white dark:bg-slate-900 px-5 py-2.5 text-sm font-medium text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-500/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               Anuluj edycję
             </button>
           </div>
 
           {supabaseUpdateError && (
-            <p className="text-sm font-medium text-red-700">{supabaseUpdateError}</p>
+            <p className="text-sm font-medium text-red-700 dark:text-red-400">{supabaseUpdateError}</p>
           )}
           {supabaseUpdateSuccess && (
-            <p className="text-sm font-medium text-emerald-700">
+            <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
               Zmiany zapisane w Supabase.
             </p>
           )}
         </section>
       ) : (
-        <section className="bg-blue-50 border border-blue-200 rounded-2xl p-6 flex flex-col gap-4 mb-10">
+        <section className="bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 rounded-2xl p-6 flex flex-col gap-4 mb-10">
           <div>
             <h2 className="text-base font-semibold text-blue-900">Zapis do Supabase</h2>
-            <p className="text-sm text-blue-700 mt-1">
+            <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
               Zapisuje alert bezpośrednio w bazie danych. Wymaga zalogowania jako administrator.
             </p>
           </div>
 
-          <p className="text-xs text-blue-600">
+          <p className="text-xs text-blue-600 dark:text-blue-400">
             Tworzysz kilka alertów pod rząd? Sprawdź w podglądzie karty poniżej, że
             slug, tytuł i kategoria należą do TEGO alertu, zwłaszcza po wczytaniu
             kolejnego JSON.
@@ -1224,14 +1224,14 @@ export default function BuilderPage() {
           {(() => {
             const prePublishWarnings = getPrePublishWarnings(form);
             return (
-              <div className="rounded-lg bg-white border border-blue-200 px-3 py-2.5">
+              <div className="rounded-lg bg-white dark:bg-slate-900 border border-blue-200 dark:border-blue-500/30 px-3 py-2.5">
                 <p className="text-xs font-semibold text-blue-900 mb-1.5">Przed publikacją sprawdź:</p>
                 {prePublishWarnings.length === 0 ? (
-                  <p className="text-xs text-emerald-700">✓ Wszystko wygląda gotowe do publikacji.</p>
+                  <p className="text-xs text-emerald-700 dark:text-emerald-300">✓ Wszystko wygląda gotowe do publikacji.</p>
                 ) : (
                   <ul className="space-y-0.5">
                     {prePublishWarnings.map((w, i) => (
-                      <li key={i} className="text-xs text-amber-700">⚠ {w}</li>
+                      <li key={i} className="text-xs text-amber-700 dark:text-amber-300">⚠ {w}</li>
                     ))}
                   </ul>
                 )}
@@ -1239,7 +1239,7 @@ export default function BuilderPage() {
             );
           })()}
 
-          <ul className="text-xs text-blue-700 space-y-1 list-disc list-inside">
+          <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-1 list-disc list-inside">
             <li>Publikuj tylko po sprawdzeniu oficjalnego źródła.</li>
             <li>Brak linku do źródła = nie publikuj.</li>
             <li>AI pomaga pisać, ale nie weryfikuje faktów za Ciebie.</li>
@@ -1252,24 +1252,24 @@ export default function BuilderPage() {
             <button
               onClick={handleSaveDraftToSupabase}
               disabled={supabaseSaving}
-              className="rounded-lg border border-blue-300 bg-white px-5 py-2.5 text-sm font-medium text-blue-700 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="rounded-lg border border-blue-300 bg-white dark:bg-slate-900 px-5 py-2.5 text-sm font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-500/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {supabaseSaving ? "Zapisywanie…" : "Zapisz jako draft w Supabase"}
             </button>
             <button
               onClick={handlePublishToSupabase}
               disabled={supabaseSaving}
-              className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="rounded-lg bg-blue-600 dark:bg-blue-500 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 dark:hover:bg-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {supabaseSaving ? "Publikowanie…" : "Opublikuj w Supabase"}
             </button>
           </div>
 
           {supabaseError && (
-            <p className="text-sm font-medium text-red-700">Błąd: {supabaseError}</p>
+            <p className="text-sm font-medium text-red-700 dark:text-red-400">Błąd: {supabaseError}</p>
           )}
           {supabaseSuccess === "draft" && lastSavedAlert && (
-            <p className="text-sm font-medium text-emerald-700">
+            <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
               Draft zapisany: „{lastSavedAlert.title || "Bez tytułu"}" (
               {categoryOptions.find((o) => o.value === lastSavedAlert.category)?.label ?? lastSavedAlert.category},
               slug: {lastSavedAlert.slug}). Formularz jest teraz czysty — gotowy na kolejny alert.
@@ -1277,18 +1277,18 @@ export default function BuilderPage() {
           )}
           {supabaseSuccess === "published" && lastSavedAlert && (
             <div className="flex flex-col gap-1">
-              <p className="text-sm font-medium text-emerald-700">
+              <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
                 Opublikowano: „{lastSavedAlert.title || "Bez tytułu"}" (
                 {categoryOptions.find((o) => o.value === lastSavedAlert.category)?.label ?? lastSavedAlert.category},
                 slug: {lastSavedAlert.slug}). Formularz jest teraz czysty — gotowy na kolejny alert.
               </p>
               <a
                 href={`/alerts/${supabaseSavedSlug}`}
-                className="text-sm text-blue-700 underline hover:text-blue-900"
+                className="text-sm text-blue-700 dark:text-blue-300 underline hover:text-blue-900"
               >
                 Otwórz alert → /alerts/{supabaseSavedSlug}
               </a>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-400 dark:text-slate-500">
                 Sprawdź publiczny widok wylogowany/incognito i na telefonie —
                 upewnij się, że alert nie wygląda jak placeholder.
               </p>
@@ -1314,17 +1314,17 @@ export default function BuilderPage() {
             onClick={copyJson}
             className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
               copied
-                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300"
+                ? "border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:border-slate-300"
             }`}
           >
             {copied ? "Skopiowano ✓" : "Kopiuj JSON"}
           </button>
         </div>
-        <p className="text-sm text-slate-500 mb-3">
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">
           Podgląd JSON aktywnego alertu.
         </p>
-        <pre className="bg-slate-50 border border-slate-200 text-slate-700 rounded-2xl p-5 text-sm font-mono leading-relaxed overflow-x-auto">
+        <pre className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 rounded-2xl p-5 text-sm font-mono leading-relaxed overflow-x-auto">
           {jsonOutput}
         </pre>
       </section>
@@ -1336,19 +1336,19 @@ export default function BuilderPage() {
         <h2 className={sectionTitleClass + " mb-4"}>Zapisane drafty</h2>
 
         {drafts.length === 0 ? (
-          <p className="text-sm text-slate-400">Brak zapisanych draftów.</p>
+          <p className="text-sm text-slate-400 dark:text-slate-500">Brak zapisanych draftów.</p>
         ) : (
           <div className="flex flex-col gap-3">
             {drafts.map((draft) => (
               <div
                 key={draft.id}
-                className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex flex-col sm:flex-row sm:items-center gap-3"
+                className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 flex flex-col sm:flex-row sm:items-center gap-3"
               >
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-slate-900 truncate">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
                     {draft.form.title || "Bez tytułu"}
                   </p>
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                     {categoryOptions.find((o) => o.value === draft.form.category)?.label} ·{" "}
                     {severityOptions.find((o) => o.value === draft.form.severity)?.label} ·{" "}
                     {formatItemDate(draft.createdAt)}
@@ -1357,13 +1357,13 @@ export default function BuilderPage() {
                 <div className="flex items-center gap-2 shrink-0">
                   <button
                     onClick={() => loadDraft(draft)}
-                    className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"
+                    className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-1.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:border-slate-300 transition-colors"
                   >
                     Wczytaj
                   </button>
                   <button
                     onClick={() => deleteDraft(draft.id)}
-                    className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+                    className="rounded-lg border border-red-200 dark:border-red-500/30 bg-white dark:bg-slate-900 px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
                   >
                     Usuń
                   </button>
@@ -1381,7 +1381,7 @@ export default function BuilderPage() {
         <h2 className={sectionTitleClass + " mb-4"}>Lokalnie opublikowane alerty</h2>
 
         {publishedAlerts.length === 0 ? (
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-slate-400 dark:text-slate-500">
             Brak lokalnie opublikowanych alertów.
           </p>
         ) : (
@@ -1389,13 +1389,13 @@ export default function BuilderPage() {
             {publishedAlerts.map((pa) => (
               <div
                 key={pa.id}
-                className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex flex-col sm:flex-row sm:items-center gap-3"
+                className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 flex flex-col sm:flex-row sm:items-center gap-3"
               >
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-slate-900 truncate">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
                     {pa.title || "Bez tytułu"}
                   </p>
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                     {categoryOptions.find((o) => o.value === pa.category)?.label} ·{" "}
                     {severityOptions.find((o) => o.value === pa.severity)?.label} ·{" "}
                     opublikowano {formatItemDate(pa.publishedAt)}
@@ -1404,13 +1404,13 @@ export default function BuilderPage() {
                 <div className="flex items-center gap-2 shrink-0">
                   <button
                     onClick={() => loadPublishedToForm(pa)}
-                    className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"
+                    className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-1.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:border-slate-300 transition-colors"
                   >
                     Wczytaj do edycji
                   </button>
                   <button
                     onClick={() => deletePublished(pa.id)}
-                    className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+                    className="rounded-lg border border-red-200 dark:border-red-500/30 bg-white dark:bg-slate-900 px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
                   >
                     Usuń
                   </button>
@@ -1430,12 +1430,12 @@ export default function BuilderPage() {
           <button
             onClick={refreshSupabaseAlerts}
             disabled={supabaseAlertsLoading}
-            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors"
+            className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60 disabled:opacity-50 transition-colors"
           >
             {supabaseAlertsLoading ? "Ładowanie…" : "Odśwież listę"}
           </button>
         </div>
-        <p className="text-sm text-slate-500 mb-4">
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
           Alerty zapisane w prawdziwej bazie danych. Widoczne tylko dla zalogowanego administratora.
           Jeśli komunikat jest już nieaktualny, ustaw go jako zarchiwizowany („Archiwizuj")
           — albo nie publikuj go wcale, jeśli jeszcze jest draftem. Jeśli utrudnienie się
@@ -1453,12 +1453,12 @@ export default function BuilderPage() {
                 value={adminSearchQuery}
                 onChange={(e) => setAdminSearchQuery(e.target.value)}
                 placeholder="Szukaj po tytule, slugu, lokalizacji..."
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 pr-20 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2.5 pr-20 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500"
               />
               {adminSearchQuery && (
                 <button
                   onClick={() => setAdminSearchQuery("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded px-2 py-1 text-xs font-medium text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded px-2 py-1 text-xs font-medium text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                 >
                   Wyczyść
                 </button>
@@ -1481,7 +1481,7 @@ export default function BuilderPage() {
                   className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
                     adminStatusFilter === opt.value
                       ? "bg-slate-700 text-white border-slate-700"
-                      : "bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:text-slate-900"
+                      : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-slate-400 hover:text-slate-900 dark:hover:text-white"
                   }`}
                 >
                   {opt.label}
@@ -1503,8 +1503,8 @@ export default function BuilderPage() {
                     onClick={() => setAdminCategoryFilter(opt.value)}
                     className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors whitespace-nowrap ${
                       adminCategoryFilter === opt.value
-                        ? "bg-blue-600 text-white border-blue-600"
-                        : "bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:text-slate-900"
+                        ? "bg-blue-600 dark:bg-blue-500 text-white border-blue-600"
+                        : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-slate-400 hover:text-slate-900 dark:hover:text-white"
                     }`}
                   >
                     {opt.label}
@@ -1515,9 +1515,9 @@ export default function BuilderPage() {
 
             {/* Counter + clear */}
             <div className="flex items-center justify-between gap-2">
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-slate-500 dark:text-slate-400">
                 Wyświetlane alerty w Supabase:{" "}
-                <span className="font-semibold text-slate-700">
+                <span className="font-semibold text-slate-700 dark:text-slate-300">
                   {filteredSupabaseAlerts.length}
                 </span>{" "}
                 z {supabaseAlerts.length}
@@ -1525,7 +1525,7 @@ export default function BuilderPage() {
               {hasAdminFilters && (
                 <button
                   onClick={clearAdminFilters}
-                  className="text-xs font-medium text-slate-500 hover:text-slate-800 transition-colors"
+                  className="text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 transition-colors"
                 >
                   Wyczyść filtry
                 </button>
@@ -1538,15 +1538,15 @@ export default function BuilderPage() {
           <div
             className={`rounded-xl px-4 py-3 mb-4 ${
               statusActionMsg.type === "success"
-                ? "bg-emerald-50 border border-emerald-200"
-                : "bg-red-50 border border-red-200"
+                ? "bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30"
+                : "bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30"
             }`}
           >
             <p
               className={`text-sm font-medium ${
                 statusActionMsg.type === "success"
-                  ? "text-emerald-700"
-                  : "text-red-700"
+                  ? "text-emerald-700 dark:text-emerald-300"
+                  : "text-red-700 dark:text-red-400"
               }`}
             >
               {statusActionMsg.text}
@@ -1555,23 +1555,23 @@ export default function BuilderPage() {
         )}
 
         {supabaseAlertsLoading && supabaseAlerts.length === 0 ? (
-          <p className="text-sm text-slate-400">Pobieranie alertów z bazy danych…</p>
+          <p className="text-sm text-slate-400 dark:text-slate-500">Pobieranie alertów z bazy danych…</p>
         ) : supabaseAlertsError ? (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3">
-            <p className="text-sm font-medium text-red-700">
+          <div className="rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3">
+            <p className="text-sm font-medium text-red-700 dark:text-red-400">
               Nie udało się pobrać alertów z Supabase.
             </p>
             <p className="text-xs text-red-500 mt-1 font-mono">{supabaseAlertsError}</p>
-            <p className="text-xs text-red-600 mt-2">
+            <p className="text-xs text-red-600 dark:text-red-400 mt-2">
               Sprawdź czy kolumna <span className="font-mono">updated_at</span> istnieje w tabeli i czy polityki RLS pozwalają na odczyt.
             </p>
           </div>
         ) : supabaseAlerts.length === 0 ? (
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-slate-400 dark:text-slate-500">
             Brak alertów w Supabase albo nie udało się ich pobrać.
           </p>
         ) : filteredSupabaseAlerts.length === 0 ? (
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-slate-400 dark:text-slate-500">
             Brak alertów pasujących do filtrów.
           </p>
         ) : (
@@ -1579,28 +1579,28 @@ export default function BuilderPage() {
             {filteredSupabaseAlerts.map((a) => (
               <div
                 key={a.id}
-                className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex flex-col sm:flex-row sm:items-start gap-3"
+                className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 flex flex-col sm:flex-row sm:items-start gap-3"
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2 mb-1">
                     <span className={statusBadgeClass(a.status)}>
                       {statusLabel(a.status)}
                     </span>
-                    <span className="text-xs text-slate-400">
+                    <span className="text-xs text-slate-400 dark:text-slate-500">
                       {categoryOptions.find((o) => o.value === a.category)?.label}
                     </span>
-                    <span className="text-xs text-slate-400">·</span>
-                    <span className="text-xs text-slate-400">
+                    <span className="text-xs text-slate-400 dark:text-slate-500">·</span>
+                    <span className="text-xs text-slate-400 dark:text-slate-500">
                       {severityOptions.find((o) => o.value === a.severity)?.label}
                     </span>
                   </div>
-                  <p className="text-sm font-semibold text-slate-900 truncate">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
                     {a.title || "Bez tytułu"}
                   </p>
-                  <p className="text-xs text-slate-400 font-mono mt-0.5 truncate">
+                  <p className="text-xs text-slate-400 dark:text-slate-500 font-mono mt-0.5 truncate">
                     {a.slug}
                   </p>
-                  <p className="text-xs text-slate-400 mt-0.5">
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
                     zmieniono {formatItemDate(a.updatedAt)}
                   </p>
                 </div>
@@ -1608,7 +1608,7 @@ export default function BuilderPage() {
                   <button
                     onClick={() => loadFromSupabaseAlert(a)}
                     disabled={loadingSupabaseId === a.id}
-                    className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-60 transition-colors"
+                    className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-1.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:border-slate-300 disabled:opacity-60 transition-colors"
                   >
                     {loadingSupabaseId === a.id ? "Wczytywanie…" : "Wczytaj do edycji"}
                   </button>
@@ -1630,14 +1630,14 @@ export default function BuilderPage() {
                     <>
                       <a
                         href={`/alerts/${a.slug}`}
-                        className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-700 hover:bg-emerald-100 transition-colors"
+                        className="rounded-lg border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 px-3 py-1.5 text-sm font-medium text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 transition-colors"
                       >
                         Otwórz alert
                       </a>
                       <button
                         onClick={() => handleStatusAction(a.slug, "archive")}
                         disabled={statusActionSlug === a.slug}
-                        className="rounded-lg border border-amber-200 bg-white px-3 py-1.5 text-sm font-medium text-amber-700 hover:bg-amber-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="rounded-lg border border-amber-200 dark:border-amber-500/30 bg-white dark:bg-slate-900 px-3 py-1.5 text-sm font-medium text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-500/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
                         {statusActionSlug === a.slug ? "…" : "Archiwizuj"}
                       </button>
@@ -1649,11 +1649,11 @@ export default function BuilderPage() {
                       <button
                         onClick={() => handleStatusAction(a.slug, "restore")}
                         disabled={statusActionSlug === a.slug}
-                        className="rounded-lg border border-blue-200 bg-white px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="rounded-lg border border-blue-200 dark:border-blue-500/30 bg-white dark:bg-slate-900 px-3 py-1.5 text-sm font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-500/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
                         {statusActionSlug === a.slug ? "…" : "Przywróć jako draft"}
                       </button>
-                      <span className="text-xs text-slate-400 italic">
+                      <span className="text-xs text-slate-400 dark:text-slate-500 italic">
                         Niewidoczny publicznie
                       </span>
                     </>

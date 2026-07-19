@@ -127,6 +127,29 @@ The public UI is Polish-only. Two professional Userbrain testers (Franklin, Eliz
 
 ---
 
+## Dark Mode Is Real But Not Fully Hand-Tuned (Sprint 162)
+
+Sprint 162 added a complete light/dark/system theme system (semantic CSS
+tokens, no-flash hydration, live system reaction, accessible three-way
+toggle at `/ustawienia`). The ~30 pre-existing pages/components (all admin
+surfaces, all public pages) got their dark-mode coverage via a scripted,
+purely additive sweep — a `dark:` companion class inserted next to each
+recurring hardcoded Tailwind color class, not a manual per-component design
+pass the way light mode has had. It's genuinely readable and tested (see
+`docs/SPRINT_162_THEME_SYSTEM_LIGHT_DARK_SYSTEM_V1.md`'s test matrix and
+manual QA), but a handful of small accents (e.g. `ring-*` badge outlines)
+were left unstyled for dark mode since they weren't part of the sweep's
+pattern set. The Web App Manifest's `theme_color`/`background_color` also
+stay fixed to the light brand color — no dark variant exists in that spec.
+
+**Consequence:** dark mode looks correct and consistent everywhere it was
+tested, but hasn't had the same level of design polish as light mode. A
+future sprint could migrate the swept files to the semantic token classes
+(`bg-surface`, `text-text-primary`, ...) incrementally, with no behavior
+change, to close this gap.
+
+---
+
 ## This Is Early-Stage Software
 
 Alertownik is a pilot-stage MVP, not a mature product. It has had QA passes (see [[Sprint Log]] Sprint 68 in Obsidian) and is now being prepared for its first real testers, but it has not yet been validated under real, sustained usage. See `docs/NEXT_MILESTONES.md` for the planned path (richer source monitoring, notifications, multi-role admin).

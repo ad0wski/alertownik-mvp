@@ -209,10 +209,10 @@ const monitoringConfig: Record<
   MonitoringStatus,
   { label: string; badge: string }
 > = {
-  do_sprawdzenia:      { label: "Do sprawdzenia",    badge: "bg-amber-50 text-amber-700 ring-1 ring-amber-200" },
-  sprawdzone_dzis:     { label: "Sprawdzone dziś",   badge: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200" },
-  ostatnio_sprawdzone: { label: "Ostatnio sprawdzone", badge: "bg-slate-100 text-slate-500 ring-1 ring-slate-200" },
-  nieaktywne:          { label: "Nieaktywne",        badge: "bg-slate-50 text-slate-400 ring-1 ring-slate-200" },
+  do_sprawdzenia:      { label: "Do sprawdzenia",    badge: "bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 ring-1 ring-amber-200" },
+  sprawdzone_dzis:     { label: "Sprawdzone dziś",   badge: "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-200" },
+  ostatnio_sprawdzone: { label: "Ostatnio sprawdzone", badge: "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 ring-1 ring-slate-200" },
+  nieaktywne:          { label: "Nieaktywne",        badge: "bg-slate-50 dark:bg-slate-800/60 text-slate-400 dark:text-slate-500 ring-1 ring-slate-200" },
 };
 
 function todayString(): string {
@@ -244,8 +244,8 @@ function getMonitoringBadge(source: AlertSource): { label: string; badge: string
     return {
       label: days === 1 ? "Sprawdzone wczoraj" : `Sprawdzone ${days} dni temu`,
       badge: stale
-        ? "bg-amber-50 text-amber-700 ring-1 ring-amber-200"
-        : "bg-slate-100 text-slate-500 ring-1 ring-slate-200",
+        ? "bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 ring-1 ring-amber-200"
+        : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 ring-1 ring-slate-200",
     };
   }
   return monitoringConfig[status];
@@ -260,8 +260,8 @@ function needsChecking(source: AlertSource): boolean {
 // ── Shared styles ─────────────────────────────────────────────────────────────
 
 const inputClass =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500";
-const labelClass = "block text-sm font-medium text-slate-700 mb-1";
+  "w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500";
+const labelClass = "block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -325,16 +325,16 @@ const CHECK_RESULT_OPTIONS: { value: SourceCheckResult; label: string }[] = [
 ];
 
 const resultConfig: Record<SourceCheckResult, { label: string; color: string }> = {
-  no_changes:     { label: "Brak zmian",                     color: "text-slate-600" },
-  found_notice:   { label: "Znaleziono komunikat",           color: "text-blue-600" },
+  no_changes:     { label: "Brak zmian",                     color: "text-slate-600 dark:text-slate-400" },
+  found_notice:   { label: "Znaleziono komunikat",           color: "text-blue-600 dark:text-blue-400" },
   alert_created:  { label: "Przygotowano alert",             color: "text-emerald-600" },
-  needs_followup: { label: "Wymaga późniejszego sprawdzenia", color: "text-amber-600" },
+  needs_followup: { label: "Wymaga późniejszego sprawdzenia", color: "text-amber-600 dark:text-amber-300" },
 };
 
 const severityConfig: Record<string, { label: string; color: string }> = {
-  info:    { label: "Info",  color: "text-blue-700 bg-blue-50 border-blue-200" },
-  warning: { label: "Uwaga", color: "text-amber-700 bg-amber-50 border-amber-200" },
-  urgent:  { label: "Pilne", color: "text-red-700 bg-red-50 border-red-200" },
+  info:    { label: "Info",  color: "text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-500/15 border-blue-200 dark:border-blue-500/30" },
+  warning: { label: "Uwaga", color: "text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/15 border-amber-200 dark:border-amber-500/30" },
+  urgent:  { label: "Pilne", color: "text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/30" },
 };
 
 // Results that warrant showing the notice text field
@@ -352,11 +352,11 @@ interface PilotSourceSuggestionsProps {
 
 function PilotSourceSuggestions({ existingUrls, onFillForm }: PilotSourceSuggestionsProps) {
   return (
-    <div className="rounded-xl border border-blue-200 bg-blue-50/40 p-4 mb-5">
-      <p className="text-sm font-semibold text-slate-800 mb-1">
+    <div className="rounded-xl border border-blue-200 dark:border-blue-500/30 bg-blue-50/40 p-4 mb-5">
+      <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-1">
         Pilotażowe źródła — WKD / Komorów / Pruszków
       </p>
-      <p className="text-xs text-slate-500 mb-3 leading-relaxed">
+      <p className="text-xs text-slate-500 dark:text-slate-400 mb-3 leading-relaxed">
         Sprawdzone real adresy dla pierwszego pilotu. „Wypełnij formularz" tylko
         przygotowuje formularz dodawania — źródło zapisuje się dopiero po Twojej
         weryfikacji i kliknięciu „Dodaj źródło".
@@ -367,21 +367,21 @@ function PilotSourceSuggestions({ existingUrls, onFillForm }: PilotSourceSuggest
           return (
             <div
               key={s.id}
-              className={`rounded-lg border p-3 ${added ? "border-emerald-200 bg-emerald-50/50" : "border-slate-200 bg-white"}`}
+              className={`rounded-lg border p-3 ${added ? "border-emerald-200 dark:border-emerald-500/30 bg-emerald-50/50" : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"}`}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-slate-800 truncate">{s.name}</p>
-                  <p className="text-xs text-slate-400 mt-0.5">
+                  <p className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">{s.name}</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
                     {categoryLabels[s.category]} · {sourceTypeLabels[s.sourceType]}
                   </p>
                 </div>
                 {added ? (
-                  <span className="shrink-0 text-xs font-medium text-emerald-700">Dodano ✓</span>
+                  <span className="shrink-0 text-xs font-medium text-emerald-700 dark:text-emerald-300">Dodano ✓</span>
                 ) : (
                   <button
                     onClick={() => onFillForm(s)}
-                    className="shrink-0 text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                    className="shrink-0 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline"
                   >
                     Wypełnij formularz →
                   </button>
@@ -413,12 +413,12 @@ function SourceForm({
   return (
     <form
       onSubmit={onSubmit}
-      className="rounded-xl border border-slate-200 bg-white p-5 space-y-4"
+      className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 space-y-4"
     >
       {/* Sprint 104 — admin helper text: the one hard rule from Real Data
           Admin Checklist / Admin Source Seeding Checklist, restated where
           the mistake would actually happen. */}
-      <p className="text-xs text-slate-400">
+      <p className="text-xs text-slate-400 dark:text-slate-500">
         Zanim dodasz: otwórz link w przeglądarce i potwierdź, że strona
         faktycznie istnieje i pochodzi z oficjalnego źródła. Nie dodawaj
         źródła, którego nie da się zweryfikować.
@@ -468,7 +468,7 @@ function SourceForm({
               <option key={t} value={t}>{sourceTypeLabels[t]}</option>
             ))}
           </select>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
             Jeśli źródło ma kanał RSS, oznacz „RSS/Feed" — ułatwi to przyszłą automatyzację.
             Jeśli strona blokuje automatyczne pobieranie (np. błąd 403 przy „Sprawdź stronę"),
             oznacz „Inne" — podgląd nadal spróbuje pobrać stronę, ale traktuj ją jako źródło manualne.
@@ -487,7 +487,7 @@ function SourceForm({
       </div>
 
       {saveError && (
-        <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+        <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-lg px-3 py-2">
           {saveError}
         </p>
       )}
@@ -496,14 +496,14 @@ function SourceForm({
         <button
           type="submit"
           disabled={saving}
-          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white text-sm font-medium rounded-lg hover:bg-blue-700 dark:hover:bg-blue-400 disabled:opacity-50 transition-colors"
         >
           {saving ? "Zapisywanie…" : submitLabel}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="px-4 py-2 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-100 transition-colors"
+          className="px-4 py-2 text-slate-600 dark:text-slate-400 text-sm font-medium rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
         >
           Anuluj
         </button>
@@ -730,8 +730,8 @@ function SourceCard({
     <div
       className={`rounded-xl border p-4 transition-all ${
         inactive
-          ? "bg-slate-50 border-slate-200 opacity-70"
-          : "bg-white border-slate-200 shadow-sm"
+          ? "bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-800 opacity-70"
+          : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm"
       }`}
     >
       {/* ── Top: info + management buttons ─────────────────────────── */}
@@ -740,23 +740,23 @@ function SourceCard({
         {/* Source info */}
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-1.5">
-            <span className={`font-semibold text-sm ${inactive ? "text-slate-500" : "text-slate-900"}`}>
+            <span className={`font-semibold text-sm ${inactive ? "text-slate-500 dark:text-slate-400" : "text-slate-900 dark:text-white"}`}>
               {source.name}
             </span>
             <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${monCfg.badge}`}>
               {monCfg.label}
             </span>
-            <span className="text-xs text-slate-400 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-full">
+            <span className="text-xs text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 px-2 py-0.5 rounded-full">
               {categoryLabels[source.category]}
             </span>
-            <span className="text-xs text-slate-400 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-full">
+            <span className="text-xs text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 px-2 py-0.5 rounded-full">
               {sourceTypeLabels[source.sourceType]}
             </span>
             <span className="text-xs text-indigo-500 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full">
               {PARSER_STRATEGY_LABELS[detectParserStrategy(source.sourceType)]}
             </span>
             {!source.url && (
-              <span className="text-xs font-medium text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
+              <span className="text-xs font-medium text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 px-2 py-0.5 rounded-full">
                 ⚠ Brak adresu URL
               </span>
             )}
@@ -766,17 +766,17 @@ function SourceCard({
             href={source.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm text-blue-600 hover:text-blue-800 hover:underline truncate block"
+            className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline truncate block"
           >
             {source.url}
           </a>
 
           {source.notes && (
-            <p className="text-sm text-slate-500 mt-1">{source.notes}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{source.notes}</p>
           )}
 
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1.5">
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-400 dark:text-slate-500">
               {source.lastCheckedAt
                 ? `Ostatnio sprawdzono: ${formatCheckedAt(source.lastCheckedAt)}`
                 : "Jeszcze nie sprawdzano"}
@@ -793,7 +793,7 @@ function SourceCard({
         <div className="flex items-center gap-1 shrink-0">
           <button
             onClick={onEdit}
-            className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+            className="px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
           >
             Edytuj
           </button>
@@ -801,7 +801,7 @@ function SourceCard({
             onClick={onToggle}
             className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
               source.isActive
-                ? "text-amber-600 hover:text-amber-800 hover:bg-amber-50"
+                ? "text-amber-600 dark:text-amber-300 hover:text-amber-800 hover:bg-amber-50 dark:hover:bg-amber-500/10"
                 : "text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50"
             }`}
           >
@@ -809,7 +809,7 @@ function SourceCard({
           </button>
           <button
             onClick={onDelete}
-            className="px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            className="px-3 py-1.5 text-xs font-medium text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors"
           >
             Usuń
           </button>
@@ -817,11 +817,11 @@ function SourceCard({
       </div>
 
       {/* ── Footer: workflow actions ────────────────────────────────── */}
-      <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+      <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={onPrepareAlert}
-            className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-3 py-1.5 bg-blue-600 dark:bg-blue-500 text-white text-xs font-medium rounded-lg hover:bg-blue-700 dark:hover:bg-blue-400 transition-colors"
           >
             Przygotuj alert
           </button>
@@ -830,8 +830,8 @@ function SourceCard({
             disabled={previewStatus === "loading"}
             className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors disabled:opacity-50 ${
               previewStatus === "success" || previewStatus === "pdf_manual"
-                ? "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"
+                ? "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200"
+                : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800"
             }`}
           >
             {previewStatus === "loading"
@@ -846,13 +846,13 @@ function SourceCard({
             href={source.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+            className="px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
           >
             Otwórz źródło ↗
           </a>
           <Link
             href="/builder"
-            className="px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+            className="px-3 py-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
           >
             Otwórz Kreator →
           </Link>
@@ -862,24 +862,24 @@ function SourceCard({
             className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors disabled:opacity-50 ${
               monStatus === "sprawdzone_dzis"
                 ? "text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50"
-                : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"
+                : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800"
             }`}
           >
             {markingChecked ? "Oznaczanie…" : "Oznacz jako sprawdzone"}
           </button>
           <button
             onClick={() => setShowPanel(!showPanel)}
-            className="px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+            className="px-3 py-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
           >
             Historia{checks.length > 0 ? ` (${checks.length})` : ""} {showPanel ? "↑" : "↓"}
           </button>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <span className="text-xs text-slate-400">Alerty: {alertCount}</span>
+          <span className="text-xs text-slate-400 dark:text-slate-500">Alerty: {alertCount}</span>
           <Link
             href={`/admin/queue?source=${source.id}`}
             className={`text-xs font-medium ${
-              pendingCandidateCount > 0 ? "text-purple-600 hover:text-purple-800" : "text-slate-400 hover:text-slate-600"
+              pendingCandidateCount > 0 ? "text-purple-600 hover:text-purple-800" : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400"
             } hover:underline`}
           >
             Kandydaci: {pendingCandidateCount} →
@@ -889,15 +889,15 @@ function SourceCard({
 
       {/* ── Source preview panel ─────────────────────────────────────── */}
       {(previewStatus === "success" || previewStatus === "error" || previewStatus === "pdf_manual") && (
-        <div className="mt-3 pt-3 border-t border-slate-100">
+        <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
           {previewStatus === "error" && (
-            <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5">
+            <div className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-lg px-3 py-2.5">
               <div className="flex items-start gap-2">
                 <span className="font-medium shrink-0">Nie udało się pobrać:</span>
                 <span className="flex-1">{previewError}</span>
                 <button
                   onClick={() => setPreviewStatus("idle")}
-                  className="shrink-0 text-red-400 hover:text-red-600 font-bold leading-none"
+                  className="shrink-0 text-red-400 hover:text-red-600 dark:hover:text-red-400 font-bold leading-none"
                   aria-label="Zamknij"
                 >
                   ×
@@ -912,13 +912,13 @@ function SourceCard({
                   href={source.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="font-medium text-red-700 hover:text-red-900 hover:underline"
+                  className="font-medium text-red-700 dark:text-red-400 hover:text-red-900 hover:underline"
                 >
                   Otwórz źródło ręcznie →
                 </a>
                 <button
                   onClick={() => handlePrepareAlertFromCheck()}
-                  className="font-medium text-red-700 hover:text-red-900 hover:underline"
+                  className="font-medium text-red-700 dark:text-red-400 hover:text-red-900 hover:underline"
                 >
                   Wyślij źródło do AI Helpera →
                 </button>
@@ -927,11 +927,11 @@ function SourceCard({
           )}
 
           {previewStatus === "pdf_manual" && (
-            <div className="flex items-start gap-2 text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5">
+            <div className="flex items-start gap-2 text-xs text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2.5">
               <span className="flex-1">{getPdfManualInstructions(source.url).instructions}</span>
               <button
                 onClick={() => setPreviewStatus("idle")}
-                className="shrink-0 text-slate-400 hover:text-slate-600 font-bold leading-none"
+                className="shrink-0 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400 font-bold leading-none"
                 aria-label="Zamknij"
               >
                 ×
@@ -942,7 +942,7 @@ function SourceCard({
           {previewStatus === "success" && previewData && (
             <div>
               <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                   Podgląd strony
                 </p>
                 <button
@@ -952,7 +952,7 @@ function SourceCard({
                     setInlineDraft({ status: "idle" });
                     setInlineDraftSent(false);
                   }}
-                  className="text-xs text-slate-400 hover:text-slate-600 px-1 py-0.5"
+                  className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400 px-1 py-0.5"
                   aria-label="Zamknij podgląd"
                 >
                   Zamknij ×
@@ -960,15 +960,15 @@ function SourceCard({
               </div>
 
               {previewData.pageTitle && (
-                <p className="text-xs text-slate-500 mb-3 truncate">
-                  <span className="font-medium text-slate-700">{previewData.pageTitle}</span>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-3 truncate">
+                  <span className="font-medium text-slate-700 dark:text-slate-300">{previewData.pageTitle}</span>
                   {" — "}pobrano {formatCheckedAt(previewData.fetchedAt)}
                 </p>
               )}
 
               {previewData.feedUrl && (
-                <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 mb-3">
-                  <p className="text-xs text-emerald-800">
+                <div className="rounded-lg bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 px-3 py-2 mb-3">
+                  <p className="text-xs text-emerald-800 dark:text-emerald-300">
                     Wykryto możliwy kanał RSS:{" "}
                     <a
                       href={previewData.feedUrl}
@@ -984,30 +984,30 @@ function SourceCard({
               )}
 
               {previewData.candidates.length === 0 ? (
-                <p className="text-xs text-slate-400 mb-2">
+                <p className="text-xs text-slate-400 dark:text-slate-500 mb-2">
                   Nie znaleziono czytelnych fragmentów tekstu. Otwórz stronę i skopiuj treść ręcznie do AI Helpera.
                 </p>
               ) : (
                 <div className="space-y-2 mb-3">
-                  <p className="text-xs text-slate-400 mb-1">
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mb-1">
                     Znalezione fragmenty ({previewData.candidates.length}) — wybierz fragment do przetworzenia:
                   </p>
                   {previewData.candidates.map((c, i) => {
                     const candidateText = (c.heading ? c.heading + "\n\n" : "") + c.text;
                     return (
-                      <div key={i} className="bg-white border border-slate-200 rounded-lg p-3">
+                      <div key={i} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3">
                         {c.heading && (
-                          <p className="text-xs font-semibold text-slate-800 mb-1 truncate">{c.heading}</p>
+                          <p className="text-xs font-semibold text-slate-800 dark:text-slate-100 mb-1 truncate">{c.heading}</p>
                         )}
-                        <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">{c.text}</p>
+                        <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed line-clamp-3">{c.text}</p>
                         <div className="flex flex-wrap gap-3 mt-1">
                           {c.hasDate && (
-                            <span className="inline-flex items-center gap-1 text-xs text-blue-600">
+                            <span className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400">
                               📅 wykryto datę
                             </span>
                           )}
                           {!c.heading && !c.hasDate && c.text.length < 150 && (
-                            <span className="inline-flex items-center gap-1 text-xs text-amber-600">
+                            <span className="inline-flex items-center gap-1 text-xs text-amber-600 dark:text-amber-300">
                               ⚠ mało konkretnej treści — sprawdź ręcznie
                             </span>
                           )}
@@ -1022,14 +1022,14 @@ function SourceCard({
                           </button>
                           <button
                             onClick={() => handlePrepareAlertFromCheck(candidateText)}
-                            className="text-xs font-medium text-blue-500 hover:text-blue-700 hover:underline"
+                            className="text-xs font-medium text-blue-500 hover:text-blue-700 dark:hover:text-blue-300 hover:underline"
                           >
                             Wyślij do AI Helpera →
                           </button>
                           <button
                             onClick={() => saveAsCandidate(`c${i}`, candidateText, c.heading)}
                             disabled={savingCandidateKey === `c${i}` || savedCandidateKeys.has(`c${i}`)}
-                            className="text-xs font-medium text-amber-600 hover:text-amber-800 hover:underline disabled:opacity-50"
+                            className="text-xs font-medium text-amber-600 dark:text-amber-300 hover:text-amber-800 hover:underline disabled:opacity-50"
                           >
                             {savedCandidateKeys.has(`c${i}`)
                               ? "Zapisano jako kandydat ✓"
@@ -1052,7 +1052,7 @@ function SourceCard({
                       if (text) generateInlineDraft(text.slice(0, 3000));
                     }}
                     disabled={inlineDraft.status === "loading"}
-                    className="text-xs text-slate-500 hover:text-slate-700 hover:underline font-medium disabled:opacity-50"
+                    className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:underline font-medium disabled:opacity-50"
                   >
                     {inlineDraft.status === "loading" ? "Generowanie…" : "Generuj draft AI z całej treści →"}
                   </button>
@@ -1061,7 +1061,7 @@ function SourceCard({
                       const text = previewData?.rawText;
                       if (text) handlePrepareAlertFromCheck(text.slice(0, 3000));
                     }}
-                    className="text-xs text-slate-400 hover:text-slate-600 hover:underline"
+                    className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400 hover:underline"
                   >
                     Wyślij do AI Helpera →
                   </button>
@@ -1071,7 +1071,7 @@ function SourceCard({
                       if (text) saveAsCandidate("full", text.slice(0, 3000));
                     }}
                     disabled={savingCandidateKey === "full" || savedCandidateKeys.has("full")}
-                    className="text-xs text-amber-600 hover:text-amber-800 hover:underline font-medium disabled:opacity-50"
+                    className="text-xs text-amber-600 dark:text-amber-300 hover:text-amber-800 hover:underline font-medium disabled:opacity-50"
                   >
                     {savedCandidateKeys.has("full")
                       ? "Zapisano jako kandydat ✓"
@@ -1083,7 +1083,7 @@ function SourceCard({
               )}
 
               {candidateSaveError && (
-                <p className="mt-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                <p className="mt-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-lg px-3 py-2">
                   {candidateSaveError}
                 </p>
               )}
@@ -1092,11 +1092,11 @@ function SourceCard({
                   should lead somewhere — straight to the queue where the new
                   candidate now sits as "Oczekujące". */}
               {savedCandidateKeys.size > 0 && (
-                <p className="mt-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+                <p className="mt-2 text-xs text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 rounded-lg px-3 py-2">
                   Kandydat zapisany w kolejce (status „Oczekujące”).{" "}
                   <Link
                     href={`/admin/queue?source=${source.id}`}
-                    className="font-medium text-emerald-800 underline hover:text-emerald-900"
+                    className="font-medium text-emerald-800 dark:text-emerald-300 underline hover:text-emerald-900"
                   >
                     Zobacz w kolejce →
                   </Link>{" "}
@@ -1106,37 +1106,37 @@ function SourceCard({
 
               {/* Inline AI draft result */}
               {inlineDraft.status === "error" && (
-                <div className="mt-3 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-600">
+                <div className="mt-3 rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 px-3 py-2 text-xs text-red-600 dark:text-red-400">
                   {inlineDraft.error}
                 </div>
               )}
 
               {inlineDraft.status === "success" && (
-                <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50 p-3">
+                <div className="mt-3 rounded-xl border border-blue-200 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-500/15 p-3">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Draft AI</span>
+                    <span className="text-xs font-semibold text-blue-700 dark:text-blue-300 uppercase tracking-wide">Draft AI</span>
                     <div className="flex items-center gap-2">
                       {inlineDraft.mode === "anthropic" ? (
-                        <span className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
+                        <span className="text-xs text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 rounded-full px-2 py-0.5">
                           Claude API
                         </span>
                       ) : (
-                        <span className="text-xs text-slate-500 bg-slate-100 border border-slate-200 rounded-full px-2 py-0.5">
+                        <span className="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-full px-2 py-0.5">
                           Tryb testowy
                         </span>
                       )}
                       <button
                         onClick={() => { setInlineDraft({ status: "idle" }); setInlineDraftSent(false); }}
-                        className="text-xs text-slate-400 hover:text-slate-600 font-bold leading-none"
+                        className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400 font-bold leading-none"
                         aria-label="Usuń draft"
                       >
                         ×
                       </button>
                     </div>
                   </div>
-                  <p className="text-sm font-semibold text-slate-900 mb-1.5">{inlineDraft.draft.title}</p>
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white mb-1.5">{inlineDraft.draft.title}</p>
                   <div className="flex flex-wrap gap-1.5 mb-2">
-                    <span className="text-xs text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full">
+                    <span className="text-xs text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 px-2 py-0.5 rounded-full">
                       {categoryLabels[inlineDraft.draft.category as AlertCategory] ?? inlineDraft.draft.category}
                     </span>
                     {inlineDraft.draft.severity && severityConfig[inlineDraft.draft.severity] && (
@@ -1145,36 +1145,36 @@ function SourceCard({
                       </span>
                     )}
                     {inlineDraft.draft.startsAt ? (
-                      <span className="text-xs text-slate-500">{inlineDraft.draft.startsAt}</span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400">{inlineDraft.draft.startsAt}</span>
                     ) : (
-                      <span className="text-xs text-amber-600 font-medium">Nieznana data</span>
+                      <span className="text-xs text-amber-600 dark:text-amber-300 font-medium">Nieznana data</span>
                     )}
                     {inlineDraft.draft.place ? (
-                      <span className="text-xs text-slate-600">{inlineDraft.draft.place}</span>
+                      <span className="text-xs text-slate-600 dark:text-slate-400">{inlineDraft.draft.place}</span>
                     ) : (
-                      <span className="text-xs text-amber-600 font-medium">Nieznana lokalizacja</span>
+                      <span className="text-xs text-amber-600 dark:text-amber-300 font-medium">Nieznana lokalizacja</span>
                     )}
                   </div>
-                  <p className="text-xs text-slate-600 leading-relaxed mb-2.5">{inlineDraft.draft.change}</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-2.5">{inlineDraft.draft.change}</p>
                   <p className="text-xs mb-2.5">
                     {inlineDraft.draft.sourceUrl ? (
                       <a
                         href={inlineDraft.draft.sourceUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                        className="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline"
                       >
                         Sprawdź link źródła →
                       </a>
                     ) : (
-                      <span className="text-amber-600 font-medium">Brak linku źródła</span>
+                      <span className="text-amber-600 dark:text-amber-300 font-medium">Brak linku źródła</span>
                     )}
                   </p>
                   {inlineDraft.warnings.length > 0 && (
-                    <div className="mb-2.5 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2">
+                    <div className="mb-2.5 rounded-lg bg-amber-50 dark:bg-amber-500/15 border border-amber-200 dark:border-amber-500/30 px-3 py-2">
                       <ul className="space-y-0.5">
                         {inlineDraft.warnings.map((w, wi) => (
-                          <li key={wi} className="text-xs text-amber-700">⚠ {w}</li>
+                          <li key={wi} className="text-xs text-amber-700 dark:text-amber-300">⚠ {w}</li>
                         ))}
                       </ul>
                     </div>
@@ -1193,7 +1193,7 @@ function SourceCard({
                           handlePrepareAlertFromCheck(inlineDraft.sourceText);
                         }
                       }}
-                      className="px-3 py-1.5 text-xs font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded-lg transition-colors"
+                      className="px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:bg-blue-100 rounded-lg transition-colors"
                     >
                       Otwórz w AI Helperze →
                     </button>
@@ -1207,17 +1207,17 @@ function SourceCard({
 
       {/* ── Check history panel ─────────────────────────────────────── */}
       {showPanel && (
-        <div className="mt-3 pt-3 border-t border-slate-100">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
+        <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">
             Historia sprawdzeń
           </p>
 
           {/* Check form */}
-          <div className="bg-slate-50 rounded-xl p-3 mb-4 space-y-2.5">
+          <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-3 mb-4 space-y-2.5">
             <select
               value={formResult}
               onChange={(e) => handleResultChange(e.target.value as SourceCheckResult)}
-              className="w-full sm:w-auto text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full sm:w-auto text-sm border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
             >
               {CHECK_RESULT_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -1227,7 +1227,7 @@ function SourceCard({
             {/* Notice text — shown when admin found something */}
             {showNoticeField && (
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">
+                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                   Treść komunikatu lub link do komunikatu
                 </label>
                 <textarea
@@ -1235,7 +1235,7 @@ function SourceCard({
                   onChange={(e) => setFormNoticeText(e.target.value)}
                   rows={3}
                   placeholder="Wklej fragment komunikatu, link do strony albo krótką notatkę, którą chcesz potem przerobić na alert..."
-                  className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  className="w-full text-sm border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 resize-none"
                 />
               </div>
             )}
@@ -1245,19 +1245,19 @@ function SourceCard({
               onChange={(e) => setFormNotes(e.target.value)}
               rows={2}
               placeholder="Notatka ze sprawdzenia (opcjonalna)..."
-              className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              className="w-full text-sm border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 resize-none"
             />
 
             <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={handleSaveCheck}
                 disabled={savingCheck}
-                className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                className="px-3 py-1.5 bg-blue-600 dark:bg-blue-500 text-white text-xs font-medium rounded-lg hover:bg-blue-700 dark:hover:bg-blue-400 disabled:opacity-50 transition-colors"
               >
                 {savingCheck ? "Zapisywanie…" : "Zapisz wynik sprawdzenia"}
               </button>
               {checkMsg && (
-                <p className={`text-xs font-medium ${checkMsg.ok ? "text-emerald-700" : "text-red-600"}`}>
+                <p className={`text-xs font-medium ${checkMsg.ok ? "text-emerald-700 dark:text-emerald-300" : "text-red-600 dark:text-red-400"}`}>
                   {checkMsg.text}
                 </p>
               )}
@@ -1276,24 +1276,24 @@ function SourceCard({
 
           {/* History list */}
           {checks.length === 0 ? (
-            <p className="text-xs text-slate-400">Brak historii sprawdzeń.</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">Brak historii sprawdzeń.</p>
           ) : (
             <div className="space-y-3">
               {checks.map((check) => (
-                <div key={check.id} className="text-xs border-b border-slate-100 pb-2.5 last:border-0 last:pb-0">
+                <div key={check.id} className="text-xs border-b border-slate-100 dark:border-slate-800 pb-2.5 last:border-0 last:pb-0">
                   <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
                     <span className={`font-medium shrink-0 ${resultConfig[check.result].color}`}>
                       {resultConfig[check.result].label}
                     </span>
-                    <span className="text-slate-400 shrink-0">{formatCheckedAt(check.checkedAt)}</span>
+                    <span className="text-slate-400 dark:text-slate-500 shrink-0">{formatCheckedAt(check.checkedAt)}</span>
                   </div>
                   {check.notes && (
-                    <p className="mt-1 text-xs text-slate-500 whitespace-pre-wrap leading-relaxed">{check.notes}</p>
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 whitespace-pre-wrap leading-relaxed">{check.notes}</p>
                   )}
                   {ALERT_SHORTCUT_RESULTS.includes(check.result) && (
                     <button
                       onClick={() => handlePrepareAlertFromCheck(check.notes)}
-                      className="mt-1 text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                      className="mt-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline"
                     >
                       Przygotuj alert →
                     </button>
@@ -1594,13 +1594,13 @@ export default function SourcesPage() {
   if (!session) {
     return (
       <main className="max-w-4xl mx-auto w-full px-4 sm:px-6 py-10">
-        <div className="text-center py-20 bg-white rounded-2xl border border-slate-200">
-          <p className="text-lg font-semibold text-slate-700 mb-2">
+        <div className="text-center py-20 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
+          <p className="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-2">
             Ta sekcja jest dostępna po zalogowaniu.
           </p>
           <Link
             href="/login"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 dark:bg-blue-500 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 dark:hover:bg-blue-400 transition-colors"
           >
             Przejdź do logowania →
           </Link>
@@ -1619,17 +1619,17 @@ export default function SourcesPage() {
       {/* Page header */}
       <div className="mb-6">
         <div className="flex flex-wrap items-center gap-2.5 mb-1">
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Źródła</h1>
-          <span className="inline-flex items-center text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-0.5">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Źródła</h1>
+          <span className="inline-flex items-center text-xs font-medium text-amber-600 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/15 border border-amber-200 dark:border-amber-500/30 rounded-full px-2.5 py-0.5">
             Admin
           </span>
           {toCheckCount > 0 && (
-            <span className="inline-flex items-center text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-300 rounded-full px-2.5 py-0.5">
+            <span className="inline-flex items-center text-xs font-semibold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/15 border border-amber-300 rounded-full px-2.5 py-0.5">
               {toCheckCount} do sprawdzenia
             </span>
           )}
         </div>
-        <p className="text-sm text-slate-500 leading-relaxed">
+        <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
           Miejsca, w których mogą pojawiać się komunikaty do przetworzenia na alerty.
           Sprawdzanie odbywa się ręcznie — kliknij „Sprawdź" przy wybranym źródle, aby zapisać wynik.
         </p>
@@ -1679,13 +1679,13 @@ export default function SourcesPage() {
       <div className="mb-5 flex flex-wrap items-center gap-2">
         <button
           onClick={() => { setShowAddForm(!showAddForm); setSaveError(null); setAddForm(emptyForm()); }}
-          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+          className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white text-sm font-medium rounded-lg hover:bg-blue-700 dark:hover:bg-blue-400 transition-colors"
         >
           {showAddForm ? "Anuluj dodawanie" : "+ Dodaj źródło"}
         </button>
         <button
           onClick={() => setShowPilotSuggestions(!showPilotSuggestions)}
-          className="px-4 py-2 border border-blue-200 text-blue-700 bg-white text-sm font-medium rounded-lg hover:bg-blue-50 transition-colors"
+          className="px-4 py-2 border border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-300 bg-white dark:bg-slate-900 text-sm font-medium rounded-lg hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"
         >
           {showPilotSuggestions ? "Ukryj pilotażowe źródła" : "Pilotażowe źródła →"}
         </button>
@@ -1721,12 +1721,12 @@ export default function SourcesPage() {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Szukaj po nazwie, linku albo notatkach..."
-          className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 pr-20 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+          className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 pr-20 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 transition-colors"
         />
         {searchQuery && (
           <button
             onClick={() => setSearchQuery("")}
-            className="absolute right-3 top-1/2 -translate-y-1/2 rounded px-2 py-1 text-xs font-medium text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+            className="absolute right-3 top-1/2 -translate-y-1/2 rounded px-2 py-1 text-xs font-medium text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             aria-label="Wyczyść wyszukiwanie"
           >
             Wyczyść
@@ -1743,17 +1743,17 @@ export default function SourcesPage() {
             className={`px-3 py-1.5 text-sm rounded-full font-medium transition-colors ${
               filter === opt.value
                 ? "bg-slate-800 text-white"
-                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200"
             }`}
           >
             {opt.label}
           </button>
         ))}
-        <span className="hidden sm:block w-px h-4 bg-slate-200 mx-1" aria-hidden="true" />
+        <span className="hidden sm:block w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1" aria-hidden="true" />
         <select
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value as AlertCategory | "all")}
-          className="text-sm border border-slate-300 rounded-lg px-2.5 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="text-sm border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
         >
           <option value="all">Wszystkie kategorie</option>
           {CATEGORIES.map((c) => (
@@ -1764,31 +1764,31 @@ export default function SourcesPage() {
 
       {/* ── Result counter ───────────────────────────────────────────── */}
       {loadState === "ready" && sources.length > 0 && (
-        <p className="text-xs text-slate-400 mb-4">
+        <p className="text-xs text-slate-400 dark:text-slate-500 mb-4">
           Wyświetlane źródła:{" "}
-          <span className="font-semibold text-slate-600">{filtered.length}</span>{" "}
+          <span className="font-semibold text-slate-600 dark:text-slate-400">{filtered.length}</span>{" "}
           z {sources.length}
         </p>
       )}
 
       {/* ── Feedback messages ─────────────────────────────────────────── */}
       {checkSuccess && (
-        <div className="rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm px-4 py-3 mb-4">
+        <div className="rounded-lg bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-sm px-4 py-3 mb-4">
           {checkSuccess}
         </div>
       )}
       {checkError && (
-        <div className="rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 mb-4">
+        <div className="rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 text-red-700 dark:text-red-400 text-sm px-4 py-3 mb-4">
           {checkError}
         </div>
       )}
       {loadState === "error" && (
-        <div className="rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 mb-4">
+        <div className="rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 text-red-700 dark:text-red-400 text-sm px-4 py-3 mb-4">
           Nie udało się pobrać źródeł.
         </div>
       )}
       {deleteError && (
-        <div className="rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 mb-4">
+        <div className="rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 text-red-700 dark:text-red-400 text-sm px-4 py-3 mb-4">
           {deleteError}
         </div>
       )}
@@ -1799,7 +1799,7 @@ export default function SourcesPage() {
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="h-28 rounded-xl border border-slate-100 bg-slate-50 animate-pulse"
+              className="h-28 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 animate-pulse"
             />
           ))}
         </div>
@@ -1808,18 +1808,18 @@ export default function SourcesPage() {
       {/* ── Empty state ───────────────────────────────────────────────── */}
       {loadState === "ready" && sources.length === 0 && (
         <div className="py-12">
-          <p className="text-slate-600 text-sm font-medium mb-1">Nie dodano jeszcze żadnych źródeł.</p>
-          <p className="text-slate-400 text-sm mb-6">
+          <p className="text-slate-600 dark:text-slate-400 text-sm font-medium mb-1">Nie dodano jeszcze żadnych źródeł.</p>
+          <p className="text-slate-400 dark:text-slate-500 text-sm mb-6">
             Kliknij „+ Dodaj źródło" powyżej, aby dodać własne źródło, albo otwórz{" "}
             <button
               onClick={() => setShowPilotSuggestions(true)}
-              className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
+              className="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline"
             >
               „Pilotażowe źródła"
             </button>{" "}
             i wypełnij formularz jednym z gotowych, sprawdzonych adresów dla WKD / Komorowa / Pruszkowa.
           </p>
-          <p className="text-xs text-slate-400 max-w-lg border-t border-slate-200 pt-4">
+          <p className="text-xs text-slate-400 dark:text-slate-500 max-w-lg border-t border-slate-200 dark:border-slate-800 pt-4">
             Po dodaniu źródła użyj „Sprawdź stronę", aby pobrać treść i wygenerować draft alertu.
             Wynik sprawdzenia możesz zapisać w historii — zostanie powiązany ze źródłem.
           </p>
@@ -1828,7 +1828,7 @@ export default function SourcesPage() {
 
       {/* ── No results after filter ───────────────────────────────────── */}
       {loadState === "ready" && sources.length > 0 && filtered.length === 0 && (
-        <div className="text-center py-12 text-slate-400 text-sm">
+        <div className="text-center py-12 text-slate-400 dark:text-slate-500 text-sm">
           Brak źródeł pasujących do wybranych filtrów.
         </div>
       )}
@@ -1840,9 +1840,9 @@ export default function SourcesPage() {
             editingId === source.id ? (
               <div
                 key={source.id}
-                className="rounded-xl border border-blue-200 bg-blue-50/40 p-4"
+                className="rounded-xl border border-blue-200 dark:border-blue-500/30 bg-blue-50/40 p-4"
               >
-                <p className="text-xs font-medium text-blue-700 mb-3">
+                <p className="text-xs font-medium text-blue-700 dark:text-blue-300 mb-3">
                   Edytujesz: {source.name}
                 </p>
                 <SourceForm
@@ -1880,7 +1880,7 @@ export default function SourcesPage() {
 
       {/* Source count summary */}
       {loadState === "ready" && sources.length > 0 && (
-        <p className="text-xs text-slate-400 text-right mt-5">
+        <p className="text-xs text-slate-400 dark:text-slate-500 text-right mt-5">
           {sources.length === 1 ? "1 źródło łącznie" : `${sources.length} źródeł łącznie`}
           {filtered.length !== sources.length && ` · ${filtered.length} po filtrowaniu`}
         </p>

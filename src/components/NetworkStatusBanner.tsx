@@ -40,8 +40,8 @@ export function NetworkStatusBanner() {
       aria-live="polite"
       className={`text-xs text-center py-1.5 px-4 ${
         status === "offline"
-          ? "bg-amber-100 text-amber-800"
-          : "bg-emerald-100 text-emerald-800"
+          ? "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300"
+          : "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300"
       }`}
     >
       {status === "offline"

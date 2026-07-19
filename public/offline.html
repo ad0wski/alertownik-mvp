@@ -5,7 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <title>Brak połączenia z internetem — Alertownik</title>
 <style>
-  :root { color-scheme: light; }
+  /* Sprint 162 — this page has no app JavaScript (SW-cached fallback, must
+     work standalone), so dark mode here is primarily prefers-color-scheme
+     driven. The tiny inline script below (no framework, no app bundle) only
+     adds one thing on top: honoring a manual light/dark override the user
+     already made in the app, by toggling this same class. Falls back to
+     the media query alone if that script doesn't run for any reason. */
+  :root { color-scheme: light dark; }
   * { box-sizing: border-box; }
   html, body {
     margin: 0;
@@ -79,7 +85,41 @@
   }
   button:hover { background: #1d4ed8; }
   button:focus-visible { outline: 2px solid #1d4ed8; outline-offset: 2px; }
+
+  /* The inline script below only ever adds "au-dark"/"au-light" to <html>
+     (never to <body>) — every selector here keys off html's class, never
+     body's, so there's exactly one source of truth for "is an override
+     active" per rule. */
+  @media (prefers-color-scheme: dark) {
+    html:not(.au-light) body { background: #0b1220; }
+    html:not(.au-light) main { background: #111827; border-color: #293548; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4); }
+    html:not(.au-light) h1 { color: #f1f5f9; }
+    html:not(.au-light) p { color: #cbd5e1; }
+    html:not(.au-light) .muted { color: #94a3b8; }
+  }
+  html.au-dark body { background: #0b1220; }
+  html.au-dark main { background: #111827; border-color: #293548; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4); }
+  html.au-dark h1 { color: #f1f5f9; }
+  html.au-dark p { color: #cbd5e1; }
+  html.au-dark .muted { color: #94a3b8; }
 </style>
+<script>
+  // Mirrors the resolution logic in src/app/theme-bootstrap-script.tsx and
+  // src/lib/theme.ts (duplicated on purpose — this page can't import app
+  // modules). Adds "au-dark"/"au-light" so a manual override wins over the
+  // media query above; if this throws for any reason, the plain
+  // prefers-color-scheme rules above still apply.
+  (function () {
+    try {
+      var stored = localStorage.getItem("alertownik-theme-preference");
+      if (stored === "dark") {
+        document.documentElement.classList.add("au-dark");
+      } else if (stored === "light") {
+        document.documentElement.classList.add("au-light");
+      }
+    } catch (e) {}
+  })();
+</script>
 </head>
 <body>
   <main>

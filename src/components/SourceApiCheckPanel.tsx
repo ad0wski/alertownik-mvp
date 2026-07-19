@@ -132,7 +132,7 @@ export function SourceApiCheckPanel({
         <button
           onClick={runCheck}
           disabled={check.status === "loading"}
-          className="inline-flex items-center gap-1 rounded-lg border border-purple-300 bg-white px-3 py-1.5 text-sm font-medium text-purple-700 hover:bg-purple-100 disabled:opacity-50 transition-colors"
+          className="inline-flex items-center gap-1 rounded-lg border border-purple-300 bg-white dark:bg-slate-900 px-3 py-1.5 text-sm font-medium text-purple-700 hover:bg-purple-100 disabled:opacity-50 transition-colors"
         >
           {check.status === "loading" ? "Sprawdzanie…" : `${CHECK_BUTTON_LABEL} →`}
         </button>
@@ -140,19 +140,19 @@ export function SourceApiCheckPanel({
           ręczny check — nie cron
         </span>
       </div>
-      <p className="text-xs text-slate-500 leading-relaxed mt-1.5">
+      <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mt-1.5">
         {MANUAL_CHECK_DISCLAIMER}
       </p>
 
       {check.status === "error" && (
-        <p className="mt-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+        <p className="mt-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-lg px-3 py-2">
           {check.error}
         </p>
       )}
 
       {check.status === "done" && (
         <div className="mt-2">
-          <p className="text-xs font-medium text-slate-700 mb-2">
+          <p className="text-xs font-medium text-slate-700 dark:text-slate-300 mb-2">
             {check.proposals.length > 0
               ? `Znaleziono ${check.proposals.length} propozycji (do Twojego przeglądu):`
               : "Brak propozycji na stronie źródła — to też wynik, można go zalogować w historii."}
@@ -162,20 +162,20 @@ export function SourceApiCheckPanel({
             {check.proposals.map((p, idx) => {
               const duplicate = findSimilarText(p.rawText, dedupTexts);
               return (
-                <div key={idx} className="rounded-lg border border-slate-200 bg-white p-3">
+                <div key={idx} className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3">
                   <div className="flex flex-wrap items-center gap-1.5 mb-1">
-                    <p className="text-sm font-semibold text-slate-800 mr-1">{p.title}</p>
+                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 mr-1">{p.title}</p>
                     {!p.hasDate && (
-                      <span className="inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 ring-1 ring-amber-200">
+                      <span className="inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 ring-1 ring-amber-200">
                         brak daty w treści
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap">
+                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed whitespace-pre-wrap">
                     {p.excerpt}
                   </p>
                   {duplicate && (
-                    <p className="mt-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
+                    <p className="mt-1.5 text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/15 border border-amber-200 dark:border-amber-500/30 rounded-lg px-2.5 py-1.5">
                       ⚠ Możliwy duplikat — podobna treść już istnieje: „{duplicate.slice(0, 100)}”
                     </p>
                   )}
@@ -183,7 +183,7 @@ export function SourceApiCheckPanel({
                     <button
                       onClick={() => saveProposal(idx, p)}
                       disabled={savingIdx === idx || savedIdxs.has(idx)}
-                      className="text-xs font-medium text-amber-600 hover:text-amber-800 hover:underline disabled:opacity-50"
+                      className="text-xs font-medium text-amber-600 dark:text-amber-300 hover:text-amber-800 hover:underline disabled:opacity-50"
                     >
                       {savedIdxs.has(idx)
                         ? "Zapisano jako kandydat ✓"
@@ -195,7 +195,7 @@ export function SourceApiCheckPanel({
                       href={source.officialUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                      className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline"
                     >
                       Otwórz źródło →
                     </a>
@@ -206,17 +206,17 @@ export function SourceApiCheckPanel({
           </div>
 
           {saveError && (
-            <p className="mt-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            <p className="mt-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-lg px-3 py-2">
               {saveError}
             </p>
           )}
 
           {savedIdxs.size > 0 && (
-            <p className="mt-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+            <p className="mt-2 text-xs text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 rounded-lg px-3 py-2">
               Kandydat zapisany w kolejce (status „Oczekujące”).{" "}
               <Link
                 href={registryMatch ? `/admin/queue?source=${registryMatch.id}` : "/admin/queue"}
-                className="font-medium text-emerald-800 underline hover:text-emerald-900"
+                className="font-medium text-emerald-800 dark:text-emerald-300 underline hover:text-emerald-900"
               >
                 Zobacz w kolejce →
               </Link>{" "}
@@ -230,7 +230,7 @@ export function SourceApiCheckPanel({
                 <button
                   onClick={logCheckToHistory}
                   disabled={loggingCheck || checkLogged}
-                  className="text-xs font-medium text-slate-600 hover:text-slate-800 hover:underline disabled:opacity-50"
+                  className="text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 hover:underline disabled:opacity-50"
                 >
                   {checkLogged
                     ? "Check zapisany w historii ✓"
@@ -241,11 +241,11 @@ export function SourceApiCheckPanel({
                         }) →`}
                 </button>
                 {checkLogError && (
-                  <span className="text-xs text-red-600">{checkLogError}</span>
+                  <span className="text-xs text-red-600 dark:text-red-400">{checkLogError}</span>
                 )}
               </div>
             ) : (
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-400 dark:text-slate-500">
                 Historia checków niedostępna: to źródło nie ma jeszcze wpisu w rejestrze
                 poniżej (dopasowanie po URL). Dodaj je do rejestru, aby logować checki.
               </p>

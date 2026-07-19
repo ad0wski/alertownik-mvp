@@ -10,9 +10,9 @@ const timeStatusConfig: Record<
   Exclude<AlertTimeStatus, "unknown">,
   { dot: string; text: string; label: string }
 > = {
-  active:    { dot: "bg-emerald-500", text: "text-emerald-700", label: "Trwa" },
-  upcoming:  { dot: "bg-blue-400",    text: "text-blue-600",    label: "Nadchodzące" },
-  ended:     { dot: "bg-slate-300",   text: "text-slate-400",   label: "Zakończone" },
+  active:    { dot: "bg-emerald-500", text: "text-emerald-700 dark:text-emerald-300", label: "Trwa" },
+  upcoming:  { dot: "bg-blue-400",    text: "text-blue-600 dark:text-blue-400",    label: "Nadchodzące" },
+  ended:     { dot: "bg-slate-300",   text: "text-slate-400 dark:text-slate-500",   label: "Zakończone" },
 };
 
 const categoryLabels: Record<Alert["category"], string> = {
@@ -30,17 +30,17 @@ const severityConfig: Record<
 > = {
   info: {
     label: "Informacja",
-    badge: "bg-blue-50 text-blue-700 ring-1 ring-blue-200",
+    badge: "bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 ring-1 ring-blue-200",
     stripe: "border-l-blue-500",
   },
   warning: {
     label: "Uwaga",
-    badge: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
+    badge: "bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 ring-1 ring-amber-200",
     stripe: "border-l-amber-500",
   },
   urgent: {
     label: "Pilne",
-    badge: "bg-red-50 text-red-700 ring-1 ring-red-200",
+    badge: "bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 ring-1 ring-red-200",
     stripe: "border-l-red-500",
   },
 };
@@ -64,18 +64,18 @@ export function AlertCard({ alert, isPreview }: { alert: Alert; isPreview?: bool
 
   return (
     <article
-      className={`bg-white rounded-2xl border border-slate-200 hover:border-slate-300 shadow-sm hover:shadow-md border-l-4 ${severity.stripe} p-4 sm:p-5 flex flex-col gap-3 transition-all duration-150`}
+      className={`bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-slate-300 shadow-sm hover:shadow-md border-l-4 ${severity.stripe} p-4 sm:p-5 flex flex-col gap-3 transition-all duration-150`}
     >
       {/* Badges */}
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-medium text-slate-600 bg-slate-100 rounded-full px-2.5 py-1">
+        <span className="text-xs font-medium text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 rounded-full px-2.5 py-1">
           {categoryLabels[alert.category]}
         </span>
         <span className={`text-xs font-semibold rounded-full px-2.5 py-1 ${severity.badge}`}>
           {severity.label}
         </span>
         {showFreshBadge && (
-          <span className="text-xs font-semibold rounded-full px-2.5 py-1 bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200">
+          <span className="text-xs font-semibold rounded-full px-2.5 py-1 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-200">
             Nowe
           </span>
         )}
@@ -89,13 +89,13 @@ export function AlertCard({ alert, isPreview }: { alert: Alert; isPreview?: bool
 
       {/* Title — links to the detail page for published alerts, so the
           biggest visual element is also the biggest tap target on mobile */}
-      <h2 className="text-[15px] sm:text-base font-semibold text-slate-900 leading-snug">
+      <h2 className="text-[15px] sm:text-base font-semibold text-slate-900 dark:text-white leading-snug">
         {isPreview ? (
           alert.title
         ) : (
           <Link
             href={`/alerts/${alert.slug}`}
-            className="hover:text-blue-700 transition-colors"
+            className="hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
           >
             {alert.title}
           </Link>
@@ -103,11 +103,11 @@ export function AlertCard({ alert, isPreview }: { alert: Alert; isPreview?: bool
       </h2>
 
       {/* Place · date */}
-      <p className="text-sm text-slate-500 leading-relaxed">
+      <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
         {alert.place ? (
-          <span className="font-medium text-slate-600">{alert.place}</span>
+          <span className="font-medium text-slate-600 dark:text-slate-400">{alert.place}</span>
         ) : (
-          <span className="italic text-slate-400">Brak informacji o lokalizacji</span>
+          <span className="italic text-slate-400 dark:text-slate-500">Brak informacji o lokalizacji</span>
         )}
         {" · "}
         {formatAlertRange(alert.startsAt, alert.endsAt)}
@@ -115,8 +115,8 @@ export function AlertCard({ alert, isPreview }: { alert: Alert; isPreview?: bool
 
       {/* Source line — trust signal visible without expanding the card */}
       {alert.sourceName && (
-        <p className="text-xs text-slate-500 -mt-1.5">
-          Źródło: <span className="font-medium text-slate-600">{alert.sourceName}</span>
+        <p className="text-xs text-slate-500 dark:text-slate-400 -mt-1.5">
+          Źródło: <span className="font-medium text-slate-600 dark:text-slate-400">{alert.sourceName}</span>
         </p>
       )}
 
@@ -125,18 +125,18 @@ export function AlertCard({ alert, isPreview }: { alert: Alert; isPreview?: bool
         <button
           onClick={() => setExpanded((prev) => !prev)}
           aria-expanded={expanded}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4 py-2.5 sm:py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 sm:py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:border-slate-300 transition-colors"
         >
           {expanded ? "Ukryj szczegóły ▲" : "Szczegóły ▼"}
         </button>
         {isPreview ? (
-          <span className="text-xs text-slate-400 italic">
+          <span className="text-xs text-slate-400 dark:text-slate-500 italic">
             Podgląd — alert nie jest jeszcze opublikowany w bazie.
           </span>
         ) : (
           <Link
             href={`/alerts/${alert.slug}`}
-            className="inline-flex items-center gap-1 rounded-lg border border-blue-100 bg-blue-50 px-4 py-2.5 sm:py-2 text-sm font-medium text-blue-700 hover:bg-blue-100 hover:border-blue-200 transition-colors"
+            className="inline-flex items-center gap-1 rounded-lg border border-blue-100 bg-blue-50 dark:bg-blue-500/15 px-4 py-2.5 sm:py-2 text-sm font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-100 hover:border-blue-200 transition-colors"
           >
             Otwórz alert →
           </Link>
@@ -145,60 +145,60 @@ export function AlertCard({ alert, isPreview }: { alert: Alert; isPreview?: bool
 
       {/* Expanded details — stacked vertically on mobile */}
       {expanded && (
-        <dl className="border-t border-slate-100 pt-3 mt-1 flex flex-col divide-y divide-slate-100">
+        <dl className="border-t border-slate-100 dark:border-slate-800 pt-3 mt-1 flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
           <div className="flex flex-col py-3 gap-1">
-            <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400 pt-0.5">
+            <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500 pt-0.5">
               Kiedy
             </dt>
-            <dd className="text-sm text-slate-700 leading-relaxed">
+            <dd className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
               {formatAlertRange(alert.startsAt, alert.endsAt)}
             </dd>
           </div>
 
           <div className="flex flex-col py-3 gap-1">
-            <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400 pt-0.5">
+            <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500 pt-0.5">
               Gdzie
             </dt>
-            <dd className="text-sm text-slate-700 leading-relaxed">
-              {alert.place || <span className="italic text-slate-400">Brak informacji o lokalizacji</span>}
+            <dd className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+              {alert.place || <span className="italic text-slate-400 dark:text-slate-500">Brak informacji o lokalizacji</span>}
             </dd>
           </div>
 
           <div className="flex flex-col py-3 gap-1">
-            <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400 pt-0.5">
+            <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500 pt-0.5">
               Co się zmienia
             </dt>
-            <dd className="text-sm text-slate-700 leading-relaxed">
-              {alert.change || <span className="italic text-slate-400">Brak szczegółów.</span>}
+            <dd className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+              {alert.change || <span className="italic text-slate-400 dark:text-slate-500">Brak szczegółów.</span>}
             </dd>
           </div>
 
           <div className="flex flex-col py-3 gap-1">
-            <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400 pt-0.5">
+            <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500 pt-0.5">
               Co zrobić
             </dt>
-            <dd className="text-sm text-slate-700 leading-relaxed">
-              {alert.action || <span className="italic text-slate-400">Brak zalecanego działania.</span>}
+            <dd className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+              {alert.action || <span className="italic text-slate-400 dark:text-slate-500">Brak zalecanego działania.</span>}
             </dd>
           </div>
 
           <div className="flex flex-col py-3 gap-1">
-            <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400 pt-0.5">
+            <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500 pt-0.5">
               Źródło
             </dt>
-            <dd className="text-sm text-slate-700 flex flex-wrap items-center gap-3 mt-0.5">
+            <dd className="text-sm text-slate-700 dark:text-slate-300 flex flex-wrap items-center gap-3 mt-0.5">
               {alert.sourceName && <span>{alert.sourceName}</span>}
               {isRealLink ? (
                 <a
                   href={alert.sourceUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                  className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline"
                 >
                   Zobacz źródło →
                 </a>
               ) : !alert.sourceName ? (
-                <span className="text-xs text-slate-400">Brak informacji o źródle</span>
+                <span className="text-xs text-slate-400 dark:text-slate-500">Brak informacji o źródle</span>
               ) : null}
             </dd>
           </div>

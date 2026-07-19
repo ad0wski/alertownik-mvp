@@ -5,6 +5,9 @@ import { AppHeader } from "@/components/AppHeader";
 import { AppFooter } from "@/components/AppFooter";
 import { PwaController } from "@/components/PwaController";
 import { NetworkStatusBanner } from "@/components/NetworkStatusBanner";
+import { ThemeScript } from "./theme-bootstrap-script";
+import { ThemeProvider } from "@/components/ThemeProvider";
+import { THEME_COLOR_DARK, THEME_COLOR_LIGHT } from "@/lib/theme";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,7 +20,14 @@ const geistMono = Geist_Mono({
 });
 
 export const viewport: Viewport = {
-  themeColor: "#2563eb",
+  // Sprint 162 — dual light/dark theme-color. This static pair covers the
+  // OS-level prefers-color-scheme case (and the pre-hydration instant);
+  // ThemeProvider takes over afterwards to also reflect a manual override.
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: THEME_COLOR_LIGHT },
+    { media: "(prefers-color-scheme: dark)", color: THEME_COLOR_DARK },
+  ],
+  colorScheme: "light dark",
   width: "device-width",
   initialScale: 1,
   minimumScale: 1,
@@ -43,14 +53,27 @@ export default function RootLayout({
   return (
     <html
       lang="pl"
+      // suppressHydrationWarning: ThemeScript sets the `.dark` class and
+      // `style.colorScheme` on this element before React hydrates (see
+      // ThemeScript's doc comment) — that's a deliberate, expected mismatch
+      // between the server-rendered markup and the first client paint, not
+      // a bug. This only suppresses the warning for this one element's
+      // attributes, not for its subtree.
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <NetworkStatusBanner />
-        <AppHeader />
-        <div className="flex-1 flex flex-col">{children}</div>
-        <AppFooter />
-        <PwaController />
+        {/* Must be the first thing in <body> — it's a literal blocking
+            <script> tag (see theme-bootstrap-script.tsx) that sets the
+            `.dark` class before anything below it paints. */}
+        <ThemeScript />
+        <ThemeProvider>
+          <NetworkStatusBanner />
+          <AppHeader />
+          <div className="flex-1 flex flex-col">{children}</div>
+          <AppFooter />
+          <PwaController />
+        </ThemeProvider>
       </body>
     </html>
   );

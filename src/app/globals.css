@@ -1,19 +1,113 @@
 @import "tailwindcss";
 
+/* Sprint 162 — theme system. `dark:` utilities are driven by a `.dark`
+   class on <html> (set by the inline bootstrap script in layout.tsx before
+   paint, and kept in sync by ThemeProvider), not by the `prefers-color-scheme`
+   media query directly — that's what lets a manual "Jasny"/"Ciemny" choice
+   override the system preference, and lets "Systemowy" react live to an OS
+   theme change without a reload (ThemeProvider listens to the media query
+   itself and toggles the class). */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme inline {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Semantic color tokens — exposed as plain Tailwind utilities (bg-surface,
+     text-primary, border-strong, ...) so new code can use them directly.
+     Each resolves through a CSS custom property redefined under .dark below,
+     so a single class works in both themes with no dark: pairing needed. */
+  --color-background: var(--au-background);
+  --color-background-subtle: var(--au-background-subtle);
+  --color-surface: var(--au-surface);
+  --color-surface-elevated: var(--au-surface-elevated);
+  --color-text-primary: var(--au-text-primary);
+  --color-text-secondary: var(--au-text-secondary);
+  --color-text-muted: var(--au-text-muted);
+  --color-border: var(--au-border);
+  --color-border-strong: var(--au-border-strong);
+  --color-primary: var(--au-primary);
+  --color-primary-hover: var(--au-primary-hover);
+  --color-primary-foreground: var(--au-primary-foreground);
+  --color-focus-ring: var(--au-focus-ring);
+  --color-success: var(--au-success);
+  --color-warning: var(--au-warning);
+  --color-danger: var(--au-danger);
+  --color-info: var(--au-info);
+  --color-overlay: var(--au-overlay);
+}
+
+/* Light theme (default) — chosen to match the app's existing look closely,
+   so shipping this system causes no visual regression for light-mode users. */
+:root {
+  --au-background: #f8fafc;
+  --au-background-subtle: #f1f5f9;
+  --au-surface: #ffffff;
+  --au-surface-elevated: #ffffff;
+  --au-text-primary: #0f172a;
+  --au-text-secondary: #334155;
+  --au-text-muted: #64748b;
+  --au-border: #e2e8f0;
+  --au-border-strong: #cbd5e1;
+  --au-primary: #2563eb;
+  --au-primary-hover: #1d4ed8;
+  --au-primary-foreground: #ffffff;
+  --au-focus-ring: #3b82f6;
+  --au-success: #059669;
+  --au-warning: #b45309;
+  --au-danger: #dc2626;
+  --au-info: #2563eb;
+  --au-overlay: rgba(15, 23, 42, 0.5);
+  --au-shadow: rgba(15, 23, 42, 0.08);
+
+  color-scheme: light;
+}
+
+.dark {
+  --au-background: #0b1220;
+  --au-background-subtle: #0f172a;
+  --au-surface: #111827;
+  --au-surface-elevated: #1e293b;
+  --au-text-primary: #f1f5f9;
+  --au-text-secondary: #cbd5e1;
+  --au-text-muted: #94a3b8;
+  --au-border: #293548;
+  --au-border-strong: #3f4d63;
+  --au-primary: #3b82f6;
+  --au-primary-hover: #60a5fa;
+  --au-primary-foreground: #0b1220;
+  --au-focus-ring: #60a5fa;
+  --au-success: #34d399;
+  --au-warning: #fbbf24;
+  --au-danger: #f87171;
+  --au-info: #60a5fa;
+  --au-overlay: rgba(0, 0, 0, 0.6);
+  --au-shadow: rgba(0, 0, 0, 0.4);
+
+  color-scheme: dark;
 }
 
 body {
-  background: linear-gradient(180deg, #f0f9ff 0%, #f8fafc 40%, #f8fafc 100%);
+  background: linear-gradient(
+    180deg,
+    var(--au-background) 0%,
+    var(--au-background-subtle) 40%,
+    var(--au-background-subtle) 100%
+  );
   min-height: 100vh;
-  color: #0f172a;
+  color: var(--au-text-primary);
   font-family: var(--font-geist-sans, Arial, Helvetica, sans-serif);
 }
 
 :is(button, a, input, select, textarea):focus-visible {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid var(--au-focus-ring);
   outline-offset: 2px;
   border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }

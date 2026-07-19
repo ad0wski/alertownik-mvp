@@ -51,8 +51,8 @@ export function AppHeader() {
   const publicNavLinkClass = (href: string) =>
     `px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
       isActive(href)
-        ? "bg-blue-50 text-blue-700"
-        : "text-slate-700 hover:text-slate-900 hover:bg-slate-100"
+        ? "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300"
+        : "text-slate-700 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800"
     }`;
 
   // Sprint 156B — real-device finding: the 3 public links + logo were tight
@@ -62,12 +62,12 @@ export function AppHeader() {
   const mobilePublicNavLinkClass = (href: string) =>
     `px-2 py-1.5 rounded-lg text-xs font-semibold transition-colors shrink-0 whitespace-nowrap ${
       isActive(href)
-        ? "bg-blue-50 text-blue-700"
-        : "text-slate-700 hover:text-slate-900 hover:bg-slate-100"
+        ? "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300"
+        : "text-slate-700 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800"
     }`;
 
   return (
-    <header className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
+    <header className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm dark:bg-slate-900 dark:border-slate-800">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
         <div className="flex items-center justify-between gap-3">
 
@@ -82,11 +82,11 @@ export function AppHeader() {
             <div>
               <Link
                 href="/"
-                className="text-lg font-bold text-slate-900 hover:text-blue-700 transition-colors tracking-tight leading-none"
+                className="text-lg font-bold text-slate-900 hover:text-blue-700 transition-colors tracking-tight leading-none dark:text-white dark:hover:text-blue-400"
               >
                 Alertownik
               </Link>
-              <p className="hidden sm:block text-xs text-slate-400 mt-0.5 leading-none">
+              <p className="hidden sm:block text-xs text-slate-400 mt-0.5 leading-none dark:text-slate-500">
                 Lokalne alerty w jednym miejscu
               </p>
             </div>
@@ -109,9 +109,9 @@ export function AppHeader() {
 
             {session && (
               <>
-                <span className="w-px h-4 bg-slate-200 mx-2" aria-hidden="true" />
+                <span className="w-px h-4 bg-slate-200 mx-2 dark:bg-slate-700" aria-hidden="true" />
                 <span
-                  className="text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5 select-none cursor-default"
+                  className="text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5 select-none cursor-default dark:text-amber-300 dark:bg-amber-500/10 dark:border-amber-500/30"
                   aria-label="Tryb admina"
                 >
                   Admin
@@ -123,19 +123,19 @@ export function AppHeader() {
                     href={l.href}
                     className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                       isActive(l.href)
-                        ? "bg-amber-50 text-amber-700"
-                        : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                        ? "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
+                        : "text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800"
                     }`}
                   >
                     {l.label}
                   </Link>
                 ))}
 
-                <span className="w-px h-4 bg-slate-200 mx-1" aria-hidden="true" />
+                <span className="w-px h-4 bg-slate-200 mx-1 dark:bg-slate-700" aria-hidden="true" />
 
                 <button
                   onClick={handleLogout}
-                  className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+                  className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors dark:text-slate-400 dark:hover:text-red-400 dark:hover:bg-red-500/10"
                 >
                   Wyloguj
                 </button>
@@ -165,7 +165,7 @@ export function AppHeader() {
                 onClick={() => setMenuOpen((v) => !v)}
                 aria-expanded={menuOpen}
                 aria-label="Menu admina"
-                className="p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors shrink-0"
+                className="p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors shrink-0 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800"
               >
                 {menuOpen ? (
                   <svg
@@ -202,9 +202,9 @@ export function AppHeader() {
 
       {/* Mobile dropdown menu — admin only */}
       {session && menuOpen && (
-        <div className="sm:hidden border-t border-slate-100 bg-white px-4 pt-3 pb-4 flex flex-col gap-1 shadow-md">
+        <div className="sm:hidden border-t border-slate-100 bg-white px-4 pt-3 pb-4 flex flex-col gap-1 shadow-md dark:border-slate-800 dark:bg-slate-900">
           <div className="flex items-center gap-2 px-1 mb-2">
-            <span className="text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-0.5">
+            <span className="text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-0.5 dark:text-amber-300 dark:bg-amber-500/10 dark:border-amber-500/30">
               Admin
             </span>
           </div>
@@ -215,18 +215,18 @@ export function AppHeader() {
               href={l.href}
               className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 isActive(l.href)
-                  ? "bg-amber-50 text-amber-700"
-                  : "text-slate-700 hover:text-slate-900 hover:bg-slate-100"
+                  ? "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
+                  : "text-slate-700 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800"
               }`}
             >
               {l.label}
             </Link>
           ))}
 
-          <div className="border-t border-slate-100 mt-2 pt-2">
+          <div className="border-t border-slate-100 mt-2 pt-2 dark:border-slate-800">
             <button
               onClick={handleLogout}
-              className="w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+              className="w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors dark:text-red-400 dark:hover:bg-red-500/10"
             >
               Wyloguj
             </button>

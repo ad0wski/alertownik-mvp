@@ -58,6 +58,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | Manual source monitoring and check history | `/admin/sources` |
 | Source check → AI Helper shortcut | `/admin/sources` → `/ai-helper` |
 | Installable PWA — manifest, icons, service worker, safe offline screen | all public pages, `/instalacja` |
+| Light / dark / system theme (localStorage, no server sync) | `/ustawienia`, applies app-wide |
 
 ---
 

@@ -27,15 +27,15 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 const SEVERITY_META: Record<string, { label: string; color: string }> = {
-  info:    { label: "Info",  color: "text-blue-700 bg-blue-50 border-blue-200" },
-  warning: { label: "Uwaga", color: "text-amber-700 bg-amber-50 border-amber-200" },
-  urgent:  { label: "Pilne", color: "text-red-700 bg-red-50 border-red-200" },
+  info:    { label: "Info",  color: "text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-500/15 border-blue-200 dark:border-blue-500/30" },
+  warning: { label: "Uwaga", color: "text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/15 border-amber-200 dark:border-amber-500/30" },
+  urgent:  { label: "Pilne", color: "text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/30" },
 };
 
 const inputClass =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500";
+  "w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500";
 
-const labelClass = "text-sm font-medium text-slate-700";
+const labelClass = "text-sm font-medium text-slate-700 dark:text-slate-300";
 
 function buildPrompt(
   rawText: string,
@@ -312,14 +312,14 @@ export default function AiHelperPage() {
       {/* Page title */}
       <div className="mb-8">
         <div className="flex flex-wrap items-center gap-2.5 mb-1">
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
             AI Helper
           </h1>
-          <span className="inline-flex items-center text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-0.5">
+          <span className="inline-flex items-center text-xs font-medium text-amber-600 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/15 border border-amber-200 dark:border-amber-500/30 rounded-full px-2.5 py-0.5">
             Admin
           </span>
         </div>
-        <p className="mt-1 text-sm text-slate-500 leading-relaxed">
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
           Wygeneruj szkic alertu przez AI lub przygotuj prompt do ChatGPT / Claude.
           AI tworzy tylko wstępny draft — przed publikacją zawsze sprawdź daty, lokalizację i treść w źródle.
         </p>
@@ -327,29 +327,29 @@ export default function AiHelperPage() {
 
       {/* Source loaded banner */}
       {loadedFrom === "source" && (
-        <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-5 py-4 mb-6">
-          <p className="text-sm font-semibold text-emerald-800 mb-1">
+        <div className="rounded-xl bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 px-5 py-4 mb-6">
+          <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300 mb-1">
             Źródło zostało wczytane do AI Helpera.
           </p>
-          <p className="text-sm text-emerald-700">
+          <p className="text-sm text-emerald-700 dark:text-emerald-300">
             Teraz wklej komunikat z tego źródła, a potem skopiuj prompt do ChatGPT lub Claude.
           </p>
         </div>
       )}
       {loadedFrom === "check" && (
-        <div className="rounded-xl bg-blue-50 border border-blue-200 px-5 py-4 mb-6">
+        <div className="rounded-xl bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 px-5 py-4 mb-6">
           <p className="text-sm font-semibold text-blue-800 mb-1">
             Komunikat ze sprawdzenia źródła został wczytany do AI Helpera.
           </p>
-          <p className="text-sm text-blue-700">
+          <p className="text-sm text-blue-700 dark:text-blue-300">
             Treść komunikatu jest już wklejona w polu poniżej. Sprawdź, uzupełnij jeśli potrzeba, i skopiuj prompt do ChatGPT lub Claude.
           </p>
         </div>
       )}
 
       {/* Input form */}
-      <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-5 mb-6">
-        <h2 className="text-base font-semibold text-slate-800">
+      <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 flex flex-col gap-5 mb-6">
+        <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">
           Dane wejściowe
         </h2>
 
@@ -370,7 +370,7 @@ export default function AiHelperPage() {
           <div className="flex flex-col gap-2">
             <label className={labelClass}>
               Nazwa źródła{" "}
-              <span className="font-normal text-slate-400">(opcjonalnie)</span>
+              <span className="font-normal text-slate-400 dark:text-slate-500">(opcjonalnie)</span>
             </label>
             <input
               type="text"
@@ -383,7 +383,7 @@ export default function AiHelperPage() {
           <div className="flex flex-col gap-2">
             <label className={labelClass}>
               Link do źródła{" "}
-              <span className="font-normal text-slate-400">(opcjonalnie)</span>
+              <span className="font-normal text-slate-400 dark:text-slate-500">(opcjonalnie)</span>
             </label>
             <input
               type="url"
@@ -399,7 +399,7 @@ export default function AiHelperPage() {
         <div className="flex flex-col gap-2">
           <label className={labelClass}>
             Sugerowana kategoria{" "}
-            <span className="font-normal text-slate-400">(opcjonalnie)</span>
+            <span className="font-normal text-slate-400 dark:text-slate-500">(opcjonalnie)</span>
           </label>
           <select
             value={suggestedCategory}
@@ -416,15 +416,15 @@ export default function AiHelperPage() {
       </section>
 
       {/* ── AI draft generator ────────────────────────────────────────── */}
-      <section className="bg-blue-50 border border-blue-200 rounded-2xl p-6 flex flex-col gap-4 mb-6">
+      <section className="bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 rounded-2xl p-6 flex flex-col gap-4 mb-6">
         <div>
           <h2 className="text-base font-semibold text-blue-900">
             Generator draftu AI
           </h2>
-          <p className="text-sm text-blue-700 mt-1">
+          <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
             Kliknij poniżej, aby automatycznie wygenerować szkic alertu z wklejonego komunikatu.
           </p>
-          <ul className="mt-2 text-xs text-blue-600 space-y-1 list-none">
+          <ul className="mt-2 text-xs text-blue-600 dark:text-blue-400 space-y-1 list-none">
             <li>· AI tworzy tylko wstępny draft — nie publikuje alertu automatycznie.</li>
             <li>· Przed wysłaniem do Kreatora zawsze zweryfikuj daty, trasę i lokalizację w oryginalnym źródle.</li>
             <li>· Pola oznaczone ostrzeżeniem wymagają ręcznego uzupełnienia przez admina.</li>
@@ -435,13 +435,13 @@ export default function AiHelperPage() {
           <button
             onClick={generateDraft}
             disabled={aiDraftStatus === "loading"}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="rounded-lg bg-blue-600 dark:bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 dark:hover:bg-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {aiDraftStatus === "loading" ? "Generuję draft…" : "Wygeneruj draft AI"}
           </button>
 
           {aiDraftStatus === "error" && (
-            <span className="text-sm font-medium text-red-600">
+            <span className="text-sm font-medium text-red-600 dark:text-red-400">
               {aiDraftError}
             </span>
           )}
@@ -452,15 +452,15 @@ export default function AiHelperPage() {
 
             {/* Header: label + mode badge + copy JSON */}
             <div className="flex flex-wrap items-center gap-2">
-              <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide flex-1">
+              <p className="text-xs font-semibold text-blue-700 dark:text-blue-300 uppercase tracking-wide flex-1">
                 Wygenerowany szkic alertu
               </p>
               {aiDraftMode === "anthropic" ? (
-                <span className="inline-flex items-center text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
+                <span className="inline-flex items-center text-xs font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 rounded-full px-2 py-0.5">
                   Tryb: Claude API
                 </span>
               ) : (
-                <span className="inline-flex items-center text-xs font-medium text-slate-500 bg-slate-100 border border-slate-200 rounded-full px-2 py-0.5">
+                <span className="inline-flex items-center text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-full px-2 py-0.5">
                   Tryb: testowy
                 </span>
               )}
@@ -468,8 +468,8 @@ export default function AiHelperPage() {
                 onClick={copyDraftJson}
                 className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors ${
                   jsonCopied
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                    : "border-blue-200 bg-white text-blue-600 hover:bg-blue-100"
+                    ? "border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                    : "border-blue-200 dark:border-blue-500/30 bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 hover:bg-blue-100"
                 }`}
               >
                 {jsonCopied ? "Skopiowano ✓" : "Kopiuj JSON"}
@@ -477,74 +477,74 @@ export default function AiHelperPage() {
             </div>
 
             {/* Raw JSON */}
-            <pre className="bg-white border border-blue-200 text-slate-700 rounded-xl p-4 text-xs font-mono leading-relaxed overflow-x-auto whitespace-pre-wrap break-words">
+            <pre className="bg-white dark:bg-slate-900 border border-blue-200 dark:border-blue-500/30 text-slate-700 dark:text-slate-300 rounded-xl p-4 text-xs font-mono leading-relaxed overflow-x-auto whitespace-pre-wrap break-words">
               {aiDraftResult}
             </pre>
 
             {/* Human preview card */}
             {aiDraftParsed && (
-              <div className="bg-white rounded-xl border border-blue-100 p-4">
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">
+              <div className="bg-white dark:bg-slate-900 rounded-xl border border-blue-100 p-4">
+                <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-3">
                   Podgląd alertu
                 </p>
                 <dl className="grid grid-cols-[7rem_1fr] gap-x-3 gap-y-2 text-sm">
-                  <dt className="font-medium text-slate-500 pt-0.5">Tytuł</dt>
-                  <dd className="text-slate-900 font-medium pt-0.5">{aiDraftParsed.title || "—"}</dd>
+                  <dt className="font-medium text-slate-500 dark:text-slate-400 pt-0.5">Tytuł</dt>
+                  <dd className="text-slate-900 dark:text-white font-medium pt-0.5">{aiDraftParsed.title || "—"}</dd>
 
-                  <dt className="font-medium text-slate-500 pt-0.5">Kategoria</dt>
-                  <dd className="text-slate-800 pt-0.5">
+                  <dt className="font-medium text-slate-500 dark:text-slate-400 pt-0.5">Kategoria</dt>
+                  <dd className="text-slate-800 dark:text-slate-100 pt-0.5">
                     {aiDraftParsed.category ? (CATEGORY_LABELS[aiDraftParsed.category] ?? aiDraftParsed.category) : "—"}
                   </dd>
 
-                  <dt className="font-medium text-slate-500 pt-0.5">Ważność</dt>
+                  <dt className="font-medium text-slate-500 dark:text-slate-400 pt-0.5">Ważność</dt>
                   <dd className="pt-0.5">
                     {aiDraftParsed.severity && SEVERITY_META[aiDraftParsed.severity] ? (
                       <span className={`inline-flex items-center text-xs font-medium border rounded-full px-2 py-0.5 ${SEVERITY_META[aiDraftParsed.severity].color}`}>
                         {SEVERITY_META[aiDraftParsed.severity].label}
                       </span>
                     ) : (
-                      <span className="text-slate-400">—</span>
+                      <span className="text-slate-400 dark:text-slate-500">—</span>
                     )}
                   </dd>
 
-                  <dt className="font-medium text-slate-500 pt-0.5">Kiedy</dt>
-                  <dd className="text-slate-800 pt-0.5">
+                  <dt className="font-medium text-slate-500 dark:text-slate-400 pt-0.5">Kiedy</dt>
+                  <dd className="text-slate-800 dark:text-slate-100 pt-0.5">
                     {aiDraftParsed.startsAt
                       ? aiDraftParsed.endsAt
                         ? `${aiDraftParsed.startsAt} – ${aiDraftParsed.endsAt}`
                         : aiDraftParsed.startsAt
-                      : <span className="text-amber-600 font-medium">Nieznana data</span>}
+                      : <span className="text-amber-600 dark:text-amber-300 font-medium">Nieznana data</span>}
                   </dd>
 
-                  <dt className="font-medium text-slate-500 pt-0.5">Gdzie</dt>
-                  <dd className="text-slate-800 pt-0.5">
+                  <dt className="font-medium text-slate-500 dark:text-slate-400 pt-0.5">Gdzie</dt>
+                  <dd className="text-slate-800 dark:text-slate-100 pt-0.5">
                     {aiDraftParsed.place && aiDraftParsed.place.trim()
                       ? aiDraftParsed.place
-                      : <span className="text-amber-600 font-medium">Nieznana lokalizacja</span>}
+                      : <span className="text-amber-600 dark:text-amber-300 font-medium">Nieznana lokalizacja</span>}
                   </dd>
 
-                  <dt className="font-medium text-slate-500 pt-1">Co się zmienia</dt>
-                  <dd className="text-slate-800 pt-1 leading-relaxed">{aiDraftParsed.change || "—"}</dd>
+                  <dt className="font-medium text-slate-500 dark:text-slate-400 pt-1">Co się zmienia</dt>
+                  <dd className="text-slate-800 dark:text-slate-100 pt-1 leading-relaxed">{aiDraftParsed.change || "—"}</dd>
 
-                  <dt className="font-medium text-slate-500 pt-1">Co zrobić</dt>
-                  <dd className="text-slate-800 pt-1 leading-relaxed">{aiDraftParsed.action || "—"}</dd>
+                  <dt className="font-medium text-slate-500 dark:text-slate-400 pt-1">Co zrobić</dt>
+                  <dd className="text-slate-800 dark:text-slate-100 pt-1 leading-relaxed">{aiDraftParsed.action || "—"}</dd>
 
-                  <dt className="font-medium text-slate-500 pt-0.5">Źródło</dt>
-                  <dd className="text-slate-800 pt-0.5 flex flex-wrap items-center gap-3">
+                  <dt className="font-medium text-slate-500 dark:text-slate-400 pt-0.5">Źródło</dt>
+                  <dd className="text-slate-800 dark:text-slate-100 pt-0.5 flex flex-wrap items-center gap-3">
                     <span>
-                      {aiDraftParsed.sourceName || <span className="text-amber-600 font-medium">Brak nazwy źródła</span>}
+                      {aiDraftParsed.sourceName || <span className="text-amber-600 dark:text-amber-300 font-medium">Brak nazwy źródła</span>}
                     </span>
                     {aiDraftParsed.sourceUrl ? (
                       <a
                         href={aiDraftParsed.sourceUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                        className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline"
                       >
                         Sprawdź link →
                       </a>
                     ) : (
-                      <span className="text-xs text-amber-600 font-medium">Brak linku źródła</span>
+                      <span className="text-xs text-amber-600 dark:text-amber-300 font-medium">Brak linku źródła</span>
                     )}
                   </dd>
                 </dl>
@@ -553,13 +553,13 @@ export default function AiHelperPage() {
 
             {/* Warnings */}
             {aiDraftWarnings.length > 0 && (
-              <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
-                <p className="text-sm font-semibold text-amber-800 mb-2">
+              <div className="rounded-xl bg-amber-50 dark:bg-amber-500/15 border border-amber-200 dark:border-amber-500/30 px-4 py-3">
+                <p className="text-sm font-semibold text-amber-800 dark:text-amber-300 mb-2">
                   Do sprawdzenia przed publikacją
                 </p>
                 <ul className="space-y-1">
                   {aiDraftWarnings.map((w, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm text-amber-700">
+                    <li key={i} className="flex items-start gap-2 text-sm text-amber-700 dark:text-amber-300">
                       <span className="mt-0.5 shrink-0">⚠</span>
                       <span>{w}</span>
                     </li>
@@ -577,7 +577,7 @@ export default function AiHelperPage() {
               >
                 {aiDraftSent ? "Wysłano do Kreatora ✓" : "Wczytaj draft do Kreatora →"}
               </button>
-              <span className="text-xs text-blue-600 font-medium">
+              <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
                 Admin musi zweryfikować i zatwierdzić przed publikacją.
               </span>
             </div>
@@ -588,27 +588,27 @@ export default function AiHelperPage() {
       {/* Prompt preview */}
       <section>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-semibold text-slate-800">
+          <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">
             Ręczny workflow: prompt do ChatGPT / Claude
           </h2>
           <button
             onClick={copyPrompt}
             className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
               copied
-                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300"
+                ? "border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:border-slate-300"
             }`}
           >
             {copied ? "Skopiowano ✓" : "Kopiuj prompt"}
           </button>
         </div>
-        <p className="text-sm text-slate-500 mb-3">
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">
           Skopiuj ten tekst i wklej do{" "}
           <a
             href="https://chat.openai.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
+            className="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline"
           >
             ChatGPT
           </a>{" "}
@@ -617,13 +617,13 @@ export default function AiHelperPage() {
             href="https://claude.ai"
             target="_blank"
             rel="noopener noreferrer"
-            className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
+            className="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline"
           >
             Claude
           </a>
           . Wynik wklej w sekcji poniżej.
         </p>
-        <pre className="bg-slate-50 border border-slate-200 text-slate-700 rounded-2xl p-5 text-sm font-mono leading-relaxed overflow-x-auto whitespace-pre-wrap break-words">
+        <pre className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 rounded-2xl p-5 text-sm font-mono leading-relaxed overflow-x-auto whitespace-pre-wrap break-words">
           {prompt}
         </pre>
       </section>
@@ -631,14 +631,14 @@ export default function AiHelperPage() {
       {/* AI response — paste JSON and send to Builder */}
       <section className="mt-8">
         <div className="mb-4">
-          <h2 className="text-base font-semibold text-slate-800">Odpowiedź AI</h2>
-          <p className="text-sm text-slate-500 mt-1">
+          <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">Odpowiedź AI</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             Wklej tutaj JSON zwrócony przez ChatGPT lub Claude.
             Sprawdź dane i kliknij „Wczytaj do Kreatora" — nie publikuj bez weryfikacji źródła.
           </p>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-4">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 flex flex-col gap-4">
           <textarea
             value={aiJsonInput}
             onChange={(e) => handleAiJsonChange(e.target.value)}
@@ -650,18 +650,18 @@ export default function AiHelperPage() {
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={sendToBuilder}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+              className="rounded-lg bg-blue-600 dark:bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 dark:hover:bg-blue-400 transition-colors"
             >
               Wczytaj do Kreatora
             </button>
 
             {aiJsonStatus === "valid" && (
-              <span className="text-sm font-medium text-emerald-700">
+              <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
                 JSON wygląda poprawnie.
               </span>
             )}
             {aiJsonStatus === "error" && (
-              <span className="text-sm font-medium text-red-600">
+              <span className="text-sm font-medium text-red-600 dark:text-red-400">
                 Nie udało się odczytać JSON. Sprawdź, czy wkleiłeś sam obiekt JSON bez dodatkowego tekstu.
               </span>
             )}

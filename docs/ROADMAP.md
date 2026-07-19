@@ -106,6 +106,20 @@ Stages are intentionally separate — each one can be evaluated and validated be
 
 ---
 
+## Stage 9 — Theme System ✅ (Sprint 162)
+
+- ✅ Light / dark / system theme, default system, manual choice persisted locally (`alertownik-theme-preference`, never sent to Supabase)
+- ✅ Semantic CSS-token color system (`background`, `surface`, `text-primary`, `border`, `primary`, `success`/`warning`/`danger`/`info`, etc.), Tailwind v4 `.dark`-class-driven `dark:` variant
+- ✅ No flash of the wrong theme — a literal blocking `<script>` sets the theme class before first paint; verified `next/script strategy="beforeInteractive"` does NOT reliably do this in the App Router and switched approach
+- ✅ System theme reacts live to an OS change, no reload
+- ✅ Accessible three-way toggle (`role="radiogroup"`, ≥44px targets, visible state) on new `/ustawienia` page
+- ✅ All 17 required routes covered (public, alert detail, admin, builder, AI helper, offline fallback), zero CSP change, PWA cache policy unchanged
+- 🟡 Pre-existing pages/components got dark-mode coverage via an additive class sweep, not a full manual design pass — see `docs/LIMITATIONS.md` and `docs/SPRINT_162_THEME_SYSTEM_LIGHT_DARK_SYSTEM_V1.md`
+
+**Goal:** Give residents and admins who prefer (or whose OS defaults to) a dark UI a correct, accessible option, as groundwork before Sprint 163's app-shell/mobile-nav work.
+
+---
+
 ## Out of Scope (Unlikely to Change)
 
 - The app will always surface alerts from official sources — not crowdsourced reports

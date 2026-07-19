@@ -13,9 +13,9 @@ const timeStatusConfig: Record<
   Exclude<AlertTimeStatus, "unknown">,
   { dot: string; text: string; label: string }
 > = {
-  active:    { dot: "bg-emerald-500", text: "text-emerald-700", label: "Trwa" },
-  upcoming:  { dot: "bg-blue-400",    text: "text-blue-600",    label: "Nadchodzące" },
-  ended:     { dot: "bg-slate-300",   text: "text-slate-400",   label: "Zakończone" },
+  active:    { dot: "bg-emerald-500", text: "text-emerald-700 dark:text-emerald-300", label: "Trwa" },
+  upcoming:  { dot: "bg-blue-400",    text: "text-blue-600 dark:text-blue-400",    label: "Nadchodzące" },
+  ended:     { dot: "bg-slate-300",   text: "text-slate-400 dark:text-slate-500",   label: "Zakończone" },
 };
 
 const PUBLISHED_KEY = "alertownik-published-alerts";
@@ -35,17 +35,17 @@ const severityConfig: Record<
 > = {
   info: {
     label: "Informacja",
-    badge: "bg-blue-50 text-blue-700 ring-1 ring-blue-200",
+    badge: "bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 ring-1 ring-blue-200",
     accent: "border-l-blue-400",
   },
   warning: {
     label: "Uwaga",
-    badge: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
+    badge: "bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 ring-1 ring-amber-200",
     accent: "border-l-amber-400",
   },
   urgent: {
     label: "Pilne",
-    badge: "bg-red-50 text-red-700 ring-1 ring-red-200",
+    badge: "bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 ring-1 ring-red-200",
     accent: "border-l-red-500",
   },
 };
@@ -96,16 +96,16 @@ export function AlertDetailClient({ slug }: { slug: string }) {
   if (!alert) {
     return (
       <main className="max-w-3xl mx-auto w-full px-4 sm:px-6 py-10">
-        <div className="text-center py-20 bg-white rounded-2xl border border-slate-200">
-          <p className="text-lg font-semibold text-slate-700 mb-2">
+        <div className="text-center py-20 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
+          <p className="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-2">
             Nie znaleziono alertu
           </p>
-          <p className="text-sm text-slate-400 mb-8">
+          <p className="text-sm text-slate-400 dark:text-slate-500 mb-8">
             Alert mógł zostać usunięty lub link jest nieprawidłowy.
           </p>
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 dark:bg-blue-500 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 dark:hover:bg-blue-400 transition-colors"
           >
             ← Wróć do listy alertów
           </Link>
@@ -133,18 +133,18 @@ export function AlertDetailClient({ slug }: { slug: string }) {
     <main className="max-w-3xl mx-auto w-full px-4 sm:px-6 py-8 sm:py-10">
       <Link
         href="/"
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-blue-700 transition-colors mb-5 sm:mb-6 group"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors mb-5 sm:mb-6 group"
       >
         <span className="group-hover:-translate-x-0.5 transition-transform inline-block">←</span>
         Wróć do listy alertów
       </Link>
 
       <article
-        className={`bg-white rounded-2xl border border-slate-200 shadow-md border-l-4 ${severity.accent} p-4 sm:p-6 flex flex-col gap-4`}
+        className={`bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-md border-l-4 ${severity.accent} p-4 sm:p-6 flex flex-col gap-4`}
       >
         {/* Badges */}
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-medium text-slate-500 bg-slate-100 rounded-full px-2.5 py-1">
+          <span className="text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 rounded-full px-2.5 py-1">
             {categoryLabels[alert.category]}
           </span>
           <span
@@ -161,65 +161,65 @@ export function AlertDetailClient({ slug }: { slug: string }) {
         </div>
 
         {/* Title */}
-        <h1 className="text-lg sm:text-xl font-bold text-slate-900 leading-snug">
+        <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white leading-snug">
           {alert.title}
         </h1>
 
         {/* Compact line */}
-        <p className="text-sm text-slate-500 leading-relaxed">
+        <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
           {alert.place ? (
-            <span className="font-medium text-slate-600">{alert.place}</span>
+            <span className="font-medium text-slate-600 dark:text-slate-400">{alert.place}</span>
           ) : (
-            <span className="italic text-slate-400">Brak informacji o lokalizacji</span>
+            <span className="italic text-slate-400 dark:text-slate-500">Brak informacji o lokalizacji</span>
           )}
           {" · "}
           {formatAlertRange(alert.startsAt, alert.endsAt)}
         </p>
 
         {/* Detail rows — always stacked vertically for clean mobile reading */}
-        <dl className="border-t border-slate-100 pt-4 flex flex-col divide-y divide-slate-100">
+        <dl className="border-t border-slate-100 dark:border-slate-800 pt-4 flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
           <div className="flex flex-col py-3 gap-1">
-            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
               Kiedy
             </dt>
-            <dd className="text-sm text-slate-700 leading-relaxed">
+            <dd className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
               {formatAlertRange(alert.startsAt, alert.endsAt)}
             </dd>
           </div>
 
           <div className="flex flex-col py-3 gap-1">
-            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
               Gdzie
             </dt>
-            <dd className="text-sm text-slate-700 leading-relaxed">
-              {alert.place || <span className="italic text-slate-400">Brak informacji o lokalizacji</span>}
+            <dd className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+              {alert.place || <span className="italic text-slate-400 dark:text-slate-500">Brak informacji o lokalizacji</span>}
             </dd>
           </div>
 
           <div className="flex flex-col py-3 gap-1">
-            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
               Co się zmienia
             </dt>
-            <dd className="text-sm text-slate-700 leading-relaxed">
-              {alert.change || <span className="italic text-slate-400">Brak szczegółów.</span>}
+            <dd className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+              {alert.change || <span className="italic text-slate-400 dark:text-slate-500">Brak szczegółów.</span>}
             </dd>
           </div>
 
           <div className="flex flex-col py-3 gap-1">
-            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
               Co zrobić
             </dt>
-            <dd className="text-sm text-slate-700 leading-relaxed">
-              {alert.action || <span className="italic text-slate-400">Brak zalecanego działania.</span>}
+            <dd className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+              {alert.action || <span className="italic text-slate-400 dark:text-slate-500">Brak zalecanego działania.</span>}
             </dd>
           </div>
 
           {(alert.publishedAt || alert.updatedAt) && (
             <div className="flex flex-col py-3 gap-1">
-              <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+              <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                 Ostatnia weryfikacja przez admina
               </dt>
-              <dd className="text-sm text-slate-700 leading-relaxed">
+              <dd className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
                 {alert.updatedAt
                   ? `ostatnio sprawdzono/zmieniono ${formatAlertDateTime(alert.updatedAt)}`
                   : `opublikowano ${formatAlertDateTime(alert.publishedAt as string)}`}
@@ -235,28 +235,28 @@ export function AlertDetailClient({ slug }: { slug: string }) {
             Źródło komunikatu
           </p>
           {alert.sourceName ? (
-            <p className="text-sm font-medium text-slate-800">{alert.sourceName}</p>
+            <p className="text-sm font-medium text-slate-800 dark:text-slate-100">{alert.sourceName}</p>
           ) : (
-            <p className="text-sm italic text-slate-500">Brak informacji o źródle</p>
+            <p className="text-sm italic text-slate-500 dark:text-slate-400">Brak informacji o źródle</p>
           )}
           {sourceHost && sourceHost !== alert.sourceName && (
-            <p className="text-xs text-slate-500 mt-0.5">{sourceHost}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{sourceHost}</p>
           )}
           {isRealLink && (
             <a
               href={alert.sourceUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 mt-2 rounded-lg border border-blue-200 bg-white px-3.5 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100 hover:border-blue-300 transition-colors"
+              className="inline-flex items-center gap-1 mt-2 rounded-lg border border-blue-200 dark:border-blue-500/30 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-100 hover:border-blue-300 transition-colors"
             >
               Zobacz oficjalny komunikat →
             </a>
           )}
         </div>
 
-        <div className="text-xs text-slate-400 leading-relaxed border-t border-slate-100 pt-3 mt-1">
+        <div className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed border-t border-slate-100 dark:border-slate-800 pt-3 mt-1">
           <p className="flex flex-wrap items-center gap-1.5 mb-1.5">
-            <span className="inline-flex items-center gap-1 font-medium text-emerald-700">
+            <span className="inline-flex items-center gap-1 font-medium text-emerald-700 dark:text-emerald-300">
               ✓ Zatwierdzone ręcznie przez administratora
             </span>
             <span className="text-slate-300">·</span>
@@ -269,7 +269,7 @@ export function AlertDetailClient({ slug }: { slug: string }) {
           </p>
           <a
             href={buildAlertReportMailto(alert.title)}
-            className="inline-block mt-1.5 font-medium text-slate-500 hover:text-blue-700 hover:underline"
+            className="inline-block mt-1.5 font-medium text-slate-500 dark:text-slate-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline"
           >
             Ten alert jest nieaktualny albo błędny? Zgłoś →
           </a>

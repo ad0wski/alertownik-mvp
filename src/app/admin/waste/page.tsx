@@ -66,8 +66,8 @@ const IMPORT_PLACEHOLDER = `[
 ]`;
 
 const inputClass =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500";
-const labelClass = "block text-sm font-medium text-slate-700 mb-1";
+  "w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500";
+const labelClass = "block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1";
 
 // Parses + validates a pasted JSON array against the documented row
 // format, reusing the exact same validation as the single add/edit form
@@ -345,27 +345,27 @@ function WasteAdminContent() {
       {/* Page header */}
       <div className="mb-6">
         <div className="flex flex-wrap items-center gap-2.5 mb-1">
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Harmonogram odpadów</h1>
-          <span className="inline-flex items-center text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-0.5">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Harmonogram odpadów</h1>
+          <span className="inline-flex items-center text-xs font-medium text-amber-600 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/15 border border-amber-200 dark:border-amber-500/30 rounded-full px-2.5 py-0.5">
             Admin
           </span>
         </div>
-        <p className="text-sm text-slate-500 leading-relaxed">
+        <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
           Dodawaj i edytuj terminy odbioru odpadów. Każdy termin jest widoczny publicznie od razu po
           zapisaniu — nie ma tu draftów. Zawsze sprawdzaj dane z oficjalnym źródłem przed zapisem i
           unikaj wpisywania dokładnych adresów — używaj okolicy albo grupy ulic. Pełna checklista importu:{" "}
-          <span className="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded">
+          <span className="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
             docs/waste-schedule-import-template.md
           </span>.
         </p>
       </div>
 
       {loadState === "table_missing" && (
-        <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 mb-6">
-          <p className="text-sm font-medium text-slate-700">Tabela harmonogramu nie jest jeszcze włączona.</p>
-          <p className="text-sm text-slate-500 mt-1">
+        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 mb-6">
+          <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Tabela harmonogramu nie jest jeszcze włączona.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             Uruchom migrację z{" "}
-            <span className="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded">
+            <span className="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
               docs/supabase_waste_schedule_items.sql
             </span>{" "}
             w Supabase SQL Editor.
@@ -374,8 +374,8 @@ function WasteAdminContent() {
       )}
 
       {loadState === "error" && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 mb-6">
-          <p className="text-sm font-medium text-red-700">Nie udało się pobrać harmonogramu.</p>
+        <div className="rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 mb-6">
+          <p className="text-sm font-medium text-red-700 dark:text-red-400">Nie udało się pobrać harmonogramu.</p>
           {loadError && <p className="text-xs text-red-500 mt-1 font-mono">{loadError}</p>}
         </div>
       )}
@@ -386,13 +386,13 @@ function WasteAdminContent() {
           <div className="flex flex-wrap items-center gap-2 mb-5">
             <button
               onClick={() => (showForm ? cancelForm() : startAdd())}
-              className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+              className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white text-sm font-medium rounded-lg hover:bg-blue-700 dark:hover:bg-blue-400 transition-colors"
             >
               {showForm ? "Anuluj" : "+ Dodaj termin"}
             </button>
             <button
               onClick={() => setShowImport(!showImport)}
-              className="px-4 py-2 border border-blue-200 text-blue-700 bg-white text-sm font-medium rounded-lg hover:bg-blue-50 transition-colors"
+              className="px-4 py-2 border border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-300 bg-white dark:bg-slate-900 text-sm font-medium rounded-lg hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"
             >
               {showImport ? "Ukryj import" : "Import z JSON →"}
             </button>
@@ -402,9 +402,9 @@ function WasteAdminContent() {
           {showForm && (
             <form
               onSubmit={handleSubmit}
-              className="rounded-xl border border-blue-200 bg-blue-50/40 p-5 space-y-4 mb-6"
+              className="rounded-xl border border-blue-200 dark:border-blue-500/30 bg-blue-50/40 p-5 space-y-4 mb-6"
             >
-              <p className="text-sm font-semibold text-slate-800">
+              <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
                 {editingId ? "Edytujesz termin" : "Nowy termin odbioru"}
               </p>
 
@@ -434,7 +434,7 @@ function WasteAdminContent() {
                 </div>
                 <div>
                   <label className={labelClass}>
-                    Strefa / okolica <span className="font-normal text-slate-400">(opcjonalnie)</span>
+                    Strefa / okolica <span className="font-normal text-slate-400 dark:text-slate-500">(opcjonalnie)</span>
                   </label>
                   <input
                     name="areaName"
@@ -446,7 +446,7 @@ function WasteAdminContent() {
                 </div>
                 <div>
                   <label className={labelClass}>
-                    Grupa ulic <span className="font-normal text-slate-400">(opcjonalnie, nie dokładny adres)</span>
+                    Grupa ulic <span className="font-normal text-slate-400 dark:text-slate-500">(opcjonalnie, nie dokładny adres)</span>
                   </label>
                   <input
                     name="streetGroup"
@@ -468,7 +468,7 @@ function WasteAdminContent() {
                 </div>
                 <div>
                   <label className={labelClass}>
-                    Link do źródła <span className="font-normal text-slate-400">(zalecane)</span>
+                    Link do źródła <span className="font-normal text-slate-400 dark:text-slate-500">(zalecane)</span>
                   </label>
                   <input
                     type="url"
@@ -492,7 +492,7 @@ function WasteAdminContent() {
               </div>
 
               <div>
-                <label className={labelClass}>Notatki <span className="font-normal text-slate-400">(opcjonalnie)</span></label>
+                <label className={labelClass}>Notatki <span className="font-normal text-slate-400 dark:text-slate-500">(opcjonalnie)</span></label>
                 <textarea
                   name="notes"
                   rows={2}
@@ -503,33 +503,33 @@ function WasteAdminContent() {
               </div>
 
               {!form.sourceUrl && (
-                <p className="text-xs text-amber-600">
+                <p className="text-xs text-amber-600 dark:text-amber-300">
                   Brak linku źródła — termin bez źródła trudniej zweryfikować później. Zalecane, niewymagane.
                 </p>
               )}
 
               {formErrors.length > 0 && (
-                <ul className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 space-y-0.5">
+                <ul className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-lg px-3 py-2 space-y-0.5">
                   {formErrors.map((err, i) => <li key={i}>{err}</li>)}
                 </ul>
               )}
 
               {saveMsg && !saveMsg.ok && (
-                <p className="text-sm font-medium text-red-700">{saveMsg.text}</p>
+                <p className="text-sm font-medium text-red-700 dark:text-red-400">{saveMsg.text}</p>
               )}
 
               <div className="flex gap-3">
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                  className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white text-sm font-medium rounded-lg hover:bg-blue-700 dark:hover:bg-blue-400 disabled:opacity-50 transition-colors"
                 >
                   {saving ? "Zapisywanie…" : editingId ? "Zapisz zmiany" : "Dodaj termin"}
                 </button>
                 <button
                   type="button"
                   onClick={cancelForm}
-                  className="px-4 py-2 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-100 transition-colors"
+                  className="px-4 py-2 text-slate-600 dark:text-slate-400 text-sm font-medium rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                 >
                   Anuluj
                 </button>
@@ -538,15 +538,15 @@ function WasteAdminContent() {
           )}
 
           {saveMsg && saveMsg.ok && (
-            <p className="text-sm font-medium text-emerald-700 mb-4">{saveMsg.text}</p>
+            <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300 mb-4">{saveMsg.text}</p>
           )}
 
           {/* ── JSON import ─────────────────────────────────────────────── */}
           {showImport && (
-            <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-3 mb-6">
+            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 space-y-3 mb-6">
               <div>
-                <p className="text-sm font-semibold text-slate-800">Import wielu terminów z JSON</p>
-                <p className="text-sm text-slate-500 mt-1">
+                <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Import wielu terminów z JSON</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
                   Wklej tablicę obiektów w formacie poniżej. Pola: <span className="font-mono text-xs">locality</span> (wymagane),{" "}
                   <span className="font-mono text-xs">areaName</span>, <span className="font-mono text-xs">streetGroup</span>,{" "}
                   <span className="font-mono text-xs">wasteType</span> (wymagane — {WASTE_TYPES.join(", ")}),{" "}
@@ -564,18 +564,18 @@ function WasteAdminContent() {
                 className={inputClass + " resize-y font-mono text-xs"}
               />
               {importErrors.length > 0 && (
-                <ul className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 space-y-0.5">
+                <ul className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-lg px-3 py-2 space-y-0.5">
                   {importErrors.map((err, i) => <li key={i}>{err}</li>)}
                 </ul>
               )}
               {importParsed && (
                 <>
-                  <p className="text-sm font-medium text-emerald-700">
+                  <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
                     {importParsed.length} {importParsed.length === 1 ? "wiersz gotowy" : "wierszy gotowych"} do zaimportowania. Sprawdź podgląd przed zapisem:
                   </p>
-                  <div className="overflow-x-auto rounded-lg border border-slate-200">
+                  <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
                     <table className="w-full text-xs">
-                      <thead className="bg-slate-50 text-slate-500">
+                      <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400">
                         <tr>
                           <th className="text-left px-2.5 py-1.5 font-medium">#</th>
                           <th className="text-left px-2.5 py-1.5 font-medium">Lokalizacja</th>
@@ -586,14 +586,14 @@ function WasteAdminContent() {
                       </thead>
                       <tbody>
                         {importParsed.map((row, i) => (
-                          <tr key={i} className="border-t border-slate-100">
-                            <td className="px-2.5 py-1.5 text-slate-400">{i + 1}</td>
-                            <td className="px-2.5 py-1.5 text-slate-700">
+                          <tr key={i} className="border-t border-slate-100 dark:border-slate-800">
+                            <td className="px-2.5 py-1.5 text-slate-400 dark:text-slate-500">{i + 1}</td>
+                            <td className="px-2.5 py-1.5 text-slate-700 dark:text-slate-300">
                               {[row.locality, row.areaName, row.streetGroup].filter(Boolean).join(" — ")}
                             </td>
-                            <td className="px-2.5 py-1.5 text-slate-700">{WASTE_TYPE_LABELS[row.wasteType] ?? row.wasteType}</td>
-                            <td className="px-2.5 py-1.5 text-slate-700">{row.collectionDate}</td>
-                            <td className="px-2.5 py-1.5 text-slate-500">{row.sourceName || row.sourceUrl || "—"}</td>
+                            <td className="px-2.5 py-1.5 text-slate-700 dark:text-slate-300">{WASTE_TYPE_LABELS[row.wasteType] ?? row.wasteType}</td>
+                            <td className="px-2.5 py-1.5 text-slate-700 dark:text-slate-300">{row.collectionDate}</td>
+                            <td className="px-2.5 py-1.5 text-slate-500 dark:text-slate-400">{row.sourceName || row.sourceUrl || "—"}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -602,21 +602,21 @@ function WasteAdminContent() {
                 </>
               )}
               {importDuplicateWarnings.length > 0 && (
-                <ul className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 space-y-0.5">
+                <ul className="text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/15 border border-amber-200 dark:border-amber-500/30 rounded-lg px-3 py-2 space-y-0.5">
                   {importDuplicateWarnings.map((warn, i) => <li key={i}>{warn}</li>)}
                 </ul>
               )}
               {importPastDateWarnings.length > 0 && (
-                <ul className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 space-y-0.5">
+                <ul className="text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/15 border border-amber-200 dark:border-amber-500/30 rounded-lg px-3 py-2 space-y-0.5">
                   {importPastDateWarnings.map((warn, i) => <li key={i}>{warn}</li>)}
                 </ul>
               )}
               {importMissingSourceWarnings.length > 0 && (
-                <ul className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 space-y-0.5">
+                <ul className="text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/15 border border-amber-200 dark:border-amber-500/30 rounded-lg px-3 py-2 space-y-0.5">
                   {importMissingSourceWarnings.map((warn, i) => <li key={i}>{warn}</li>)}
                 </ul>
               )}
-              {importMsg && <p className="text-sm font-medium text-slate-700">{importMsg}</p>}
+              {importMsg && <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{importMsg}</p>}
               <button
                 onClick={handleImport}
                 disabled={!importParsed || importing}
@@ -634,12 +634,12 @@ function WasteAdminContent() {
               value={localityFilter}
               onChange={(e) => setLocalityFilter(e.target.value)}
               placeholder="Filtruj po lokalizacji/okolicy..."
-              className="flex-1 min-w-[180px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 min-w-[180px] rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
             />
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value as WasteType | "all")}
-              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
             >
               <option value="all">Wszystkie rodzaje</option>
               {WASTE_TYPES.map((t) => (
@@ -652,11 +652,11 @@ function WasteAdminContent() {
           {loadState === "loading" ? (
             <div className="space-y-3">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-16 rounded-xl border border-slate-100 bg-slate-50 animate-pulse" />
+                <div key={i} className="h-16 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 animate-pulse" />
               ))}
             </div>
           ) : filtered.length === 0 ? (
-            <div className="text-center py-12 text-slate-400 text-sm">
+            <div className="text-center py-12 text-slate-400 dark:text-slate-500 text-sm">
               {items.length === 0
                 ? "Brak terminów. Dodaj pierwszy termin albo zaimportuj kilka naraz z JSON."
                 : "Brak terminów pasujących do filtrów."}
@@ -664,11 +664,11 @@ function WasteAdminContent() {
           ) : (
             <div className="space-y-6">
               <div>
-                <h2 className="text-sm font-semibold text-slate-700 mb-3">
+                <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
                   Nadchodzące ({upcoming.length})
                 </h2>
                 {upcoming.length === 0 ? (
-                  <p className="text-sm text-slate-400">Brak nadchodzących terminów.</p>
+                  <p className="text-sm text-slate-400 dark:text-slate-500">Brak nadchodzących terminów.</p>
                 ) : (
                   <div className="space-y-2">
                     {upcoming.map((item) => (
@@ -686,7 +686,7 @@ function WasteAdminContent() {
 
               {past.length > 0 && (
                 <div>
-                  <h2 className="text-sm font-semibold text-slate-400 mb-3">
+                  <h2 className="text-sm font-semibold text-slate-400 dark:text-slate-500 mb-3">
                     Przeszłe ({past.length})
                   </h2>
                   <div className="space-y-2 opacity-60">
@@ -721,43 +721,43 @@ function WasteItemRow({
   deleting: boolean;
 }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3">
+    <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3">
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2 mb-1">
-          <span className="text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-full px-2.5 py-0.5">
+          <span className="text-xs font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 rounded-full px-2.5 py-0.5">
             {WASTE_TYPE_LABELS[item.wasteType] ?? item.wasteType}
           </span>
-          <span className="text-sm font-semibold text-slate-900">{item.collectionDate}</span>
+          <span className="text-sm font-semibold text-slate-900 dark:text-white">{item.collectionDate}</span>
         </div>
-        <p className="text-sm text-slate-600">{placeLabel(item)}</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">{placeLabel(item)}</p>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
           {item.sourceUrl ? (
             <a
               href={item.sourceUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs font-medium text-blue-600 hover:underline"
+              className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
             >
               Źródło: {item.sourceName || "zobacz"} →
             </a>
           ) : (
-            <span className="text-xs text-amber-600">Brak linku źródła</span>
+            <span className="text-xs text-amber-600 dark:text-amber-300">Brak linku źródła</span>
           )}
-          <span className="text-xs text-slate-400">zmieniono {formatUpdatedAt(item.updatedAt)}</span>
+          <span className="text-xs text-slate-400 dark:text-slate-500">zmieniono {formatUpdatedAt(item.updatedAt)}</span>
         </div>
-        {item.notes && <p className="text-xs text-slate-400 mt-1">{item.notes}</p>}
+        {item.notes && <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{item.notes}</p>}
       </div>
       <div className="flex items-center gap-2 shrink-0">
         <button
           onClick={onEdit}
-          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"
+          className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-1.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:border-slate-300 transition-colors"
         >
           Edytuj
         </button>
         <button
           onClick={onDelete}
           disabled={deleting}
-          className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 transition-colors"
+          className="rounded-lg border border-red-200 dark:border-red-500/30 bg-white dark:bg-slate-900 px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 disabled:opacity-50 transition-colors"
         >
           {deleting ? "…" : "Usuń"}
         </button>

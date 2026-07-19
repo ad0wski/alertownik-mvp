@@ -62,9 +62,9 @@ export function PwaController() {
     <div
       role="status"
       aria-live="polite"
-      className="fixed bottom-4 inset-x-4 sm:inset-x-auto sm:right-4 sm:left-auto z-50 max-w-sm sm:w-96 mx-auto sm:mx-0 rounded-xl border border-blue-200 bg-white shadow-lg px-4 py-3 flex items-center gap-3"
+      className="fixed bottom-4 inset-x-4 sm:inset-x-auto sm:right-4 sm:left-auto z-50 max-w-sm sm:w-96 mx-auto sm:mx-0 rounded-xl border border-blue-200 bg-white shadow-lg px-4 py-3 flex items-center gap-3 dark:border-blue-500/30 dark:bg-slate-800"
     >
-      <p className="text-sm text-slate-700 flex-1">
+      <p className="text-sm text-slate-700 flex-1 dark:text-slate-200">
         Dostępna jest nowa wersja Alertownika.
       </p>
       <button
@@ -73,7 +73,7 @@ export function PwaController() {
           userRequestedUpdate.current = true;
           waitingWorker.postMessage("SKIP_WAITING");
         }}
-        className="text-sm font-medium text-blue-700 hover:text-blue-800 whitespace-nowrap"
+        className="text-sm font-medium text-blue-700 hover:text-blue-800 whitespace-nowrap dark:text-blue-400 dark:hover:text-blue-300"
       >
         Odśwież
       </button>
@@ -81,7 +81,7 @@ export function PwaController() {
         type="button"
         onClick={() => setDismissed(true)}
         aria-label="Zamknij"
-        className="text-slate-400 hover:text-slate-600 text-sm leading-none px-1"
+        className="text-slate-400 hover:text-slate-600 text-sm leading-none px-1 dark:text-slate-500 dark:hover:text-slate-300"
       >
         ✕
       </button>

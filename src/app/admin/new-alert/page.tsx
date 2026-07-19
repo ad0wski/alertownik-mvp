@@ -59,9 +59,9 @@ const SEVERITY_LABELS: Record<AlertSeverity, string> = {
 };
 
 const RISK_STYLES = {
-  low:    "border-emerald-200 bg-emerald-50 text-emerald-800",
-  medium: "border-amber-200 bg-amber-50 text-amber-800",
-  high:   "border-red-200 bg-red-50 text-red-800",
+  low:    "border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300",
+  medium: "border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300",
+  high:   "border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 text-red-800",
 } as const;
 
 interface DraftResult {
@@ -77,13 +77,13 @@ function ChecklistRow({ ok, manual, label, note }: {
   ok?: boolean; manual?: boolean; label: string; note?: string;
 }) {
   const icon = manual ? "○" : ok ? "✓" : "✗";
-  const iconColor = manual ? "text-slate-400" : ok ? "text-emerald-600" : "text-red-500";
+  const iconColor = manual ? "text-slate-400 dark:text-slate-500" : ok ? "text-emerald-600" : "text-red-500";
   return (
-    <li className="flex items-start gap-2 text-sm text-slate-700">
+    <li className="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300">
       <span className={`font-semibold ${iconColor} shrink-0`} aria-hidden="true">{icon}</span>
       <span>
         {label}
-        {note && <span className="text-xs text-slate-400"> — {note}</span>}
+        {note && <span className="text-xs text-slate-400 dark:text-slate-500"> — {note}</span>}
       </span>
     </li>
   );
@@ -270,30 +270,30 @@ function NewAlertPageInner() {
     <main className="max-w-3xl mx-auto w-full px-4 sm:px-6 py-8 sm:py-10">
       <div className="mb-6">
         <div className="flex flex-wrap items-center gap-2.5 mb-1">
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
             Nowy alert ze źródła
           </h1>
-          <span className="inline-flex items-center text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-0.5">
+          <span className="inline-flex items-center text-xs font-medium text-amber-600 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/15 border border-amber-200 dark:border-amber-500/30 rounded-full px-2.5 py-0.5">
             Admin
           </span>
         </div>
-        <p className="mt-1 text-sm text-slate-500 leading-relaxed">
-          Trzy kroki: <span className="font-medium text-slate-600">wklej komunikat</span>{" "}
-          → <span className="font-medium text-slate-600">sprawdź szkic</span>{" "}
-          → <span className="font-medium text-slate-600">opublikuj ręcznie w Kreatorze</span>.
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+          Trzy kroki: <span className="font-medium text-slate-600 dark:text-slate-400">wklej komunikat</span>{" "}
+          → <span className="font-medium text-slate-600 dark:text-slate-400">sprawdź szkic</span>{" "}
+          → <span className="font-medium text-slate-600 dark:text-slate-400">opublikuj ręcznie w Kreatorze</span>.
           Ta strona niczego nie publikuje — szkic zawsze czeka na Twoją weryfikację.
         </p>
       </div>
 
       {/* ── Step 1: input ─────────────────────────────────────────────── */}
-      <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 mb-6">
-        <h2 className="text-base font-semibold text-slate-800 mb-4">
+      <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 sm:p-5 mb-6">
+        <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100 mb-4">
           1. Skąd pochodzi komunikat?
         </h2>
 
         <div className="flex flex-col gap-4">
           <div>
-            <label htmlFor="source-url" className="block text-sm font-medium text-slate-700 mb-1">
+            <label htmlFor="source-url" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
               Link do komunikatu
             </label>
             <input
@@ -302,16 +302,16 @@ function NewAlertPageInner() {
               value={sourceUrl}
               onChange={(e) => setSourceUrl(e.target.value)}
               placeholder="https://wkd.com.pl/aktualnosci/..."
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500"
             />
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
               Link do konkretnego komunikatu, nie do strony głównej. Bez linku
               do źródła alert nie nadaje się do publikacji.
             </p>
           </div>
 
           <div>
-            <label htmlFor="source-text" className="block text-sm font-medium text-slate-700 mb-1">
+            <label htmlFor="source-text" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
               Treść komunikatu <span className="text-red-500">*</span>
             </label>
             <textarea
@@ -320,13 +320,13 @@ function NewAlertPageInner() {
               onChange={(e) => setSourceText(e.target.value)}
               rows={7}
               placeholder="Skopiuj i wklej treść komunikatu ze strony źródła..."
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 leading-relaxed"
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 leading-relaxed"
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label htmlFor="area" className="block text-sm font-medium text-slate-700 mb-1">
+              <label htmlFor="area" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Obszar / okolica
               </label>
               <input
@@ -335,18 +335,18 @@ function NewAlertPageInner() {
                 value={area}
                 onChange={(e) => setArea(e.target.value)}
                 placeholder="np. Komorów, linia WKD"
-                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500"
               />
             </div>
             <div>
-              <label htmlFor="category" className="block text-sm font-medium text-slate-700 mb-1">
+              <label htmlFor="category" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Kategoria
               </label>
               <select
                 id="category"
                 value={category}
                 onChange={(e) => setCategory(e.target.value as AlertCategory | "auto")}
-                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm text-slate-800 dark:text-slate-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500"
               >
                 {CATEGORY_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
@@ -354,17 +354,17 @@ function NewAlertPageInner() {
               </select>
             </div>
             <div>
-              <label htmlFor="published-date" className="block text-sm font-medium text-slate-700 mb-1">
-                Data komunikatu <span className="text-slate-400 font-normal">(opcjonalnie)</span>
+              <label htmlFor="published-date" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                Data komunikatu <span className="text-slate-400 dark:text-slate-500 font-normal">(opcjonalnie)</span>
               </label>
               <input
                 id="published-date"
                 type="date"
                 value={publishedDate}
                 onChange={(e) => setPublishedDate(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm text-slate-800 dark:text-slate-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500"
               />
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
                 Kiedy źródło opublikowało komunikat — terminy robót/utrudnień
                 AI odczyta z treści.
               </p>
@@ -372,7 +372,7 @@ function NewAlertPageInner() {
           </div>
 
           {error && (
-            <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            <p className="text-sm text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-lg px-3 py-2">
               {error}
             </p>
           )}
@@ -381,7 +381,7 @@ function NewAlertPageInner() {
             <button
               onClick={handleGenerate}
               disabled={loading}
-              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 dark:bg-blue-500 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 dark:hover:bg-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {loading ? "Przygotowuję szkic…" : "Przygotuj szkic"}
             </button>
@@ -393,10 +393,10 @@ function NewAlertPageInner() {
       {result && previewAlert && (
         <section className="flex flex-col gap-5">
           <div>
-            <h2 className="text-base font-semibold text-slate-800 mb-1">
+            <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100 mb-1">
               2. Tak zobaczy to mieszkaniec
             </h2>
-            <p className="text-xs text-slate-400 mb-3">
+            <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">
               Szkic przygotował: {result.mode === "anthropic" ? "AI (Claude)" : "tryb lokalny bez AI"}
               {" · "}kategoria: {CATEGORY_LABELS[result.draft.category]}
               {" · "}ważność: {SEVERITY_LABELS[result.draft.severity]}
@@ -419,19 +419,19 @@ function NewAlertPageInner() {
 
           {/* Warnings */}
           {allWarnings.length > 0 && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3.5">
-              <p className="text-sm font-semibold text-amber-800 mb-1">
+            <div className="rounded-xl border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/15 px-4 py-3.5">
+              <p className="text-sm font-semibold text-amber-800 dark:text-amber-300 mb-1">
                 Do sprawdzenia przed publikacją
               </p>
-              <ul className="text-xs text-amber-800 space-y-0.5 list-disc list-inside">
+              <ul className="text-xs text-amber-800 dark:text-amber-300 space-y-0.5 list-disc list-inside">
                 {allWarnings.map((w) => <li key={w}>{w}</li>)}
               </ul>
             </div>
           )}
 
           {/* Compact checklist */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
-            <h3 className="text-sm font-semibold text-slate-800 mb-3">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 sm:p-5">
+            <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-3">
               Szybki przegląd
             </h3>
             <ul className="flex flex-col gap-2">
@@ -457,27 +457,27 @@ function NewAlertPageInner() {
           </div>
 
           {/* Actions */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
-            <h3 className="text-sm font-semibold text-slate-800 mb-1">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 sm:p-5">
+            <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-1">
               3. Co dalej?
             </h3>
-            <p className="text-xs text-slate-400 mb-4">
+            <p className="text-xs text-slate-400 dark:text-slate-500 mb-4">
               Draft nie jest widoczny publicznie. Publikacja jest możliwa
               wyłącznie z Kreatora, po ręcznym sprawdzeniu źródła.
             </p>
 
             {savedSlug ? (
-              <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3.5">
-                <p className="text-sm font-semibold text-emerald-800 mb-1">
+              <div className="rounded-xl border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 px-4 py-3.5">
+                <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300 mb-1">
                   Zapisano draft w Supabase ✓
                 </p>
-                <p className="text-xs text-emerald-700 mb-2">
+                <p className="text-xs text-emerald-700 dark:text-emerald-300 mb-2">
                   Slug: <span className="font-mono">{savedSlug}</span> · status: draft
                   (niewidoczny publicznie).
                 </p>
                 <Link
                   href={`/builder?edit=${savedSlug}`}
-                  className="inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-white px-3.5 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-100 transition-colors"
+                  className="inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-white dark:bg-slate-900 px-3.5 py-2 text-sm font-medium text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 transition-colors"
                 >
                   Sprawdź i opublikuj w Kreatorze →
                 </Link>
@@ -487,19 +487,19 @@ function NewAlertPageInner() {
                 <button
                   onClick={handleSaveDraft}
                   disabled={saving}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 dark:bg-blue-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 dark:hover:bg-blue-400 disabled:opacity-50 transition-colors"
                 >
                   {saving ? "Zapisuję…" : "Zapisz jako draft"}
                 </button>
                 <button
                   onClick={handleOpenInBuilder}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-medium text-blue-700 hover:bg-blue-100 transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-500/15 px-4 py-2.5 text-sm font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-100 transition-colors"
                 >
                   Otwórz w Kreatorze
                 </button>
                 <button
                   onClick={handleReject}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors"
                 >
                   Odrzuć szkic
                 </button>
@@ -507,7 +507,7 @@ function NewAlertPageInner() {
             )}
 
             {saveError && (
-              <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mt-3">
+              <p className="text-sm text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-lg px-3 py-2 mt-3">
                 {saveError}
               </p>
             )}

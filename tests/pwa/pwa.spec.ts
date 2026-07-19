@@ -97,7 +97,7 @@ test.describe("Cache safety (M3)", () => {
     await waitForServiceWorker(page);
 
     const cachedUrls = await page.evaluate(async () => {
-      const cache = await caches.open("alertownik-pwa-v1");
+      const cache = await caches.open("alertownik-pwa-v2");
       const requests = await cache.keys();
       return requests.map((r) => new URL(r.url).pathname);
     });
@@ -132,6 +132,49 @@ test.describe("Offline fallback (M4)", () => {
   });
 });
 
+test.describe("Offline fallback theming (Sprint 162)", () => {
+  // offline.html has no app JavaScript bundle, so it's tested directly (not
+  // via the service worker) — same requirement the page itself documents:
+  // it must work standalone and still respect dark mode.
+  test("light system preference keeps the light background", async ({ page }) => {
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.goto("/offline.html");
+    const bg = await page.evaluate(
+      () => getComputedStyle(document.body).backgroundColor
+    );
+    expect(bg).toBe("rgb(240, 249, 255)"); // #f0f9ff
+  });
+
+  test("dark system preference switches the background via prefers-color-scheme", async ({
+    page,
+  }) => {
+    await page.emulateMedia({ colorScheme: "dark" });
+    await page.goto("/offline.html");
+    const bg = await page.evaluate(
+      () => getComputedStyle(document.body).backgroundColor
+    );
+    expect(bg).toBe("rgb(11, 18, 32)"); // #0b1220
+  });
+
+  test("a stored manual light preference wins even under a dark system", async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem("alertownik-theme-preference", "light");
+    });
+    await page.emulateMedia({ colorScheme: "dark" });
+    await page.goto("/offline.html");
+    const bg = await page.evaluate(
+      () => getComputedStyle(document.body).backgroundColor
+    );
+    expect(bg).toBe("rgb(240, 249, 255)");
+  });
+
+  test("honest data-loss warning text is still present regardless of theme", async ({ page }) => {
+    await page.emulateMedia({ colorScheme: "dark" });
+    await page.goto("/offline.html");
+    await expect(page.getByText(/nie pokazujemy tu starych alertów/)).toBeVisible();
+  });
+});
+
 test.describe("Admin/API exclusions (M5)", () => {
   test("service worker fetch handler ignores non-GET and admin/api paths", async ({ page }) => {
     await waitForServiceWorker(page);
@@ -149,7 +192,7 @@ test.describe("Admin/API exclusions (M5)", () => {
     await waitForServiceWorker(page);
 
     const hasAdminEntry = await page.evaluate(async () => {
-      const cache = await caches.open("alertownik-pwa-v1");
+      const cache = await caches.open("alertownik-pwa-v2");
       const requests = await cache.keys();
       return requests.some((r) => new URL(r.url).pathname.startsWith("/admin"));
     });

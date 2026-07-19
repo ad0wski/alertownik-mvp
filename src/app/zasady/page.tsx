@@ -6,34 +6,34 @@ export const metadata = {
     "Zasady korzystania i zastrzeżenia serwisu Alertownik (wersja beta) — czym serwis jest, a czym nie jest.",
 };
 
-const sectionClass = "bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5";
-const h2Class = "text-base font-semibold text-slate-900 mb-2";
-const pClass = "text-sm text-slate-600 leading-relaxed";
-const listClass = "text-sm text-slate-600 space-y-1.5 list-disc list-inside leading-relaxed";
+const sectionClass = "bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 sm:p-5";
+const h2Class = "text-base font-semibold text-slate-900 dark:text-white mb-2";
+const pClass = "text-sm text-slate-600 dark:text-slate-400 leading-relaxed";
+const listClass = "text-sm text-slate-600 dark:text-slate-400 space-y-1.5 list-disc list-inside leading-relaxed";
 
 export default function TermsPage() {
   return (
     <main className="max-w-3xl mx-auto w-full px-4 sm:px-6 py-8 sm:py-10">
       <Link
         href="/"
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-blue-700 transition-colors mb-5 sm:mb-6 group"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors mb-5 sm:mb-6 group"
       >
         <span className="group-hover:-translate-x-0.5 transition-transform inline-block">←</span>
         Wróć do listy alertów
       </Link>
 
       <div className="mb-6">
-        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight mb-2">
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight mb-2">
           Zasady korzystania i zastrzeżenia
         </h1>
-        <p className="text-sm text-slate-500 leading-relaxed">
+        <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
           Wersja beta (szkic) — 3 lipca 2026. Prosto i uczciwie: czym
           Alertownik jest, a czym nie jest.
         </p>
       </div>
 
       <div className="flex flex-col gap-4">
-        <section className="bg-red-50 rounded-2xl border border-red-200 shadow-sm p-4 sm:p-5">
+        <section className="bg-red-50 dark:bg-red-500/10 rounded-2xl border border-red-200 dark:border-red-500/30 shadow-sm p-4 sm:p-5">
           <h2 className={h2Class}>Najważniejsze: to nie jest serwis ratunkowy</h2>
           <p className={pClass}>
             Alertownik <span className="font-semibold">nie jest oficjalnym
@@ -110,7 +110,7 @@ export default function TermsPage() {
             </li>
             <li>
               Zauważyłeś/aś błąd albo nieaktualny alert?{" "}
-              <Link href="/about#feedback" className="font-medium text-blue-600 hover:underline">
+              <Link href="/about#feedback" className="font-medium text-blue-600 dark:text-blue-400 hover:underline">
                 Zgłoś go nam
               </Link>{" "}
               — to najlepszy sposób, by pomóc.
@@ -118,7 +118,7 @@ export default function TermsPage() {
           </ul>
         </section>
 
-        <section className="bg-amber-50 rounded-2xl border border-amber-200 shadow-sm p-4 sm:p-5">
+        <section className="bg-amber-50 dark:bg-amber-500/15 rounded-2xl border border-amber-200 dark:border-amber-500/30 shadow-sm p-4 sm:p-5">
           <h2 className={h2Class}>Status tego dokumentu</h2>
           <p className={pClass}>
             Szkic na czas pilotażu (beta) — zostanie zweryfikowany i

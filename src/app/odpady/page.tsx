@@ -43,7 +43,7 @@ export default function OdpadyPage() {
     <main className="max-w-3xl mx-auto w-full px-4 sm:px-6 py-8 sm:py-10">
       <Link
         href="/"
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-blue-700 transition-colors mb-5 sm:mb-6 group"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors mb-5 sm:mb-6 group"
       >
         <span className="group-hover:-translate-x-0.5 transition-transform inline-block">←</span>
         Wróć do listy alertów
@@ -51,14 +51,14 @@ export default function OdpadyPage() {
 
       <div className="mb-6">
         <div className="flex flex-wrap items-center gap-2.5 mb-1">
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
             Odpady — harmonogram odbioru
           </h1>
-          <span className="inline-flex items-center text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-full px-2.5 py-0.5">
+          <span className="inline-flex items-center text-xs font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 rounded-full px-2.5 py-0.5">
             Wczesna wersja
           </span>
         </div>
-        <p className="text-sm sm:text-base text-slate-500 leading-relaxed">
+        <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 leading-relaxed">
           Najbliższe terminy odbioru odpadów dla Twojej okolicy — ręcznie
           przepisane z oficjalnych harmonogramów, zawsze z linkiem do źródła.
         </p>
@@ -67,32 +67,32 @@ export default function OdpadyPage() {
       <div className="flex flex-col gap-4">
         <OdpadyClient />
 
-        <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
-          <h2 className="text-base font-semibold text-slate-900 mb-2">
+        <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 sm:p-5">
+          <h2 className="text-base font-semibold text-slate-900 dark:text-white mb-2">
             Jak to ma działać
           </h2>
-          <ul className="text-sm text-slate-600 space-y-1.5 list-disc list-inside leading-relaxed">
+          <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-1.5 list-disc list-inside leading-relaxed">
             <li>Wybierasz swoją okolicę albo grupę ulic — bez podawania dokładnego adresu.</li>
             <li>Nie musisz się logować — preferencja zapisuje się tylko w tej przeglądarce.</li>
             <li>Widzisz najbliższe terminy odbioru, podzielone według rodzaju odpadów.</li>
             <li>Każdy termin wskazuje źródło, z którego pochodzi — to ono jest najważniejsze, nie ta strona.</li>
             <li>Przypomnienia (np. dzień wcześniej) są planowane na później — na razie strona pokazuje tylko terminy.</li>
             <li>
-              Zaczynamy od <span className="font-medium text-slate-700">Komorowa</span> (zabudowa
+              Zaczynamy od <span className="font-medium text-slate-700 dark:text-slate-300">Komorowa</span> (zabudowa
               jednorodzinna, harmonogram Gminy Michałowice na 2026 rok) — jeśli
               Twojej okolicy jeszcze tu nie ma, skorzystaj z oficjalnych źródeł poniżej.
             </li>
           </ul>
-          <p className="text-sm text-slate-500 mt-3 leading-relaxed">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-3 leading-relaxed">
             Planowane rodzaje odpadów: {PLANNED_WASTE_TYPES.join(", ")}.
           </p>
         </section>
 
-        <section className="bg-amber-50 rounded-2xl border border-amber-200 shadow-sm p-4 sm:p-5">
+        <section className="bg-amber-50 dark:bg-amber-500/15 rounded-2xl border border-amber-200 dark:border-amber-500/30 shadow-sm p-4 sm:p-5">
           <h2 className="text-base font-semibold text-amber-900 mb-2">
             Pełny harmonogram znajdziesz w oficjalnym źródle
           </h2>
-          <p className="text-sm text-amber-800 leading-relaxed mb-3">
+          <p className="text-sm text-amber-800 dark:text-amber-300 leading-relaxed mb-3">
             Alertownik pokazuje tylko terminy, które zostały już ręcznie
             przepisane i zweryfikowane — pozostałe okolice, typy zabudowy i
             frakcje znajdziesz w źródłach, które same prowadzą harmonogram:
@@ -104,25 +104,25 @@ export default function OdpadyPage() {
                   href={s.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="font-medium text-blue-700 hover:text-blue-900 hover:underline"
+                  className="font-medium text-blue-700 dark:text-blue-300 hover:text-blue-900 hover:underline"
                 >
                   {s.name} →
                 </a>
-                <p className="text-amber-700 mt-0.5">{s.note}</p>
+                <p className="text-amber-700 dark:text-amber-300 mt-0.5">{s.note}</p>
               </li>
             ))}
           </ul>
         </section>
 
-        <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
-          <h2 className="text-base font-semibold text-slate-900 mb-2">
+        <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 sm:p-5">
+          <h2 className="text-base font-semibold text-slate-900 dark:text-white mb-2">
             Ogłoszenia o zmianach harmonogramu już dziś
           </h2>
-          <p className="text-sm text-slate-600 leading-relaxed">
+          <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
             Jednorazowe zmiany w odbiorze (np. przesunięcie terminu po święcie)
             są już publikowane jako zwykłe alerty w kategorii „Odpady" — możesz
             je zobaczyć na{" "}
-            <Link href="/" className="font-medium text-blue-600 hover:underline">
+            <Link href="/" className="font-medium text-blue-600 dark:text-blue-400 hover:underline">
               stronie głównej
             </Link>{" "}
             albo zaznaczyć kategorię „Odpady" w „Moja okolica", żeby widzieć
@@ -130,11 +130,11 @@ export default function OdpadyPage() {
           </p>
         </section>
 
-        <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
-          <h2 className="text-base font-semibold text-slate-900 mb-2">
+        <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 sm:p-5">
+          <h2 className="text-base font-semibold text-slate-900 dark:text-white mb-2">
             Źródła pozostają najważniejsze
           </h2>
-          <p className="text-sm text-slate-600 leading-relaxed">
+          <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
             Tak jak przy innych alertach — gdy harmonogram odbioru odpadów
             faktycznie się tu pojawi, każdy termin trzeba będzie zweryfikować
             z oficjalnym źródłem gminy albo operatora odpadów. Alertownik nie

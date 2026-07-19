@@ -6,7 +6,13 @@
 // It only guarantees that a public page request made while offline resolves
 // to an honest "no connection" screen instead of a stale cached alert.
 
-const CACHE_NAME = "alertownik-pwa-v1";
+// Sprint 162 — bumped v1 -> v2 only because offline.html's content changed
+// (dark-mode support). The caching strategy/policy itself is unchanged:
+// same precache list, same excluded prefixes, same activate-time cleanup of
+// stale "alertownik-pwa-*" caches below. Without this bump, browsers with
+// an already-installed v1 worker would keep serving the old light-only
+// offline.html indefinitely (the cache key never changes on its own).
+const CACHE_NAME = "alertownik-pwa-v2";
 const OFFLINE_URL = "/offline.html";
 const OFFLINE_ICON = "/icon-192.png";
 const PRECACHE_URLS = [OFFLINE_URL, OFFLINE_ICON];

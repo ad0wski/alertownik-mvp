@@ -35,16 +35,16 @@ const categoryLabels: Record<AlertCategory, string> = {
 const categoryBadgeClass: Record<AlertCategory, string> = {
   transport: "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200",
   water:     "bg-cyan-50 text-cyan-700 ring-1 ring-cyan-200",
-  power:     "bg-yellow-50 text-yellow-700 ring-1 ring-yellow-200",
+  power:     "bg-yellow-50 dark:bg-amber-500/15 text-yellow-700 dark:text-amber-300 ring-1 ring-yellow-200",
   waste:     "bg-lime-50 text-lime-700 ring-1 ring-lime-200",
   roads:     "bg-orange-50 text-orange-700 ring-1 ring-orange-200",
-  municipal: "bg-slate-100 text-slate-600 ring-1 ring-slate-200",
+  municipal: "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 ring-1 ring-slate-200",
 };
 
 const riskBadgeClass: Record<OfficialSourceCheck["risk"], string> = {
-  low:    "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200",
-  medium: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
-  high:   "bg-red-50 text-red-700 ring-1 ring-red-200",
+  low:    "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-200",
+  medium: "bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 ring-1 ring-amber-200",
+  high:   "bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 ring-1 ring-red-200",
 };
 
 function ChecklistCard({
@@ -58,13 +58,13 @@ function ChecklistCard({
 }) {
   const safeCheckSource = getSafeCheckSource(source.id);
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
+    <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm p-4">
       <div className="flex flex-wrap items-center gap-1.5 mb-2">
-        <h4 className="text-sm font-semibold text-slate-800 mr-1">{source.name}</h4>
+        <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-100 mr-1">{source.name}</h4>
         <span className={`inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full ${categoryBadgeClass[source.category]}`}>
           {categoryLabels[source.category]}
         </span>
-        <span className="inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 ring-1 ring-blue-200">
+        <span className="inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 ring-1 ring-blue-200">
           {FREQUENCY_LABELS[source.frequency]}
           {source.frequencyNote && ` — ${source.frequencyNote}`}
         </span>
@@ -73,18 +73,18 @@ function ChecklistCard({
         </span>
       </div>
 
-      <p className="text-sm text-slate-600 leading-relaxed mb-2">
-        <span className="font-medium text-slate-700">Co sprawdzić: </span>
+      <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-2">
+        <span className="font-medium text-slate-700 dark:text-slate-300">Co sprawdzić: </span>
         {source.whatToCheck}
       </p>
 
-      <p className="text-xs text-slate-500 mb-2">
+      <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
         <span className="font-medium">Miejscowości: </span>
         {source.localities.join(", ")}
       </p>
 
       {source.riskNote && (
-        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 mb-2">
+        <p className="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/15 border border-amber-200 dark:border-amber-500/30 rounded-lg px-2.5 py-1.5 mb-2">
           ⚠ {source.riskNote}
         </p>
       )}
@@ -94,19 +94,19 @@ function ChecklistCard({
           href={source.officialUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+          className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline"
         >
           Otwórz oficjalne źródło →
         </a>
         <Link
           href="/admin/new-alert"
-          className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+          className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline"
         >
           Nowy alert ze źródła →
         </Link>
         <Link
           href="/builder"
-          className="text-sm font-medium text-slate-500 hover:text-slate-700 hover:underline"
+          className="text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:underline"
         >
           Kreator →
         </Link>
@@ -133,32 +133,32 @@ export function OfficialSourceChecklist({
   dedupTexts?: string[];
 }) {
   return (
-    <section id="checklista" className="mb-8 rounded-2xl border border-blue-200 bg-blue-50/50 p-4 sm:p-5">
+    <section id="checklista" className="mb-8 rounded-2xl border border-blue-200 dark:border-blue-500/30 bg-blue-50/50 p-4 sm:p-5">
       <details open>
         <summary className="cursor-pointer select-none">
-          <span className="text-base font-semibold text-slate-800">
+          <span className="text-base font-semibold text-slate-800 dark:text-slate-100">
             Checklista oficjalnych źródeł
           </span>
-          <span className="ml-2 inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 ring-1 ring-slate-200">
+          <span className="ml-2 inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 ring-1 ring-slate-200">
             ręczne sprawdzanie
           </span>
         </summary>
 
-        <p className="text-sm text-slate-600 leading-relaxed mt-2 mb-3">
+        <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mt-2 mb-3">
           Stała lista miejsc, które sprawdzasz ręcznie w przeglądarce — żeby nie
           zgadywać za każdym razem, gdzie szukać. To nie jest automatyczny
           monitoring: nic nie pobiera się samo i nic nie publikuje się samo.
         </p>
 
         {/* Publish policy — one box, project rules, not per-source settings */}
-        <div className="rounded-xl border border-slate-200 bg-white p-3.5 mb-3">
-          <h3 className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 mb-3">
+          <h3 className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide mb-1.5">
             Zasady (source-first, tylko draft)
           </h3>
-          <ul className="text-sm text-slate-600 space-y-1">
+          <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-1">
             {CHECKLIST_PUBLISH_POLICY.map((rule) => (
               <li key={rule} className="flex items-start gap-2">
-                <span className="text-slate-400 mt-0.5">•</span>
+                <span className="text-slate-400 dark:text-slate-500 mt-0.5">•</span>
                 <span>{rule}</span>
               </li>
             ))}
@@ -166,8 +166,8 @@ export function OfficialSourceChecklist({
         </div>
 
         {/* Found something? — the single source-to-draft flow */}
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3.5 mb-4">
-          <h3 className="text-xs font-semibold text-emerald-800 uppercase tracking-wide mb-1.5">
+        <div className="rounded-xl border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 p-3.5 mb-4">
+          <h3 className="text-xs font-semibold text-emerald-800 dark:text-emerald-300 uppercase tracking-wide mb-1.5">
             Coś znalazłeś? (źródło → szkic)
           </h3>
           <ol className="text-sm text-emerald-900 space-y-1 list-decimal list-inside">
@@ -188,7 +188,7 @@ export function OfficialSourceChecklist({
           ))}
         </div>
 
-        <p className="text-xs text-slate-500 mt-3">
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-3">
           Wynik każdego sprawdzenia (także „brak zmian") zaloguj przy odpowiednim
           źródle w rejestrze poniżej — historia checków buduje rytm na przyszłość.
         </p>

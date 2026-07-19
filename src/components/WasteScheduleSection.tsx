@@ -50,21 +50,21 @@ export function WasteScheduleSection({ areaKeywords }: Props) {
 
   if (state === "loading") {
     return (
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 animate-pulse">
-        <div className="h-4 w-40 bg-slate-100 rounded mb-3" />
-        <div className="h-3 w-full bg-slate-100 rounded mb-2" />
-        <div className="h-3 w-2/3 bg-slate-100 rounded" />
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 sm:p-5 animate-pulse">
+        <div className="h-4 w-40 bg-slate-100 dark:bg-slate-800 rounded mb-3" />
+        <div className="h-3 w-full bg-slate-100 dark:bg-slate-800 rounded mb-2" />
+        <div className="h-3 w-2/3 bg-slate-100 dark:bg-slate-800 rounded" />
       </div>
     );
   }
 
   if (state === "table_missing") {
     return (
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
-        <p className="text-sm font-medium text-slate-700 mb-1">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 sm:p-5">
+        <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
           Harmonogram nie jest jeszcze włączony.
         </p>
-        <p className="text-sm text-slate-500 leading-relaxed">
+        <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
           Ta sekcja pokaże najbliższe terminy odbioru odpadów, gdy admin
           uzupełni je z oficjalnych źródeł. Do tego czasu sprawdź linki
           poniżej.
@@ -75,8 +75,8 @@ export function WasteScheduleSection({ areaKeywords }: Props) {
 
   if (state === "error") {
     return (
-      <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3">
-        <p className="text-sm font-medium text-red-700">
+      <div className="rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3">
+        <p className="text-sm font-medium text-red-700 dark:text-red-400">
           Nie udało się pobrać harmonogramu.
         </p>
         {errorMsg && <p className="text-xs text-red-500 mt-1 font-mono">{errorMsg}</p>}
@@ -86,11 +86,11 @@ export function WasteScheduleSection({ areaKeywords }: Props) {
 
   if (items.length === 0) {
     return (
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
-        <p className="text-sm font-medium text-slate-700 mb-1">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 sm:p-5">
+        <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
           Brak zapisanych terminów.
         </p>
-        <p className="text-sm text-slate-500 leading-relaxed">
+        <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
           Harmonogram odpadów wymaga oficjalnych danych — admin jeszcze nie
           zaimportował terminów z oficjalnego harmonogramu gminy/operatora.
           To nie błąd, tylko brak importu na razie. Przygotowujemy import z
@@ -121,9 +121,9 @@ export function WasteScheduleSection({ areaKeywords }: Props) {
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-xs text-slate-500 leading-relaxed">
+      <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
         Zapisane terminy obejmują:{" "}
-        <span className="font-medium text-slate-600">{coveredLocalities.join(", ")}</span>
+        <span className="font-medium text-slate-600 dark:text-slate-400">{coveredLocalities.join(", ")}</span>
         {" "}(frakcje: {coveredTypeLabels.join(", ").toLowerCase()}).
         Frakcji, których tu nie widać (np. popiół albo odzież i tekstylia),
         jeszcze nie zaimportowano — sprawdź je w oficjalnym harmonogramie.
@@ -136,8 +136,8 @@ export function WasteScheduleSection({ areaKeywords }: Props) {
             onClick={() => setShowMyArea(false)}
             className={`px-3.5 py-1.5 rounded-full text-xs font-medium border transition-colors ${
               !showMyArea
-                ? "bg-blue-600 text-white border-blue-600"
-                : "bg-white text-slate-600 border-slate-200 hover:border-slate-400"
+                ? "bg-blue-600 dark:bg-blue-500 text-white border-blue-600"
+                : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-slate-400"
             }`}
           >
             Wszystkie okolice
@@ -146,8 +146,8 @@ export function WasteScheduleSection({ areaKeywords }: Props) {
             onClick={() => setShowMyArea(true)}
             className={`px-3.5 py-1.5 rounded-full text-xs font-medium border transition-colors ${
               showMyArea
-                ? "bg-blue-600 text-white border-blue-600"
-                : "bg-white text-slate-600 border-slate-200 hover:border-slate-400"
+                ? "bg-blue-600 dark:bg-blue-500 text-white border-blue-600"
+                : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-slate-400"
             }`}
           >
             Moja okolica
@@ -156,23 +156,23 @@ export function WasteScheduleSection({ areaKeywords }: Props) {
       )}
 
       {showMyArea && prefsSet && filteredItems.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
-          <p className="text-sm font-medium text-slate-700 mb-1">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 sm:p-5">
+          <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
             Brak terminów dla Twojej okolicy.
           </p>
-          <p className="text-sm text-slate-500 leading-relaxed">
+          <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
             Żaden zapisany termin nie pasuje do Twojej okolicy. Sprawdź
             „Wszystkie okolice" albo zmień okolicę w panelu powyżej.
           </p>
         </div>
       ) : (
         groups.map((group) => (
-          <div key={group.date} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
-            <p className="text-sm font-semibold text-slate-900 mb-2.5 flex flex-wrap items-center gap-2">
+          <div key={group.date} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 sm:p-5">
+            <p className="text-sm font-semibold text-slate-900 dark:text-white mb-2.5 flex flex-wrap items-center gap-2">
               {relativeDayLabel(group.date)}{" "}
-              <span className="text-slate-400 font-normal">— {formatScheduleDate(group.date)}</span>
+              <span className="text-slate-400 dark:text-slate-500 font-normal">— {formatScheduleDate(group.date)}</span>
               {isWithinDays(group.date, 7) && (
-                <span className="text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
+                <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 rounded-full px-2 py-0.5">
                   Ten tydzień
                 </span>
               )}
@@ -180,16 +180,16 @@ export function WasteScheduleSection({ areaKeywords }: Props) {
             <div className="flex flex-col gap-2">
               {group.items.map((item) => (
                 <div key={item.id} className="flex flex-wrap items-center gap-2 text-sm">
-                  <span className="font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-full px-2.5 py-0.5 text-xs">
+                  <span className="font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 rounded-full px-2.5 py-0.5 text-xs">
                     {WASTE_TYPE_LABELS[item.wasteType] ?? item.wasteType}
                   </span>
-                  <span className="text-slate-600">{placeLabel(item)}</span>
+                  <span className="text-slate-600 dark:text-slate-400">{placeLabel(item)}</span>
                   {item.sourceUrl && (
                     <a
                       href={item.sourceUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                      className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline"
                     >
                       Źródło: {item.sourceName || "zobacz"} →
                     </a>

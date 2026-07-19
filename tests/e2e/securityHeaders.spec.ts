@@ -89,3 +89,48 @@ test.describe("Security headers — don't break real rendering", () => {
     expect(cspViolations, cspViolations.join("\n")).toEqual([]);
   });
 });
+
+test.describe("CSP anti-drift (Sprint 162 — theme system required no CSP change)", () => {
+  // The Sprint 162 inline theme-bootstrap script (src/app/theme-bootstrap-script.tsx)
+  // runs under the SAME `script-src 'self' 'unsafe-inline'` directive Sprint 161
+  // already shipped (next.config.ts's own comment explains why: Next's App
+  // Router injects its own inline RSC-streaming scripts regardless of app
+  // code, so 'unsafe-inline' was already required with no nonce mechanism in
+  // place). This test pins the exact directive set so a future change that
+  // widens it — for example adding 'unsafe-eval' in production, or a new
+  // external script/connect host — fails loudly instead of silently.
+  test("script-src / connect-src / style-src directive sets are unchanged from the Sprint 161 baseline", async ({
+    request,
+    baseURL,
+  }) => {
+    const res = await request.get(`${baseURL}/`);
+    const csp = res.headers()["content-security-policy"] ?? "";
+    const directives = Object.fromEntries(
+      csp
+        .split(";")
+        .map((d) => d.trim())
+        .filter(Boolean)
+        .map((d) => {
+          const [name, ...rest] = d.split(" ");
+          return [name, rest.join(" ")];
+        })
+    );
+
+    // This suite runs against `next dev`, where script-src legitimately
+    // gains 'unsafe-eval' (see the "dev-mode CSP" test above) — strip it
+    // before comparing so this test still pins the real, meaningful part
+    // of the directive (no new host, no other new keyword) in both dev and
+    // a production run.
+    const scriptSrcWithoutDevEval = (directives["script-src"] ?? "")
+      .replace(/\s*'unsafe-eval'/, "")
+      .trim();
+    expect(scriptSrcWithoutDevEval).toBe("'self' 'unsafe-inline'");
+    expect(directives["style-src"]).toBe("'self' 'unsafe-inline'");
+    // connect-src is `'self'` plus the one Supabase origin from env — no
+    // additional hosts. Assert no comma/space-separated extra host beyond
+    // that pair was introduced.
+    const connectSrcHosts = (directives["connect-src"] ?? "").split(" ").filter(Boolean);
+    expect(connectSrcHosts.length).toBeLessThanOrEqual(2);
+    expect(connectSrcHosts[0]).toBe("'self'");
+  });
+});

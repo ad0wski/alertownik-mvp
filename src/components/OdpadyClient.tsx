@@ -30,7 +30,7 @@ export function OdpadyClient() {
     <div className="flex flex-col gap-4">
       {ready && <AreaPreferenceBar value={prefs.locationKeywords} onChange={handleAreaChange} />}
 
-      <p className="text-xs text-slate-400 leading-relaxed">
+      <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed">
         Nie wysyłamy jeszcze powiadomień — to przypomnienie widoczne w
         aplikacji. Dane harmonogramu należy sprawdzić w oficjalnym źródle.
       </p>
@@ -38,7 +38,7 @@ export function OdpadyClient() {
       <NextCollectionCard areaKeywords={prefs.locationKeywords} />
 
       <section>
-        <h2 className="text-base font-semibold text-slate-900 mb-2.5">
+        <h2 className="text-base font-semibold text-slate-900 dark:text-white mb-2.5">
           Nadchodzące terminy
         </h2>
         <WasteScheduleSection areaKeywords={prefs.locationKeywords} />

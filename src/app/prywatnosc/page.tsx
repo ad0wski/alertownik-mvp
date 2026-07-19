@@ -7,27 +7,27 @@ export const metadata = {
     "Polityka prywatności serwisu Alertownik (wersja beta) — jakie dane przetwarzamy, po co i jakie masz prawa.",
 };
 
-const sectionClass = "bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5";
-const h2Class = "text-base font-semibold text-slate-900 mb-2";
-const pClass = "text-sm text-slate-600 leading-relaxed";
-const listClass = "text-sm text-slate-600 space-y-1.5 list-disc list-inside leading-relaxed";
+const sectionClass = "bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 sm:p-5";
+const h2Class = "text-base font-semibold text-slate-900 dark:text-white mb-2";
+const pClass = "text-sm text-slate-600 dark:text-slate-400 leading-relaxed";
+const listClass = "text-sm text-slate-600 dark:text-slate-400 space-y-1.5 list-disc list-inside leading-relaxed";
 
 export default function PrivacyPage() {
   return (
     <main className="max-w-3xl mx-auto w-full px-4 sm:px-6 py-8 sm:py-10">
       <Link
         href="/"
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-blue-700 transition-colors mb-5 sm:mb-6 group"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors mb-5 sm:mb-6 group"
       >
         <span className="group-hover:-translate-x-0.5 transition-transform inline-block">←</span>
         Wróć do listy alertów
       </Link>
 
       <div className="mb-6">
-        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight mb-2">
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight mb-2">
           Polityka prywatności
         </h1>
-        <p className="text-sm text-slate-500 leading-relaxed">
+        <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
           Wersja beta (szkic) — 3 lipca 2026. Ten dokument opisuje uczciwie
           obecny stan serwisu w fazie pilotażu i zostanie zaktualizowany oraz
           zweryfikowany przed szerszym publicznym startem lub publikacją w
@@ -47,7 +47,7 @@ export default function PrivacyPage() {
             Kontakt we wszystkich sprawach, w tym dotyczących prywatności:{" "}
             <a
               href={`mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent("Alertownik — prywatność")}`}
-              className="font-medium text-blue-600 hover:underline"
+              className="font-medium text-blue-600 dark:text-blue-400 hover:underline"
             >
               {FEEDBACK_EMAIL}
             </a>
@@ -80,6 +80,12 @@ export default function PrivacyPage() {
               przeglądarce (localStorage) i nie są wysyłane na nasz serwer.
             </li>
             <li>
+              <span className="font-medium">Wygląd (jasny / ciemny / systemowy)</span>{" "}
+              — wybrany motyw jest zapisywany wyłącznie w Twojej przeglądarce
+              (localStorage, osobny klucz od preferencji okolicy) i nie jest
+              wysyłany na nasz serwer.
+            </li>
+            <li>
               <span className="font-medium">Dane administratorów</span> — konta
               logowania (e-mail) istnieją tylko dla administratorów serwisu,
               nie dla użytkowników publicznych.
@@ -103,7 +109,7 @@ export default function PrivacyPage() {
           <p className={pClass}>
             Alertownika można dodać do ekranu głównego telefonu lub
             zainstalować jako aplikację (zobacz{" "}
-            <Link href="/instalacja" className="font-medium text-blue-600 hover:underline">
+            <Link href="/instalacja" className="font-medium text-blue-600 dark:text-blue-400 hover:underline">
               instrukcję instalacji
             </Link>
             ). W tym celu przeglądarka korzysta z technicznej pamięci
@@ -200,7 +206,7 @@ export default function PrivacyPage() {
             Aby skorzystać z tych praw, po prostu{" "}
             <a
               href={`mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent("Alertownik — prywatność")}`}
-              className="font-medium text-blue-600 hover:underline"
+              className="font-medium text-blue-600 dark:text-blue-400 hover:underline"
             >
               napisz do nas
             </a>
@@ -208,7 +214,7 @@ export default function PrivacyPage() {
           </p>
         </section>
 
-        <section className="bg-amber-50 rounded-2xl border border-amber-200 shadow-sm p-4 sm:p-5">
+        <section className="bg-amber-50 dark:bg-amber-500/15 rounded-2xl border border-amber-200 dark:border-amber-500/30 shadow-sm p-4 sm:p-5">
           <h2 className={h2Class}>Status tego dokumentu</h2>
           <p className={pClass}>
             To szkic na czas pilotażu (beta) — napisany uczciwie na podstawie

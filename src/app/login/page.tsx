@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { signIn } from "@/lib/auth";
 
 const inputClass =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500";
+  "w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -40,16 +40,16 @@ export default function LoginPage() {
     <main className="max-w-sm mx-auto w-full px-4 py-16">
 
       <div className="mb-8 text-center">
-        <h1 className="text-xl font-bold text-slate-900">Logowanie</h1>
-        <p className="text-sm text-slate-500 mt-1">Panel admina Alertownik</p>
+        <h1 className="text-xl font-bold text-slate-900 dark:text-white">Logowanie</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Panel admina Alertownik</p>
       </div>
 
       <form
         onSubmit={handleSubmit}
-        className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-5"
+        className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 flex flex-col gap-5"
       >
         <div className="flex flex-col gap-2">
-          <label htmlFor="email" className="text-sm font-medium text-slate-700">
+          <label htmlFor="email" className="text-sm font-medium text-slate-700 dark:text-slate-300">
             Email
           </label>
           <input
@@ -64,7 +64,7 @@ export default function LoginPage() {
         </div>
 
         <div className="flex flex-col gap-2">
-          <label htmlFor="password" className="text-sm font-medium text-slate-700">
+          <label htmlFor="password" className="text-sm font-medium text-slate-700 dark:text-slate-300">
             Hasło
           </label>
           <input
@@ -79,7 +79,7 @@ export default function LoginPage() {
         </div>
 
         {error && (
-          <p className="text-sm font-medium text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+          <p className="text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 border border-red-100 rounded-lg px-3 py-2">
             {error}
           </p>
         )}
@@ -87,14 +87,14 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={loading}
-          className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60 transition-colors"
+          className="rounded-lg bg-blue-600 dark:bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 dark:hover:bg-blue-400 disabled:opacity-60 transition-colors"
         >
           {loading ? "Logowanie…" : "Zaloguj"}
         </button>
       </form>
 
-      <p className="text-center text-sm text-slate-500 mt-6">
-        <Link href="/" className="text-blue-600 hover:text-blue-800 hover:underline">
+      <p className="text-center text-sm text-slate-500 dark:text-slate-400 mt-6">
+        <Link href="/" className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline">
           ← Wróć do alertów
         </Link>
       </p>

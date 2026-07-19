@@ -32,10 +32,10 @@ const categoryLabels: Record<AlertCategory, string> = {
 };
 
 const statusBadgeClass: Record<SourceHealthStatus, string> = {
-  checked_recently: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200",
-  stale:            "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
-  never_checked:    "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
-  unregistered:     "bg-slate-100 text-slate-500 ring-1 ring-slate-200",
+  checked_recently: "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-200",
+  stale:            "bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 ring-1 ring-amber-200",
+  never_checked:    "bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 ring-1 ring-amber-200",
+  unregistered:     "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 ring-1 ring-slate-200",
 };
 
 const resultLabels: Record<SourceCheckResult, string> = {
@@ -62,14 +62,14 @@ export function SourceHealthDashboard({ rows }: { rows: SourceHealthRow[] }) {
   return (
     <section
       id="zdrowie-zrodel"
-      className="mb-8 rounded-2xl border border-slate-200 bg-white shadow-sm p-4 sm:p-5"
+      className="mb-8 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm p-4 sm:p-5"
     >
       <details open>
         <summary className="cursor-pointer select-none">
-          <span className="text-base font-semibold text-slate-800">
+          <span className="text-base font-semibold text-slate-800 dark:text-slate-100">
             Zdrowie źródeł
           </span>
-          <span className="ml-2 inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 ring-1 ring-slate-200">
+          <span className="ml-2 inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 ring-1 ring-slate-200">
             {HEALTH_BADGE_MANUAL}
           </span>
           <span className="ml-1.5 inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 ring-1 ring-purple-200">
@@ -77,30 +77,30 @@ export function SourceHealthDashboard({ rows }: { rows: SourceHealthRow[] }) {
           </span>
         </summary>
 
-        <p className="text-sm text-slate-600 leading-relaxed mt-2 mb-3">
+        <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mt-2 mb-3">
           {HEALTH_DASHBOARD_DISCLAIMER}
         </p>
 
         {/* Summary chips */}
         <div className="flex flex-wrap gap-2 mb-3">
-          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-full px-2.5 py-1">
-            Źródła oficjalne: <span className="font-semibold text-slate-800">{summary.total}</span>
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 rounded-full px-2.5 py-1">
+            Źródła oficjalne: <span className="font-semibold text-slate-800 dark:text-slate-100">{summary.total}</span>
           </span>
           <span className="inline-flex items-center gap-1.5 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-full px-2.5 py-1">
             Z checkiem przez aplikację: <span className="font-semibold">{summary.apiSupported}</span>
           </span>
-          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2.5 py-1">
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 rounded-full px-2.5 py-1">
             Sprawdzone niedawno: <span className="font-semibold">{summary.checkedRecently}</span>
           </span>
-          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-1">
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/15 border border-amber-200 dark:border-amber-500/30 rounded-full px-2.5 py-1">
             Wymagają uwagi: <span className="font-semibold">{summary.needsAttention}</span>
           </span>
         </div>
 
-        <p className="text-xs text-slate-500 leading-relaxed mb-1.5">
+        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-1.5">
           {HEALTH_API_SUPPORT_NOTE}
         </p>
-        <p className="text-xs text-slate-400 leading-relaxed mb-3">
+        <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed mb-3">
           {HEALTH_ERROR_FALLBACK_NOTE}
         </p>
 
@@ -109,13 +109,13 @@ export function SourceHealthDashboard({ rows }: { rows: SourceHealthRow[] }) {
           {rows.map((row) => (
             <div
               key={row.checklistId}
-              className="rounded-xl border border-slate-200 bg-slate-50/50 p-3"
+              className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 p-3"
             >
               <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-sm font-semibold text-slate-800 mr-1">
+                <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 mr-1">
                   {row.name}
                 </span>
-                <span className="inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 ring-1 ring-slate-200">
+                <span className="inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 ring-1 ring-slate-200">
                   {categoryLabels[row.category]}
                 </span>
                 {row.apiSupported ? (
@@ -123,7 +123,7 @@ export function SourceHealthDashboard({ rows }: { rows: SourceHealthRow[] }) {
                     {HEALTH_API_SUPPORTED_LABEL}
                   </span>
                 ) : (
-                  <span className="inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 ring-1 ring-slate-200">
+                  <span className="inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 ring-1 ring-slate-200">
                     {HEALTH_MANUAL_ONLY_LABEL}
                   </span>
                 )}
@@ -133,7 +133,7 @@ export function SourceHealthDashboard({ rows }: { rows: SourceHealthRow[] }) {
               </div>
 
               <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5 mt-1.5">
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-slate-500 dark:text-slate-400">
                   {row.lastCheckAt ? (
                     <>
                       Ostatni check: {formatCheckedAt(row.lastCheckAt)}
@@ -147,9 +147,9 @@ export function SourceHealthDashboard({ rows }: { rows: SourceHealthRow[] }) {
                     "Jeszcze nie sprawdzano"
                   )}
                 </span>
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-slate-500 dark:text-slate-400">
                   Kandydaci ({RECENT_CANDIDATE_DAYS} dni):{" "}
-                  <span className={row.recentCandidateCount > 0 ? "font-semibold text-purple-700" : "text-slate-400"}>
+                  <span className={row.recentCandidateCount > 0 ? "font-semibold text-purple-700" : "text-slate-400 dark:text-slate-500"}>
                     {row.recentCandidateCount}
                   </span>
                 </span>
@@ -157,7 +157,7 @@ export function SourceHealthDashboard({ rows }: { rows: SourceHealthRow[] }) {
                   href={row.officialUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                  className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline"
                 >
                   Otwórz źródło ↗
                 </a>

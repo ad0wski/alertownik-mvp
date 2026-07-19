@@ -17,6 +17,13 @@ export default function manifest(): MetadataRoute.Manifest {
     display: "standalone",
     orientation: "any",
     lang: "pl-PL",
+    // Sprint 162 — kept as the light-mode brand values. The Web App
+    // Manifest spec has no dark-mode variant for background_color/theme_color
+    // (unlike the HTML `<meta name="theme-color" media="...">` pair in
+    // layout.tsx, which does support it) — the OS install/splash surfaces
+    // that read this manifest use these fixed values regardless of theme.
+    // This is a real, documented gap (see docs/SPRINT_162_..._V1.md), not an
+    // oversight.
     background_color: "#f0f9ff",
     theme_color: "#2563eb",
     icons: [

@@ -17,16 +17,16 @@ export default function Home() {
           the top of the first alert card clears the fold at 390×844
           (real-device requirement — verified via screenshot). */}
       <div className="mb-2 sm:mb-6">
-        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight leading-snug mb-2">
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight leading-snug mb-2">
           Lokalne zmiany i utrudnienia w prostym formacie.
         </h1>
-        <p className="text-sm sm:text-base text-slate-500 leading-snug sm:leading-relaxed">
+        <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 leading-snug sm:leading-relaxed">
           Sprawdź, co może dziś wpłynąć na Twój dzień w okolicy. Alertownik
           zbiera w jednym miejscu komunikaty o transporcie, wodzie, prądzie,
           drogach i odpadach dla{" "}
-          <span className="font-medium text-slate-600">Komorowa, Pruszkowa i okolic</span>.
+          <span className="font-medium text-slate-600 dark:text-slate-400">Komorowa, Pruszkowa i okolic</span>.
         </p>
-        <p className="text-xs text-slate-400 mt-1.5">
+        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
           Wczesny pilotaż —{" "}
           <Link href="/about#chce-testowac" className="font-medium text-emerald-600 hover:text-emerald-800 underline">
             zgłoś się jako tester
