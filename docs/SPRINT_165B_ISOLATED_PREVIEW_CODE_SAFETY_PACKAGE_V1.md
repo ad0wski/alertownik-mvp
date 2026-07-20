@@ -87,17 +87,33 @@ New files, all pure/structural (no live database, no live Supabase project, no r
 - `tests/e2e/databaseEnvironmentGuardIntegration.spec.ts` — the guard inside the real route: still blocks today even with layers 1-3 fully satisfied and a valid bearer token; blocks on mismatch even with everything else configured; response never leaks the configured secrets; only the guarded route imports the guard module; the two dry-run cron routes import neither the guard nor the scheduled writer; `createSupabaseScheduledWriter` has exactly one caller; the route calls the guard before constructing any writer (source-order assertion).
 - `tests/e2e/environmentBadge.spec.ts` — structural audit of the badge component and its `AppHeader` wiring (Client Component, no secret/env-var-name references, no raw `process.env` interpolation, no `onClick`/`fetch`, no `useEffect`/`useState` — resolved synchronously to avoid hydration-mismatch risk, rendered only inside the existing `session &&` gate).
 
-An existing file, `tests/e2e/scheduledWriterRoute.spec.ts`, was updated: its shared `ENABLED_ENV` fixture (and two individual kill-switch tests that build their own env object) now include a passing `VERCEL_ENV`/`SUPABASE_ENVIRONMENT_TAG` pairing, so the pre-existing Layer 1-3 tests continue to exercise exactly what they claim to (kill switches, auth, sign-in) rather than being short-circuited by the new Layer 0 — no existing test's assertions or intent were weakened, only its fixture extended.
+An existing file, `tests/e2e/scheduledWriterRoute.spec.ts`, was updated twice: first (Sprint 165B) to include a passing `VERCEL_ENV`/`SUPABASE_ENVIRONMENT_TAG` pairing in its shared `ENABLED_ENV` fixture, then (Sprint 165B-2) extended to also include a matching `NEXT_PUBLIC_SUPABASE_URL`/`SUPABASE_EXPECTED_PROJECT_REF` pair, so the pre-existing Layer 1-3 tests continue to exercise exactly what they claim to (kill switches, auth, sign-in) rather than being short-circuited by Layer 0 — no existing test's assertions or intent were weakened, only its fixture extended.
 
-**Results:** `npm run check` (typecheck + lint + build) passed with zero errors. `npm run test:e2e` — 668 passed, 0 failed. `npm run test:pwa` — 17 passed, 0 failed. `git diff --check` — clean, no whitespace errors.
+**Results (Sprint 165B-2, final):** `npm run check` (typecheck + lint + build) passed with zero errors. `npm run test:e2e` — 679 passed, 1 failed (see flake note below). `npm run test:pwa` — 17 passed, 0 failed. `git diff --check` — clean, no whitespace errors.
 
-(One test, `themeSystem.spec.ts`'s "clicking Jasny overrides a dark system preference," failed once under full-suite parallel load and passed on an isolated re-run — a pre-existing flake unrelated to this sprint's changes; not a file this sprint touched.)
+`themeSystem.spec.ts`'s "clicking Jasny overrides a dark system preference" is a **confirmed, genuine flake** — re-run 3× in immediate succession in isolation, it passed twice and failed once with an identical assertion mismatch each time, indicating a timing/race condition in that pre-existing test (unrelated to any file touched by Sprint 165B or 165B-2 — the theme system and its test were not modified). Per this sprint's explicit instruction not to modify a test merely to hide a flake, it was left as-is.
 
 ---
 
-## Browser QA — manual gate, not run
+## Browser QA — completed against the real Vercel Preview deployment
 
-This branch has not yet been pushed, so no Vercel Preview URL exists for it yet. Per this sprint's instructions, Claude did not log in, did not guess a URL, and did not attempt to fabricate this verification. **This is a manual gate for Adam**, once the branch is pushed and Vercel generates a Preview deployment: confirm the `EnvironmentBadge` renders correctly (desktop, light/dark/system theme, no console errors, no layout shift in the mobile bottom navigation) and that a signed-in admin session sees no unexpected 401/403 and triggers no write action anywhere on the pages it visits. Nothing about this sprint's automated-test completion depends on that manual step — every automated check above already passed.
+Performed via Claude in Chrome against the actual deployment for this branch's final commit (found via the Vercel dashboard's deployment list, never a guessed URL). The admin panel required a login the automated session could not and did not perform; Adam logged in manually in the same browser tab/group, after which QA continued.
+
+**Checked, signed in as admin:** `/admin`, `/admin/sources`, `/admin/queue`, `/admin/new-alert`, `/builder`, `/ai-helper`, `/admin/waste`.
+
+| Check | Result |
+|---|---|
+| Badge shows `PREVIEW`, never `PRODUCTION` | ✅ confirmed on every page checked |
+| Badge visible and legible | ✅ |
+| No URL, project ref, or other technical identifier in the badge | ✅ (confirmed both visually and by the structural test suite) |
+| Light theme | ✅ badge legible, correct contrast |
+| Dark theme | ✅ badge legible, correct contrast |
+| System theme | ✅ resolves correctly (matched the browser's current OS-level preference), badge legible |
+| Desktop | ✅ all seven pages rendered correctly |
+| Mobile 390×844 | ⚠️ **not reliably verified** — the available browser-automation resize tool did not actually change the rendered viewport (screenshot remained full desktop width); per this sprint's explicit instruction not to guess, this is left as a **manual gate for Adam** |
+| No React/hydration/CSP console errors | ✅ zero application errors across the whole session (`read_console_messages` with `onlyErrors: true` returned none; the only messages seen at all were two unrelated `MaxListenersExceededWarning` lines from a Chrome extension, not the app) |
+| No unexpected 401/403 for the logged-in admin | ✅ every page loaded normally, no auth-error states observed |
+| No write actions performed | ✅ only navigation and the theme-toggle radio buttons were clicked; no Sprawdź/Zapisz/Publikuj/Edytuj/Usuń/Archiwizuj/Importuj/Generuj AI button was ever clicked |
 
 ---
 

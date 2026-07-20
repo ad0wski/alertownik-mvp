@@ -192,7 +192,8 @@ Stages are intentionally separate — each one can be evaluated and validated be
 - ✅ **Sprint 165B-2:** re-audit found the guard originally only compared self-reported labels and never confirmed the actual Supabase project — closed by adding two more independent signals (actual project ref derived from the connection URL, plus a new `SUPABASE_EXPECTED_PROJECT_REF` value), all four now required together
 - ✅ Schema replay manifest and a NOT-EXECUTED synthetic-data-only seed package prepared for the future Preview project
 - ✅ Full Sprint 165C manual-deployment runbook with 6 STOP points, actor-by-actor
-- ✅ `npm run check`, `test:e2e`, `test:pwa`, `build`, `git diff --check` all clean; browser QA of the badge performed against the real Vercel Preview deployment
+- ✅ `npm run check`, `test:e2e` (679 passed, 1 pre-existing unrelated flake confirmed non-deterministic), `test:pwa`, `build`, `git diff --check` all clean; browser QA of the badge completed (signed in, all 7 admin pages, all 3 themes, zero console/hydration errors, zero write actions)
+- ⚠️ Mobile 390×844 badge QA not reliably automatable this session — flagged as a manual gate for Adam, not guessed
 - ❌ Nothing built: no Supabase project, no SQL executed, no Vercel variable changed, no automation activated
 
 **Goal:** have every piece of code and planning ready so that creating the actual isolated Preview project (a future Sprint 165C) is a pure infrastructure/execution exercise against an already-reviewed design — see `docs/SPRINT_165B_ISOLATED_PREVIEW_CODE_SAFETY_PACKAGE_V1.md`.
