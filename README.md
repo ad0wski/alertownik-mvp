@@ -17,6 +17,8 @@ Each alert has a fixed structure: what's happening, where, when, and what to do.
 > **Safe auto-candidate canary foundation (Sprint 164B, live on Production — automation still OFF):** a read-only "Stan automatyzacji (canary)" panel on `/admin/sources` shows whether the existing Michałowice candidate-automation pipeline's kill switches are on or off — never their secret values. The pipeline itself (Sprints 147–153) already satisfied every safety requirement this sprint set out to add (max 1 candidate per run, single-source allowlist, pending-only inserts, fail-closed on any missing switch/credential). Still OFF in every environment; activation is a separate, manual, staged process — see `docs/SPRINT_164B_SAFE_AUTO_CANDIDATE_CANARY_FOUNDATION_V1.md`.
 >
 > **Canary environment safety audit (Sprint 164C, docs only):** a read-only audit found Preview and Production currently share one Supabase project — a canary run triggered from a Preview URL writes to the same data as Production. Adam decided to keep this shared setup for now; the activation runbook was corrected so the first canary run is treated as a Production-data operation regardless of URL, with a mandatory pre-flight/post-run checklist — see `docs/SPRINT_164C_CANARY_ENVIRONMENT_SAFETY_AUDIT_V1.md`.
+>
+> **Isolated Preview environment design (Sprint 165A, design only — not built):** a full audit and architecture plan for a genuinely separate Preview Supabase project (own URL/key, own test admin, own scheduled-writer account, replayed schema/RLS, synthetic data only, environment badge, fail-closed environment-pairing guard). Nothing was created or changed — see `docs/SPRINT_165A_ISOLATED_PREVIEW_ENVIRONMENT_DESIGN_V1.md`.
 
 ---
 

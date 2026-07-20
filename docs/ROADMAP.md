@@ -171,6 +171,19 @@ Stages are intentionally separate — each one can be evaluated and validated be
 
 ---
 
+## Stage 13 — Isolated Preview Environment: Design and Preflight 🟡 (Sprint 165A, design only)
+
+- ✅ Full inventory of every Supabase table, RLS policy, function/trigger/index, account/role, environment variable, and write-capable route the app depends on
+- ✅ Confirmed zero usage of Supabase Storage, Realtime, or Edge Functions — isolation only needs Postgres + Auth
+- ✅ Recommended architecture: a separate Preview-only Supabase project, environment-scoped (not branch-scoped) Vercel variables, a visible `PRODUCTION`/`PREVIEW`/`DEVELOPMENT` admin badge, and a new fail-closed environment-pairing guard as a fourth, additive gate alongside the existing three write kill switches
+- ✅ Minimal synthetic test-data plan and an ordered future execution checklist split across Claude Code / Claude in Chrome / Adam's manual approval / secrets Claude must never see
+- ✅ Acceptance-test design for cross-environment isolation, kill-switch, and no-auto-publish guarantees
+- ❌ Nothing built: no new Supabase project, no SQL executed, no data copied, no Vercel variable changed, no automation run
+
+**Goal:** turn Sprint 164C's accepted shared-database limitation into a concrete, reviewed, buildable plan for real Preview/Production data isolation — see `docs/SPRINT_165A_ISOLATED_PREVIEW_ENVIRONMENT_DESIGN_V1.md`.
+
+---
+
 ## Out of Scope (Unlikely to Change)
 
 - The app will always surface alerts from official sources — not crowdsourced reports

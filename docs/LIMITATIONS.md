@@ -230,6 +230,14 @@ environment variable dashboard. When activation does happen, there is no
 "low-risk Preview rehearsal" step available — the pre-flight checklist in
 the activation runbook exists specifically to compensate for that.
 
+**Sprint 165A update:** a full design for a genuinely isolated Preview
+Supabase project now exists (own project, own URL/key, own test admin and
+scheduled-writer accounts, replayed schema/RLS, synthetic data only, a
+visible environment badge, and a new fail-closed environment-pairing
+guard) — see `docs/SPRINT_165A_ISOLATED_PREVIEW_ENVIRONMENT_DESIGN_V1.md`.
+Nothing has been built yet; the shared-database limitation above still
+applies exactly as described until a future sprint executes this plan.
+
 ---
 
 ## This Is Early-Stage Software
