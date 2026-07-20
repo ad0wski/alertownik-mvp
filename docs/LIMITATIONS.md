@@ -238,6 +238,16 @@ guard) — see `docs/SPRINT_165A_ISOLATED_PREVIEW_ENVIRONMENT_DESIGN_V1.md`.
 Nothing has been built yet; the shared-database limitation above still
 applies exactly as described until a future sprint executes this plan.
 
+**Sprint 165B update:** the code half of that design now exists —
+`src/lib/environmentIdentity.ts`, the `EnvironmentBadge` component, and
+`src/lib/databaseEnvironmentGuard.ts` (a new fourth, additive gate on
+`write-candidates`, keyed off an unconfigured `SUPABASE_ENVIRONMENT_TAG`
+variable). No infrastructure was created and no variable was set, so this
+gate blocks every environment today, same as before — see
+`docs/SPRINT_165B_ISOLATED_PREVIEW_CODE_SAFETY_PACKAGE_V1.md`. The shared
+database itself has not changed; only the future write path's readiness
+has.
+
 ---
 
 ## This Is Early-Stage Software

@@ -56,7 +56,20 @@ function authedRequest(query = ""): NextRequest {
   });
 }
 
+// Sprint 165B — the new Layer 0 database-environment guard (see
+// src/lib/databaseEnvironmentGuard.ts) blocks by default unless VERCEL_ENV
+// and SUPABASE_ENVIRONMENT_TAG are both set and matching. Every test below
+// that means to exercise layers 1-3 (unchanged from Sprint 147-149) needs
+// this pairing present so the guard itself never becomes the reason a test
+// gets 503 — the new environmentGuard/databaseEnvironmentGuard.spec.ts
+// files test Layer 0 in isolation instead.
+const GUARD_PASS_ENV = {
+  VERCEL_ENV: "development",
+  SUPABASE_ENVIRONMENT_TAG: "development",
+};
+
 const ENABLED_ENV = {
+  ...GUARD_PASS_ENV,
   SCHEDULED_CHECKS_ENABLED: "true",
   SCHEDULED_WRITES_ENABLED: "true",
   CRON_SECRET: FAKE_CRON_SECRET,
@@ -193,7 +206,7 @@ test.describe("GET /api/cron/write-candidates — two independent kill switches 
 
   test("SCHEDULED_CHECKS_ENABLED true but SCHEDULED_WRITES_ENABLED not true → still 503 (missing write flag prevents writer construction)", async () => {
     await withEnv(
-      { SCHEDULED_CHECKS_ENABLED: "true", SCHEDULED_WRITES_ENABLED: "false", CRON_SECRET: FAKE_CRON_SECRET },
+      { ...GUARD_PASS_ENV, SCHEDULED_CHECKS_ENABLED: "true", SCHEDULED_WRITES_ENABLED: "false", CRON_SECRET: FAKE_CRON_SECRET },
       async () => {
         const res = await GET(authedRequest());
         expect(res.status).toBe(503);
@@ -203,7 +216,7 @@ test.describe("GET /api/cron/write-candidates — two independent kill switches 
 
   test("SCHEDULED_WRITES_ENABLED true but SCHEDULED_CHECKS_ENABLED not true → still 503", async () => {
     await withEnv(
-      { SCHEDULED_CHECKS_ENABLED: "false", SCHEDULED_WRITES_ENABLED: "true", CRON_SECRET: FAKE_CRON_SECRET },
+      { ...GUARD_PASS_ENV, SCHEDULED_CHECKS_ENABLED: "false", SCHEDULED_WRITES_ENABLED: "true", CRON_SECRET: FAKE_CRON_SECRET },
       async () => {
         const res = await GET(authedRequest());
         expect(res.status).toBe(503);
@@ -215,7 +228,7 @@ test.describe("GET /api/cron/write-candidates — two independent kill switches 
 test.describe("GET /api/cron/write-candidates — authentication (both kill switches on)", () => {
   test("missing CRON_SECRET configuration fails closed", async () => {
     await withEnv(
-      { SCHEDULED_CHECKS_ENABLED: "true", SCHEDULED_WRITES_ENABLED: "true", CRON_SECRET: undefined },
+      { ...GUARD_PASS_ENV, SCHEDULED_CHECKS_ENABLED: "true", SCHEDULED_WRITES_ENABLED: "true", CRON_SECRET: undefined },
       async () => {
         const res = await GET(authedRequest());
         expect(res.status).toBe(503);

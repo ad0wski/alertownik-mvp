@@ -16,6 +16,10 @@ import {
   createSupabaseScheduledWriter,
   writeCandidatesForSource,
 } from "@/lib/scheduledWriter";
+import {
+  checkDatabaseEnvironmentGuard,
+  DATABASE_ENVIRONMENT_GUARD_GENERIC_ERROR,
+} from "@/lib/databaseEnvironmentGuard";
 import type { SafeCheckSourceId } from "@/lib/sourceCheck";
 
 // Sprint 147 — Scheduled Writer Foundation v1.
@@ -34,9 +38,16 @@ import type { SafeCheckSourceId } from "@/lib/sourceCheck";
 // every future reader, for the sake of one route instead of two. See
 // docs/SCHEDULED_WRITER_FOUNDATION_V1.md §D for the full comparison.
 //
-// DEFAULT-DISABLED AT THREE INDEPENDENT LAYERS (all must be true; today,
+// DEFAULT-DISABLED AT FOUR INDEPENDENT LAYERS (all must be true; today,
 // none are) — see src/lib/scheduledWriter.ts's file header for the full
-// explanation of each:
+// explanation of layers 1-3, and src/lib/databaseEnvironmentGuard.ts for
+// layer 0:
+//   0. Sprint 165B — the database-environment pairing guard: the running
+//      Vercel environment and the explicitly-configured
+//      SUPABASE_ENVIRONMENT_TAG must both be known and must match. No
+//      value is configured anywhere as part of Sprint 165B, so this layer
+//      alone already blocks every environment today, independent of
+//      layers 1-3. Checked first (cheapest, no I/O).
 //   1. SCHEDULED_CHECKS_ENABLED = "true"  (existing switch, Sprint 142)
 //   2. SCHEDULED_WRITES_ENABLED = "true"  (new, this sprint — separate)
 //   3. SUPABASE_SCHEDULED_WRITER_EMAIL / SUPABASE_SCHEDULED_WRITER_PASSWORD
@@ -97,6 +108,15 @@ async function fetchAndParseProposals(officialUrl: string): Promise<FetchOutcome
 }
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
+  // Layer 0 (Sprint 165B): environment/database pairing guard — cheapest
+  // check (no I/O), so it runs first. A generic error, identical shape to
+  // the kill-switch response below, so a caller cannot distinguish "wrong
+  // environment pairing" from "kill switch off" from the response alone.
+  const environmentGuard = checkDatabaseEnvironmentGuard();
+  if (!environmentGuard.ok) {
+    return NextResponse.json({ ok: false, error: DATABASE_ENVIRONMENT_GUARD_GENERIC_ERROR }, { status: 503 });
+  }
+
   // Layer 1 + 2: two independent kill switches, both required.
   if (
     !isScheduledChecksEnabled(process.env.SCHEDULED_CHECKS_ENABLED) ||

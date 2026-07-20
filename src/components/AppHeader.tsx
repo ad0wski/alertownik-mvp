@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { signOut } from "@/lib/auth";
+import { EnvironmentBadge } from "@/components/EnvironmentBadge";
 import type { Session } from "@supabase/supabase-js";
 
 const adminLinks = [
@@ -114,6 +115,7 @@ export function AppHeader() {
                 >
                   Admin
                 </span>
+                <EnvironmentBadge />
 
                 {adminLinks.map((l) => (
                   <Link
@@ -197,6 +199,7 @@ export function AppHeader() {
             <span className="text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-0.5 dark:text-amber-300 dark:bg-amber-500/10 dark:border-amber-500/30">
               Admin
             </span>
+            <EnvironmentBadge />
           </div>
 
           {adminLinks.map((l) => (
