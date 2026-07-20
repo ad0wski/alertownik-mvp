@@ -2,6 +2,8 @@
 
 **Status:** code and documentation only, branch `sprint-165b-isolated-preview-code-safety-package-v1`, not merged to `main`. No Supabase project was created. No SQL was executed. No RLS was changed. No Supabase Auth account was created. No secret was opened, copied, or typed. No Vercel environment variable was changed. No Redeploy was performed. No cron was run. No candidate was created. No alert was published, edited, or archived.
 
+**Sprint 165B-2 addendum (same branch):** an independent re-audit found the original guard compared only self-reported labels and never confirmed the actual Supabase project identity — a real gap, closed before merge by adding two more independent signals (the actual project ref derived from `NEXT_PUBLIC_SUPABASE_URL`, and a new `SUPABASE_EXPECTED_PROJECT_REF` variable). Browser QA of the environment badge was also performed against the real Vercel Preview deployment for this branch. See the "Sprint 165B-2 correction" subsection below and the Browser QA section for full detail.
+
 **Trigger:** Sprint 165A designed a genuinely isolated Preview Supabase project. This sprint builds the code-level half of that design — the parts that can be written, tested, and reviewed *before* the new infrastructure exists — so that when the infrastructure is created (a future sprint, 165C), the application already knows how to detect its own environment, show it honestly to the admin, and refuse to write automation data anywhere the environment/database pairing hasn't been explicitly confirmed safe.
 
 ---
@@ -23,14 +25,26 @@ A small, read-only `<span>` showing exactly one of `PRODUCTION` / `PREVIEW` / `D
 
 ### 3. Fail-closed database/environment pairing guard — `src/lib/databaseEnvironmentGuard.ts`
 
-`checkDatabaseEnvironmentGuard()` compares the resolved Vercel environment against a **new**, explicitly-configured variable, `SUPABASE_ENVIRONMENT_TAG` (values: `production`/`preview`/`development` — same closed set as the identity resolver). Both must be present, both must be recognized, and they must match; any other combination fails closed with one of four generic reasons (`environment_unknown`, `database_tag_not_configured`, `database_tag_unknown`, `environment_mismatch`), and every caller-facing surface uses one single generic message (`DATABASE_ENVIRONMENT_GUARD_GENERIC_ERROR = "Zapis jest tymczasowo niedostępny."`) — the specific reason is never returned to an HTTP caller.
+**Sprint 165B-2 correction.** The version of this guard originally shipped in Sprint 165B compared only two self-reported *labels* — the resolved Vercel environment and `SUPABASE_ENVIRONMENT_TAG` — and never looked at which Supabase project was actually configured. A re-audit found this insufficient: two matching labels are not proof of which database is wired up. Concretely, `VERCEL_ENV=preview` + `SUPABASE_ENVIRONMENT_TAG=preview` while `NEXT_PUBLIC_SUPABASE_URL` still pointed at the **Production** project would have passed the original guard. This was a real gap in the original implementation, confirmed by direct code reading (the original file never referenced `NEXT_PUBLIC_SUPABASE_URL` at all), closed in this same sprint before merge — see `tests/e2e/databaseEnvironmentGuard.spec.ts` §D.3/§D.4 for the exact regression test.
 
-Deliberately **does not** parse `NEXT_PUBLIC_SUPABASE_URL`, extract a project ref, or compare hostnames — the design explicitly avoids "rely solely on hostname," and this implementation goes further: it relies on hostname *not at all*, using a separate, human-asserted tag instead, which is simpler to reason about and impossible to spoof from a client request.
+`checkDatabaseEnvironmentGuard()` now independently confirms **four** signals, all required:
 
-**No value for `SUPABASE_ENVIRONMENT_TAG` is set anywhere as part of this sprint** — every environment, including Production, therefore fails this guard today with reason `database_tag_not_configured`. This is safe and non-regressive:
+| # | Signal | Source | Failure reason if missing/invalid/mismatched |
+|---|---|---|---|
+| 1 | **Runtime application environment** | `getServerEnvironmentIdentity()` — `VERCEL_ENV`-derived | `environment_unknown` |
+| 2 | **Declared database environment** | `SUPABASE_ENVIRONMENT_TAG` (new env var, name only — see below) | `database_tag_not_configured` / `database_tag_unknown` / `environment_mismatch` (vs. signal 1) |
+| 3 | **Actual Supabase project identity** | Derived independently from `NEXT_PUBLIC_SUPABASE_URL`'s hostname (`<project-ref>.supabase.co` → `<project-ref>`) — never a self-reported label | `supabase_url_missing_or_invalid` |
+| 4 | **Expected Supabase project identity** | `SUPABASE_EXPECTED_PROJECT_REF` (new env var, name only — see below) | `expected_project_ref_not_configured` / `project_ref_mismatch` (vs. signal 3) |
+
+Signals 1+2 are checked first (cheapest, no derivation needed) — if either fails, signals 3+4 are never even computed. The project-ref extraction (signal 3) is pure string/URL parsing — no network call, no Supabase client, no I/O — so the guard remains synchronous and stays Layer 0 (cheapest, checked first, before the pre-existing kill switches). Every caller-facing surface still uses one single generic message (`DATABASE_ENVIRONMENT_GUARD_GENERIC_ERROR = "Zapis jest tymczasowo niedostępny."`) — none of the seven possible failure reasons, the resolved environment, the configured tag, the actual project ref, or the expected project ref is ever returned to an HTTP caller or written to a log line.
+
+The project ref extracted from the URL is not treated as a secret in this codebase (Supabase's own anon key already ships this value to every browser via the public connection URL), but it is still never logged, never returned in any API response, and never interpolated into the generic error string — verified directly by test.
+
+**No value for `SUPABASE_ENVIRONMENT_TAG` or `SUPABASE_EXPECTED_PROJECT_REF` is set anywhere as part of this sprint** — every environment, including Production, therefore fails this guard today (reaching `database_tag_not_configured` before the project-ref signals are even evaluated). This is safe and non-regressive, for the same reasons as before:
 - The guard is only ever consulted inside the one write-capable automation route (see next section) — every read path (public site, admin dashboard, source registry, etc.) is completely unaffected, so **Production stays fully functional in its existing read/write-via-admin-session behavior.**
-- `write-candidates` was already unreachable in every environment before this sprint (`SCHEDULED_WRITES_ENABLED` has no configured value anywhere — confirmed by the Sprint 148/150 orphaned-environment-variable cleanups). A fourth reason it stays blocked changes nothing observable.
+- `write-candidates` was already unreachable in every environment before this sprint (`SCHEDULED_WRITES_ENABLED` has no configured value anywhere — confirmed by the Sprint 148/150 orphaned-environment-variable cleanups). A fifth/sixth/seventh reason it stays blocked changes nothing observable.
 - The two dry-run cron routes never import this guard or the scheduled-writer module at all (verified structurally, see Tests) — their zero-write guarantee is unchanged, and **the existing Production cron (`check-michalowice`, daily 05:00 UTC dry-run) continues running exactly as before, writing nothing, as it always has.**
+- No `service_role` key is read, used, or referenced anywhere in this module.
 
 ### 4. Guard wired into the one write-capable automation route
 
@@ -51,13 +65,16 @@ A structural test confirms `createSupabaseScheduledWriter` (the only function th
 
 ---
 
-## Configuration variable introduced (name only — no value set)
+## Configuration variables introduced (names only — no value set)
 
-| Variable | Values | Set anywhere in this sprint? |
+| Variable | Values / example placeholder | Set anywhere in this sprint? |
 |---|---|---|
 | `SUPABASE_ENVIRONMENT_TAG` | `production` \| `preview` \| `development` (placeholder example only — never a real value) | **No.** Not in Vercel, not in `.env.local`, not in any file in this repository. |
+| `SUPABASE_EXPECTED_PROJECT_REF` | e.g. `abcdefghijklmnopqrst` (a Supabase project ref shape — placeholder example only, never a real value) | **No.** Not in Vercel, not in `.env.local`, not in any file in this repository. |
 
-`VERCEL_ENV` / `NEXT_PUBLIC_VERCEL_ENV` are Vercel's own pre-existing system variables — nothing was added or changed for those.
+`VERCEL_ENV` / `NEXT_PUBLIC_VERCEL_ENV` and `NEXT_PUBLIC_SUPABASE_URL` are Vercel's/this project's own pre-existing variables — nothing was added or changed for those; `SUPABASE_EXPECTED_PROJECT_REF` is compared against a value *derived* from the existing `NEXT_PUBLIC_SUPABASE_URL`, never against a new copy of it.
+
+**Sprint 165C will need**, once the isolated Preview project exists: `SUPABASE_ENVIRONMENT_TAG=preview` and `SUPABASE_EXPECTED_PROJECT_REF=<the new Preview project's actual ref>`, both scoped to Preview only in Vercel — see the updated `docs/SPRINT_165C_MANUAL_DEPLOYMENT_RUNBOOK_V1.md` §8.
 
 ---
 
@@ -66,7 +83,7 @@ A structural test confirms `createSupabaseScheduledWriter` (the only function th
 New files, all pure/structural (no live database, no live Supabase project, no real credential):
 
 - `tests/e2e/environmentIdentity.spec.ts` — the resolver's full decision table (known values, case-insensitivity, whitespace, missing/empty/garbage input, the two wrappers' independence from each other's env var).
-- `tests/e2e/databaseEnvironmentGuard.spec.ts` — every scenario from Sprint 165A §E that can be verified without a second live Supabase project: matching pairings pass, every mismatch/missing/unknown combination blocks, UNKNOWN always blocks regardless of the tag, the generic error string leaks no infrastructure detail.
+- `tests/e2e/databaseEnvironmentGuard.spec.ts` — the full four-signal decision table (Sprint 165B-2): matching everything on both Preview and Production passes; the exact "matching labels, wrong project" gap this sprint closed is blocked (`project_ref_mismatch`); missing/malformed/non-Supabase/multi-label URLs all block as `supabase_url_missing_or_invalid`; a missing `SUPABASE_EXPECTED_PROJECT_REF` blocks; UNKNOWN always blocks regardless of every other signal; Development requires every signal explicitly configured, no implicit pass; no failure reason or the passing result ever contains a URL, project ref, or the word "supabase".
 - `tests/e2e/databaseEnvironmentGuardIntegration.spec.ts` — the guard inside the real route: still blocks today even with layers 1-3 fully satisfied and a valid bearer token; blocks on mismatch even with everything else configured; response never leaks the configured secrets; only the guarded route imports the guard module; the two dry-run cron routes import neither the guard nor the scheduled writer; `createSupabaseScheduledWriter` has exactly one caller; the route calls the guard before constructing any writer (source-order assertion).
 - `tests/e2e/environmentBadge.spec.ts` — structural audit of the badge component and its `AppHeader` wiring (Client Component, no secret/env-var-name references, no raw `process.env` interpolation, no `onClick`/`fetch`, no `useEffect`/`useState` — resolved synchronously to avoid hydration-mismatch risk, rendered only inside the existing `session &&` gate).
 

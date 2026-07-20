@@ -184,14 +184,15 @@ Stages are intentionally separate — each one can be evaluated and validated be
 
 ---
 
-## Stage 14 — Isolated Preview Code Safety Package 🟡 (Sprint 165B, code + docs — no infrastructure yet)
+## Stage 14 — Isolated Preview Code Safety Package 🟡 (Sprint 165B/165B-2, code + docs — no infrastructure yet)
 
 - ✅ Single-source-of-truth environment identity (`src/lib/environmentIdentity.ts`), `VERCEL_ENV`-derived, no hydration risk (build-time constant on both server and client)
 - ✅ Visible `PRODUCTION`/`PREVIEW`/`DEVELOPMENT`/`UNKNOWN` badge in the admin panel only, never on public pages
-- ✅ New fail-closed `SUPABASE_ENVIRONMENT_TAG` pairing guard, wired as an additive fourth gate on `write-candidates` — blocks every environment today (no value configured anywhere), non-regressive since that route was already unreachable
+- ✅ Fail-closed database-environment guard, wired as an additive fourth gate on `write-candidates` — blocks every environment today (no value configured anywhere), non-regressive since that route was already unreachable
+- ✅ **Sprint 165B-2:** re-audit found the guard originally only compared self-reported labels and never confirmed the actual Supabase project — closed by adding two more independent signals (actual project ref derived from the connection URL, plus a new `SUPABASE_EXPECTED_PROJECT_REF` value), all four now required together
 - ✅ Schema replay manifest and a NOT-EXECUTED synthetic-data-only seed package prepared for the future Preview project
 - ✅ Full Sprint 165C manual-deployment runbook with 6 STOP points, actor-by-actor
-- ✅ `npm run check`, `test:e2e` (668 passed), `test:pwa` (17 passed), `build`, `git diff --check` all clean
+- ✅ `npm run check`, `test:e2e`, `test:pwa`, `build`, `git diff --check` all clean; browser QA of the badge performed against the real Vercel Preview deployment
 - ❌ Nothing built: no Supabase project, no SQL executed, no Vercel variable changed, no automation activated
 
 **Goal:** have every piece of code and planning ready so that creating the actual isolated Preview project (a future Sprint 165C) is a pure infrastructure/execution exercise against an already-reviewed design — see `docs/SPRINT_165B_ISOLATED_PREVIEW_CODE_SAFETY_PACKAGE_V1.md`.

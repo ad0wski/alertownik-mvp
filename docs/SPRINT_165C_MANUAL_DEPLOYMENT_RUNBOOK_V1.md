@@ -72,9 +72,10 @@ Prerequisite reading: `docs/SPRINT_165A_ISOLATED_PREVIEW_ENVIRONMENT_DESIGN_V1.m
 ## 8. How to configure only the Preview scope in Vercel
 
 1. [Claude in Chrome] Navigate to Vercel → `alertownik-mvp` → Settings → Environment Variables.
-2. [Claude in Chrome] Add each of the following as a **new row**, scope set to **Preview only** (all Preview branches — not a specific branch name, avoiding the exact branch-scoped-orphan pattern cleaned up in Sprints 148/150): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SCHEDULED_WRITER_EMAIL`, `SUPABASE_SCHEDULED_WRITER_PASSWORD`, `CRON_SECRET`, `SUPABASE_ENVIRONMENT_TAG` (value: `preview`).
+2. [Claude in Chrome] Add each of the following as a **new row**, scope set to **Preview only** (all Preview branches — not a specific branch name, avoiding the exact branch-scoped-orphan pattern cleaned up in Sprints 148/150): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SCHEDULED_WRITER_EMAIL`, `SUPABASE_SCHEDULED_WRITER_PASSWORD`, `CRON_SECRET`, `SUPABASE_ENVIRONMENT_TAG` (value: `preview`), `SUPABASE_EXPECTED_PROJECT_REF` (value: the new Preview project's own project ref — the same value Adam already has from creating the project in §4, never something Claude derives or is told).
 3. [Adam] Pastes every value directly into Vercel's own input field — Claude never sees, types, or relays any of these values.
 4. [Claude in Chrome, names/scope only] Confirm the new rows show scope "Preview" (not "Production," not "Production and Preview") and that the existing Production-scoped rows for the same variable names are unchanged in count and scope.
+5. **Do not forget `SUPABASE_EXPECTED_PROJECT_REF`.** Sprint 165B-2 added this as a fourth, independent signal the guard requires (`src/lib/databaseEnvironmentGuard.ts`) — without it, `checkDatabaseEnvironmentGuard()` blocks with `expected_project_ref_not_configured` even once `SUPABASE_ENVIRONMENT_TAG` and every kill switch are correctly set.
 
 ## 9. How to guarantee Production is never touched
 

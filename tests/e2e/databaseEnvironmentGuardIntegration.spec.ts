@@ -5,7 +5,7 @@ import { NextRequest } from "next/server";
 import { GET as writeCandidatesGet } from "@/app/api/cron/write-candidates/route";
 
 /**
- * Sprint 165B — integration coverage for the new Layer 0
+ * Sprint 165B / 165B-2 — integration coverage for the new Layer 0
  * database-environment guard inside GET /api/cron/write-candidates, plus
  * the structural guarantees from the Sprint 165A design's §E acceptance
  * list that don't need a live second Supabase project:
@@ -13,6 +13,10 @@ import { GET as writeCandidatesGet } from "@/app/api/cron/write-candidates/route
  *   - public/read-only routes are untouched by its existence
  *   - no route reaches the scheduled writer except through this one gated
  *     route (nothing bypasses the guard via a direct import elsewhere)
+ *   - Sprint 165B-2: the corrected four-signal guard (app environment,
+ *     SUPABASE_ENVIRONMENT_TAG, actual Supabase project ref, expected
+ *     project ref) is exercised end-to-end through the real route, not
+ *     just the pure guard function
  */
 
 const FAKE_CRON_SECRET = "test-only-fake-secret-not-a-real-value";
@@ -105,6 +109,92 @@ test.describe("§E — Layer 0 guard inside write-candidates: additive, never wi
         const text = await res.text();
         expect(text).not.toContain(FAKE_CRON_SECRET);
         expect(text).not.toContain(OTHERWISE_FULLY_ENABLED_ENV.SUPABASE_SCHEDULED_WRITER_PASSWORD);
+      }
+    );
+  });
+});
+
+test.describe("§C (Sprint 165B-2) — the real gap this correction closes, exercised through the actual route", () => {
+  const PREVIEW_PROJECT_URL = "https://previewrefabcdef.supabase.co";
+  const PREVIEW_PROJECT_REF = "previewrefabcdef";
+  const PRODUCTION_PROJECT_URL = "https://prodrefabcdefghij.supabase.co";
+  const PRODUCTION_PROJECT_REF = "prodrefabcdefghij";
+
+  test("matching app environment + tag alone is NOT sufficient — a Preview app/tag pairing wired to the Production project URL is still blocked, even with layers 1-3 fully satisfied", async () => {
+    await withEnv(
+      {
+        ...OTHERWISE_FULLY_ENABLED_ENV,
+        VERCEL_ENV: "preview",
+        SUPABASE_ENVIRONMENT_TAG: "preview",
+        // The exact misconfiguration this sprint's re-audit named: labels
+        // agree, but the actually-configured project is Production's.
+        NEXT_PUBLIC_SUPABASE_URL: PRODUCTION_PROJECT_URL,
+        SUPABASE_EXPECTED_PROJECT_REF: PREVIEW_PROJECT_REF,
+      },
+      async () => {
+        let fetchCalled = false;
+        const restore = mockFetch(async () => {
+          fetchCalled = true;
+          throw new Error("fetch must not be called — the corrected guard must block first");
+        });
+        try {
+          const res = await writeCandidatesGet(authedRequest());
+          expect(res.status).toBe(503);
+          expect(fetchCalled).toBe(false);
+        } finally {
+          restore();
+        }
+      }
+    );
+  });
+
+  test("all four signals genuinely matching lets the route proceed past Layer 0 (reaching later layers, e.g. a real fetch attempt)", async () => {
+    await withEnv(
+      {
+        ...OTHERWISE_FULLY_ENABLED_ENV,
+        VERCEL_ENV: "preview",
+        SUPABASE_ENVIRONMENT_TAG: "preview",
+        NEXT_PUBLIC_SUPABASE_URL: PREVIEW_PROJECT_URL,
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "test-only-fake-anon-key-not-a-real-value",
+        SUPABASE_EXPECTED_PROJECT_REF: PREVIEW_PROJECT_REF,
+      },
+      async () => {
+        let fetchCalled = false;
+        const restore = mockFetch(async () => {
+          fetchCalled = true;
+          // Simulate Supabase Auth rejecting the fake credentials — this
+          // proves Layer 0 passed and the route reached Layer 3's sign-in
+          // attempt, without ever needing a real Supabase project.
+          return new Response(JSON.stringify({ error: "invalid_grant" }), {
+            status: 400,
+            headers: { "content-type": "application/json" },
+          });
+        });
+        try {
+          await writeCandidatesGet(authedRequest());
+          expect(fetchCalled).toBe(true);
+        } finally {
+          restore();
+        }
+      }
+    );
+  });
+
+  test("the response never contains the actual or expected Supabase project ref, or the full Supabase URL, in either the blocked or the pass-through case", async () => {
+    await withEnv(
+      {
+        ...OTHERWISE_FULLY_ENABLED_ENV,
+        VERCEL_ENV: "preview",
+        SUPABASE_ENVIRONMENT_TAG: "preview",
+        NEXT_PUBLIC_SUPABASE_URL: PRODUCTION_PROJECT_URL,
+        SUPABASE_EXPECTED_PROJECT_REF: PREVIEW_PROJECT_REF,
+      },
+      async () => {
+        const res = await writeCandidatesGet(authedRequest());
+        const text = await res.text();
+        expect(text).not.toContain(PREVIEW_PROJECT_REF);
+        expect(text).not.toContain(PRODUCTION_PROJECT_REF);
+        expect(text).not.toMatch(/supabase\.co/);
       }
     );
   });

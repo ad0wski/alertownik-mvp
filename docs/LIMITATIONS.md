@@ -248,6 +248,19 @@ gate blocks every environment today, same as before — see
 database itself has not changed; only the future write path's readiness
 has.
 
+**Sprint 165B-2 update:** an independent re-audit of that guard found it
+originally compared only two self-reported *labels* (the running
+environment and `SUPABASE_ENVIRONMENT_TAG`) and never actually confirmed
+which Supabase *project* was configured — a real gap, since matching
+labels don't prove matching databases. Closed before merge: the guard now
+also independently derives the actual project identity from
+`NEXT_PUBLIC_SUPABASE_URL` and compares it against a new
+`SUPABASE_EXPECTED_PROJECT_REF` variable — four signals, all required,
+still zero values configured anywhere. Browser QA of the visible
+environment badge was also performed against this branch's real Vercel
+Preview deployment — see the updated
+`docs/SPRINT_165B_ISOLATED_PREVIEW_CODE_SAFETY_PACKAGE_V1.md` for both.
+
 ---
 
 ## This Is Early-Stage Software

@@ -56,16 +56,23 @@ function authedRequest(query = ""): NextRequest {
   });
 }
 
-// Sprint 165B — the new Layer 0 database-environment guard (see
-// src/lib/databaseEnvironmentGuard.ts) blocks by default unless VERCEL_ENV
-// and SUPABASE_ENVIRONMENT_TAG are both set and matching. Every test below
-// that means to exercise layers 1-3 (unchanged from Sprint 147-149) needs
-// this pairing present so the guard itself never becomes the reason a test
-// gets 503 — the new environmentGuard/databaseEnvironmentGuard.spec.ts
-// files test Layer 0 in isolation instead.
+// Sprint 165B / 165B-2 — the new Layer 0 database-environment guard (see
+// src/lib/databaseEnvironmentGuard.ts) blocks by default unless all four
+// signals are present and consistent: VERCEL_ENV, SUPABASE_ENVIRONMENT_TAG,
+// the actual Supabase project ref (derived from NEXT_PUBLIC_SUPABASE_URL),
+// and SUPABASE_EXPECTED_PROJECT_REF. Every test below that means to
+// exercise layers 1-3 (unchanged from Sprint 147-149) needs this full
+// pairing present so the guard itself never becomes the reason a test gets
+// 503 — the new databaseEnvironmentGuard*.spec.ts files test Layer 0 in
+// isolation instead. NEXT_PUBLIC_SUPABASE_URL is deliberately overridden
+// here (not left to this repo's .env.local) so the guard's project-ref
+// check is deterministic regardless of local environment configuration.
+const GUARD_PASS_PROJECT_REF = "test-only-fake-project-ref";
 const GUARD_PASS_ENV = {
   VERCEL_ENV: "development",
   SUPABASE_ENVIRONMENT_TAG: "development",
+  NEXT_PUBLIC_SUPABASE_URL: `https://${GUARD_PASS_PROJECT_REF}.supabase.co`,
+  SUPABASE_EXPECTED_PROJECT_REF: GUARD_PASS_PROJECT_REF,
 };
 
 const ENABLED_ENV = {
