@@ -54,8 +54,14 @@
 -- This file is intended for exactly one run against a freshly-replayed,
 -- empty Preview project — which matches the isolated `alertownik-preview`
 -- project's confirmed state (every table at 0 rows) as of this audit.
+--
+-- SPRINT 165C: the entire executable body below is wrapped in a single
+-- begin;/commit; transaction so this file's seven INSERT statements either
+-- all succeed together or all roll back together — no partial seed state
+-- is possible even if one statement fails partway through.
 -- ============================================================================
 
+begin;
 
 -- ── alert_categories ─────────────────────────────────────────────────────
 -- Mirrors the live category set. Safe to insert verbatim — categories are
@@ -205,6 +211,8 @@ insert into waste_schedule_items (locality, area_name, street_group, waste_type,
   ('Testowa Miejscowość B (SYNTHETIC)', 'Osiedle Przykładowe', 'ul. Przykładowa 1-15', 'glass',
    current_date + 14, 'Testowy Urząd Przykładowa (SYNTHETIC)', 'https://example-preview-only.test/komunikaty',
    'SYNTHETIC PREVIEW DATA');
+
+commit;
 
 -- ============================================================================
 -- END OF FILE — NOT EXECUTED, SYNTHETIC PREVIEW DATA ONLY
