@@ -240,6 +240,36 @@ Stages are intentionally separate — each one can be evaluated and validated be
 
 ---
 
+## Stage 15 — Preview Canary Rehearsal: Audit and Design 🟡 (Sprint 166A, design only)
+
+- ✅ Full read-only audit of the existing candidate-automation pipeline (Sprints 147–153, 164B, 165A–C): data flow, endpoints, cron entries, environment variables, Auth accounts, RLS policies, kill switches, limits, idempotency/race safeguards, dry-run paths, and rollback points — all mapped in `docs/SPRINT_166A_PREVIEW_CANARY_REHEARSAL_AUDIT_AND_DESIGN_V1.md`.
+- ✅ Designed the smallest possible safe first canary: single source (Michałowice, the existing default), hard cap of 1 candidate, Preview-only by construction (via the Sprint 165B/165B-2 database-environment guard), dry-run first, ends on a `pending` candidate, never auto-publishes.
+- ✅ Full list of the environment variables a future execution phase would need, with purpose/secrecy/source/scope for each — none set this sprint.
+- ✅ Read-only confirmation (reusing the existing Sprint 165C Phase 4 record, no new sign-in or query) that the Preview scheduled-writer identity exists and is correctly membership-linked.
+- ✅ Code-safety assessment: existing safeguards (hard cap, source allowlist, dry-run route, JSON-response reporting) already sufficient for a first small canary — no code change made.
+- ✅ Manual execution checklist for the next phase: exact variables Adam must set, what Claude in Chrome can do unattended, dry-run-then-write order of operations, and explicit PASS/STOP/rollback criteria.
+- ❌ Nothing activated: no Vercel variable added, no SQL run, no cron invoked, no automation turned on. Execution is a separate, later, explicitly-scoped sprint.
+
+**Goal:** have an exact, reviewed, buildable plan for the pipeline's first real run — entirely on the isolated Preview environment Sprint 165C built — before any execution happens.
+
+---
+
+## Future Direction — Nationwide Source Coverage (design note, not scheduled)
+
+Once the Preview canary above is confirmed successful, the next large area of work is a nationwide official-source registry, not yet scheduled as a numbered sprint:
+- Full Poland hierarchy: województwo → powiat → gmina → miejscowość → dzielnica/sołectwo.
+- Source classification by alert category (transport/water/power/roads/waste/municipal).
+- Per-source quality/availability status (building on the existing Link Health Panel concept, Stage 11).
+- Duplicate detection across sources (building on the existing fuzzy/DB-fingerprint dedup, Sprint 149/150).
+- Manual and automated source verification stages.
+- Location- and interest-based personalization (building on the existing "Moja okolica" local-only preferences).
+- A separate, later legal/RODO and location-consent design stage.
+- Preparation for app-store submission and partner/investor conversations remains a later, separate milestone (see Stage 8's remaining rate-limiting/server-guard items as a prerequisite).
+
+**None of this is implemented or scheduled yet — recorded here as direction only.**
+
+---
+
 ## Out of Scope (Unlikely to Change)
 
 - The app will always surface alerts from official sources — not crowdsourced reports
