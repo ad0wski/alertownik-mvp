@@ -97,3 +97,16 @@ If, despite §0's recommendation, a future session chooses to replay history dir
 13. Re-run the exact `pg_policies`/`pg_indexes`/`list_tables` queries from Sprint 165A §B against the *new* project and diff the output against §B's Production snapshot, line by line, before considering the replay complete.
 
 Steps 2, 8, and parts of 9 have **no existing source file** — this is the concrete, itemized version of §0's finding, not a hand-wave.
+
+---
+
+## 7. Sprint 165C, Phase 1 correction — triggers DO exist
+
+This manifest (§0 above) and Sprint 165A §B.3 both stated that **no triggers** were found in `public`, based on a query against `information_schema.triggers`, and concluded `updated_at` columns are maintained by application code only. Sprint 165C's preflight re-ran the equivalent check directly against `pg_trigger` (authoritative; `information_schema.triggers` can under-report depending on how a prior query was scoped) and found this was **wrong**: four triggers exist live today, all invoking the existing `set_updated_at()` function —
+
+- `alerts.set_alerts_updated_at`
+- `alert_sources.alert_sources_set_updated_at`
+- `waste_schedule_items.waste_schedule_items_set_updated_at`
+- `source_notice_candidates.source_notice_candidates_set_updated_at`
+
+These triggers already exist on Production today and always have — nothing was added by Sprint 165C. This is a correction to a prior audit's finding, not a schema change. `docs/sql/SPRINT_165C_AS_BUILT_SCHEMA_NOT_EXECUTED_V1.sql` (written this sprint) includes all four `CREATE TRIGGER` statements, so an isolated Preview replay reproduces this real behavior instead of silently omitting it, as the provisional order in §6 above would have. The rest of §0's live-introspection re-check (tables, columns, row counts, RLS policies, indexes, functions, extensions, `list_migrations`) found **zero drift** from the Sprint 165A snapshot.
