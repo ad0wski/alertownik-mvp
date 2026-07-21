@@ -287,7 +287,7 @@ function matchesSearch(source: AlertSource, query: string): boolean {
   if (!q) return true;
   return (
     source.name.toLowerCase().includes(q) ||
-    source.url.toLowerCase().includes(q) ||
+    (source.url ?? "").toLowerCase().includes(q) ||
     (source.notes ?? "").toLowerCase().includes(q) ||
     categoryLabels[source.category].toLowerCase().includes(q)
   );
@@ -765,7 +765,7 @@ function SourceCard({
           </div>
 
           <a
-            href={source.url}
+            href={source.url ?? undefined}
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline truncate block"
@@ -845,7 +845,7 @@ function SourceCard({
                   : "Sprawdź stronę"}
           </button>
           <a
-            href={source.url}
+            href={source.url ?? undefined}
             target="_blank"
             rel="noopener noreferrer"
             className="px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
@@ -911,7 +911,7 @@ function SourceCard({
                   admin saw the error text but no actionable next step. */}
               <div className="flex flex-wrap gap-3 mt-2 pt-2 border-t border-red-100">
                 <a
-                  href={source.url}
+                  href={source.url ?? undefined}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="font-medium text-red-700 dark:text-red-400 hover:text-red-900 hover:underline"
@@ -1518,7 +1518,7 @@ export default function SourcesPage() {
 
   function startEdit(source: AlertSource) {
     setEditingId(source.id);
-    setEditForm({ name: source.name, url: source.url, category: source.category, sourceType: source.sourceType, notes: source.notes ?? "" });
+    setEditForm({ name: source.name, url: source.url ?? "", category: source.category, sourceType: source.sourceType, notes: source.notes ?? "" });
     setSaveError(null);
   }
 
@@ -1687,7 +1687,7 @@ export default function SourcesPage() {
         <LinkHealthPanel
           targets={sources
             .filter((s) => s.isActive && s.url)
-            .map((s) => ({ id: s.id, name: s.name, url: s.url }))}
+            .map((s) => ({ id: s.id, name: s.name, url: s.url as string }))}
         />
       )}
 
@@ -1720,7 +1720,7 @@ export default function SourcesPage() {
       {/* Pilot source suggestions */}
       {showPilotSuggestions && (
         <PilotSourceSuggestions
-          existingUrls={new Set(sources.map((s) => s.url))}
+          existingUrls={new Set(sources.map((s) => s.url).filter((u): u is string => u !== null))}
           onFillForm={handleFillFromSuggestion}
         />
       )}

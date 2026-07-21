@@ -83,6 +83,22 @@ test.describe("buildSourceHealthRows — coverage and API-support flags", () => 
       expect(row.recentCandidateCount).toBe(0);
     }
   });
+
+  // Sprint 165C-1 regression — this is the exact crash reproduced on
+  // /admin/sources in the isolated Preview deployment: alert_sources.url is
+  // nullable (a source can be registered before its official URL is known;
+  // the Preview synthetic seed deliberately includes such a row), and this
+  // function's registry matching must handle that without throwing and
+  // without ever treating the null-url row as a match.
+  test("a registry row with url: null does not throw and is never falsely matched", () => {
+    const registryWithNullUrl = [...REGISTRY, { id: "reg-no-url", url: null }];
+    expect(() => rowsFor({ registrySources: registryWithNullUrl })).not.toThrow();
+
+    const rows = rowsFor({ registrySources: registryWithNullUrl });
+    expect(findRow(rows, "michalowice-komunikaty").registrySourceId).toBe("reg-mich");
+    expect(findRow(rows, "wkd-aktualnosci").registrySourceId).toBe("reg-wkd");
+    expect(rows.every((r) => r.registrySourceId !== "reg-no-url")).toBe(true);
+  });
 });
 
 test.describe("buildSourceHealthRows — last check and staleness", () => {

@@ -5,7 +5,10 @@ export type AlertSourceType = "website" | "pdf" | "rss" | "other";
 export interface AlertSource {
   id: string;
   name: string;
-  url: string;
+  /** Nullable in the database — a source can be registered before its
+   *  official URL is known (see docs/sql seed data). Every consumer must
+   *  handle the null case explicitly, never assume a string. */
+  url: string | null;
   category: AlertCategory;
   sourceType: AlertSourceType;
   isActive: boolean;

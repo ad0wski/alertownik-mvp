@@ -70,7 +70,7 @@ export interface SourceHealthRow {
 // SourceNoticeCandidate) all satisfy these, and tests can pass plain objects.
 export interface HealthRegistrySource {
   id: string;
-  url: string;
+  url: string | null;
   lastCheckedAt?: string;
 }
 

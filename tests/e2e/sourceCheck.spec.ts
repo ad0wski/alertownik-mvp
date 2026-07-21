@@ -138,6 +138,27 @@ test.describe("findMatchingRegistrySource", () => {
     expect(findMatchingRegistrySource(registry, "https://example.test/other")).toBeNull();
     expect(findMatchingRegistrySource([], "https://michalowice.pl/")).toBeNull();
   });
+
+  // Sprint 165C-1 — alert_sources.url is nullable (a source can be
+  // registered before its official URL is known; the isolated Preview
+  // synthetic seed deliberately includes one such row). A registry row
+  // with no URL must never crash the match, and must never be treated as
+  // "matching" an official URL just because both sides fell back to an
+  // empty-string comparison.
+  test("a registry row with url: null is skipped, never throws, and is never falsely matched", () => {
+    const withNullUrl = [...registry, { id: "c", url: null }];
+
+    const officialUrl = "https://michalowice.pl/dzieje-sie/aktualnosci/komunikaty";
+    expect(() => findMatchingRegistrySource(withNullUrl, officialUrl)).not.toThrow();
+    expect(findMatchingRegistrySource(withNullUrl, officialUrl)?.id).toBe("a");
+
+    // An officialUrl that itself normalizes to an empty string must still
+    // never match the null-url row (both "empty" is not a match).
+    expect(findMatchingRegistrySource(withNullUrl, "")).toBeNull();
+
+    // Null-url-only registry — no match, no crash.
+    expect(findMatchingRegistrySource([{ id: "c", url: null }], "https://michalowice.pl/")).toBeNull();
+  });
 });
 
 test.describe("manual-check copy (anti-drift)", () => {

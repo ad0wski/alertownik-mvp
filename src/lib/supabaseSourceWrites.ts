@@ -22,7 +22,7 @@ function rowToAlertSource(row: Record<string, unknown>): AlertSource {
   return {
     id: row.id as string,
     name: row.name as string,
-    url: row.url as string,
+    url: row.url as string | null,
     category: row.category as AlertCategory,
     sourceType: row.source_type as AlertSource["sourceType"],
     isActive: row.is_active as boolean,

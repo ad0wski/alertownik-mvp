@@ -134,12 +134,16 @@ function normalizeUrl(url: string): string {
 // check history. Match is by normalized host+path (www. and trailing
 // slashes ignored) — no match is fine: candidates save with source_id null
 // and history logging is simply unavailable until the source is registered.
-export function findMatchingRegistrySource<T extends { url: string }>(
+//
+// alert_sources.url is nullable (a source can be registered before its
+// official URL is known) — a registry row with no URL can never match any
+// officialUrl, so it's skipped rather than compared.
+export function findMatchingRegistrySource<T extends { url: string | null }>(
   registrySources: T[],
   officialUrl: string
 ): T | null {
   const target = normalizeUrl(officialUrl);
-  return registrySources.find((s) => normalizeUrl(s.url) === target) ?? null;
+  return registrySources.find((s) => s.url !== null && normalizeUrl(s.url) === target) ?? null;
 }
 
 // ── Copy (kept here so tests can pin it against automation-promise drift) ────

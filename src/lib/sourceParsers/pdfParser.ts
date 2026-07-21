@@ -7,11 +7,11 @@
 
 export interface PdfManualResult {
   ok: false;
-  sourceUrl: string;
+  sourceUrl: string | null;
   instructions: string;
 }
 
-export function getPdfManualInstructions(sourceUrl: string): PdfManualResult {
+export function getPdfManualInstructions(sourceUrl: string | null): PdfManualResult {
   return {
     ok: false,
     sourceUrl,
