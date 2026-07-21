@@ -254,6 +254,19 @@ Stages are intentionally separate — each one can be evaluated and validated be
 
 ---
 
+## Stage 15b — Disabled Canary Infrastructure 🟡 (Sprint 166B, Preview-only, still fully OFF)
+
+- ✅ Seven non-secret canary-support variables set on Vercel, Preview scope only: `SCHEDULED_CHECKS_ENABLED=false`, `SCHEDULED_WRITES_ENABLED=false`, `SCHEDULED_WRITER_FINGERPRINT_ENABLED=true`, `SCHEDULED_WRITER_MAX_CANDIDATES_PER_RUN=1`, `SCHEDULED_WRITER_ALLOWED_SOURCE_IDS`, `SCHEDULED_WRITER_SOURCE_REGISTRY_IDS`, `SUPABASE_SCHEDULED_WRITER_EMAIL` — see `docs/SPRINT_166B_DISABLED_CANARY_INFRASTRUCTURE_V1.md`.
+- ✅ Canary source identifier confirmed read-only via a live GET request (not SQL): the synthetic Michałowice stand-in row on `alertownik-preview`.
+- ✅ New Preview deployment verified: badge `PREVIEW`, all Supabase calls GET-only against the isolated project, null-URL source still renders correctly, zero write actions.
+- ❌ `CRON_SECRET` (Preview) and `SUPABASE_SCHEDULED_WRITER_PASSWORD` deliberately not set — both remain a future, separate step for Adam.
+- ❌ Both kill switches (`SCHEDULED_CHECKS_ENABLED`, `SCHEDULED_WRITES_ENABLED`) explicitly `false` — the route remains fully inert.
+- ❌ No dry-run, no write-candidates call, no canary execution — a separate, later, explicitly-approved sprint.
+
+**Goal:** have every non-secret piece of canary configuration in place and verified live, so that the only remaining step before a first controlled dry-run is Adam supplying two secrets and a separate explicit go-ahead.
+
+---
+
 ## Future Direction — Nationwide Source Coverage (design note, not scheduled)
 
 Once the Preview canary above is confirmed successful, the next large area of work is a nationwide official-source registry, not yet scheduled as a numbered sprint:

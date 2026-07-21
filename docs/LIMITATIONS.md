@@ -299,6 +299,15 @@ badge, and every Supabase network call from each environment targets only
 its own project ref. Automation is still off in both environments. See
 `docs/SPRINT_165C_POST_RELEASE_CLOSURE_V1.md`.
 
+**Sprint 166B update:** the non-secret half of a future Preview canary
+run's configuration now exists on Vercel (Preview scope only): both
+kill switches explicitly `false`, the per-run candidate cap, the
+single-source allowlist, the DB-fingerprint flag, and the existing test
+writer's email. `CRON_SECRET` and the writer's password remain deliberately
+unset — see `docs/SPRINT_166B_DISABLED_CANARY_INFRASTRUCTURE_V1.md`. This
+remains a config-only change: no dry-run, no write, and no automation
+activation happened in this sprint.
+
 ---
 
 ## This Is Early-Stage Software
