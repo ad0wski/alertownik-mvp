@@ -261,6 +261,20 @@ environment badge was also performed against this branch's real Vercel
 Preview deployment — see the updated
 `docs/SPRINT_165B_ISOLATED_PREVIEW_CODE_SAFETY_PACKAGE_V1.md` for both.
 
+**Sprint 165C update:** a real, separate Supabase project (`alertownik-preview`,
+West Europe/London, Free plan) now exists, and its schema/RLS have been
+replayed and verified read-only against it (8 tables, 28 RLS policies, 4
+triggers, all 8 tables RLS-enabled — exact match with Production's live
+snapshot; every table confirmed at 0 rows) — see
+`docs/SPRINT_165C_MANUAL_GATE_2_PROJECT_CREATED_V1.md` and
+`docs/SPRINT_165C_PHASE_3_SCHEMA_RLS_REPLAY_V1.md`. **The shared-database
+limitation above still applies to the live app exactly as before** — no
+Supabase Auth account exists on the new project yet, no seed data has been
+inserted, and Vercel's Preview environment still points at Production's
+original Supabase project (`NEXT_PUBLIC_SUPABASE_URL` unchanged). Nothing
+described in this limitation entry changes until Vercel Preview is
+reconnected to `alertownik-preview` in a later, separate manual gate.
+
 ---
 
 ## This Is Early-Stage Software

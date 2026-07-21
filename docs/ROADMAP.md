@@ -187,9 +187,18 @@ Stages are intentionally separate — each one can be evaluated and validated be
 ## Stage 14b — Isolated Preview Supabase Project Created 🟡 (Sprint 165C, Manual Gate 2)
 
 - ✅ A new, empty, separate Supabase project, `alertownik-preview`, was created in the same organization as Production — region West Europe (London)/`eu-west-2` matching Production, Free plan, `NANO` compute — see `docs/SPRINT_165C_MANUAL_GATE_2_PROJECT_CREATED_V1.md`.
-- ❌ Still schema-empty: no SQL run, no tables/RLS/triggers, no Auth accounts, no Vercel variable changed, no automation activated. Production was not touched.
+- ❌ Still schema-empty at that point: no SQL run, no tables/RLS/triggers, no Auth accounts, no Vercel variable changed, no automation activated. Production was not touched.
 
 **Goal:** provide a genuinely separate database for the isolated Preview design (Sprint 165A) to eventually be built on, one manual gate at a time.
+
+---
+
+## Stage 14c — Isolated Preview Schema and RLS Replay Complete 🟡 (Sprint 165C, Phase 3)
+
+- ✅ The as-built schema+RLS file (`docs/sql/SPRINT_165C_AS_BUILT_SCHEMA_NOT_EXECUTED_V1.sql`) was run, wrapped in a transaction, against `alertownik-preview` after a read-only empty-schema check. Result verified read-only: 8 tables, 28 RLS policies, 4 triggers, all 8 tables RLS-enabled — exact match with the live Production snapshot. All 8 tables confirmed at 0 rows. See `docs/SPRINT_165C_PHASE_3_SCHEMA_RLS_REPLAY_V1.md`.
+- ❌ Still not done: no Supabase Auth accounts (test admin/scheduled-writer), no synthetic seed data, Vercel Preview still points at the original shared Production project (not yet reconnected to `alertownik-preview`), automation remains fully OFF everywhere.
+
+**Goal:** prove the isolated Preview project's schema is a faithful, verified replica of Production before any account or data is created on it.
 
 ---
 

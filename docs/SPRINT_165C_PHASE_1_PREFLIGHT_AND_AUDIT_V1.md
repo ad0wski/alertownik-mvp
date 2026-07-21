@@ -2,6 +2,8 @@
 
 **Status:** preflight, documentation audit, live re-verification, and preparation only. Branch `sprint-165c-isolated-preview-supabase-infrastructure-v1`, not merged to `main`. **No Supabase project was created. No SQL was executed. No Vercel environment variable was changed. No Supabase Auth account was created. No secret was set, opened, or copied. No write-candidates run. No SCHEDULED_CHECKS_ENABLED/SCHEDULED_WRITES_ENABLED activation. No Redeploy. No merge to `main`. Sprint 166 was not started.**
 
+**Superseded by later phases on this same branch:** the Supabase project was created in Manual Gate 2 (`docs/SPRINT_165C_MANUAL_GATE_2_PROJECT_CREATED_V1.md`) and its schema/RLS were replayed and verified in Phase 3 (`docs/SPRINT_165C_PHASE_3_SCHEMA_RLS_REPLAY_V1.md`). This document remains the accurate record of the preflight/audit stage only — read the later documents for current infrastructure state.
+
 ---
 
 ## 1. Preflight (Stage A) — result
