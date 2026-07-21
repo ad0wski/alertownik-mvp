@@ -211,16 +211,16 @@ Stages are intentionally separate — each one can be evaluated and validated be
 
 ---
 
-## Stage 14e — Isolated Preview: Full Acceptance ✅ (Sprint 165C, complete — branch not yet merged)
+## Stage 14e — Isolated Preview: Full Acceptance and Production Release ✅ (Sprint 165C, complete — merged to `main`, live on Production)
 
-- ✅ Vercel Preview environment separation: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_ENVIRONMENT_TAG=preview`, `SUPABASE_EXPECTED_PROJECT_REF` all split into Preview-only values, separate from Production's own unchanged entries.
+- ✅ Vercel Preview environment separation: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_ENVIRONMENT_TAG=preview`, `SUPABASE_EXPECTED_PROJECT_REF` all split into Preview-only values, separate from Production's own unchanged entries — Production and Preview now use two different Supabase project refs.
 - ✅ A new Preview deployment (triggered by an empty commit) confirmed live: environment badge reads `PREVIEW`, every Supabase call verified hitting `alertownik-preview`'s own project ref, zero write requests during any QA pass.
 - ✅ Sprint 165C-1: a genuine, previously-unknown bug — `alert_sources.url` (nullable in the database) was typed as a non-nullable `string`, crashing `/admin/sources` whenever a registry row had no URL — was found by the synthetic seed's own deliberately-null-URL test source, fixed by correctly modeling `string | null` throughout (no casts, no fake substitute values), covered by new regression tests, and re-verified live.
 - ✅ Full acceptance pass: 682/682 e2e tests, 17/17 PWA tests, clean typecheck/lint/build, all 8 required pages QA'd on the live Preview deployment. See `docs/SPRINT_165C_FINAL_ACCEPTANCE_V1.md`.
+- ✅ **Release:** feature branch fast-forward-merged to `main` (no merge commit) and deployed to Production. A full read-only smoke test of the official Production URL (all 8 required pages, admin included) and a post-release recheck of Preview both confirmed zero regressions, correct `PRODUCTION`/`PREVIEW` badges, and continued database isolation. See `docs/SPRINT_165C_POST_RELEASE_CLOSURE_V1.md`.
 - ❌ Automation (`SCHEDULED_CHECKS_ENABLED`/`SCHEDULED_WRITES_ENABLED`) remains fully OFF — a separate, later, explicitly-scoped decision.
-- ❌ Not yet merged to `main` — a separate, explicit decision for Adam.
 
-**Goal achieved:** a genuinely isolated Preview Supabase project — own database, own Auth, own environment variables — verified end-to-end so that Preview testing (including the eventual candidate-automation canary) can no longer touch Production data by construction, not by discipline alone.
+**Goal achieved:** a genuinely isolated Preview Supabase project — own database, own Auth, own environment variables — verified end-to-end and released to Production, so that Preview testing (including the eventual candidate-automation canary) can no longer touch Production data by construction, not by discipline alone.
 
 ---
 

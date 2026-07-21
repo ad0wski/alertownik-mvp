@@ -288,6 +288,17 @@ Supabase's Free plan, sharing the org-wide quota with Production (5 GB
 egress / 500 MB database / 50k MAU / 1 GB storage per cycle) and may
 auto-pause after a period of inactivity.
 
+**Sprint 165C update (released):** the isolated Preview work above has
+been merged to `main` (clean fast-forward, no merge commit) and deployed
+to Production. A full read-only smoke test of the official Production URL
+(all 8 required pages, including `/admin` and `/admin/sources` under a
+real Production admin session) and a post-release recheck of the Preview
+deployment both confirmed zero regressions: Production shows its own data
+and the `PRODUCTION` badge, Preview shows synthetic data and the `PREVIEW`
+badge, and every Supabase network call from each environment targets only
+its own project ref. Automation is still off in both environments. See
+`docs/SPRINT_165C_POST_RELEASE_CLOSURE_V1.md`.
+
 ---
 
 ## This Is Early-Stage Software
