@@ -32,6 +32,29 @@
 --     or is an obviously-fake placeholder UUID for cross-referencing
 --     within this file only.
 -- ============================================================================
+--
+-- SPRINT 165C PRE-RUN AUDIT CORRECTION: the alerts insert below originally
+-- used category = 'municipal' for the draft row. The live `alerts` table's
+-- CHECK constraint allows only
+-- ['transport','water','power','waste','roads','announcement'] — a
+-- different enum than `alert_sources`/`source_notice_candidates`, which do
+-- allow 'municipal'. This was a genuine data bug (would have aborted the
+-- entire alerts INSERT with a CHECK violation) caught during Sprint 165C's
+-- pre-run audit against the live, introspection-derived schema
+-- (docs/sql/SPRINT_165C_AS_BUILT_SCHEMA_NOT_EXECUTED_V1.sql). Fixed to
+-- 'announcement' — a synthetic-data-only correction, no change in intent.
+--
+-- SPRINT 165C NOTE ON RE-RUN SAFETY: `alert_categories` (unique slug),
+-- `alert_sources` (fixed placeholder id), and `alerts` (unique slug) all
+-- guard their inserts with `on conflict ... do nothing`, so re-running
+-- this file is harmless for those three tables. `source_checks`,
+-- `source_notice_candidates`, and `waste_schedule_items` have no natural
+-- business-key uniqueness to conflict on (their id is server-generated),
+-- so re-running this file WOULD duplicate rows in those three tables.
+-- This file is intended for exactly one run against a freshly-replayed,
+-- empty Preview project — which matches the isolated `alertownik-preview`
+-- project's confirmed state (every table at 0 rows) as of this audit.
+-- ============================================================================
 
 
 -- ── alert_categories ─────────────────────────────────────────────────────
@@ -112,7 +135,7 @@ insert into alerts (slug, category, severity, title, place, starts_at, ends_at, 
    'published', '11111111-1111-4111-8111-111111111111', now() + interval '3 day'),
 
   ('synthetic-preview-draft',
-   'municipal', 'info', '[SYNTHETIC PREVIEW] Roboczy testowy komunikat (draft)',
+   'announcement', 'info', '[SYNTHETIC PREVIEW] Roboczy testowy komunikat (draft)',
    'Przykładowa', null, null,
    'Testowy szkic — nigdy nieopublikowany.', null,
    'Testowy Urząd Przykładowa (SYNTHETIC)', 'https://example-preview-only.test/komunikaty',
