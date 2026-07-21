@@ -184,6 +184,15 @@ Stages are intentionally separate — each one can be evaluated and validated be
 
 ---
 
+## Stage 14b — Isolated Preview Supabase Project Created 🟡 (Sprint 165C, Manual Gate 2)
+
+- ✅ A new, empty, separate Supabase project, `alertownik-preview`, was created in the same organization as Production — region West Europe (London)/`eu-west-2` matching Production, Free plan, `NANO` compute — see `docs/SPRINT_165C_MANUAL_GATE_2_PROJECT_CREATED_V1.md`.
+- ❌ Still schema-empty: no SQL run, no tables/RLS/triggers, no Auth accounts, no Vercel variable changed, no automation activated. Production was not touched.
+
+**Goal:** provide a genuinely separate database for the isolated Preview design (Sprint 165A) to eventually be built on, one manual gate at a time.
+
+---
+
 ## Stage 14 — Isolated Preview Code Safety Package 🟡 (Sprint 165B/165B-2, code + docs — no infrastructure yet)
 
 - ✅ Single-source-of-truth environment identity (`src/lib/environmentIdentity.ts`), `VERCEL_ENV`-derived, no hydration risk (build-time constant on both server and client)
