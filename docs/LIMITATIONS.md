@@ -267,13 +267,26 @@ replayed and verified read-only against it (8 tables, 28 RLS policies, 4
 triggers, all 8 tables RLS-enabled — exact match with Production's live
 snapshot; every table confirmed at 0 rows) — see
 `docs/SPRINT_165C_MANUAL_GATE_2_PROJECT_CREATED_V1.md` and
-`docs/SPRINT_165C_PHASE_3_SCHEMA_RLS_REPLAY_V1.md`. **The shared-database
-limitation above still applies to the live app exactly as before** — no
-Supabase Auth account exists on the new project yet, no seed data has been
-inserted, and Vercel's Preview environment still points at Production's
-original Supabase project (`NEXT_PUBLIC_SUPABASE_URL` unchanged). Nothing
-described in this limitation entry changes until Vercel Preview is
-reconnected to `alertownik-preview` in a later, separate manual gate.
+`docs/SPRINT_165C_PHASE_3_SCHEMA_RLS_REPLAY_V1.md`.
+
+**Sprint 165C update (final):** the shared-database limitation above is
+**resolved for Preview** — Vercel's Preview environment now points at
+`alertownik-preview` (its own project, own Auth, own environment
+variables, entirely separate from Production), verified live: every
+Supabase call from a Preview deployment targets `alertownik-preview`'s own
+project ref, the visible `EnvironmentBadge` reads `PREVIEW`, and content is
+exclusively synthetic seed data. Full acceptance record:
+`docs/SPRINT_165C_FINAL_ACCEPTANCE_V1.md`. Two test accounts exist
+(admin + scheduled-writer), synthetic seed data has been inserted, and a
+real regression (`alert_sources.url` nullable-URL crash on
+`/admin/sources`) was found and fixed as part of this work
+(Sprint 165C-1). **Automation remains fully OFF** on both Production and
+Preview — `SCHEDULED_CHECKS_ENABLED`/`SCHEDULED_WRITES_ENABLED` are unset
+everywhere; turning them on for a Preview canary rehearsal is a separate,
+later, explicitly-scoped decision. The isolated Preview project runs on
+Supabase's Free plan, sharing the org-wide quota with Production (5 GB
+egress / 500 MB database / 50k MAU / 1 GB storage per cycle) and may
+auto-pause after a period of inactivity.
 
 ---
 

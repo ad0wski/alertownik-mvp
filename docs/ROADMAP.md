@@ -198,6 +198,8 @@ Stages are intentionally separate — each one can be evaluated and validated be
 - ✅ The as-built schema+RLS file (`docs/sql/SPRINT_165C_AS_BUILT_SCHEMA_NOT_EXECUTED_V1.sql`) was run, wrapped in a transaction, against `alertownik-preview` after a read-only empty-schema check. Result verified read-only: 8 tables, 28 RLS policies, 4 triggers, all 8 tables RLS-enabled — exact match with the live Production snapshot. All 8 tables confirmed at 0 rows. See `docs/SPRINT_165C_PHASE_3_SCHEMA_RLS_REPLAY_V1.md`.
 - ❌ Still not done: no Supabase Auth accounts (test admin/scheduled-writer), no synthetic seed data, Vercel Preview still points at the original shared Production project (not yet reconnected to `alertownik-preview`), automation remains fully OFF everywhere.
 
+**Goal:** prove the isolated Preview project's schema is a faithful, verified replica of Production before any account or data is created on it.
+
 ---
 
 ## Stage 14d — Isolated Preview Auth Accounts and Synthetic Seed Complete 🟡 (Sprint 165C, Phase 4)
@@ -207,7 +209,18 @@ Stages are intentionally separate — each one can be evaluated and validated be
 - ✅ The corrected seed ran successfully: 6 categories, 3 sources, 7 alerts (5 published/1 draft/1 archived), 3 source checks, 3 candidates (pending/approved/rejected, none published or converted), 4 waste-schedule rows — every count verified read-only, exact match with plan. See `docs/SPRINT_165C_PHASE_4_AUTH_AND_SYNTHETIC_SEED_V1.md`.
 - ❌ Still not done: Vercel Preview still points at the original shared Production project; automation remains fully OFF everywhere.
 
-**Goal:** prove the isolated Preview project's schema is a faithful, verified replica of Production before any account or data is created on it.
+---
+
+## Stage 14e — Isolated Preview: Full Acceptance ✅ (Sprint 165C, complete — branch not yet merged)
+
+- ✅ Vercel Preview environment separation: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_ENVIRONMENT_TAG=preview`, `SUPABASE_EXPECTED_PROJECT_REF` all split into Preview-only values, separate from Production's own unchanged entries.
+- ✅ A new Preview deployment (triggered by an empty commit) confirmed live: environment badge reads `PREVIEW`, every Supabase call verified hitting `alertownik-preview`'s own project ref, zero write requests during any QA pass.
+- ✅ Sprint 165C-1: a genuine, previously-unknown bug — `alert_sources.url` (nullable in the database) was typed as a non-nullable `string`, crashing `/admin/sources` whenever a registry row had no URL — was found by the synthetic seed's own deliberately-null-URL test source, fixed by correctly modeling `string | null` throughout (no casts, no fake substitute values), covered by new regression tests, and re-verified live.
+- ✅ Full acceptance pass: 682/682 e2e tests, 17/17 PWA tests, clean typecheck/lint/build, all 8 required pages QA'd on the live Preview deployment. See `docs/SPRINT_165C_FINAL_ACCEPTANCE_V1.md`.
+- ❌ Automation (`SCHEDULED_CHECKS_ENABLED`/`SCHEDULED_WRITES_ENABLED`) remains fully OFF — a separate, later, explicitly-scoped decision.
+- ❌ Not yet merged to `main` — a separate, explicit decision for Adam.
+
+**Goal achieved:** a genuinely isolated Preview Supabase project — own database, own Auth, own environment variables — verified end-to-end so that Preview testing (including the eventual candidate-automation canary) can no longer touch Production data by construction, not by discipline alone.
 
 ---
 
