@@ -2,6 +2,8 @@
 
 **Status:** schema/RLS replay executed successfully against the new, isolated `alertownik-preview` Supabase project. Branch `sprint-165c-isolated-preview-supabase-infrastructure-v1`, not merged to `main`. **Zero seed data inserted. Zero Supabase Auth accounts created. Zero Vercel environment variable changes. Zero automation activated. Production (`alertownik-mvp`) was not touched.**
 
+**Superseded by Phase 4** (`docs/SPRINT_165C_PHASE_4_AUTH_AND_SYNTHETIC_SEED_V1.md`): Auth accounts now exist and synthetic seed data has been run. This document remains the accurate record of the schema/RLS replay stage only.
+
 ---
 
 ## What was executed

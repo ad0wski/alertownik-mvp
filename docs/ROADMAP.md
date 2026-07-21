@@ -198,6 +198,15 @@ Stages are intentionally separate — each one can be evaluated and validated be
 - ✅ The as-built schema+RLS file (`docs/sql/SPRINT_165C_AS_BUILT_SCHEMA_NOT_EXECUTED_V1.sql`) was run, wrapped in a transaction, against `alertownik-preview` after a read-only empty-schema check. Result verified read-only: 8 tables, 28 RLS policies, 4 triggers, all 8 tables RLS-enabled — exact match with the live Production snapshot. All 8 tables confirmed at 0 rows. See `docs/SPRINT_165C_PHASE_3_SCHEMA_RLS_REPLAY_V1.md`.
 - ❌ Still not done: no Supabase Auth accounts (test admin/scheduled-writer), no synthetic seed data, Vercel Preview still points at the original shared Production project (not yet reconnected to `alertownik-preview`), automation remains fully OFF everywhere.
 
+---
+
+## Stage 14d — Isolated Preview Auth Accounts and Synthetic Seed Complete 🟡 (Sprint 165C, Phase 4)
+
+- ✅ Two Supabase Auth accounts created directly by Adam in `alertownik-preview` (test admin, test scheduled-writer, both `@example.invalid`, both password-only, never seen by Claude) and correctly membership-linked — one row each in `admin_profiles`/`automation_identities`, verified read-only after each insert.
+- ✅ A genuine pre-run bug in the synthetic seed file was found and fixed (an `alerts.category` value invalid against the live CHECK constraint) and the file was wrapped in a `begin;`/`commit;` transaction — both fixes committed to the feature branch before execution.
+- ✅ The corrected seed ran successfully: 6 categories, 3 sources, 7 alerts (5 published/1 draft/1 archived), 3 source checks, 3 candidates (pending/approved/rejected, none published or converted), 4 waste-schedule rows — every count verified read-only, exact match with plan. See `docs/SPRINT_165C_PHASE_4_AUTH_AND_SYNTHETIC_SEED_V1.md`.
+- ❌ Still not done: Vercel Preview still points at the original shared Production project; automation remains fully OFF everywhere.
+
 **Goal:** prove the isolated Preview project's schema is a faithful, verified replica of Production before any account or data is created on it.
 
 ---
