@@ -254,16 +254,17 @@ Stages are intentionally separate — each one can be evaluated and validated be
 
 ---
 
-## Stage 15b — Disabled Canary Infrastructure 🟡 (Sprint 166B, Preview-only, still fully OFF)
+## Stage 15b — First Controlled Canary Write ✅ (Sprint 166B, complete — automation returned to OFF)
 
-- ✅ Seven non-secret canary-support variables set on Vercel, Preview scope only: `SCHEDULED_CHECKS_ENABLED=false`, `SCHEDULED_WRITES_ENABLED=false`, `SCHEDULED_WRITER_FINGERPRINT_ENABLED=true`, `SCHEDULED_WRITER_MAX_CANDIDATES_PER_RUN=1`, `SCHEDULED_WRITER_ALLOWED_SOURCE_IDS`, `SCHEDULED_WRITER_SOURCE_REGISTRY_IDS`, `SUPABASE_SCHEDULED_WRITER_EMAIL` — see `docs/SPRINT_166B_DISABLED_CANARY_INFRASTRUCTURE_V1.md`.
-- ✅ Canary source identifier confirmed read-only via a live GET request (not SQL): the synthetic Michałowice stand-in row on `alertownik-preview`.
-- ✅ New Preview deployment verified: badge `PREVIEW`, all Supabase calls GET-only against the isolated project, null-URL source still renders correctly, zero write actions.
-- ❌ `CRON_SECRET` (Preview) and `SUPABASE_SCHEDULED_WRITER_PASSWORD` deliberately not set — both remain a future, separate step for Adam.
-- ❌ Both kill switches (`SCHEDULED_CHECKS_ENABLED`, `SCHEDULED_WRITES_ENABLED`) explicitly `false` — the route remains fully inert.
-- ❌ No dry-run, no write-candidates call, no canary execution — a separate, later, explicitly-approved sprint.
+- ✅ Seven non-secret canary-support variables set on Vercel, Preview scope only, then `CRON_SECRET` and `SUPABASE_SCHEDULED_WRITER_PASSWORD` added (Adam-generated/pasted, never seen by Claude) — see `docs/SPRINT_166B_DISABLED_CANARY_INFRASTRUCTURE_V1.md`.
+- ✅ Dry-run (`check-michalowice`) confirmed zero-write, then `SCHEDULED_CHECKS_ENABLED` and `SCHEDULED_WRITES_ENABLED` were flipped to `true` (Preview scope only) in separate, explicitly-approved steps, each followed by a natural deployment.
+- ✅ **First real controlled `write-candidates` call succeeded**: exactly 1 `pending` candidate inserted (Michałowice source), 1 `source_checks` row inserted, hard cap correctly enforced (6 proposals found, 5 capped), zero alerts created or published — verified read-only via table counts, response JSON, and network requests, all confirmed against `alertownik-preview` only.
+- ✅ `SCHEDULED_WRITES_ENABLED` returned to `false` (Preview scope only) immediately after; a further deployment and read-only recheck confirmed `write-candidates` is fail-closed again and no second write occurred.
+- ✅ Production untouched throughout the entire sprint — its own `CRON_SECRET`/`SCHEDULED_CHECKS_ENABLED` values were never read or modified.
+- ❌ The one `pending` candidate was deliberately left in place (not deleted) — a legitimate artifact of a successful rehearsal, awaiting manual admin review via the existing `/admin/sources` flow.
+- ❌ `SCHEDULED_CHECKS_ENABLED` and any recurring/scheduled activation remain a separate, later, explicitly-scoped decision — not part of this sprint's closure.
 
-**Goal:** have every non-secret piece of canary configuration in place and verified live, so that the only remaining step before a first controlled dry-run is Adam supplying two secrets and a separate explicit go-ahead.
+**Goal achieved:** prove the full candidate-automation pipeline works end-to-end on the isolated Preview environment, under a hard cap and full read-only verification, then return every switch to its safe-by-default OFF state — see `docs/SPRINT_166B_DISABLED_CANARY_INFRASTRUCTURE_V1.md`.
 
 ---
 
