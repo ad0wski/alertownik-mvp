@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { parsePageHtml } from "@/lib/sourceParsers/pageParser";
 import {
   checkCronAuth,
   isScheduledChecksEnabled,
   resolveCronSources,
-  CRON_FETCH_TIMEOUT_MS,
 } from "@/lib/cronCheckSources";
-import { buildCheckProposals } from "@/lib/sourceCheck";
 import {
   isWriteModeEnabled,
   getScheduledWriterCredentials,
@@ -20,6 +17,7 @@ import {
   checkDatabaseEnvironmentGuard,
   DATABASE_ENVIRONMENT_GUARD_GENERIC_ERROR,
 } from "@/lib/databaseEnvironmentGuard";
+import { fetchAndParseProposals } from "@/lib/scheduledSourceFetch";
 import type { SafeCheckSourceId } from "@/lib/sourceCheck";
 
 // Sprint 147 — Scheduled Writer Foundation v1.
@@ -61,51 +59,6 @@ import type { SafeCheckSourceId } from "@/lib/sourceCheck";
 // with a fully in-memory fake writer (no network mocking needed).
 
 export const dynamic = "force-dynamic";
-
-interface FetchOutcomeFailure {
-  ok: false;
-  outcome: "fetch_error" | "timeout";
-  diagnostic: string;
-}
-
-interface FetchOutcomeSuccess {
-  ok: true;
-  proposals: ReturnType<typeof buildCheckProposals>;
-}
-
-async function fetchAndParseProposals(officialUrl: string): Promise<FetchOutcomeFailure | FetchOutcomeSuccess> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), CRON_FETCH_TIMEOUT_MS);
-  try {
-    const response = await fetch(officialUrl, {
-      signal: controller.signal,
-      headers: {
-        "User-Agent": "Alertownik-Monitor/1.0 (scheduled writer)",
-        Accept: "text/html,application/xhtml+xml,*/*;q=0.8",
-      },
-    });
-    clearTimeout(timeoutId);
-    if (!response.ok) {
-      return { ok: false, outcome: "fetch_error", diagnostic: response.status >= 500 ? "http_5xx" : "http_4xx" };
-    }
-    const contentType = response.headers.get("content-type") ?? "";
-    if (!contentType.includes("html")) {
-      return { ok: false, outcome: "fetch_error", diagnostic: "non_html_content_type" };
-    }
-    const raw = await response.text();
-    const html = raw.slice(0, 500_000);
-    const parse = parsePageHtml(html, officialUrl);
-    return { ok: true, proposals: buildCheckProposals(parse) };
-  } catch (err) {
-    clearTimeout(timeoutId);
-    const isTimeout = err instanceof Error && err.name === "AbortError";
-    return {
-      ok: false,
-      outcome: isTimeout ? "timeout" : "fetch_error",
-      diagnostic: isTimeout ? "timeout_10s" : "network_error",
-    };
-  }
-}
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
   // Layer 0 (Sprint 165B): environment/database pairing guard — cheapest
