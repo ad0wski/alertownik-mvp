@@ -100,6 +100,21 @@
 
 **Two-concurrent-invocations test plan (once migrated, for a future session — not performed this session):** from Adam's own terminal, fire two `write-candidates` requests as close together as possible (e.g. two parallel `curl`/`Invoke-RestMethod` calls); read `scheduled_writer_runs` back (read-only, via the Supabase dashboard — the writer itself still can't `SELECT`) to confirm exactly one row was created for that instant, and that exactly one HTTP response was `200 ok:true` while the other was `503 reason:"lock_held"`.
 
+### Stage 2b closure — live migration executed and concurrency test PASSED (this session)
+
+The Revision 2 migration (`docs/sql/PROPOSED_SPRINT_166C_ATOMIC_LOCK_MIGRATION_V2.sql`) was executed exactly once against `alertownik-preview` (project ref `nowvcdbtgaigutyxpmdp`). All 9 read-only post-migration checks passed: the partial unique index, both `SECURITY DEFINER` functions with `prosecdef=true` and empty `search_path`, exactly one remaining RLS policy (`scheduled_writer_runs_admin_select`), the writer INSERT/UPDATE policies gone, `'abandoned'` present in the outcome `CHECK`, the `error_summary` length `CHECK` present, and the row count unchanged (0) immediately after.
+
+`SCHEDULED_WRITES_ENABLED` was then set to `true` for the Preview environment only (all Preview branches; Production untouched — it has no such variable at all), a new Preview deployment was built from an empty commit, and the real two-concurrent-invocations test was run exactly once (via `vercel curl` against the deployment, to pass through Vercel Deployment Protection) with a genuinely fresh `CRON_SECRET` entered interactively and never persisted.
+
+**Result — PASS, exactly as designed:**
+- Request #1: `ok:true`, `dryRun:false`, `checkedSources:1`, `successfulSources:1`, `candidatesInserted:1`, `sourceChecksInserted:1`, `published:false`.
+- Request #2: `ok:false`, `reason:"lock_held"`, `"Poprzednie uruchomienie wciąż trwa."` — blocked before any fetch or write, exactly the atomic lock's designed behavior.
+- Counters (read-only, before → after): `alerts` 7 → 7 (unchanged), `source_notice_candidates` 4 → 5 (+1, matching the single winning request), `source_checks` 4 → 5 (+1).
+- `scheduled_writer_runs`: **exactly one row exists**, for `environment_tag='preview'`, `trigger='manual'` — the blocked request never created a second row at all (the unique-index rejection happens at `INSERT` time, before any row can exist). `finished_at` is set (closed), `outcome='success'`, and `sources_checked=1`/`sources_failed=0`/`candidates_inserted=1` match request #1's response exactly. Zero rows anywhere in the table have `finished_at IS NULL`.
+- Production was never called, read, or written during any part of this test.
+
+Immediately after the test, `SCHEDULED_WRITES_ENABLED` was reset to `false` for Preview (Production untouched, `SCHEDULED_CHECKS_ENABLED` left `true`) — the test candidate and its `scheduled_writer_runs` row are intentionally **not** deleted; they remain as the live evidence of this closed test.
+
 ### Stage 7 — Safe one-source-to-many-sources transition
 - Documented process (not new code): (a) add the new source to `officialSourceChecklist.ts` and `SAFE_CHECK_SOURCE_IDS`, (b) write and pass a parser fixture test for that source's actual HTML shape (matching the existing WKD/Michałowice pattern), (c) run the *dry-run* endpoint against it manually for at least one real invocation to confirm proposals look sane, (d) only then add its id to `SCHEDULED_WRITER_ALLOWED_SOURCE_IDS`, one source at a time, each addition its own explicit approval — never a batch enable.
 
@@ -125,11 +140,11 @@ Given the above, the following are unambiguous, structurally isolated from any l
 
 ## F. Next manual approval point
 
-Two separate gates remain, each requiring its own explicit go-ahead (matching the staged-approval pattern used throughout Sprints 164–166B):
-1. **Executing `PROPOSED_SPRINT_166C_ATOMIC_LOCK_MIGRATION_V2.sql` against `alertownik-preview`** — the concrete next step after this document's own commit; the exact plan is in Stage 2b above. Not performed this session.
-2. **A real two-concurrent-invocations test and a controlled write** against the resulting live deployment — only after (1) is approved and applied, and only after Adam confirms the migration's own read-only verification queries look correct.
+Both gates that were open at the end of the previous session are now closed:
+1. ~~Executing `PROPOSED_SPRINT_166C_ATOMIC_LOCK_MIGRATION_V2.sql` against `alertownik-preview`~~ — **done**, see Stage 2b above.
+2. ~~A real two-concurrent-invocations test and a controlled write against the resulting live deployment~~ — **done, PASS**, see "Stage 2b closure" above.
 
-Before either of those, or before any Vercel Cron entry is added, Adam's explicit go-ahead is required.
+What remains before this sprint's scope is fully complete is unchanged from the original brief and still requires its own separate, explicit approval before any of it starts: a real Vercel Cron entry (Stage 6), a genuine alerting mechanism (Stage 4), and the second-source transition process (Stage 7). None of these were started this session.
 
 ---
 
@@ -141,9 +156,10 @@ Before either of those, or before any Vercel Cron entry is added, Adam's explici
 | Single controlled write (manual trigger) | 100% (proven live in Sprint 166B) | 100% |
 | Retry for transient errors | 100% (implemented, tested, live-wired in Etap D) | 100% (unchanged) |
 | Persisted run history | 60% (live-wired against the migrated V1 table in Etap D) | 75% (open/close now atomic-RPC-based, correctly tested; still not live-migrated) |
-| Concurrency/lock protection | 30% (Etap D wiring existed but was a structural no-op — SELECT-then-INSERT race + no SELECT grant) | **90%** — genuinely atomic mechanism designed, implemented, and unit/race-tested against a faithful in-memory model; only the migration's live execution and one real two-invocation test remain |
+| Concurrency/lock protection | 30% (Etap D wiring existed but was a structural no-op — SELECT-then-INSERT race + no SELECT grant) | **100%** — atomic mechanism designed, implemented, unit/race-tested, migrated live to `alertownik-preview`, and confirmed PASS in a real two-concurrent-invocations test with a genuine `write-candidates` deployment |
+| Persisted run history | 75% (open/close RPC-based, correctly tested; not yet live-migrated) | **100%** — live-migrated, and a real row (outcome `success`, correct counters) was created and closed correctly during the live test |
 | Alerting | 0% | 10% (unchanged — design only) |
 | Scheduled (cron-triggered) writes | 0% | 0% (explicitly deferred — Stage 6, untouched this session) |
 | Multi-source safety process | design-only | design-only (unchanged — Stage 7) |
 
-**Overall automatic-source-monitoring readiness: ~55–60%** (up from ~35–40% at the end of Etap D) — the atomic lock is now correctly *designed and coded*, closing the single biggest structural gap the brief identified (a genuine TOCTOU race in the prior approach). What remains before "Dokończenie bezpiecznego silnika automatyzacji" reaches 100%: (a) execute the atomic-lock migration on `alertownik-preview`, (b) a real two-concurrent-invocation test against the live deployment, (c) one controlled write to confirm the whole pipeline end-to-end with the new mechanism live — each its own approval gate, none performed this session. The cron schedule itself (Stage 6) is deliberately a separate, later milestone, not part of "the safe automation engine" scope this session closes out.
+**Overall automatic-source-monitoring readiness: ~80–85%** (up from ~55–60% earlier this session) — the atomic lock is not just designed but now proven live: migration executed, 9/9 read-only checks PASS, and a real two-concurrent-invocations test against the deployed Preview endpoint confirmed exactly one request processed while the other was cleanly blocked by the lock, with zero double-writes, zero orphaned open runs, and zero Production contact. What remains before "Dokończenie bezpiecznego silnika automatyzacji" is considered fully complete is deliberately unstarted and out of this session's scope: (a) a real Vercel Cron entry (Stage 6), (b) a genuine alerting mechanism beyond the run-history row itself (Stage 4), (c) the second-source transition process (Stage 7) — each its own separate, later approval gate.
