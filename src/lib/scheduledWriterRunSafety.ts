@@ -161,6 +161,92 @@ export type RunOutcome =
 
 export type RunTrigger = "cron" | "manual";
 
+// ── Revision 2 (post read-only security audit) — mirrored validation specs ──
+//
+// The atomic SQL functions (open_scheduled_writer_run,
+// close_scheduled_writer_run — see
+// docs/sql/PROPOSED_SPRINT_166C_ATOMIC_LOCK_MIGRATION_V2.sql) are the ONLY
+// place these checks are actually enforced; the database is always the
+// real source of truth. The functions below exist purely so the exact
+// same edge cases (out-of-range staleness window, invalid outcome,
+// negative counters) can be reviewed and tested here in isolation,
+// without a live database — mirroring the existing isRunLockHeld
+// specification pattern above. A change to either side without the
+// other is a bug, not a design choice.
+
+/** Mirrors open_scheduled_writer_run()'s own bounds check on
+ *  p_stale_after_seconds, applied before that function touches any row.
+ *  The route's real call site always passes RUN_LOCK_STALE_AFTER_MS / 1000
+ *  (300), which is comfortably inside this range — these bounds exist to
+ *  reject a NULL, zero, negative, or unreasonably large value at the
+ *  database layer regardless of what any future caller might pass. */
+export const RUN_LOCK_STALE_AFTER_SECONDS_MIN = 300;
+export const RUN_LOCK_STALE_AFTER_SECONDS_MAX = 86400;
+
+export function isStaleAfterSecondsValid(value: number | null | undefined): boolean {
+  if (value === null || value === undefined) return false;
+  if (!Number.isFinite(value)) return false;
+  return value >= RUN_LOCK_STALE_AFTER_SECONDS_MIN && value <= RUN_LOCK_STALE_AFTER_SECONDS_MAX;
+}
+
+/** Mirrors the exact set close_scheduled_writer_run() validates p_outcome
+ *  against — identical to the table's own
+ *  scheduled_writer_runs_outcome_check CHECK constraint. */
+export const ALLOWED_RUN_OUTCOMES: ReadonlySet<string> = new Set([
+  "success",
+  "partial_failure",
+  "total_failure",
+  "skipped_kill_switch",
+  "skipped_lock_held",
+  "abandoned",
+]);
+
+/** Mirrors scheduled_writer_runs_error_summary_length_check and
+ *  close_scheduled_writer_run()'s own matching in-function check. */
+export const ERROR_SUMMARY_MAX_LENGTH = 200;
+
+function isNonNegativeFiniteInteger(value: number | null | undefined): boolean {
+  return value !== null && value !== undefined && Number.isFinite(value) && Number.isInteger(value) && value >= 0;
+}
+
+export interface CloseRunValidationInput {
+  outcome: string | null | undefined;
+  sourcesChecked: number | null | undefined;
+  sourcesFailed: number | null | undefined;
+  candidatesInserted: number | null | undefined;
+  duplicatesSkipped: number | null | undefined;
+  ambiguousCandidates: number | null | undefined;
+  cappedSkipped: number | null | undefined;
+  duplicatesPreventedByDatabase: number | null | undefined;
+  errorSummary: string | null | undefined;
+}
+
+/** Mirrors close_scheduled_writer_run()'s own validation, executed before
+ *  its UPDATE — true only if every field would pass the SQL function's
+ *  checks (and, transitively, the table's CHECK constraints). */
+export function isCloseRunInputValid(input: CloseRunValidationInput): boolean {
+  if (!input.outcome || !ALLOWED_RUN_OUTCOMES.has(input.outcome)) return false;
+  if (
+    !isNonNegativeFiniteInteger(input.sourcesChecked) ||
+    !isNonNegativeFiniteInteger(input.sourcesFailed) ||
+    !isNonNegativeFiniteInteger(input.candidatesInserted) ||
+    !isNonNegativeFiniteInteger(input.duplicatesSkipped) ||
+    !isNonNegativeFiniteInteger(input.ambiguousCandidates) ||
+    !isNonNegativeFiniteInteger(input.cappedSkipped) ||
+    !isNonNegativeFiniteInteger(input.duplicatesPreventedByDatabase)
+  ) {
+    return false;
+  }
+  if (
+    input.errorSummary !== null &&
+    input.errorSummary !== undefined &&
+    input.errorSummary.length > ERROR_SUMMARY_MAX_LENGTH
+  ) {
+    return false;
+  }
+  return true;
+}
+
 export interface RunHistoryOpenInput {
   id: string;
   startedAt: string;

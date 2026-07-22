@@ -68,13 +68,63 @@
 -- (definer) privilege and return only a boolean to the caller, never a
 -- full row. This satisfies "don't widen SELECT if a narrower function
 -- can return only what's needed."
+--
+-- ── Revision 2 (post read-only security audit, this session) ────────────────
+--
+-- The audit's verdict was SAFE AFTER FIX. Three hardening changes were
+-- applied, none of which alter the two functions' public contract
+-- (argument count/order/names, return type) or the route's call sites:
+--
+--   a) p_stale_after_seconds is now validated BEFORE any UPDATE or INSERT
+--      runs: must be non-null and within [300, 86400] seconds. A caller
+--      passing NULL, 0, a negative number, or an unreasonably large
+--      number previously had no defense at the database layer — a
+--      negative value in particular could have forced the stale-close
+--      UPDATE's threshold into the future, incorrectly abandoning a
+--      genuinely fresh, still-running lock. Out-of-range values now raise
+--      a plain, non-secret exception and touch zero rows. The route's own
+--      call site is unaffected (it always passes 300, the exact default).
+--   b) Both functions now use `set search_path = ''` instead of
+--      `set search_path = public`, the stricter Supabase/Postgres-
+--      recommended hardening for SECURITY DEFINER functions. Every
+--      schema-level object reference was already fully qualified
+--      (public.scheduled_writer_runs, public.automation_identities,
+--      auth.uid()); the two remaining unqualified calls (now(),
+--      make_interval()) are explicitly qualified as pg_catalog.now() and
+--      pg_catalog.make_interval() so nothing depends on an implicit
+--      search_path at all, empty or otherwise.
+--   c) close_scheduled_writer_run() now validates p_outcome against the
+--      exact same allowed set the table's own CHECK constraint enforces
+--      (including 'abandoned'), and validates that every counter argument
+--      is non-null and >= 0 — all before the UPDATE runs. This was
+--      already backstopped by the table's CHECK constraint (an invalid
+--      write could never persist), but a raw, uncaught constraint-
+--      violation error is a worse failure mode than a clean, predictable,
+--      non-secret exception raised deliberately by the function itself.
+--      A length cap on error_summary (200 characters — comfortably above
+--      every value this codebase ever produces, e.g. "3/5 sources
+--      failed", "unexpected_error", "stale_lock_auto_closed") is enforced
+--      the same way, and backed by a matching table-level CHECK
+--      constraint added in section 1 below, so the limit holds even for
+--      any future caller that bypasses this function's own check.
+--
+-- None of this weakens the fail-closed contract: unique_violation on the
+-- INSERT still means, and only means, "a genuine conflicting lock exists"
+-- and returns false; the new validation exceptions are raised BEFORE any
+-- row is touched (no partial write can ever precede a validation
+-- failure), and any other unexpected error still propagates as a raised
+-- exception rather than being silently reinterpreted as "lock held" —
+-- the route's own .catch(() => ({ opened: false })) is what collapses
+-- that distinction into one fail-closed outcome at the application layer,
+-- exactly as before.
 
 begin;
 
--- ── 1. Allow a new outcome value for auto-closed stale locks ────────────────
--- Same constraint, one more allowed value. Named explicitly (confirmed
--- live via pg_constraint before writing this file) so this ALTER targets
--- exactly the existing constraint, not a guessed name.
+-- ── 1. Allow a new outcome value for auto-closed stale locks, and cap
+--       error_summary length ────────────────────────────────────────────────
+-- Same outcome constraint, one more allowed value. Named explicitly
+-- (confirmed live via pg_constraint before writing this file) so this
+-- ALTER targets exactly the existing constraint, not a guessed name.
 alter table public.scheduled_writer_runs
   drop constraint scheduled_writer_runs_outcome_check;
 
@@ -86,6 +136,13 @@ alter table public.scheduled_writer_runs
       'skipped_kill_switch', 'skipped_lock_held', 'abandoned'
     ]::text[])
   );
+
+-- New in Revision 2: a table-level backstop matching
+-- close_scheduled_writer_run()'s own length check below — holds even for
+-- any future write path, not only calls that go through the function.
+alter table public.scheduled_writer_runs
+  add constraint scheduled_writer_runs_error_summary_length_check
+  check (error_summary is null or char_length(error_summary) <= 200);
 
 -- ── 2. The atomic guarantee itself ───────────────────────────────────────────
 -- A partial unique index: at most one row per (environment_tag, trigger)
@@ -104,10 +161,10 @@ create or replace function public.open_scheduled_writer_run(
 ) returns boolean
 language plpgsql
 security definer
-set search_path = public
+set search_path = ''
 as $$
 declare
-  v_now timestamptz := now();
+  v_now timestamptz := pg_catalog.now();
   v_is_writer boolean;
 begin
   select exists (
@@ -116,6 +173,21 @@ begin
 
   if not v_is_writer then
     raise exception 'not authorized';
+  end if;
+
+  -- Revision 2: validate the caller-supplied staleness threshold before
+  -- touching any row. NULL, 0, negative, or unreasonably large values are
+  -- rejected outright — in particular, a negative value would otherwise
+  -- push the stale-close threshold into the future, incorrectly
+  -- abandoning a genuinely fresh, still-running lock. The message is
+  -- deliberately generic (no echo of the caller-supplied value) — it is
+  -- still an internal, non-secret string, matching this function's
+  -- existing "not authorized" convention.
+  if p_stale_after_seconds is null
+    or p_stale_after_seconds < 300
+    or p_stale_after_seconds > 86400
+  then
+    raise exception 'p_stale_after_seconds out of allowed range';
   end if;
 
   -- Housekeeping: close a stale (abandoned) open run for this exact
@@ -130,7 +202,7 @@ begin
   where environment_tag = p_environment_tag
     and trigger = p_trigger
     and finished_at is null
-    and started_at < v_now - make_interval(secs => p_stale_after_seconds);
+    and started_at < v_now - pg_catalog.make_interval(secs => p_stale_after_seconds);
 
   begin
     insert into public.scheduled_writer_runs (id, started_at, trigger, environment_tag)
@@ -139,7 +211,10 @@ begin
   exception when unique_violation then
     -- A genuinely still-open, non-stale row exists for this scope — the
     -- database itself caught this, not application logic. No source
-    -- fetch, no candidate write should ever follow a false return.
+    -- fetch, no candidate write should ever follow a false return. Any
+    -- OTHER exception (not unique_violation) is deliberately left
+    -- uncaught here and propagates to the caller as a real error — it is
+    -- never reinterpreted as "lock held" inside this function.
     return false;
   end;
 end;
@@ -163,7 +238,7 @@ create or replace function public.close_scheduled_writer_run(
 ) returns boolean
 language plpgsql
 security definer
-set search_path = public
+set search_path = ''
 as $$
 declare
   v_is_writer boolean;
@@ -176,13 +251,44 @@ begin
     raise exception 'not authorized';
   end if;
 
+  -- Revision 2: validate every argument before the UPDATE runs — a
+  -- validation failure here can never leave a partially-applied write,
+  -- because nothing has been written yet at this point. p_outcome must
+  -- be one of the exact values the table's own CHECK constraint allows
+  -- (including 'abandoned', reserved for the housekeeping step above but
+  -- still a structurally valid outcome); every counter must be present
+  -- and non-negative; error_summary, if provided, is capped at the same
+  -- length the table-level CHECK constraint (section 1) enforces.
+  if p_outcome is null or p_outcome <> all (array[
+    'success', 'partial_failure', 'total_failure',
+    'skipped_kill_switch', 'skipped_lock_held', 'abandoned'
+  ]::text[])
+  then
+    raise exception 'p_outcome is not one of the allowed run outcomes';
+  end if;
+
+  if p_sources_checked is null or p_sources_checked < 0
+    or p_sources_failed is null or p_sources_failed < 0
+    or p_candidates_inserted is null or p_candidates_inserted < 0
+    or p_duplicates_skipped is null or p_duplicates_skipped < 0
+    or p_ambiguous_candidates is null or p_ambiguous_candidates < 0
+    or p_capped_skipped is null or p_capped_skipped < 0
+    or p_duplicates_prevented_by_database is null or p_duplicates_prevented_by_database < 0
+  then
+    raise exception 'run counters must be non-null and >= 0';
+  end if;
+
+  if p_error_summary is not null and pg_catalog.char_length(p_error_summary) > 200 then
+    raise exception 'p_error_summary exceeds the maximum allowed length';
+  end if;
+
   -- Only ever closes a row that is still open (finished_at is null) —
   -- an already-closed row (by a normal close OR by the stale-abandon
   -- housekeeping above) is never reopened or edited; this mirrors the
   -- exact invariant the original V1 migration's writer_close RLS policy
   -- already enforced.
   update public.scheduled_writer_runs
-  set finished_at = now(),
+  set finished_at = pg_catalog.now(),
       outcome = p_outcome,
       sources_checked = p_sources_checked,
       sources_failed = p_sources_failed,
@@ -217,10 +323,10 @@ commit;
 -- Verification (read-only, run separately after applying):
 --   select indexname, indexdef from pg_indexes where tablename = 'scheduled_writer_runs';
 --     -- expect scheduled_writer_runs_one_open_per_scope present, plus the existing pkey index
---   select proname, prosecdef from pg_proc where proname in ('open_scheduled_writer_run', 'close_scheduled_writer_run');
---     -- expect prosecdef = true (SECURITY DEFINER) for both
+--   select proname, prosecdef, proconfig from pg_proc where proname in ('open_scheduled_writer_run', 'close_scheduled_writer_run');
+--     -- expect prosecdef = true for both, and proconfig containing 'search_path=' (empty)
 --   select policyname, cmd from pg_policies where tablename = 'scheduled_writer_runs';
 --     -- expect exactly 1 row: scheduled_writer_runs_admin_select (SELECT)
---   select conname, pg_get_constraintdef(oid) from pg_constraint where conrelid = 'public.scheduled_writer_runs'::regclass and conname = 'scheduled_writer_runs_outcome_check';
---     -- expect 'abandoned' present in the allowed list
+--   select conname, pg_get_constraintdef(oid) from pg_constraint where conrelid = 'public.scheduled_writer_runs'::regclass and conname in ('scheduled_writer_runs_outcome_check', 'scheduled_writer_runs_error_summary_length_check');
+--     -- expect 'abandoned' present in the outcome list, and the length check present
 --   select count(*) from public.scheduled_writer_runs; -- expect unchanged from before this migration (0, as of this writing)

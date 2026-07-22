@@ -6,7 +6,12 @@ import {
   buildRunHistoryCloseUpdate,
   MAX_FETCH_ATTEMPTS,
   RUN_LOCK_STALE_AFTER_MS,
+  isStaleAfterSecondsValid,
+  isCloseRunInputValid,
+  ALLOWED_RUN_OUTCOMES,
+  ERROR_SUMMARY_MAX_LENGTH,
   type RunLockRow,
+  type CloseRunValidationInput,
 } from "@/lib/scheduledWriterRunSafety";
 
 /**
@@ -180,5 +185,145 @@ test.describe("buildRunHistoryCloseUpdate", () => {
     expect(payload).not.toHaveProperty("id");
     expect(payload).not.toHaveProperty("started_at");
     expect(payload).not.toHaveProperty("trigger");
+  });
+});
+
+/**
+ * Sprint 166C, Stage 2b — Revision 2 (post read-only security audit).
+ *
+ * These mirror the exact validation open_scheduled_writer_run() and
+ * close_scheduled_writer_run() perform BEFORE touching any row — see
+ * docs/sql/PROPOSED_SPRINT_166C_ATOMIC_LOCK_MIGRATION_V2.sql. The SQL
+ * functions are the only place these checks are actually enforced; this
+ * file exists so the exact boundary values can be reviewed and tested in
+ * isolation without a live database, matching the isRunLockHeld
+ * specification pattern above. Two concurrent opens racing on the same
+ * lock are covered at the route level in
+ * scheduledWriterRouteHistoryLock.spec.ts ("exactly one of two
+ * simultaneous invocations opens the run") — not duplicated here.
+ */
+test.describe("isStaleAfterSecondsValid — mirrors open_scheduled_writer_run()'s bounds check", () => {
+  test("null is rejected", () => {
+    expect(isStaleAfterSecondsValid(null)).toBe(false);
+  });
+
+  test("undefined is rejected", () => {
+    expect(isStaleAfterSecondsValid(undefined)).toBe(false);
+  });
+
+  test("0 is rejected", () => {
+    expect(isStaleAfterSecondsValid(0)).toBe(false);
+  });
+
+  test("a negative value is rejected", () => {
+    expect(isStaleAfterSecondsValid(-1)).toBe(false);
+  });
+
+  test("299 (just under the minimum) is rejected", () => {
+    expect(isStaleAfterSecondsValid(299)).toBe(false);
+  });
+
+  test("300 (the minimum, and the route's real value) is accepted", () => {
+    expect(isStaleAfterSecondsValid(300)).toBe(true);
+  });
+
+  test("86400 (the maximum) is accepted", () => {
+    expect(isStaleAfterSecondsValid(86400)).toBe(true);
+  });
+
+  test("86401 (just over the maximum) is rejected", () => {
+    expect(isStaleAfterSecondsValid(86401)).toBe(false);
+  });
+
+  test("NaN and Infinity are rejected", () => {
+    expect(isStaleAfterSecondsValid(Number.NaN)).toBe(false);
+    expect(isStaleAfterSecondsValid(Number.POSITIVE_INFINITY)).toBe(false);
+  });
+});
+
+function validCloseInput(overrides: Partial<CloseRunValidationInput> = {}): CloseRunValidationInput {
+  return {
+    outcome: "success",
+    sourcesChecked: 1,
+    sourcesFailed: 0,
+    candidatesInserted: 1,
+    duplicatesSkipped: 0,
+    ambiguousCandidates: 0,
+    cappedSkipped: 0,
+    duplicatesPreventedByDatabase: 0,
+    errorSummary: null,
+    ...overrides,
+  };
+}
+
+test.describe("isCloseRunInputValid — mirrors close_scheduled_writer_run()'s own validation", () => {
+  test("a fully valid input (a normal successful close) is accepted", () => {
+    expect(isCloseRunInputValid(validCloseInput())).toBe(true);
+  });
+
+  test("every outcome in ALLOWED_RUN_OUTCOMES is individually accepted, including 'abandoned'", () => {
+    for (const outcome of ALLOWED_RUN_OUTCOMES) {
+      expect(isCloseRunInputValid(validCloseInput({ outcome }))).toBe(true);
+    }
+  });
+
+  test("an invalid p_outcome string is rejected", () => {
+    expect(isCloseRunInputValid(validCloseInput({ outcome: "not_a_real_outcome" }))).toBe(false);
+  });
+
+  test("a null or undefined outcome is rejected", () => {
+    expect(isCloseRunInputValid(validCloseInput({ outcome: null }))).toBe(false);
+    expect(isCloseRunInputValid(validCloseInput({ outcome: undefined }))).toBe(false);
+  });
+
+  test("a negative sourcesChecked is rejected", () => {
+    expect(isCloseRunInputValid(validCloseInput({ sourcesChecked: -1 }))).toBe(false);
+  });
+
+  test("a negative sourcesFailed is rejected", () => {
+    expect(isCloseRunInputValid(validCloseInput({ sourcesFailed: -1 }))).toBe(false);
+  });
+
+  test("a negative candidatesInserted is rejected", () => {
+    expect(isCloseRunInputValid(validCloseInput({ candidatesInserted: -1 }))).toBe(false);
+  });
+
+  test("a negative duplicatesSkipped is rejected", () => {
+    expect(isCloseRunInputValid(validCloseInput({ duplicatesSkipped: -1 }))).toBe(false);
+  });
+
+  test("a negative ambiguousCandidates is rejected", () => {
+    expect(isCloseRunInputValid(validCloseInput({ ambiguousCandidates: -1 }))).toBe(false);
+  });
+
+  test("a negative cappedSkipped is rejected", () => {
+    expect(isCloseRunInputValid(validCloseInput({ cappedSkipped: -1 }))).toBe(false);
+  });
+
+  test("a negative duplicatesPreventedByDatabase is rejected", () => {
+    expect(isCloseRunInputValid(validCloseInput({ duplicatesPreventedByDatabase: -1 }))).toBe(false);
+  });
+
+  test("a null or undefined counter is rejected (must be present, not merely non-negative)", () => {
+    expect(isCloseRunInputValid(validCloseInput({ sourcesChecked: null }))).toBe(false);
+    expect(isCloseRunInputValid(validCloseInput({ sourcesFailed: undefined }))).toBe(false);
+  });
+
+  test("a non-integer counter is rejected", () => {
+    expect(isCloseRunInputValid(validCloseInput({ sourcesChecked: 1.5 }))).toBe(false);
+  });
+
+  test("a null errorSummary is accepted (the normal success-path shape)", () => {
+    expect(isCloseRunInputValid(validCloseInput({ errorSummary: null }))).toBe(true);
+  });
+
+  test(`an errorSummary at exactly the ${ERROR_SUMMARY_MAX_LENGTH}-character limit is accepted`, () => {
+    expect(isCloseRunInputValid(validCloseInput({ errorSummary: "a".repeat(ERROR_SUMMARY_MAX_LENGTH) }))).toBe(true);
+  });
+
+  test(`an errorSummary one character over the ${ERROR_SUMMARY_MAX_LENGTH}-character limit is rejected`, () => {
+    expect(isCloseRunInputValid(validCloseInput({ errorSummary: "a".repeat(ERROR_SUMMARY_MAX_LENGTH + 1) }))).toBe(
+      false
+    );
   });
 });
