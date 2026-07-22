@@ -20,12 +20,7 @@ import {
   DATABASE_ENVIRONMENT_GUARD_GENERIC_ERROR,
 } from "@/lib/databaseEnvironmentGuard";
 import { fetchAndParseProposals } from "@/lib/scheduledSourceFetch";
-import { isRunLockHeld } from "@/lib/scheduledWriterRunSafety";
-import {
-  createSupabaseScheduledWriterHistory,
-  buildRunHistoryOpenInsert,
-  buildRunHistoryCloseUpdate,
-} from "@/lib/scheduledWriterHistory";
+import { createSupabaseScheduledWriterHistory, buildRunHistoryCloseUpdate } from "@/lib/scheduledWriterHistory";
 import type { SafeCheckSourceId } from "@/lib/sourceCheck";
 
 // Sprint 147 — Scheduled Writer Foundation v1.
@@ -109,51 +104,28 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ ok: false, error: "Tryb zapisu nie jest jeszcze skonfigurowany." }, { status: 503 });
   }
 
-  // Sprint 166C — run history + concurrency lock. Both operate through the
-  // just-signed-in writer session, using only the INSERT/UPDATE the
-  // migrated RLS grants it (see src/lib/scheduledWriterHistory.ts and
-  // src/lib/scheduledWriterRunSafety.ts's RunHistoryWriter doc comment for
-  // the known, documented gap: findActiveLock() is currently a structural
-  // no-op against the live database, since the writer identity has no
-  // SELECT grant yet — a follow-up, NOT YET EXECUTED migration would close
-  // that. Every write here is best-effort and never blocks or crashes the
-  // actual candidate-writing path below: a history/lock failure is an
-  // observability gap, never a reason to fail the run itself.
+  // Sprint 166C, Stage 2b — atomic run history + concurrency lock. A single
+  // call attempts to atomically open a new run row for this
+  // (trigger, environmentTag) scope — see
+  // docs/sql/PROPOSED_SPRINT_166C_ATOMIC_LOCK_MIGRATION_V2.sql (NOT YET
+  // EXECUTED) for the partial-unique-index + SECURITY DEFINER function
+  // pair this now targets. `opened: false` covers both a genuine
+  // lock-still-held conflict and any unexpected error calling the
+  // function — this route treats both identically: fail closed, no
+  // source fetch, no candidate write, ever. There is no separate
+  // SELECT-then-decide step here on purpose — that TOCTOU-prone pattern
+  // is exactly what this stage replaced.
   const history = createSupabaseScheduledWriterHistory(signIn.client);
   const environmentTag = getConfiguredDatabaseEnvironmentTag() ?? "unknown";
 
-  const activeLock = await history.findActiveLock().catch(() => null);
-  if (isRunLockHeld(activeLock)) {
-    const skippedId = randomUUID();
-    const skippedAt = new Date().toISOString();
-    await history
-      .openRun(buildRunHistoryOpenInsert({ id: skippedId, startedAt: skippedAt, trigger: "manual", environmentTag }))
-      .catch(() => ({ ok: false }));
-    await history
-      .closeRun(
-        skippedId,
-        buildRunHistoryCloseUpdate({
-          finishedAt: skippedAt,
-          outcome: "skipped_lock_held",
-          sourcesChecked: 0,
-          sourcesFailed: 0,
-          candidatesInserted: 0,
-          duplicatesSkipped: 0,
-          ambiguousCandidates: 0,
-          cappedSkipped: 0,
-          duplicatesPreventedByDatabase: 0,
-          errorSummary: null,
-        })
-      )
-      .catch(() => ({ ok: false }));
-    return NextResponse.json({ ok: false, error: "Poprzednie uruchomienie wciąż trwa." }, { status: 503 });
-  }
-
   const runId = randomUUID();
-  const startedAt = new Date().toISOString();
-  await history
-    .openRun(buildRunHistoryOpenInsert({ id: runId, startedAt, trigger: "manual", environmentTag }))
-    .catch(() => ({ ok: false }));
+  const openResult = await history.openRun(runId, "manual", environmentTag).catch(() => ({ opened: false }));
+  if (!openResult.opened) {
+    return NextResponse.json(
+      { ok: false, error: "Poprzednie uruchomienie wciąż trwa.", reason: "lock_held" },
+      { status: 503 }
+    );
+  }
 
   const writer = createSupabaseScheduledWriter(signIn.client);
   const sourceKeyFilter = req.nextUrl.searchParams.get("sourceKey");

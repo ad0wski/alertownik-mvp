@@ -71,6 +71,29 @@
 - Proposed schedule: mirror the existing dry-run's cadence (`0 5 * * *`, once daily) to start — never more frequent without a separate, explicit review of Supabase Free-tier request quotas.
 - **Not added in this sprint.**
 
+### Stage 2b — Atomic concurrency lock (this session — corrects Stage 2/Etap D)
+
+**Why the Etap D wiring was insufficient, discovered by audit before any live migration:** the first live wiring of Stage 2 used a `SELECT` (`findActiveLock()`) → decide (`isRunLockHeld()`) → `INSERT` sequence. This has a genuine TOCTOU (time-of-check-to-time-of-use) race: two concurrent invocations can both execute the `SELECT` before either has inserted, both see no active lock, and both proceed to `INSERT`. (In practice, the Etap D migration also granted the writer identity no `SELECT` at all, making `findActiveLock()` a structural no-op for an unrelated reason — but even a `SELECT` policy fix would still leave the underlying race; the fix must be atomic inside one database operation, not merely readable.)
+
+**The corrected mechanism** (`docs/sql/PROPOSED_SPRINT_166C_ATOMIC_LOCK_MIGRATION_V2.sql`, **not yet executed**):
+1. A **partial `UNIQUE INDEX`** on `(environment_tag, trigger)` `WHERE finished_at IS NULL` — Postgres itself guarantees at most one open row per scope can ever exist, enforced at the storage layer, not by application logic. A concurrent `INSERT` violating it fails with `23505 unique_violation` — there is no window where two callers can both believe they succeeded.
+2. Two `SECURITY DEFINER` functions, `open_scheduled_writer_run(...)` and `close_scheduled_writer_run(...)`, are the **only** way to write this table from now on — the old direct-table `INSERT`/`UPDATE` RLS policies from the V1 migration are dropped. Each function re-implements the `automation_identities`-membership check itself (a `SECURITY DEFINER` function bypasses table RLS entirely — the function body is now the authorization boundary), and returns only a boolean, never a row. **No `SELECT` grant is added anywhere** — the "return only what's needed via a narrower function" approach the brief asked for, instead of widening RLS.
+3. `open_scheduled_writer_run()` first closes any **stale** open row for the same scope (`finished_at IS NULL AND started_at < now() - interval`, using `RUN_LOCK_STALE_AFTER_MS` as the single source of truth for the threshold, passed explicitly from the app on every call), then attempts the `INSERT`. A `unique_violation` (still genuinely locked) and any unexpected error from the function call are treated **identically** by the route: `opened: false` → fail closed, no source fetch, no candidate write, ever.
+4. A new `outcome` value, `'abandoned'`, is added to the existing `CHECK` constraint (by name, confirmed live via `pg_constraint` before writing the migration) for a stale lock the housekeeping step force-closes.
+
+**Live code (this session):**
+- `src/lib/scheduledWriterRunSafety.ts` — `RunLockRow`/`isRunLockHeld`/`RUN_LOCK_STALE_AFTER_MS` kept as a documented **specification** of the intended semantics (still directly tested), now explicitly annotated as superseded-as-a-live-mechanism by the atomic SQL function; `RunHistoryWriter.openRun` now returns `{ opened: boolean }` instead of requiring a separate lock-check step; `RunOutcome` gained `'abandoned'`.
+- `src/lib/scheduledWriterHistory.ts` — `openRun`/`closeRun` now call `.rpc('open_scheduled_writer_run', ...)` / `.rpc('close_scheduled_writer_run', ...)` instead of `.from(table).insert()/.update()`.
+- `src/app/api/cron/write-candidates/route.ts` — the whole `findActiveLock` → `isRunLockHeld` → conditional-insert block replaced with a single atomic `openRun()` call; `opened: false` → one clear `503` response (`reason: "lock_held"`), no separate "skipped" history row (a blocked attempt no longer creates a database row at all — cleaner than the Etap D version, which briefly opened-then-closed a doomed row for a blocked attempt).
+- 17 new/updated route-level tests, including a genuine `Promise.all` two-invocations-race test against a shared in-memory fake modeling the unique-index semantics (mirroring the technique `scheduledWriterConcurrency.spec.ts` already uses for the `content_fingerprint` constraint).
+
+**PASS / STOP / ROLLBACK for the migration itself:**
+- **PASS:** the unique index and both functions exist exactly as specified; `pg_policies` shows exactly one remaining policy (`scheduled_writer_runs_admin_select`); the outcome `CHECK` constraint includes `'abandoned'`; row count unchanged (0) immediately after; Production untouched throughout.
+- **STOP:** any unexpected object already existing under these names; the row count is non-zero before running (would mean the V1 migration's state has drifted from what's documented); any error mid-transaction (the whole file is `BEGIN`/`COMMIT`-wrapped, so a failure rolls back cleanly with no partial state).
+- **ROLLBACK (if ever needed after execution):** `DROP FUNCTION` both functions, `DROP INDEX scheduled_writer_runs_one_open_per_scope`, re-create the two dropped policies from the V1 migration file, revert the outcome `CHECK` constraint to the V1 list — all reversible, none destructive to any existing row.
+
+**Two-concurrent-invocations test plan (once migrated, for a future session — not performed this session):** from Adam's own terminal, fire two `write-candidates` requests as close together as possible (e.g. two parallel `curl`/`Invoke-RestMethod` calls); read `scheduled_writer_runs` back (read-only, via the Supabase dashboard — the writer itself still can't `SELECT`) to confirm exactly one row was created for that instant, and that exactly one HTTP response was `200 ok:true` while the other was `503 reason:"lock_held"`.
+
 ### Stage 7 — Safe one-source-to-many-sources transition
 - Documented process (not new code): (a) add the new source to `officialSourceChecklist.ts` and `SAFE_CHECK_SOURCE_IDS`, (b) write and pass a parser fixture test for that source's actual HTML shape (matching the existing WKD/Michałowice pattern), (c) run the *dry-run* endpoint against it manually for at least one real invocation to confirm proposals look sane, (d) only then add its id to `SCHEDULED_WRITER_ALLOWED_SOURCE_IDS`, one source at a time, each addition its own explicit approval — never a batch enable.
 
@@ -96,21 +119,25 @@ Given the above, the following are unambiguous, structurally isolated from any l
 
 ## F. Next manual approval point
 
-Before any further work on this branch touches a live route's behavior in a way that could affect Preview (even under the existing kill switches), or before the `scheduled_writer_runs` migration is applied to `alertownik-preview`, Adam's explicit go-ahead is required — matching the exact same staged-approval pattern used throughout Sprints 164–166B.
+Two separate gates remain, each requiring its own explicit go-ahead (matching the staged-approval pattern used throughout Sprints 164–166B):
+1. **Executing `PROPOSED_SPRINT_166C_ATOMIC_LOCK_MIGRATION_V2.sql` against `alertownik-preview`** — the concrete next step after this document's own commit; the exact plan is in Stage 2b above. Not performed this session.
+2. **A real two-concurrent-invocations test and a controlled write** against the resulting live deployment — only after (1) is approved and applied, and only after Adam confirms the migration's own read-only verification queries look correct.
+
+Before either of those, or before any Vercel Cron entry is added, Adam's explicit go-ahead is required.
 
 ---
 
 ## Automation readiness — percent complete (this sprint's honest assessment)
 
-| Component | Before this sprint | After this sprint |
+| Component | Before this session | After this session |
 |---|---|---|
 | Dry-run pipeline | 100% (unchanged, proven since Sprint 142) | 100% |
 | Single controlled write (manual trigger) | 100% (proven live in Sprint 166B) | 100% |
-| Retry for transient errors | 0% | 100% (implemented, tested, unused until wired live) |
-| Persisted run history | 0% | 40% (code + proposed SQL written; migration not applied, not wired into the live route) |
-| Concurrency/lock protection | 0% | 30% (decision logic written; storage + wiring not yet done) |
-| Alerting | 0% | 10% (design only — first mechanism identified, no push/email/Slack integration) |
-| Scheduled (cron-triggered) writes | 0% | 0% (explicitly deferred — Stage 6) |
-| Multi-source safety process | design-only | design-only, documented as an explicit repeatable checklist (Stage 7) |
+| Retry for transient errors | 100% (implemented, tested, live-wired in Etap D) | 100% (unchanged) |
+| Persisted run history | 60% (live-wired against the migrated V1 table in Etap D) | 75% (open/close now atomic-RPC-based, correctly tested; still not live-migrated) |
+| Concurrency/lock protection | 30% (Etap D wiring existed but was a structural no-op — SELECT-then-INSERT race + no SELECT grant) | **90%** — genuinely atomic mechanism designed, implemented, and unit/race-tested against a faithful in-memory model; only the migration's live execution and one real two-invocation test remain |
+| Alerting | 0% | 10% (unchanged — design only) |
+| Scheduled (cron-triggered) writes | 0% | 0% (explicitly deferred — Stage 6, untouched this session) |
+| Multi-source safety process | design-only | design-only (unchanged — Stage 7) |
 
-**Overall automatic-source-monitoring readiness: ~35–40%** — the write path itself is fully proven safe (Sprint 166B), but "fully automatic, production-grade, monitored, and safely multi-source" still requires the run-history migration, its live wiring, the lock's live wiring, and — last of all — the actual cron entry, each a separate future approval gate.
+**Overall automatic-source-monitoring readiness: ~55–60%** (up from ~35–40% at the end of Etap D) — the atomic lock is now correctly *designed and coded*, closing the single biggest structural gap the brief identified (a genuine TOCTOU race in the prior approach). What remains before "Dokończenie bezpiecznego silnika automatyzacji" reaches 100%: (a) execute the atomic-lock migration on `alertownik-preview`, (b) a real two-concurrent-invocation test against the live deployment, (c) one controlled write to confirm the whole pipeline end-to-end with the new mechanism live — each its own approval gate, none performed this session. The cron schedule itself (Stage 6) is deliberately a separate, later milestone, not part of "the safe automation engine" scope this session closes out.

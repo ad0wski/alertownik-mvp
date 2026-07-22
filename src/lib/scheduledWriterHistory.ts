@@ -2,62 +2,61 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   buildRunHistoryOpenInsert,
   buildRunHistoryCloseUpdate,
+  RUN_LOCK_STALE_AFTER_MS,
   type RunHistoryWriter,
-  type RunLockRow,
+  type RunTrigger,
 } from "@/lib/scheduledWriterRunSafety";
 
-// Sprint 166C — the real, Supabase-backed implementation of
-// RunHistoryWriter, targeting the live public.scheduled_writer_runs
-// table on alertownik-preview (migrated — see
-// docs/sql/PROPOSED_SPRINT_166C_RUN_HISTORY_MIGRATION_V1.sql). Mirrors
-// createSupabaseScheduledWriter's shape (src/lib/scheduledWriter.ts):
-// a narrow set of operations matching exactly what the writer
-// identity's RLS policies allow, nothing generic.
+// Sprint 166C, Stage 2b — the real, Supabase-backed implementation of
+// RunHistoryWriter, targeting the atomic SECURITY DEFINER functions
+// proposed in docs/sql/PROPOSED_SPRINT_166C_ATOMIC_LOCK_MIGRATION_V2.sql
+// (NOT YET EXECUTED against alertownik-preview or any other project).
 //
-// openRun/closeRun never rely on INSERT/UPDATE ... RETURNING to learn
-// anything back — the writer identity has no SELECT grant on this
-// table, and Postgres RLS filters RETURNING output through SELECT
-// policies, so a RETURNING clause here would come back empty regardless
-// of whether the write itself succeeded. The caller-generated id
-// (crypto.randomUUID(), see the route) is the only handle needed to
-// later close the exact same row.
+// openRun/closeRun call .rpc(), never .from(table).insert()/.update()
+// directly — the atomic-lock migration drops the old direct-table
+// writer_insert/writer_close RLS policies, so a direct table write would
+// simply be denied from here on. Both functions internally re-check
+// automation_identities membership themselves (SECURITY DEFINER bypasses
+// RLS, so the function body is now the authorization boundary) and
+// return only a boolean, never a row — no SELECT grant is needed or
+// added for the writer identity anywhere in this file.
 
 export function createSupabaseScheduledWriterHistory(client: SupabaseClient): RunHistoryWriter {
   return {
-    async openRun(payload) {
-      const { error } = await client.from("scheduled_writer_runs").insert(payload);
-      return { ok: !error };
+    async openRun(id: string, trigger: RunTrigger, environmentTag: string) {
+      const { data, error } = await client.rpc("open_scheduled_writer_run", {
+        p_id: id,
+        p_trigger: trigger,
+        p_environment_tag: environmentTag,
+        p_stale_after_seconds: Math.floor(RUN_LOCK_STALE_AFTER_MS / 1000),
+      });
+      // Any error (unexpected failure calling the function, network
+      // issue, etc.) is treated identically to "did not open" — the
+      // caller must fail closed either way, never distinguishing the two
+      // in a way that could tempt it to proceed anyway.
+      return { opened: !error && data === true };
     },
     async closeRun(id, payload) {
-      // The migrated UPDATE policy (scheduled_writer_runs_writer_close)
-      // only allows this to affect a row that is still open
-      // (finished_at is null) — attempting to close an already-closed
-      // or nonexistent row simply updates zero rows, never errors.
-      const { error } = await client.from("scheduled_writer_runs").update(payload).eq("id", id);
+      const { error } = await client.rpc("close_scheduled_writer_run", {
+        p_id: id,
+        p_outcome: payload.outcome,
+        p_sources_checked: payload.sources_checked,
+        p_sources_failed: payload.sources_failed,
+        p_candidates_inserted: payload.candidates_inserted,
+        p_duplicates_skipped: payload.duplicates_skipped,
+        p_ambiguous_candidates: payload.ambiguous_candidates,
+        p_capped_skipped: payload.capped_skipped,
+        p_duplicates_prevented_by_database: payload.duplicates_prevented_by_database,
+        p_error_summary: payload.error_summary,
+      });
       return { ok: !error };
-    },
-    async findActiveLock(): Promise<RunLockRow | null> {
-      // See RunHistoryWriter.findActiveLock's doc comment
-      // (src/lib/scheduledWriterRunSafety.ts): the writer identity has
-      // no SELECT grant on this table under the currently-migrated RLS,
-      // so this SELECT is expected to be denied/empty every time today
-      // — a structural no-op, not a bug in this function. Any Postgrest
-      // error (including an RLS-denied empty result) or an empty result
-      // set is treated identically: no lock detected, never throws, never
-      // blocks the caller.
-      const { data, error } = await client
-        .from("scheduled_writer_runs")
-        .select("started_at, finished_at")
-        .is("finished_at", null)
-        .order("started_at", { ascending: false })
-        .limit(1);
-      if (error || !data || data.length === 0) return null;
-      const row = data[0] as { started_at: string; finished_at: string | null };
-      return { startedAt: row.started_at, finishedAt: row.finished_at };
     },
   };
 }
 
 // Re-exported for the route's convenience so it only needs one import
-// site for both builders.
+// site for both builders (buildRunHistoryOpenInsert is no longer used by
+// this file's own implementation — it remains the documented shape of
+// an "open" row for tests/reference — but buildRunHistoryCloseUpdate's
+// shape maps directly onto close_scheduled_writer_run's parameters).
 export { buildRunHistoryOpenInsert, buildRunHistoryCloseUpdate };

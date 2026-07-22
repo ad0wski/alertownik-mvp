@@ -268,6 +268,20 @@ Stages are intentionally separate — each one can be evaluated and validated be
 
 ---
 
+## Stage 16 — Automatic Source Monitoring Engine 🟡 (Sprint 166C, branch only, ~55–60%)
+
+- ✅ Full audit of the candidate-automation pipeline against 11 automation-engine requirements (schedule, concurrency protection, dedup, per-run cap, run history, retry, persistent kill switch, alerting, Preview/Production separation, safe multi-source transition, no auto-publish) — see `docs/SPRINT_166C_AUTOMATIC_SOURCE_MONITORING_AUDIT_AND_DESIGN_V1.md`.
+- ✅ Bounded retry (exactly one retry, transient failures only — 5xx/timeout/network error, never 4xx) live-wired into `write-candidates`.
+- ✅ Persisted run-history table (`scheduled_writer_runs`) migrated to `alertownik-preview` — one row per invocation, RLS-scoped to the existing `automation_identities`/`admin_profiles` pattern.
+- 🟡 **Concurrency lock — corrected mid-sprint after an internal audit found a real gap**: the first live wiring used a `SELECT` → decide → `INSERT` sequence, a genuine race between two concurrent invocations. Redesigned as a Postgres-atomic mechanism instead — a partial `UNIQUE INDEX` (at most one open run per `environment_tag`+`trigger`) plus two `SECURITY DEFINER` functions that are now the *only* way to write the table, closing the race structurally rather than by discipline. Proposed in `docs/sql/PROPOSED_SPRINT_166C_ATOMIC_LOCK_MIGRATION_V2.sql` — **not yet executed**.
+- ✅ Full test coverage for the atomic design against an in-memory model of the real unique-index semantics (exactly one winner of two simultaneous open attempts, stale-lock auto-recovery, fail-closed on any lock-mechanism error) — see `tests/e2e/scheduledWriterRouteHistoryLock.spec.ts`.
+- ❌ Not yet done: the atomic-lock migration itself has not been run against `alertownik-preview`; no real two-concurrent-invocation test against a live deployment; no cron entry (Stage 6, deliberately separate); alerting beyond the history row itself; multi-source expansion beyond Michałowice.
+- ❌ `SCHEDULED_WRITES_ENABLED` remains as previously set (see Sprint 166B); no kill switch changed this sprint; Production untouched throughout.
+
+**Goal (in progress):** close the biggest remaining structural gap in the candidate-automation pipeline — genuine, database-enforced protection against two overlapping runs — before ever considering a real schedule (Stage 6). See `docs/SPRINT_166C_AUTOMATIC_SOURCE_MONITORING_AUDIT_AND_DESIGN_V1.md` for the full design, PASS/STOP/ROLLBACK plan, and remaining approval gates.
+
+---
+
 ## Future Direction — Nationwide Source Coverage (design note, not scheduled)
 
 Once the Preview canary above is confirmed successful, the next large area of work is a nationwide official-source registry, not yet scheduled as a numbered sprint:

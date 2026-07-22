@@ -68,7 +68,25 @@ export function classifyFetchFailure(diagnostic: FetchDiagnosticCode): FetchFail
 export const MAX_FETCH_ATTEMPTS = 2;
 export const RETRY_DELAY_MS = 2_000;
 
-// ── 2. Run-lock decision (pure — storage/wiring deliberately out of scope) ───
+// ── 2. Run-lock semantics ─────────────────────────────────────────────────────
+//
+// Sprint 166C, Stage 2b — SUPERSEDED as a live mechanism: the lock is now
+// enforced atomically inside Postgres itself (a partial unique index +
+// two SECURITY DEFINER functions — see
+// docs/sql/PROPOSED_SPRINT_166C_ATOMIC_LOCK_MIGRATION_V2.sql, not yet
+// executed). A SELECT-then-INSERT check from application code (which is
+// what RunLockRow/isRunLockHeld originally modeled) has a genuine
+// TOCTOU race between two concurrent invocations — see that migration
+// file's own header comment for the full explanation of why this
+// approach was rejected as the live mechanism.
+//
+// RunLockRow and isRunLockHeld are kept here, unchanged, as a documented
+// SPECIFICATION of the intended staleness semantics — RUN_LOCK_STALE_AFTER_MS
+// is the single source of truth the atomic SQL function's
+// p_stale_after_seconds parameter is always called with (see
+// src/lib/scheduledWriterHistory.ts), so the two never drift apart even
+// though the actual enforcement now happens server-side, inside a single
+// atomic database operation, not in this application code.
 
 export interface RunLockRow {
   startedAt: string;
@@ -79,12 +97,17 @@ export interface RunLockRow {
  *  before a new invocation is allowed to proceed anyway (a stuck/crashed
  *  invocation must never permanently wedge every future run). Deliberately
  *  generous relative to this route's realistic single-source runtime
- *  (a handful of seconds) — see design doc §C Stage 2. */
+ *  (a handful of seconds) — see design doc §C Stage 2. This is the exact
+ *  threshold (in seconds) passed to the atomic open_scheduled_writer_run()
+ *  SQL function as p_stale_after_seconds. */
 export const RUN_LOCK_STALE_AFTER_MS = 5 * 60 * 1000;
 
-/** Returns true if `lock` should block a new invocation from proceeding.
- *  A lock with a `finishedAt` never blocks (the run it recorded is over).
- *  A lock with no `finishedAt` blocks only while still within the
+/** Specification only as of Stage 2b (see module header) — still exactly
+ *  correct as a description of what the atomic SQL function does, and
+ *  still directly tested against fakes/fixtures for that reason. Returns
+ *  true if `lock` should block a new invocation from proceeding. A lock
+ *  with a `finishedAt` never blocks (the run it recorded is over). A
+ *  lock with no `finishedAt` blocks only while still within the
  *  stale-after window — past that, it is treated as abandoned (e.g. the
  *  function crashed or was terminated) rather than an eternal wedge. */
 export function isRunLockHeld(
@@ -128,7 +151,13 @@ export type RunOutcome =
   | "partial_failure"
   | "total_failure"
   | "skipped_kill_switch"
-  | "skipped_lock_held";
+  | "skipped_lock_held"
+  /** Set only by open_scheduled_writer_run()'s own stale-lock housekeeping
+   *  (see the atomic-lock migration) — never set directly by application
+   *  code. Recorded here so TypeScript recognizes it when reading a
+   *  history row back, and so the SQL CHECK constraint and this type
+   *  never silently drift apart. */
+  | "abandoned";
 
 export type RunTrigger = "cron" | "manual";
 
@@ -181,25 +210,23 @@ export function buildRunHistoryCloseUpdate(input: RunHistoryCloseInput) {
 
 /** Narrow interface the real route depends on (see
  *  src/lib/scheduledWriterHistory.ts for the live Supabase-backed
- *  implementation) — matches exactly what the migrated RLS allows the
- *  writer identity to do: open a run, close only its own still-open run,
- *  and best-effort look for an existing lock (see findActiveLock's own
- *  doc comment for why this last one is currently a structural no-op
- *  against the live database). Never SELECT/UPDATE/DELETE on any other
- *  row, never any access beyond this one table. */
+ *  implementation, and
+ *  docs/sql/PROPOSED_SPRINT_166C_ATOMIC_LOCK_MIGRATION_V2.sql — NOT YET
+ *  EXECUTED — for the two SECURITY DEFINER functions this now targets).
+ *  Never SELECT/UPDATE/DELETE on any row directly — every operation goes
+ *  through a function that internally re-checks automation_identities
+ *  membership itself (SECURITY DEFINER bypasses table RLS, so the
+ *  function body is the authorization boundary). */
 export interface RunHistoryWriter {
-  openRun(payload: ReturnType<typeof buildRunHistoryOpenInsert>): Promise<{ ok: boolean }>;
+  /** Atomically attempts to open a new run for the given (trigger,
+   *  environmentTag) scope. Internally closes any stale/abandoned open
+   *  run for that same scope first, then attempts the insert — a
+   *  Postgres partial unique index makes "is one already open" and "open
+   *  a new one" a single atomic operation, closing the classic
+   *  SELECT-then-INSERT race structurally. `opened: false` covers both a
+   *  genuine lock-still-held conflict AND any unexpected error calling
+   *  the function — callers must treat both identically: fail closed,
+   *  no source fetch, no candidate write. */
+  openRun(id: string, trigger: RunTrigger, environmentTag: string): Promise<{ opened: boolean }>;
   closeRun(id: string, payload: ReturnType<typeof buildRunHistoryCloseUpdate>): Promise<{ ok: boolean }>;
-  /** Best-effort concurrency check — see
-   *  docs/SPRINT_166C_AUTOMATIC_SOURCE_MONITORING_AUDIT_AND_DESIGN_V1.md
-   *  §D "Known gap": the migrated RLS grants the writer identity INSERT
-   *  and UPDATE only, no SELECT, on scheduled_writer_runs — so a live
-   *  call to this method can never actually see a prior open row and
-   *  will always resolve to null (no lock detected) until a follow-up,
-   *  NOT YET EXECUTED, single additional SELECT policy (scoped to
-   *  `finished_at is null`, mirroring the existing UPDATE policy's own
-   *  USING clause) is proposed and approved. isRunLockHeld()'s own logic
-   *  is fully correct and tested against a fake writer regardless — this
-   *  gap is specifically about live wiring, not the decision logic. */
-  findActiveLock(): Promise<RunLockRow | null>;
 }
