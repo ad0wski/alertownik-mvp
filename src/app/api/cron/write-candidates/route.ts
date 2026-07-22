@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import {
   checkCronAuth,
@@ -15,9 +16,16 @@ import {
 } from "@/lib/scheduledWriter";
 import {
   checkDatabaseEnvironmentGuard,
+  getConfiguredDatabaseEnvironmentTag,
   DATABASE_ENVIRONMENT_GUARD_GENERIC_ERROR,
 } from "@/lib/databaseEnvironmentGuard";
 import { fetchAndParseProposals } from "@/lib/scheduledSourceFetch";
+import { isRunLockHeld } from "@/lib/scheduledWriterRunSafety";
+import {
+  createSupabaseScheduledWriterHistory,
+  buildRunHistoryOpenInsert,
+  buildRunHistoryCloseUpdate,
+} from "@/lib/scheduledWriterHistory";
 import type { SafeCheckSourceId } from "@/lib/sourceCheck";
 
 // Sprint 147 — Scheduled Writer Foundation v1.
@@ -101,6 +109,52 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ ok: false, error: "Tryb zapisu nie jest jeszcze skonfigurowany." }, { status: 503 });
   }
 
+  // Sprint 166C — run history + concurrency lock. Both operate through the
+  // just-signed-in writer session, using only the INSERT/UPDATE the
+  // migrated RLS grants it (see src/lib/scheduledWriterHistory.ts and
+  // src/lib/scheduledWriterRunSafety.ts's RunHistoryWriter doc comment for
+  // the known, documented gap: findActiveLock() is currently a structural
+  // no-op against the live database, since the writer identity has no
+  // SELECT grant yet — a follow-up, NOT YET EXECUTED migration would close
+  // that. Every write here is best-effort and never blocks or crashes the
+  // actual candidate-writing path below: a history/lock failure is an
+  // observability gap, never a reason to fail the run itself.
+  const history = createSupabaseScheduledWriterHistory(signIn.client);
+  const environmentTag = getConfiguredDatabaseEnvironmentTag() ?? "unknown";
+
+  const activeLock = await history.findActiveLock().catch(() => null);
+  if (isRunLockHeld(activeLock)) {
+    const skippedId = randomUUID();
+    const skippedAt = new Date().toISOString();
+    await history
+      .openRun(buildRunHistoryOpenInsert({ id: skippedId, startedAt: skippedAt, trigger: "manual", environmentTag }))
+      .catch(() => ({ ok: false }));
+    await history
+      .closeRun(
+        skippedId,
+        buildRunHistoryCloseUpdate({
+          finishedAt: skippedAt,
+          outcome: "skipped_lock_held",
+          sourcesChecked: 0,
+          sourcesFailed: 0,
+          candidatesInserted: 0,
+          duplicatesSkipped: 0,
+          ambiguousCandidates: 0,
+          cappedSkipped: 0,
+          duplicatesPreventedByDatabase: 0,
+          errorSummary: null,
+        })
+      )
+      .catch(() => ({ ok: false }));
+    return NextResponse.json({ ok: false, error: "Poprzednie uruchomienie wciąż trwa." }, { status: 503 });
+  }
+
+  const runId = randomUUID();
+  const startedAt = new Date().toISOString();
+  await history
+    .openRun(buildRunHistoryOpenInsert({ id: runId, startedAt, trigger: "manual", environmentTag }))
+    .catch(() => ({ ok: false }));
+
   const writer = createSupabaseScheduledWriter(signIn.client);
   const sourceKeyFilter = req.nextUrl.searchParams.get("sourceKey");
   // Server-side source restriction, independent of the caller: even a
@@ -122,17 +176,60 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   // network error degrades to the same safe, honest per-source failure
   // shape as a source-page fetch failure — never an uncaught exception
   // that could turn this route's response into a framework error page.
-  const results = await Promise.all(
-    sources.map(async (source) => {
-      const sourceKey = source.id as SafeCheckSourceId;
-      try {
-        const fetched = await fetchAndParseProposals(source.officialUrl);
-        if (!fetched.ok) {
+  //
+  // Sprint 166C: the whole block is now also wrapped so the run-history
+  // row opened above is always closed — on the normal path (results
+  // computed) or on a genuinely unexpected top-level error — releasing
+  // the lock either way. A history/lock failure itself is still never
+  // allowed to fail the request (see the .catch(() => ...) calls below).
+  try {
+    const results = await Promise.all(
+      sources.map(async (source) => {
+        const sourceKey = source.id as SafeCheckSourceId;
+        try {
+          const fetched = await fetchAndParseProposals(source.officialUrl);
+          if (!fetched.ok) {
+            return {
+              sourceKey,
+              sourceName: source.name,
+              outcome: fetched.outcome,
+              diagnostic: fetched.diagnostic,
+              proposalsFound: 0,
+              candidatesInserted: 0,
+              duplicatesSkipped: 0,
+              ambiguousCandidates: 0,
+              cappedSkipped: 0,
+              sourceChecksInserted: 0,
+              duplicatesPreventedByDatabase: 0,
+            };
+          }
+
+          const registrySourceId = getRegistrySourceId(sourceKey);
+          const written = await writeCandidatesForSource(writer, {
+            sourceKey,
+            sourceName: source.name,
+            sourceUrl: source.officialUrl,
+            proposals: fetched.proposals,
+            registrySourceId,
+            writerUserId: signIn.userId,
+          });
+
           return {
             sourceKey,
             sourceName: source.name,
-            outcome: fetched.outcome,
-            diagnostic: fetched.diagnostic,
+            outcome: fetched.proposals.length > 0 ? ("success" as const) : ("no_proposals" as const),
+            proposalsFound: fetched.proposals.length,
+            ...written,
+          };
+        } catch {
+          // Deliberately no exception detail in the response (no stack
+          // trace, no error message) — same "safe, generic diagnostic
+          // only" principle already applied to sign-in failures above.
+          return {
+            sourceKey,
+            sourceName: source.name,
+            outcome: "write_error" as const,
+            diagnostic: "unexpected_error",
             proposalsFound: 0,
             candidatesInserted: 0,
             duplicatesSkipped: 0,
@@ -142,65 +239,92 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
             duplicatesPreventedByDatabase: 0,
           };
         }
+      })
+    );
 
-        const registrySourceId = getRegistrySourceId(sourceKey);
-        const written = await writeCandidatesForSource(writer, {
-          sourceKey,
-          sourceName: source.name,
-          sourceUrl: source.officialUrl,
-          proposals: fetched.proposals,
-          registrySourceId,
-          writerUserId: signIn.userId,
-        });
+    const failedOutcomes = new Set(["fetch_error", "timeout", "parse_error", "write_error"]);
+    const sourcesFailed = results.filter((r) => failedOutcomes.has(r.outcome)).length;
+    const sourcesChecked = results.length;
+    const totalCandidatesInserted = results.reduce((sum, r) => sum + r.candidatesInserted, 0);
+    const totalDuplicatesSkipped = results.reduce((sum, r) => sum + r.duplicatesSkipped, 0);
+    const totalAmbiguousCandidates = results.reduce((sum, r) => sum + r.ambiguousCandidates, 0);
+    const totalCappedSkipped = results.reduce((sum, r) => sum + r.cappedSkipped, 0);
+    const totalDuplicatesPreventedByDatabase = results.reduce(
+      (sum, r) => sum + r.duplicatesPreventedByDatabase,
+      0
+    );
 
-        return {
-          sourceKey,
-          sourceName: source.name,
-          outcome: fetched.proposals.length > 0 ? ("success" as const) : ("no_proposals" as const),
-          proposalsFound: fetched.proposals.length,
-          ...written,
-        };
-      } catch {
-        // Deliberately no exception detail in the response (no stack
-        // trace, no error message) — same "safe, generic diagnostic
-        // only" principle already applied to sign-in failures above.
-        return {
-          sourceKey,
-          sourceName: source.name,
-          outcome: "write_error" as const,
-          diagnostic: "unexpected_error",
-          proposalsFound: 0,
+    const outcome =
+      sourcesFailed === 0
+        ? ("success" as const)
+        : sourcesFailed === sourcesChecked
+          ? ("total_failure" as const)
+          : ("partial_failure" as const);
+
+    await history
+      .closeRun(
+        runId,
+        buildRunHistoryCloseUpdate({
+          finishedAt: new Date().toISOString(),
+          outcome,
+          sourcesChecked,
+          sourcesFailed,
+          candidatesInserted: totalCandidatesInserted,
+          duplicatesSkipped: totalDuplicatesSkipped,
+          ambiguousCandidates: totalAmbiguousCandidates,
+          cappedSkipped: totalCappedSkipped,
+          duplicatesPreventedByDatabase: totalDuplicatesPreventedByDatabase,
+          // Counts only — never a raw source URL, error message, or
+          // stack trace, matching this route's existing "generic
+          // diagnostic only" convention throughout.
+          errorSummary: outcome === "success" ? null : `${sourcesFailed}/${sourcesChecked} sources failed`,
+        })
+      )
+      .catch(() => ({ ok: false }));
+
+    return NextResponse.json({
+      ok: true,
+      dryRun: false,
+      checkedAt: new Date().toISOString(),
+      checkedSources: sourcesChecked,
+      successfulSources: sourcesChecked - sourcesFailed,
+      failedSources: sourcesFailed,
+      proposalsFound: results.reduce((sum, r) => sum + r.proposalsFound, 0),
+      candidatesInserted: totalCandidatesInserted,
+      duplicatesSkipped: totalDuplicatesSkipped,
+      ambiguousCandidates: totalAmbiguousCandidates,
+      cappedSkipped: totalCappedSkipped,
+      sourceChecksInserted: results.reduce((sum, r) => sum + r.sourceChecksInserted, 0),
+      duplicatesPreventedByDatabase: totalDuplicatesPreventedByDatabase,
+      published: false,
+      message:
+        "Zapisano wyłącznie kandydatów ze statusem 'pending' i wpisy historii sprawdzeń — " +
+        "żaden alert nie został utworzony ani opublikowany.",
+      results,
+    });
+  } catch {
+    // Genuinely unexpected top-level failure (should not normally happen —
+    // every per-source path above already catches its own errors). Still
+    // closes the run (releasing the lock) with an honest total_failure
+    // outcome, and still never leaks exception detail in the response,
+    // matching every other error path in this route.
+    await history
+      .closeRun(
+        runId,
+        buildRunHistoryCloseUpdate({
+          finishedAt: new Date().toISOString(),
+          outcome: "total_failure",
+          sourcesChecked: 0,
+          sourcesFailed: 0,
           candidatesInserted: 0,
           duplicatesSkipped: 0,
           ambiguousCandidates: 0,
           cappedSkipped: 0,
-          sourceChecksInserted: 0,
           duplicatesPreventedByDatabase: 0,
-        };
-      }
-    })
-  );
-
-  const failedOutcomes = new Set(["fetch_error", "timeout", "parse_error", "write_error"]);
-
-  return NextResponse.json({
-    ok: true,
-    dryRun: false,
-    checkedAt: new Date().toISOString(),
-    checkedSources: results.length,
-    successfulSources: results.filter((r) => !failedOutcomes.has(r.outcome)).length,
-    failedSources: results.filter((r) => failedOutcomes.has(r.outcome)).length,
-    proposalsFound: results.reduce((sum, r) => sum + r.proposalsFound, 0),
-    candidatesInserted: results.reduce((sum, r) => sum + r.candidatesInserted, 0),
-    duplicatesSkipped: results.reduce((sum, r) => sum + r.duplicatesSkipped, 0),
-    ambiguousCandidates: results.reduce((sum, r) => sum + r.ambiguousCandidates, 0),
-    cappedSkipped: results.reduce((sum, r) => sum + r.cappedSkipped, 0),
-    sourceChecksInserted: results.reduce((sum, r) => sum + r.sourceChecksInserted, 0),
-    duplicatesPreventedByDatabase: results.reduce((sum, r) => sum + r.duplicatesPreventedByDatabase, 0),
-    published: false,
-    message:
-      "Zapisano wyłącznie kandydatów ze statusem 'pending' i wpisy historii sprawdzeń — " +
-      "żaden alert nie został utworzony ani opublikowany.",
-    results,
-  });
+          errorSummary: "unexpected_error",
+        })
+      )
+      .catch(() => ({ ok: false }));
+    return NextResponse.json({ ok: false, error: "Nieoczekiwany błąd." }, { status: 500 });
+  }
 }

@@ -2,7 +2,8 @@ import { test, expect } from "@playwright/test";
 import {
   classifyFetchFailure,
   isRunLockHeld,
-  buildRunHistoryInsert,
+  buildRunHistoryOpenInsert,
+  buildRunHistoryCloseUpdate,
   MAX_FETCH_ATTEMPTS,
   RUN_LOCK_STALE_AFTER_MS,
   type RunLockRow,
@@ -90,13 +91,39 @@ test.describe("isRunLockHeld", () => {
   });
 });
 
-test.describe("buildRunHistoryInsert", () => {
-  test("shapes exactly the proposed scheduled_writer_runs columns, snake_case, no extra fields", () => {
-    const payload = buildRunHistoryInsert({
+test.describe("buildRunHistoryOpenInsert", () => {
+  test("shapes exactly the open-phase columns, snake_case, no extra fields", () => {
+    const payload = buildRunHistoryOpenInsert({
+      id: "11111111-1111-4111-8111-111111111111",
       startedAt: "2026-07-22T06:00:00.000Z",
-      finishedAt: "2026-07-22T06:00:05.000Z",
       trigger: "manual",
       environmentTag: "preview",
+    });
+    expect(payload).toEqual({
+      id: "11111111-1111-4111-8111-111111111111",
+      started_at: "2026-07-22T06:00:00.000Z",
+      trigger: "manual",
+      environment_tag: "preview",
+    });
+  });
+
+  test("never includes finished_at or outcome — an open row always starts null on both", () => {
+    const payload = buildRunHistoryOpenInsert({
+      id: "11111111-1111-4111-8111-111111111111",
+      startedAt: "2026-07-22T06:00:00.000Z",
+      trigger: "cron",
+      environmentTag: "production",
+    });
+    expect(payload).not.toHaveProperty("finished_at");
+    expect(payload).not.toHaveProperty("outcome");
+  });
+});
+
+test.describe("buildRunHistoryCloseUpdate", () => {
+  test("shapes exactly the close-phase columns, snake_case, no extra fields", () => {
+    const payload = buildRunHistoryCloseUpdate({
+      finishedAt: "2026-07-22T06:00:05.000Z",
+      outcome: "success",
       sourcesChecked: 1,
       sourcesFailed: 0,
       candidatesInserted: 1,
@@ -104,14 +131,11 @@ test.describe("buildRunHistoryInsert", () => {
       ambiguousCandidates: 0,
       cappedSkipped: 5,
       duplicatesPreventedByDatabase: 0,
-      outcome: "success",
       errorSummary: null,
     });
     expect(payload).toEqual({
-      started_at: "2026-07-22T06:00:00.000Z",
       finished_at: "2026-07-22T06:00:05.000Z",
-      trigger: "manual",
-      environment_tag: "preview",
+      outcome: "success",
       sources_checked: 1,
       sources_failed: 0,
       candidates_inserted: 1,
@@ -119,17 +143,31 @@ test.describe("buildRunHistoryInsert", () => {
       ambiguous_candidates: 0,
       capped_skipped: 5,
       duplicates_prevented_by_database: 0,
-      outcome: "success",
       error_summary: null,
     });
   });
 
   test("never includes an 'alerts'-shaped or publish-shaped field — structural no-auto-publish check", () => {
-    const payload = buildRunHistoryInsert({
-      startedAt: "2026-07-22T06:00:00.000Z",
+    const payload = buildRunHistoryCloseUpdate({
       finishedAt: "2026-07-22T06:00:05.000Z",
-      trigger: "cron",
-      environmentTag: "production",
+      outcome: "total_failure",
+      sourcesChecked: 1,
+      sourcesFailed: 1,
+      candidatesInserted: 0,
+      duplicatesSkipped: 0,
+      ambiguousCandidates: 0,
+      cappedSkipped: 0,
+      duplicatesPreventedByDatabase: 0,
+      errorSummary: "1/1 sources failed",
+    });
+    expect(JSON.stringify(payload)).not.toContain("alert");
+    expect(JSON.stringify(payload)).not.toContain("publish");
+  });
+
+  test("never includes started_at, trigger, or id — closing never touches the row's identity/open-phase fields", () => {
+    const payload = buildRunHistoryCloseUpdate({
+      finishedAt: "2026-07-22T06:00:05.000Z",
+      outcome: "success",
       sourcesChecked: 1,
       sourcesFailed: 0,
       candidatesInserted: 0,
@@ -137,10 +175,10 @@ test.describe("buildRunHistoryInsert", () => {
       ambiguousCandidates: 0,
       cappedSkipped: 0,
       duplicatesPreventedByDatabase: 0,
-      outcome: "total_failure",
-      errorSummary: "network_error",
+      errorSummary: null,
     });
-    expect(JSON.stringify(payload)).not.toContain("alert");
-    expect(JSON.stringify(payload)).not.toContain("publish");
+    expect(payload).not.toHaveProperty("id");
+    expect(payload).not.toHaveProperty("started_at");
+    expect(payload).not.toHaveProperty("trigger");
   });
 });
