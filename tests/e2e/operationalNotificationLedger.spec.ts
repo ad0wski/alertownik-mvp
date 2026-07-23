@@ -3,9 +3,9 @@ import {
   isClaimNotificationEventInputValid,
   isFinishNotificationEventInputValid,
   isSafeSummaryValid,
-  isCooldownSecondsValid,
   isStaleClaimAfterSecondsValid,
   SAFE_SUMMARY_MAX_LENGTH,
+  NOTIFICATION_COOLDOWN_SECONDS,
   ALLOWED_NOTIFICATION_STATUSES,
   ALLOWED_SUPPRESSED_REASONS,
   ALLOWED_PROVIDER_STATUSES,
@@ -13,6 +13,7 @@ import {
   type ClaimNotificationEventResult,
   type OperationalNotificationLedger,
 } from "@/lib/operationalNotificationLedger";
+import { DEFAULT_ALERT_COOLDOWN_MS } from "@/lib/alertDeduplication";
 
 /**
  * Sprint 166F-1 — ledger specification tests. Every "claim" in this file
@@ -33,7 +34,6 @@ function baseClaimInput(overrides: Partial<ClaimNotificationEventInput> = {}): C
     scheduledWriterRunId: null,
     sourceId: "michalowice-komunikaty",
     safeSummary: "trwały błąd pobierania — źródło: Gmina Michałowice",
-    cooldownSeconds: 21_600,
     staleClaimAfterSeconds: 300,
     ...overrides,
   };
@@ -79,19 +79,27 @@ test.describe("isClaimNotificationEventInputValid — closed-vocabulary + bounds
     expect(isSafeSummaryValid(null)).toBe(true);
   });
 
-  test("cooldownSeconds out of range fails", () => {
-    expect(isClaimNotificationEventInputValid(baseClaimInput({ cooldownSeconds: 0 }))).toBe(false);
-    expect(isClaimNotificationEventInputValid(baseClaimInput({ cooldownSeconds: -1 }))).toBe(false);
-    expect(isClaimNotificationEventInputValid(baseClaimInput({ cooldownSeconds: 99_999_999 }))).toBe(false);
-    expect(isCooldownSecondsValid(60)).toBe(true);
-    expect(isCooldownSecondsValid(59)).toBe(false);
-  });
-
   test("staleClaimAfterSeconds out of range fails", () => {
     expect(isClaimNotificationEventInputValid(baseClaimInput({ staleClaimAfterSeconds: 100 }))).toBe(false);
     expect(isStaleClaimAfterSecondsValid(300)).toBe(true);
     expect(isStaleClaimAfterSecondsValid(299)).toBe(false);
     expect(isStaleClaimAfterSecondsValid(86_401)).toBe(false);
+  });
+});
+
+test.describe("Sprint 166F-2A — cooldown is a fixed constant, never a caller-settable field", () => {
+  test("NOTIFICATION_COOLDOWN_SECONDS is exactly 21600 (6 hours), matching DEFAULT_ALERT_COOLDOWN_MS", () => {
+    expect(NOTIFICATION_COOLDOWN_SECONDS).toBe(21_600);
+    expect(NOTIFICATION_COOLDOWN_SECONDS * 1000).toBe(DEFAULT_ALERT_COOLDOWN_MS);
+  });
+
+  test("3. ClaimNotificationEventInput has no cooldownSeconds field at all — a caller cannot set, weaken, or disable the cooldown", () => {
+    // Structural proof: baseClaimInput() below is exactly
+    // ClaimNotificationEventInput's own shape (no `as any`, no excess
+    // property) — if cooldownSeconds were still part of the type, TS
+    // would allow (and this fixture would likely still include) it here.
+    const input = baseClaimInput();
+    expect(Object.prototype.hasOwnProperty.call(input, "cooldownSeconds")).toBe(false);
   });
 });
 
@@ -185,6 +193,11 @@ test.describe("closed vocabularies never silently drift", () => {
 function makeConcurrencySimulatingLedger(): OperationalNotificationLedger {
   const openClaims = new Map<string, string>(); // scopeKey -> eventId
   const cooldownUntilByScope = new Map<string, number>();
+  // Mirrors the real finish RPC's own `where id = p_id and status =
+  // 'claimed'` guard — a finished eventId is tracked here so a second
+  // finish() call on it can be correctly rejected below, instead of the
+  // fake silently succeeding twice.
+  const finishedEventIds = new Set<string>();
   let nextId = 1;
 
   function scopeKey(environmentTag: string, fingerprint: string): string {
@@ -212,16 +225,30 @@ function makeConcurrencySimulatingLedger(): OperationalNotificationLedger {
       }
       const eventId = `event-${nextId++}`;
       openClaims.set(key, eventId);
-      cooldownUntilByScope.set(key, Date.now() + input.cooldownSeconds * 1000);
+      // Fixed cooldown — matches the real claim RPC's own hard-coded
+      // v_cooldown_seconds constant, never read from the caller's input.
+      cooldownUntilByScope.set(key, Date.now() + NOTIFICATION_COOLDOWN_SECONDS * 1000);
       return { claimed: true, eventId };
     },
     async finish(input) {
+      if (finishedEventIds.has(input.eventId)) {
+        // Mirrors close_scheduled_writer_run()'s own "finished_at is
+        // null" guard, reused here as "status = 'claimed'": an
+        // already-finished row is never reopened or edited a second
+        // time — the real RPC's UPDATE simply matches zero rows and
+        // returns `found = false`.
+        return { ok: false };
+      }
+      let matched = false;
       for (const [key, eventId] of openClaims.entries()) {
         if (eventId === input.eventId) {
           openClaims.delete(key);
+          matched = true;
           break;
         }
       }
+      if (!matched) return { ok: false };
+      finishedEventIds.add(input.eventId);
       return { ok: true };
     },
   };
@@ -255,7 +282,7 @@ test.describe("15. two parallel mocked claims for the same scope → only one wi
 
   test("14. cooldown suppresses a claim attempt after a prior claim already set cooldown_until", async () => {
     const ledger = makeConcurrencySimulatingLedger();
-    const input = baseClaimInput({ cooldownSeconds: 21_600 });
+    const input = baseClaimInput();
 
     const first = await ledger.claim(input);
     expect(first.claimed).toBe(true);
@@ -270,6 +297,44 @@ test.describe("15. two parallel mocked claims for the same scope → only one wi
     if (!second.claimed) {
       expect(second.suppressedReason).toBe("suppress_cooldown");
     }
+  });
+});
+
+test.describe("7. disallowed re-finish — mirrors close_scheduled_writer_run()'s own guard", () => {
+  test("a second finish() on the same eventId is rejected, never silently re-applied", async () => {
+    const ledger = makeConcurrencySimulatingLedger();
+    const input = baseClaimInput();
+
+    const claimResult = await ledger.claim(input);
+    expect(claimResult.claimed).toBe(true);
+    if (!claimResult.claimed) return;
+
+    const firstFinish = await ledger.finish({
+      eventId: claimResult.eventId,
+      status: "sent",
+      providerStatus: "sent",
+      sentAt: new Date().toISOString(),
+    });
+    expect(firstFinish.ok).toBe(true);
+
+    const secondFinish = await ledger.finish({
+      eventId: claimResult.eventId,
+      status: "failed",
+      providerStatus: null,
+      sentAt: null,
+    });
+    expect(secondFinish.ok).toBe(false);
+  });
+
+  test("finishing an eventId that was never claimed is rejected", async () => {
+    const ledger = makeConcurrencySimulatingLedger();
+    const result = await ledger.finish({
+      eventId: "never-claimed",
+      status: "sent",
+      providerStatus: "sent",
+      sentAt: new Date().toISOString(),
+    });
+    expect(result.ok).toBe(false);
   });
 });
 

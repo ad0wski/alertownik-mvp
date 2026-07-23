@@ -1,4 +1,5 @@
 import type { AutomationErrorCategory, AutomationSeverity, RetryState } from "@/lib/automationAlerting";
+import type { RunOutcome } from "@/lib/scheduledWriterRunSafety";
 import { severityForCategory, buildRetryState } from "@/lib/automationErrorClassifier";
 import { isWithinCooldown, DEFAULT_ALERT_COOLDOWN_MS } from "@/lib/alertDeduplication";
 
@@ -41,6 +42,31 @@ export type OperationalNotificationEventType =
   | "environment_guard_blocked"
   | "kill_switch_disabled"
   | "unexpected_error";
+
+// Sprint 166F-2A — canonical, single source of truth for "was this run
+// abandoned" (Etap 2). automationErrorClassifier.categoryFromRunOutcome
+// is LIVE and already wired into runHistoryStatus.ts (the shipped
+// /admin/sources run-history display) and pinned by
+// tests/e2e/automationErrorClassifier.spec.ts's own existing assertion
+// that categoryFromRunOutcome("abandoned") === "lock_held" — changing
+// that function's return value would be a live regression to an already-
+// shipped admin panel, not a safe change to make as a side effect of this
+// sprint. Instead, this function is the ONE place that must be called
+// against the raw RunOutcome, BEFORE any caller passes that outcome
+// through categoryFromRunOutcome (which is exactly where the distinction
+// is lost — its whole contract is "collapse every RunOutcome onto one of
+// the existing AutomationErrorCategory values", and there is no
+// AutomationErrorCategory value reserved for "abandoned" specifically).
+//
+// Every future caller wiring this policy to a real run outcome (not yet
+// done this sprint — see docs/SPRINT_166F_OPERATIONAL_ALERT_LEDGER_AUDIT_AND_DESIGN_V1.md
+// §A gap and §Etap 2) MUST derive its isAbandonedRun input from THIS
+// function, never by re-deriving it ad hoc from category alone (which
+// cannot distinguish the two cases at all) or from categoryFromRunOutcome's
+// output (which has already discarded the distinction).
+export function isAbandonedRunOutcome(outcome: RunOutcome): boolean {
+  return outcome === "abandoned";
+}
 
 export function eventTypeFor(category: AutomationErrorCategory, isAbandonedRun: boolean): OperationalNotificationEventType {
   if (isAbandonedRun) return "abandoned_run";

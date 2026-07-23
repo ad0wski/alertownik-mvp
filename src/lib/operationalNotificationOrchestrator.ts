@@ -98,7 +98,9 @@ export interface ClaimEventForSendingInput {
   scheduledWriterRunId: string | null;
   sourceId: string | null;
   safeSummary: string | null;
-  cooldownSeconds: number;
+  // No cooldownSeconds — the ledger's cooldown is a fixed, non-writer-
+  // configurable constant (NOTIFICATION_COOLDOWN_SECONDS). See
+  // operationalNotificationLedger.ts for the full rationale.
   staleClaimAfterSeconds?: number;
 }
 
@@ -127,7 +129,6 @@ export async function claimEventForSending(
     scheduledWriterRunId: input.scheduledWriterRunId,
     sourceId: input.sourceId,
     safeSummary: input.safeSummary,
-    cooldownSeconds: input.cooldownSeconds,
     staleClaimAfterSeconds: input.staleClaimAfterSeconds ?? 300,
   });
 }

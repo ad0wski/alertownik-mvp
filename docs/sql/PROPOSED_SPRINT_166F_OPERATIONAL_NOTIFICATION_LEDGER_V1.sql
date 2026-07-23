@@ -43,15 +43,56 @@
 -- call (never a separate round-trip from application code), so there is
 -- no window between checking cooldown and claiming.
 --
--- ── Open design decision, flagged rather than silently assumed ──────────────
+-- ── Revision 2 (Sprint 166F-2A hardening — resolves the 166F-1 "open
+-- design decision") ──────────────────────────────────────────────────────
 --
--- p_cooldown_seconds is a caller-supplied PARAMETER (bounds-checked
--- [60, 2592000] seconds), not a hard-coded server-side constant — a
--- future kill_switch_disabled-class event might reasonably want a
--- different cooldown than a permanent_fetch alert. This mirrors how
--- open_scheduled_writer_run's p_stale_after_seconds is already a
--- parameter even though today's one caller always passes the same
--- constant. See design doc §D for the full callout.
+-- The 166F-1 draft made cooldown a caller-supplied p_cooldown_seconds
+-- parameter. Reconsidered and REJECTED: a parameter the write path
+-- controls is a parameter the write path (or a future bug in it) can
+-- silently weaken — passing a shorter value than intended, accidentally
+-- or otherwise, would quietly undermine the one thing this table exists
+-- to guarantee. The cooldown is therefore a single, fixed, NON-
+-- PARAMETERIZED constant — 21600 seconds (6 hours), matching
+-- src/lib/alertDeduplication.ts's own DEFAULT_ALERT_COOLDOWN_MS exactly
+-- — hard-coded inside claim_operational_notification_event() itself.
+-- There is no p_cooldown_seconds argument anywhere in this file. A future
+-- per-event-type cooldown (e.g. a shorter window for transient_fetch than
+-- for credentials_not_configured) requires an explicit, separately-
+-- reviewed migration that adds a new, bounds-checked parameter back —
+-- never a silent runtime toggle.
+--
+-- Revision 2 also fixes source_id's type: changed from a bare `text` to
+-- `uuid references public.alert_sources(id) on delete set null`, matching
+-- the exact existing convention in
+-- docs/supabase_source_notice_candidates.sql (source_id is a nullable FK
+-- with ON DELETE SET NULL there, not CASCADE, so history is preserved
+-- even if a source is later removed from the registry). No ON DELETE
+-- clause is added to scheduled_writer_run_id's own FK: unlike
+-- alert_sources, scheduled_writer_runs rows are never deleted by any role
+-- (see PROPOSED_SPRINT_166C_RUN_HISTORY_MIGRATION_V1.sql's own "No delete
+-- policy for any role" — the default NO ACTION is therefore always safe
+-- and never blocks a legitimate delete that could otherwise happen).
+--
+-- Revision 2 note on the 'suppressed' status: neither RPC below ever
+-- writes a row with status = 'suppressed' — a suppress_cooldown or
+-- suppress_duplicate result is returned to the caller WITHOUT inserting
+-- any new row (the existing row already on file — either the still-open
+-- claim being duplicated, or the prior row carrying the active
+-- cooldown_until — already documents why). Inserting a fresh row for
+-- every suppressed poll attempt would itself be a storm-protection
+-- failure mode (unbounded table growth under a flapping, frequently-
+-- retried source). 'suppressed' remains in the CHECK constraint as a
+-- reserved, not-yet-used value — matching this codebase's own existing
+-- convention of pre-declaring a closed-vocabulary member before any
+-- caller produces it (see NotificationStatus's "sent"/"send_failed" in
+-- Sprint 166D-1, specified before any real adapter existed) — for a
+-- possible future where the higher-level policy's OWN suppress_* decisions
+-- (suppress_retry_pending, suppress_lock_held, suppress_success,
+-- suppress_not_actionable — none of which ever reach this RPC at all,
+-- since the orchestrator only calls claim() after decideNotificationPolicy
+-- already returned "notify") might also warrant a persisted audit row.
+-- That is a distinct, separate design decision, not silently assumed
+-- here.
 
 begin;
 
@@ -76,10 +117,17 @@ create table if not exists public.operational_notification_events (
   scheduled_writer_run_id uuid references public.scheduled_writer_runs(id),
   -- Nullable: run-level events (abandoned_run, lock_held,
   -- credentials_not_configured, environment_guard_blocked,
-  -- kill_switch_disabled) have no single source to key on.
-  source_id text,
+  -- kill_switch_disabled) have no single source to key on. Typed and
+  -- constrained exactly like source_notice_candidates.source_id (see
+  -- docs/supabase_source_notice_candidates.sql) — ON DELETE SET NULL,
+  -- never CASCADE, so this ledger's history survives a source being
+  -- later removed from the registry.
+  source_id uuid references public.alert_sources(id) on delete set null,
   status text not null check (status in ('claimed', 'sent', 'failed', 'suppressed', 'abandoned')),
-  attempt_count integer not null default 1 check (attempt_count >= 0),
+  -- Neither RPC below ever increments this past its initial value of 1 —
+  -- the upper bound is a defensive cap only, in case a future migration
+  -- adds a retry-within-claim path.
+  attempt_count integer not null default 1 check (attempt_count >= 0 and attempt_count <= 1000),
   claimed_at timestamptz,
   finished_at timestamptz,
   sent_at timestamptz,
@@ -137,6 +185,13 @@ create policy operational_notification_events_admin_select
   );
 
 -- ── 3. Atomic claim — the only way a new row is ever created ────────────────
+--
+-- Fixed cooldown, not a parameter — see the Revision 2 header note above.
+-- This constant is the ONLY place the value is defined in SQL; the
+-- matching TS constant (NOTIFICATION_COOLDOWN_SECONDS,
+-- src/lib/operationalNotificationLedger.ts) exists purely so tests can
+-- assert against a named value instead of a magic number — it is never
+-- passed to this function as an argument.
 create or replace function public.claim_operational_notification_event(
   p_environment_tag text,
   p_channel text,
@@ -144,9 +199,8 @@ create or replace function public.claim_operational_notification_event(
   p_severity text,
   p_fingerprint text,
   p_scheduled_writer_run_id uuid,
-  p_source_id text,
+  p_source_id uuid,
   p_safe_summary text,
-  p_cooldown_seconds integer,
   p_stale_claim_after_seconds integer default 300
 ) returns table (claimed boolean, event_id uuid, suppressed_reason text)
 language plpgsql
@@ -158,6 +212,10 @@ declare
   v_is_writer boolean;
   v_new_id uuid;
   v_cooldown_until timestamptz;
+  -- Fixed, non-parameterized cooldown — 6 hours. See Revision 2 header
+  -- note: this must never become a caller-supplied argument without a
+  -- separate, explicitly-reviewed migration.
+  v_cooldown_seconds constant integer := 21600;
 begin
   select exists (
     select 1 from public.automation_identities where user_id = auth.uid()
@@ -194,10 +252,6 @@ begin
 
   if p_safe_summary is not null and pg_catalog.char_length(p_safe_summary) > 200 then
     raise exception 'p_safe_summary exceeds the maximum allowed length';
-  end if;
-
-  if p_cooldown_seconds is null or p_cooldown_seconds < 60 or p_cooldown_seconds > 2592000 then
-    raise exception 'p_cooldown_seconds out of allowed range';
   end if;
 
   if p_stale_claim_after_seconds is null
@@ -247,7 +301,7 @@ begin
     ) values (
       v_new_id, p_environment_tag, p_channel, p_event_type, p_severity, p_fingerprint,
       p_scheduled_writer_run_id, p_source_id, 'claimed', 1,
-      v_now, p_safe_summary, v_now + pg_catalog.make_interval(secs => p_cooldown_seconds)
+      v_now, p_safe_summary, v_now + pg_catalog.make_interval(secs => v_cooldown_seconds)
     );
     return query select true, v_new_id, null::text;
     return;
@@ -264,10 +318,10 @@ end;
 $$;
 
 revoke all on function public.claim_operational_notification_event(
-  text, text, text, text, text, uuid, text, text, integer, integer
+  text, text, text, text, text, uuid, uuid, text, integer
 ) from public;
 grant execute on function public.claim_operational_notification_event(
-  text, text, text, text, text, uuid, text, text, integer, integer
+  text, text, text, text, text, uuid, uuid, text, integer
 ) to authenticated;
 
 -- ── 4. Atomic finish — the only way a claim is ever finalized ───────────────

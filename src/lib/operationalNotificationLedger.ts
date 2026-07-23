@@ -79,14 +79,24 @@ export const SAFE_SUMMARY_MAX_LENGTH = 200;
 export const NOTIFICATION_STALE_CLAIM_AFTER_SECONDS_MIN = 300;
 export const NOTIFICATION_STALE_CLAIM_AFTER_SECONDS_MAX = 86400;
 
-/** Deliberately generous bounds for the cooldown parameter — must cover
- *  everything from a short "avoid double-claim inside one process crash
- *  loop" window up to multi-day suppression for a chronically-flapping
- *  source. See design doc §D's own "open design question" callout: this
- *  is a genuine parameter, not a hard-coded constant, because different
- *  event types may reasonably want different cooldowns. */
-export const NOTIFICATION_COOLDOWN_SECONDS_MIN = 60;
-export const NOTIFICATION_COOLDOWN_SECONDS_MAX = 30 * 24 * 60 * 60;
+/** Sprint 166F-2A — resolves the "open design question" §D of the 166F-1
+ *  design doc deliberately left open: the caller-supplied p_cooldown_seconds
+ *  parameter was reconsidered and rejected. A writer-controllable cooldown
+ *  parameter would let a caller silently weaken its own storm-protection
+ *  (accidentally or otherwise) by passing a shorter value than intended —
+ *  this ledger's entire purpose is to make that protection real and
+ *  non-bypassable, so it must not be something the write path can tune
+ *  down. The cooldown is therefore a single, fixed, non-parameterized
+ *  constant, enforced entirely inside the claim RPC
+ *  (docs/sql/PROPOSED_SPRINT_166F_OPERATIONAL_NOTIFICATION_LEDGER_V1.sql)
+ *  — there is no p_cooldown_seconds argument in that function's public
+ *  contract at all. This TS constant is the exact same value in seconds,
+ *  kept here only so tests can assert against one shared source of truth
+ *  rather than a magic number — it is NOT passed as a parameter anywhere.
+ *  A future per-event-type cooldown (e.g. a shorter window for
+ *  transient_fetch than for credentials_not_configured) is an explicit,
+ *  separate, later migration — never a silent runtime parameter. */
+export const NOTIFICATION_COOLDOWN_SECONDS = 21_600; // 6 hours — matches DEFAULT_ALERT_COOLDOWN_MS exactly
 
 function isNonNegativeFiniteInteger(value: number | null | undefined): boolean {
   return value !== null && value !== undefined && Number.isFinite(value) && Number.isInteger(value) && value >= 0;
@@ -98,12 +108,6 @@ export function isStaleClaimAfterSecondsValid(value: number | null | undefined):
   return (
     value >= NOTIFICATION_STALE_CLAIM_AFTER_SECONDS_MIN && value <= NOTIFICATION_STALE_CLAIM_AFTER_SECONDS_MAX
   );
-}
-
-export function isCooldownSecondsValid(value: number | null | undefined): boolean {
-  if (value === null || value === undefined) return false;
-  if (!Number.isFinite(value)) return false;
-  return value >= NOTIFICATION_COOLDOWN_SECONDS_MIN && value <= NOTIFICATION_COOLDOWN_SECONDS_MAX;
 }
 
 export function isSafeSummaryValid(value: string | null | undefined): boolean {
@@ -120,7 +124,9 @@ export interface ClaimNotificationEventInput {
   scheduledWriterRunId: string | null;
   sourceId: string | null;
   safeSummary: string | null;
-  cooldownSeconds: number;
+  // No cooldownSeconds field — see NOTIFICATION_COOLDOWN_SECONDS above.
+  // The cooldown is fixed and enforced entirely server-side; it is not
+  // part of this input's public contract at all.
   staleClaimAfterSeconds: number;
 }
 
@@ -136,7 +142,6 @@ export function isClaimNotificationEventInputValid(input: ClaimNotificationEvent
   if (!input.environmentTag || input.environmentTag.length === 0) return false;
   if (!input.fingerprint || input.fingerprint.length === 0) return false;
   if (!isSafeSummaryValid(input.safeSummary)) return false;
-  if (!isCooldownSecondsValid(input.cooldownSeconds)) return false;
   if (!isStaleClaimAfterSecondsValid(input.staleClaimAfterSeconds)) return false;
   return true;
 }

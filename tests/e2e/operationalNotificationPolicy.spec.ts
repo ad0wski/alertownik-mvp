@@ -3,12 +3,14 @@ import {
   decideNotificationCategory,
   decideNotificationPolicy,
   eventTypeFor,
+  isAbandonedRunOutcome,
   buildNotificationEventDetails,
   buildOperationalNotificationFingerprint,
   type NotificationCategoryInput,
 } from "@/lib/operationalNotificationPolicy";
 import type { AutomationErrorCategory, RetryState } from "@/lib/automationAlerting";
 import { DEFAULT_ALERT_COOLDOWN_MS } from "@/lib/alertDeduplication";
+import { categoryFromRunOutcome } from "@/lib/automationErrorClassifier";
 
 /**
  * Sprint 166F-1 — pure notification-policy tests. Every test here is a
@@ -92,6 +94,55 @@ test.describe("decideNotificationCategory — the eight required scenarios", () 
     expect(decideNotificationCategory({ category: "unexpected_error", retry: retry(), isAbandonedRun: false })).toBe(
       "notify"
     );
+  });
+});
+
+test.describe("Sprint 166F-2A — canonical abandoned vs. lock_held adapter (isAbandonedRunOutcome)", () => {
+  test("a genuinely still-open lock (outcome: skipped_lock_held) → suppress_lock_held end-to-end via the real classifier", () => {
+    const outcome = "skipped_lock_held" as const;
+    const category = categoryFromRunOutcome(outcome);
+    const isAbandonedRun = isAbandonedRunOutcome(outcome);
+    expect(category).toBe("lock_held");
+    expect(isAbandonedRun).toBe(false);
+    expect(decideNotificationCategory({ category, retry: retry(), isAbandonedRun })).toBe("suppress_lock_held");
+  });
+
+  test("an abandoned run (outcome: abandoned) → notify end-to-end, even though categoryFromRunOutcome itself still collapses it to 'lock_held'", () => {
+    const outcome = "abandoned" as const;
+    const category = categoryFromRunOutcome(outcome);
+    const isAbandonedRun = isAbandonedRunOutcome(outcome);
+    // categoryFromRunOutcome is LIVE (wired into runHistoryStatus.ts) and
+    // deliberately NOT changed by this sprint — this assertion documents,
+    // rather than hides, that its own output alone cannot make this
+    // distinction. isAbandonedRunOutcome is what recovers it.
+    expect(category).toBe("lock_held");
+    expect(isAbandonedRun).toBe(true);
+    expect(decideNotificationCategory({ category, retry: retry(), isAbandonedRun })).toBe("notify");
+  });
+
+  test("abandoned never travels the suppress_lock_held path, regardless of category alone", () => {
+    const abandonedDecision = decideNotificationCategory({
+      category: categoryFromRunOutcome("abandoned"),
+      retry: retry(),
+      isAbandonedRun: isAbandonedRunOutcome("abandoned"),
+    });
+    const lockHeldDecision = decideNotificationCategory({
+      category: categoryFromRunOutcome("skipped_lock_held"),
+      retry: retry(),
+      isAbandonedRun: isAbandonedRunOutcome("skipped_lock_held"),
+    });
+    expect(abandonedDecision).not.toBe("suppress_lock_held");
+    expect(abandonedDecision).toBe("notify");
+    expect(lockHeldDecision).toBe("suppress_lock_held");
+  });
+
+  test("isAbandonedRunOutcome is true only for 'abandoned', false for every other RunOutcome", () => {
+    expect(isAbandonedRunOutcome("success")).toBe(false);
+    expect(isAbandonedRunOutcome("partial_failure")).toBe(false);
+    expect(isAbandonedRunOutcome("total_failure")).toBe(false);
+    expect(isAbandonedRunOutcome("skipped_kill_switch")).toBe(false);
+    expect(isAbandonedRunOutcome("skipped_lock_held")).toBe(false);
+    expect(isAbandonedRunOutcome("abandoned")).toBe(true);
   });
 });
 

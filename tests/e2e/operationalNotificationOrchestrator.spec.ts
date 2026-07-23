@@ -131,7 +131,6 @@ test.describe("claimEventForSending — delegates entirely to the injected ledge
       scheduledWriterRunId: null,
       sourceId: "michalowice-komunikaty",
       safeSummary: "trwały błąd pobierania",
-      cooldownSeconds: 21_600,
     });
     expect(result).toEqual({ claimed: true, eventId: "event-1" });
     expect(ledger.claimCalls.length).toBe(1);
@@ -150,7 +149,6 @@ test.describe("claimEventForSending — delegates entirely to the injected ledge
       scheduledWriterRunId: "run-id-1",
       sourceId: null,
       safeSummary: null,
-      cooldownSeconds: 21_600,
     });
     expect(result).toEqual({ claimed: false, suppressedReason: "suppress_cooldown" });
   });
@@ -166,7 +164,6 @@ test.describe("claimEventForSending — delegates entirely to the injected ledge
         scheduledWriterRunId: null,
         sourceId: "michalowice-komunikaty",
         safeSummary: "x".repeat(SAFE_SUMMARY_MAX_LENGTH + 1),
-        cooldownSeconds: 21_600,
       })
     ).rejects.toThrow();
     expect(ledger.claimCalls.length).toBe(0);

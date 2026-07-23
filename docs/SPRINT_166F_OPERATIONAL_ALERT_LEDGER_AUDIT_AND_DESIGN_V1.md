@@ -261,3 +261,116 @@ Resend `ResendErrorCategory` name only, never `error.message`. No column
 on this table can ever hold a secret, token, stack trace, or raw
 provider/source response body — enforced structurally (no such column
 exists) rather than only by convention.
+
+---
+
+## H. Sprint 166F-2A Hardening Addendum
+
+Final migration hardening pass before Adam's decision to apply the
+migration in Preview only. No SQL executed, no writer wiring, no Resend
+call — all changes below are static, reviewed edits to the not-yet-run
+migration file and its supporting TypeScript specification.
+
+### H.1 — Canonical abandoned-vs-lock_held resolution
+
+`automationErrorClassifier.categoryFromRunOutcome` is **live** — wired
+into `runHistoryStatus.ts` (the shipped `/admin/sources` run-history
+display) and pinned by an existing test asserting
+`categoryFromRunOutcome("abandoned") === "lock_held"`. Changing its
+return value would be a live regression to an already-shipped admin
+panel, not a safe change to make as a side effect of this sprint.
+Resolution: a new, canonical, single-purpose function,
+`isAbandonedRunOutcome(outcome: RunOutcome): boolean`
+(`src/lib/operationalNotificationPolicy.ts`), returning `true` only for
+`outcome === "abandoned"`. Every future caller wiring this policy to a
+real run outcome must derive `isAbandonedRun` from **this** function,
+called against the raw `RunOutcome` — never re-derived from `category`
+alone (which cannot make the distinction at all) or from
+`categoryFromRunOutcome`'s own output (which has already discarded it).
+Regression tests added (`tests/e2e/operationalNotificationPolicy.spec.ts`,
+describe block "Sprint 166F-2A — canonical abandoned vs. lock_held
+adapter") prove, using the real classifier end-to-end: `skipped_lock_held`
+→ `suppress_lock_held`; `abandoned` → `notify`; and that `abandoned` never
+travels the `suppress_lock_held` path regardless of category alone.
+
+### H.2 — Cooldown: fixed 6 hours, never a caller parameter
+
+The 166F-1 draft's "open design question" (§D above) is now **resolved**:
+`p_cooldown_seconds` is removed from the claim RPC's public contract
+entirely. A parameter the write path controls is a parameter a bug (or a
+future careless caller) could use to silently weaken the ledger's own
+storm protection — exactly the failure mode this table exists to
+prevent. The cooldown is now a single fixed constant, `21600` seconds (6
+hours), declared once inside `claim_operational_notification_event()`
+itself (`v_cooldown_seconds constant integer := 21600;`) and mirrored in
+TypeScript as `NOTIFICATION_COOLDOWN_SECONDS`
+(`src/lib/operationalNotificationLedger.ts`) — a value tests can assert
+against by name, never passed anywhere as an actual argument. Both the
+pure `decideNotificationPolicy`'s default (`DEFAULT_ALERT_COOLDOWN_MS` =
+21,600,000 ms) and this new SQL/TS constant now provably agree: 21600
+seconds, one number, three places it's asserted to match
+(`alertDeduplication.ts`, `operationalNotificationLedger.ts`, the SQL
+migration), never two independently-chosen values that could drift. A
+future per-event-type cooldown remains possible but requires a new,
+separately-reviewed migration that reintroduces a bounds-checked
+parameter — never a silent runtime toggle.
+
+### H.3 — `source_id` type correction
+
+The 166F-1 draft typed `source_id` as a bare `text`. Corrected to `uuid
+references public.alert_sources(id) on delete set null` — matching
+`source_notice_candidates.source_id`'s existing, established convention
+exactly (`docs/supabase_source_notice_candidates.sql`): a nullable FK,
+`ON DELETE SET NULL` (never `CASCADE`), so this ledger's own history
+survives a source later being removed from the registry.
+`scheduled_writer_run_id`'s FK deliberately keeps no `ON DELETE` clause
+(defaults to `NO ACTION`) — unlike `alert_sources`, rows in
+`scheduled_writer_runs` are never deleted by any role (see that table's
+own migration: "No delete policy for any role"), so `NO ACTION` can never
+block a legitimate delete that could otherwise happen.
+
+### H.4 — `attempt_count` upper bound
+
+Added a defensive upper bound (`<= 1000`) alongside the existing `>= 0`
+check. Neither RPC currently increments this column past its initial
+value of `1` — the cap exists only in case a future migration adds a
+retry-within-claim path, matching this codebase's general preference for
+bounded rather than unbounded counters.
+
+### H.5 — The `'suppressed'` status remains reserved, not reachable
+
+Audit finding, documented rather than silently left as dead code: neither
+RPC ever writes a row with `status = 'suppressed'`. A `suppress_cooldown`
+or `suppress_duplicate` result is returned to the caller **without**
+inserting a new row — the existing row already on file (the still-open
+claim being duplicated, or the prior row carrying the active
+`cooldown_until`) already documents why. Inserting a fresh row for every
+suppressed attempt would itself be a storm-protection failure mode
+(unbounded table growth under a frequently-retried, flapping source).
+`'suppressed'` stays in the `CHECK` constraint as a reserved value for a
+possible future where the higher-level policy's own `suppress_*`
+decisions — `suppress_retry_pending`, `suppress_lock_held`,
+`suppress_success`, `suppress_not_actionable` (none of which ever reach
+this RPC at all, since the orchestrator only calls `claim()` after
+`decideNotificationPolicy` has already returned `"notify"`) — might also
+warrant a persisted audit row. That remains a distinct, separate decision,
+never silently assumed.
+
+### H.6 — RPC result vocabulary vs. the Etap 5 checklist wording
+
+The Etap 5 instruction's example result vocabulary (`claimed`,
+`suppressed_cooldown`, `suppressed_duplicate`, `suppressed_in_flight`,
+`fail_closed`) is **conceptually** satisfied, using this codebase's own
+existing naming rather than a second, parallel vocabulary:
+`suppressed_in_flight` and `suppressed_duplicate` describe the exact same
+case (an existing open claim blocks a new one) — the migration and TS
+both call this `suppress_duplicate`, matching `NotificationDecision`'s own
+literal exactly; introducing a second name for the identical concept
+would itself be the kind of "two conflicting sources of truth" Etap 2
+explicitly warns against. `fail_closed` is realized as the function
+**raising an exception** for any invalid/unrecognized input (never
+silently returned as a normal row) — identical to
+`open_scheduled_writer_run`'s own established convention, where the
+caller's `.catch(() => ({ opened: false }))` (mirrored here as a future
+`.catch(() => fail-closed)`) collapses every unexpected error into the
+same safe, fail-closed outcome.
