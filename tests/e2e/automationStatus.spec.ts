@@ -175,9 +175,10 @@ test.describe("buildAutomationStatus — pure snapshot builder", () => {
     });
     for (const [key, value] of Object.entries(status)) {
       // canarySources: array of {id, name} — public source identifiers.
-      // runHistory (Sprint 166D-2B): a nested object, checked separately
-      // below for the same "no secret value" guarantee.
-      if (key === "canarySources" || key === "runHistory") continue;
+      // runHistory (Sprint 166D-2B) and emailAlertConfig (Sprint 166E-1):
+      // nested objects, checked separately below for the same "no secret
+      // value" guarantee.
+      if (key === "canarySources" || key === "runHistory" || key === "emailAlertConfig") continue;
       expect(["boolean", "number"]).toContain(typeof value);
     }
     // runHistory defaults to the "not configured" shape when omitted from
@@ -186,6 +187,12 @@ test.describe("buildAutomationStatus — pure snapshot builder", () => {
     expect(status.runHistory.lastClosedRun).toBeNull();
     expect(status.runHistory.openRun).toBeNull();
     expect(typeof status.runHistory.retryInfoNote).toBe("string");
+    // emailAlertConfig defaults to fully-disabled/unconfigured when omitted
+    // — every field is a boolean or a closed-set provider string, never a
+    // key, address, or any other credential.
+    expect(status.emailAlertConfig.enabled).toBe(false);
+    expect(status.emailAlertConfig.provider).toBe("none");
+    expect(status.emailAlertConfig.configComplete).toBe(false);
   });
 });
 
@@ -227,6 +234,13 @@ const SUPABASE_ENV = {
   // any unexpected fetch, which would include an accidental
   // scheduled_writer_runs query if this were left ambient-dependent).
   SUPABASE_ENVIRONMENT_TAG: undefined,
+  // Sprint 166E-1: explicitly cleared for the same determinism reason —
+  // existing tests in this file don't expect email-alert config in their
+  // assertions and shouldn't start failing if ambient env ever sets these.
+  OPERATIONAL_EMAIL_ALERTS_ENABLED: undefined,
+  RESEND_API_KEY: undefined,
+  OPERATIONAL_ALERT_EMAIL_FROM: undefined,
+  OPERATIONAL_ALERT_EMAIL_TO: undefined,
 };
 
 function unauthedRequest(): NextRequest {
@@ -359,6 +373,34 @@ test.describe("GET /api/admin/automation-status — admin session, real environm
           expect(serialized).not.toContain("super-secret-cron-token-should-never-appear");
           expect(serialized).not.toContain("super-secret-writer-password-should-never-appear");
           expect(serialized).not.toContain("writer@example.com");
+        } finally {
+          restore();
+        }
+      }
+    );
+  });
+
+  test("Sprint 166E-1 — with a real-looking Resend API key and addresses configured, the response reports only booleans/provider, never the key or addresses", async () => {
+    await withEnv(
+      {
+        ...SUPABASE_ENV,
+        OPERATIONAL_EMAIL_ALERTS_ENABLED: "true",
+        RESEND_API_KEY: "re_super_secret_test_key_should_never_appear",
+        OPERATIONAL_ALERT_EMAIL_FROM: "alerts-from@example-should-not-appear.test",
+        OPERATIONAL_ALERT_EMAIL_TO: "admin-to@example-should-not-appear.test",
+      },
+      async () => {
+        const restore = mockFetch(mockAuthedAdmin());
+        try {
+          const res = await automationStatusGet(authedRequest("a-genuinely-valid-admin-token"));
+          const body = await res.json();
+          expect(body.status.emailAlertConfig.enabled).toBe(true);
+          expect(body.status.emailAlertConfig.provider).toBe("resend");
+          expect(body.status.emailAlertConfig.configComplete).toBe(true);
+          const serialized = JSON.stringify(body);
+          expect(serialized).not.toContain("re_super_secret_test_key_should_never_appear");
+          expect(serialized).not.toContain("alerts-from@example-should-not-appear.test");
+          expect(serialized).not.toContain("admin-to@example-should-not-appear.test");
         } finally {
           restore();
         }

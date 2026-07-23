@@ -8,6 +8,7 @@ import {
   isContentFingerprintEnabled,
 } from "@/lib/scheduledWriter";
 import { getConfiguredDatabaseEnvironmentTag } from "@/lib/databaseEnvironmentGuard";
+import { isEmailAlertsEnabled } from "@/lib/emailAlertConfig";
 import { buildAutomationStatus, type AutomationStatusSnapshot } from "@/lib/automationStatus";
 import {
   buildRunHistorySnapshot,
@@ -101,6 +102,15 @@ export async function GET(req: NextRequest): Promise<NextResponse<AutomationStat
     maxCandidatesPerRun: getMaxCandidatesPerInvocation(),
     fingerprintProtectionEnabled: isContentFingerprintEnabled(),
     runHistory,
+    // Sprint 166E-1 — presence booleans only, mirroring every other secret
+    // check in this route (CRON_SECRET, writer credentials above): never
+    // the API key, from, or to values themselves.
+    emailAlertConfig: {
+      enabled: isEmailAlertsEnabled(process.env.OPERATIONAL_EMAIL_ALERTS_ENABLED),
+      apiKeyConfigured: Boolean(process.env.RESEND_API_KEY),
+      fromConfigured: Boolean(process.env.OPERATIONAL_ALERT_EMAIL_FROM),
+      toConfigured: Boolean(process.env.OPERATIONAL_ALERT_EMAIL_TO),
+    },
   });
 
   return NextResponse.json({ ok: true, status });

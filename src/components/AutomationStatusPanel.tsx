@@ -9,12 +9,14 @@ import {
   type AutomationStatusSnapshot,
 } from "@/lib/automationStatus";
 import type { ScheduledWriterSourceActivity } from "@/lib/writerCandidateActivity";
-import {
-  OPERATIONAL_HEALTH_NOTIFICATIONS_DISABLED_NOTE,
-  OPERATIONAL_HEALTH_EMAIL_NOT_CONFIGURED_NOTE,
-} from "@/lib/operationalHealthStatus";
 import { AUTOMATION_ERROR_CATEGORY_LABELS_PL, AUTOMATION_SEVERITY_LABELS_PL } from "@/lib/automationErrorClassifier";
 import { RUN_OUTCOME_LABELS_PL, formatRunTrigger } from "@/lib/runHistoryStatus";
+import {
+  EMAIL_ALERT_PROVIDER_RESEND,
+  EMAIL_ALERT_DISABLED_NOTE,
+  EMAIL_ALERT_MISCONFIGURED_NOTE,
+  EMAIL_ALERT_READY_NOT_WIRED_NOTE,
+} from "@/lib/emailAlertConfig";
 
 type AutomationStatusResponse =
   | { ok: true; status: AutomationStatusSnapshot }
@@ -238,11 +240,49 @@ export function AutomationStatusPanel({ activityRows }: { activityRows: Schedule
               <p className="text-[11px] text-slate-400 dark:text-slate-500 leading-relaxed">
                 {status.runHistory.retryInfoNote}
               </p>
-              <p className="text-[11px] text-slate-400 dark:text-slate-500 leading-relaxed">
-                {OPERATIONAL_HEALTH_NOTIFICATIONS_DISABLED_NOTE}
+            </div>
+
+            {/* Email alerting (Sprint 166E-1) — reads status.emailAlertConfig,
+                built server-side from presence-only booleans
+                (OPERATIONAL_EMAIL_ALERTS_ENABLED / RESEND_API_KEY /
+                OPERATIONAL_ALERT_EMAIL_FROM / OPERATIONAL_ALERT_EMAIL_TO).
+                Never renders a key, an address, or any part of one — only
+                enabled/disabled, provider name, and config-complete/
+                incomplete. No send button exists anywhere in this panel. */}
+            <div className="pt-2 border-t border-slate-200 dark:border-slate-800 space-y-1.5">
+              <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                Alerty e-mail (fundament)
               </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs text-slate-500 dark:text-slate-400">Alerty e-mail:</span>
+                <StatusBadge
+                  active={status.emailAlertConfig.enabled}
+                  activeLabel="włączone"
+                  inactiveLabel="wyłączone"
+                />
+                <span className="text-xs text-slate-500 dark:text-slate-400 ml-3">Dostawca:</span>
+                <span className="text-sm font-medium text-slate-800 dark:text-slate-100">
+                  {status.emailAlertConfig.provider === EMAIL_ALERT_PROVIDER_RESEND ? "Resend" : "nieskonfigurowany"}
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs text-slate-500 dark:text-slate-400">Konfiguracja:</span>
+                <StatusBadge
+                  active={status.emailAlertConfig.configComplete}
+                  activeLabel="kompletna"
+                  inactiveLabel="niekompletna"
+                />
+                <span className="text-xs text-slate-500 dark:text-slate-400 ml-3">Ostatnia wysyłka:</span>
+                <span className="text-sm text-slate-500 dark:text-slate-400">
+                  brak danych, ponieważ trwała historia nie istnieje
+                </span>
+              </div>
               <p className="text-[11px] text-slate-400 dark:text-slate-500 leading-relaxed">
-                {OPERATIONAL_HEALTH_EMAIL_NOT_CONFIGURED_NOTE}
+                {!status.emailAlertConfig.enabled
+                  ? EMAIL_ALERT_DISABLED_NOTE
+                  : !status.emailAlertConfig.configComplete
+                    ? EMAIL_ALERT_MISCONFIGURED_NOTE
+                    : EMAIL_ALERT_READY_NOT_WIRED_NOTE}
               </p>
             </div>
           </div>

@@ -1,5 +1,6 @@
 import { getSafeCheckSource } from "@/lib/sourceCheck";
 import { notConfiguredRunHistorySnapshot, type RunHistorySnapshot } from "@/lib/runHistoryStatus";
+import { buildEmailAlertConfigStatus, type EmailAlertConfigStatus, type EmailAlertConfigStatusInput } from "@/lib/emailAlertConfig";
 
 // Sprint 164B — Safe Auto-Candidate Canary Foundation.
 //
@@ -34,6 +35,11 @@ export interface AutomationStatusInput {
    *  caller that ever supplies a real value, built from an already
    *  environment-tag-filtered scheduled_writer_runs read. */
   runHistory?: RunHistorySnapshot;
+  /** Sprint 166E-1 — same optionality convention as runHistory above:
+   *  omitting it yields the honest "disabled, unconfigured" snapshot. The
+   *  route builds this from process.env presence booleans only — never
+   *  the secret values themselves. */
+  emailAlertConfig?: EmailAlertConfigStatusInput;
 }
 
 export interface CanarySourceInfo {
@@ -57,6 +63,7 @@ export interface AutomationStatusSnapshot {
   maxCandidatesPerRun: number;
   fingerprintProtectionEnabled: boolean;
   runHistory: RunHistorySnapshot;
+  emailAlertConfig: EmailAlertConfigStatus;
 }
 
 export function buildAutomationStatus(input: AutomationStatusInput): AutomationStatusSnapshot {
@@ -80,6 +87,14 @@ export function buildAutomationStatus(input: AutomationStatusInput): AutomationS
     maxCandidatesPerRun: input.maxCandidatesPerRun,
     fingerprintProtectionEnabled: input.fingerprintProtectionEnabled,
     runHistory: input.runHistory ?? notConfiguredRunHistorySnapshot(),
+    emailAlertConfig: buildEmailAlertConfigStatus(
+      input.emailAlertConfig ?? {
+        enabled: false,
+        apiKeyConfigured: false,
+        fromConfigured: false,
+        toConfigured: false,
+      }
+    ),
   };
 }
 

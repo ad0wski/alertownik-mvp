@@ -36,3 +36,19 @@ export function createNoopNotificationAdapter(): NotificationAdapter {
     },
   };
 }
+
+/** Sprint 166E-1 — the feature is turned on
+ *  (OPERATIONAL_EMAIL_ALERTS_ENABLED === "true") but the required
+ *  server-side config (API key / from / to) is incomplete. Never performs
+ *  any I/O — same structural guarantee as the no-op adapter above — and
+ *  never pretends success: always reports the honest
+ *  "no_adapter_configured" status instead of silently degrading to
+ *  "disabled" (which would hide that an admin turned this on without
+ *  finishing setup). */
+export function createMisconfiguredNotificationAdapter(): NotificationAdapter {
+  return {
+    async send(): Promise<NotificationSendResult> {
+      return { ok: false, status: "no_adapter_configured" };
+    },
+  };
+}
