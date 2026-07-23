@@ -62,7 +62,7 @@ interface RunRow {
   sources_failed: number;
 }
 
-function mockAuthedAdmin(runRows: RunRow[] | "reject-if-called" = []) {
+function mockAuthedAdmin(runRows: RunRow[] | "reject-if-called" = [], capturedUrls?: string[]) {
   return async (input: RequestInfo | URL) => {
     const url = typeof input === "string" ? input : input.toString();
     if (url.includes("/auth/v1/user")) {
@@ -81,6 +81,7 @@ function mockAuthedAdmin(runRows: RunRow[] | "reject-if-called" = []) {
       if (runRows === "reject-if-called") {
         throw new Error("scheduled_writer_runs must never be queried when the environment tag is not configured");
       }
+      capturedUrls?.push(url);
       return new Response(JSON.stringify(runRows), {
         status: 200,
         headers: { "content-type": "application/json" },
@@ -223,7 +224,7 @@ test.describe("GET /api/admin/automation-status — run history (Sprint 166D-2B)
     });
   });
 
-  test("rows for a different environment_tag are never surfaced, even if returned by the mock", async () => {
+  test("rows for a different environment_tag are never surfaced, even if a buggy/hostile query response returned one anyway (defense in depth, layer 2: buildRunHistorySnapshot)", async () => {
     await withEnv({ ...BASE_ENV, SUPABASE_ENVIRONMENT_TAG: "preview" }, async () => {
       const restore = mockFetch(
         mockAuthedAdmin([closedRow({ id: "wrong-env", environment_tag: "production", outcome: "total_failure" })])
@@ -232,12 +233,46 @@ test.describe("GET /api/admin/automation-status — run history (Sprint 166D-2B)
         const res = await automationStatusGet(authedRequest("a-genuinely-valid-admin-token"));
         const body = await res.json();
         // The mismatched-tag row must never surface as this environment's
-        // last closed run, even though the mock returned it.
+        // last closed run, even though the mock returned it — this
+        // simulates layer 1 (the DB-side .eq() filter) somehow failing to
+        // exclude it; layer 2 must still catch it independently.
         expect(body.status.runHistory.lastClosedRun).toBeNull();
       } finally {
         restore();
       }
     });
+  });
+
+  test("Sprint 166D-2C — the query itself filters by environment_tag server-side (layer 1), using the resolved tag, never a hardcoded literal", async () => {
+    await withEnv({ ...BASE_ENV, SUPABASE_ENVIRONMENT_TAG: "development" }, async () => {
+      const capturedUrls: string[] = [];
+      const restore = mockFetch(mockAuthedAdmin([], capturedUrls));
+      try {
+        await automationStatusGet(authedRequest("a-genuinely-valid-admin-token"));
+        expect(capturedUrls.length).toBeGreaterThan(0);
+        // Supabase-js renders .eq("environment_tag", tag) as this exact
+        // query-string shape. Using "development" here (not "preview" or
+        // "production") proves the filter tracks the resolved tag, not a
+        // hardcoded literal anywhere in the route.
+        expect(capturedUrls[0]).toContain("environment_tag=eq.development");
+      } finally {
+        restore();
+      }
+    });
+  });
+
+  test("Sprint 166D-2C — a different resolved environment_tag produces a different filter value (never the same literal)", async () => {
+    const capturedUrls: string[] = [];
+    await withEnv({ ...BASE_ENV, SUPABASE_ENVIRONMENT_TAG: "preview" }, async () => {
+      const restore = mockFetch(mockAuthedAdmin([], capturedUrls));
+      try {
+        await automationStatusGet(authedRequest("a-genuinely-valid-admin-token"));
+      } finally {
+        restore();
+      }
+    });
+    expect(capturedUrls[0]).toContain("environment_tag=eq.preview");
+    expect(capturedUrls[0]).not.toContain("environment_tag=eq.development");
   });
 
   test("retryInfoNote is always the honest 'no data' sentence, never fabricated", async () => {
@@ -268,16 +303,25 @@ test.describe("GET /api/admin/automation-status — run history (Sprint 166D-2B)
     });
   });
 
-  test("the route only ever performs a SELECT — no insert/update/delete/rpc call is ever made against scheduled_writer_runs", () => {
+  test("the route only ever performs a SELECT (with a server-side environment_tag filter) — no insert/update/delete/rpc call is ever made against scheduled_writer_runs", () => {
     const routeSource = readFileSync(
       join(process.cwd(), "src/app/api/admin/automation-status/route.ts"),
       "utf-8"
     );
     expect(routeSource).toMatch(/\.select\(/);
+    expect(routeSource).toMatch(/\.eq\(\s*["']environment_tag["']\s*,\s*environmentTag\s*\)/);
     expect(routeSource).not.toMatch(/\.insert\(/);
     expect(routeSource).not.toMatch(/\.update\(/);
     expect(routeSource).not.toMatch(/\.delete\(/);
     expect(routeSource).not.toMatch(/\.rpc\(/);
     expect(routeSource).not.toMatch(/select\(\s*["']\*["']\s*\)/);
+  });
+
+  test("the environment_tag filter never uses a hardcoded 'preview'/'production' literal in the route source", () => {
+    const routeSource = readFileSync(
+      join(process.cwd(), "src/app/api/admin/automation-status/route.ts"),
+      "utf-8"
+    );
+    expect(routeSource).not.toMatch(/\.eq\(\s*["']environment_tag["']\s*,\s*["'](preview|production)["']\s*\)/);
   });
 });

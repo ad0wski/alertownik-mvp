@@ -36,6 +36,13 @@ import type { RunOutcome } from "@/lib/scheduledWriterRunSafety";
 // error_summary is never among them — it is structurally impossible for
 // this route to forward that column's contents to the browser because it
 // is never read from the database in the first place.
+//
+// Sprint 166D-2C — the query itself now also filters
+// `.eq("environment_tag", environmentTag)` server-side (the same resolved
+// value, never a hardcoded "preview"/"production" literal), so a
+// differently-tagged row is never even fetched. buildRunHistorySnapshot()'s
+// own re-filter (src/lib/runHistoryStatus.ts) is kept unchanged as a second,
+// independent layer — defense in depth, not a replacement for either layer.
 
 export type AutomationStatusResponse =
   | { ok: true; status: AutomationStatusSnapshot }
@@ -58,6 +65,7 @@ export async function GET(req: NextRequest): Promise<NextResponse<AutomationStat
       const { data, error } = await auth.client
         .from("scheduled_writer_runs")
         .select("id, started_at, finished_at, trigger, environment_tag, outcome, sources_checked, sources_failed")
+        .eq("environment_tag", environmentTag)
         .order("started_at", { ascending: false })
         .order("id", { ascending: false })
         .limit(5);
