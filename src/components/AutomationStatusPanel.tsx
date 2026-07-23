@@ -16,7 +16,16 @@ import {
   EMAIL_ALERT_DISABLED_NOTE,
   EMAIL_ALERT_MISCONFIGURED_NOTE,
   EMAIL_ALERT_READY_NOT_WIRED_NOTE,
+  EMAIL_ALERT_ACTIVE_PROVIDER_DISABLED_LABEL,
+  EMAIL_ALERT_ACTIVE_PROVIDER_MISCONFIGURED_LABEL,
+  OPERATIONAL_EMAIL_TEST_SECTION_TITLE,
+  OPERATIONAL_EMAIL_TEST_DISABLED_LABEL,
+  OPERATIONAL_EMAIL_TEST_CONFIRM_MESSAGE,
+  OPERATIONAL_EMAIL_TEST_RESULT_LABELS_PL,
+  OPERATIONAL_EMAIL_TEST_GENERIC_ERROR_LABEL,
 } from "@/lib/emailAlertConfig";
+import { getClientEnvironmentIdentity } from "@/lib/environmentIdentity";
+import type { OperationalEmailTestResponse } from "@/app/api/admin/operational-email-test/route";
 
 type AutomationStatusResponse =
   | { ok: true; status: AutomationStatusSnapshot }
@@ -59,6 +68,29 @@ export function AutomationStatusPanel({ activityRows }: { activityRows: Schedule
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   const [status, setStatus] = useState<AutomationStatusSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [testState, setTestState] = useState<"idle" | "loading">("idle");
+  const [testResultLabel, setTestResultLabel] = useState<string | null>(null);
+  const isPreview = getClientEnvironmentIdentity() === "preview";
+
+  async function runOperationalEmailTest() {
+    if (testState === "loading") return;
+    if (!confirm(OPERATIONAL_EMAIL_TEST_CONFIRM_MESSAGE)) return;
+    setTestState("loading");
+    setTestResultLabel(null);
+    try {
+      const res = await authFetch("/api/admin/operational-email-test", { method: "POST" });
+      const data = (await res.json()) as OperationalEmailTestResponse;
+      if ("status" in data) {
+        setTestResultLabel(OPERATIONAL_EMAIL_TEST_RESULT_LABELS_PL[data.status] ?? OPERATIONAL_EMAIL_TEST_GENERIC_ERROR_LABEL);
+      } else {
+        setTestResultLabel(OPERATIONAL_EMAIL_TEST_GENERIC_ERROR_LABEL);
+      }
+    } catch {
+      setTestResultLabel(OPERATIONAL_EMAIL_TEST_GENERIC_ERROR_LABEL);
+    } finally {
+      setTestState("idle");
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -260,9 +292,9 @@ export function AutomationStatusPanel({ activityRows }: { activityRows: Schedule
                   activeLabel="włączone"
                   inactiveLabel="wyłączone"
                 />
-                <span className="text-xs text-slate-500 dark:text-slate-400 ml-3">Dostawca:</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400 ml-3">Skonfigurowany dostawca:</span>
                 <span className="text-sm font-medium text-slate-800 dark:text-slate-100">
-                  {status.emailAlertConfig.provider === EMAIL_ALERT_PROVIDER_RESEND ? "Resend" : "nieskonfigurowany"}
+                  {status.emailAlertConfig.configuredProvider === EMAIL_ALERT_PROVIDER_RESEND ? "Resend" : "nieskonfigurowany"}
                 </span>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -272,7 +304,17 @@ export function AutomationStatusPanel({ activityRows }: { activityRows: Schedule
                   activeLabel="kompletna"
                   inactiveLabel="niekompletna"
                 />
-                <span className="text-xs text-slate-500 dark:text-slate-400 ml-3">Ostatnia wysyłka:</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400 ml-3">Aktywny dostawca:</span>
+                <span className="text-sm font-medium text-slate-800 dark:text-slate-100">
+                  {status.emailAlertConfig.activeProvider === EMAIL_ALERT_PROVIDER_RESEND
+                    ? "Resend"
+                    : !status.emailAlertConfig.enabled
+                      ? EMAIL_ALERT_ACTIVE_PROVIDER_DISABLED_LABEL
+                      : EMAIL_ALERT_ACTIVE_PROVIDER_MISCONFIGURED_LABEL}
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs text-slate-500 dark:text-slate-400">Ostatnia wysyłka:</span>
                 <span className="text-sm text-slate-500 dark:text-slate-400">
                   brak danych, ponieważ trwała historia nie istnieje
                 </span>
@@ -284,6 +326,36 @@ export function AutomationStatusPanel({ activityRows }: { activityRows: Schedule
                     ? EMAIL_ALERT_MISCONFIGURED_NOTE
                     : EMAIL_ALERT_READY_NOT_WIRED_NOTE}
               </p>
+
+              {/* Sprint 166E-2A — Preview-only controlled test. Rendered
+                  only when the CLIENT build's own environment identity is
+                  "preview" (build-time constant, never a runtime fetch —
+                  see environmentIdentity.ts) — this section structurally
+                  cannot appear in a Production build's HTML output. No
+                  request fires on mount; the button requires an explicit
+                  confirm() before any network call, and is disabled while
+                  a request is in flight or when alerts are disabled. */}
+              {isPreview && (
+                <div className="pt-2 border-t border-slate-200 dark:border-slate-800 space-y-1.5">
+                  <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                    {OPERATIONAL_EMAIL_TEST_SECTION_TITLE}
+                  </p>
+                  <button
+                    type="button"
+                    disabled={!status.emailAlertConfig.enabled || testState === "loading"}
+                    onClick={runOperationalEmailTest}
+                    className="text-xs font-medium px-3 py-1.5 rounded-lg ring-1 ring-slate-300 dark:ring-slate-700 text-slate-700 dark:text-slate-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-800"
+                  >
+                    {testState === "loading" ? "Wysyłanie…" : "Wyślij jeden testowy e-mail"}
+                  </button>
+                  {!status.emailAlertConfig.enabled && (
+                    <p className="text-[11px] text-slate-400 dark:text-slate-500">{OPERATIONAL_EMAIL_TEST_DISABLED_LABEL}</p>
+                  )}
+                  {testResultLabel && (
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">{testResultLabel}</p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}

@@ -191,7 +191,8 @@ test.describe("buildAutomationStatus — pure snapshot builder", () => {
     // — every field is a boolean or a closed-set provider string, never a
     // key, address, or any other credential.
     expect(status.emailAlertConfig.enabled).toBe(false);
-    expect(status.emailAlertConfig.provider).toBe("none");
+    expect(status.emailAlertConfig.configuredProvider).toBe("none");
+    expect(status.emailAlertConfig.activeProvider).toBe("none");
     expect(status.emailAlertConfig.configComplete).toBe(false);
   });
 });
@@ -395,7 +396,8 @@ test.describe("GET /api/admin/automation-status — admin session, real environm
           const res = await automationStatusGet(authedRequest("a-genuinely-valid-admin-token"));
           const body = await res.json();
           expect(body.status.emailAlertConfig.enabled).toBe(true);
-          expect(body.status.emailAlertConfig.provider).toBe("resend");
+          expect(body.status.emailAlertConfig.configuredProvider).toBe("resend");
+          expect(body.status.emailAlertConfig.activeProvider).toBe("resend");
           expect(body.status.emailAlertConfig.configComplete).toBe(true);
           const serialized = JSON.stringify(body);
           expect(serialized).not.toContain("re_super_secret_test_key_should_never_appear");
@@ -438,18 +440,32 @@ test.describe("AutomationStatusPanel.tsx — structural audit", () => {
     expect(panelSource).not.toMatch(/service_role/i);
   });
 
-  test("contains no activation control — no onClick handler anywhere (the only interactive element is the native <details> disclosure toggle)", () => {
+  test("the only activation control is the Sprint 166E-2A Preview-only, confirm()-gated email test button — no other onClick exists", () => {
     // Every other admin panel with a real action (LinkHealthPanel's check
-    // button, the Kreator publish button) uses onClick — its total absence
-    // here is the structural guarantee that this panel cannot trigger a
-    // real run or flip a switch, regardless of what its descriptive copy
-    // says about the absence of such a button.
-    expect(panelSource).not.toMatch(/onClick/);
+    // button, the Kreator publish button) uses onClick — before Sprint
+    // 166E-2A this panel had none at all. It now has EXACTLY one, guarded
+    // on every axis a real activation control needs to be guarded on:
+    // rendered only when the client build's own environment identity is
+    // "preview" (isPreview), disabled unless email alerts are enabled,
+    // disabled while a request is in flight, and never fired without an
+    // explicit confirm() first. This test pins that there is still only
+    // ONE onClick in the whole file — a second one appearing here
+    // unreviewed would be a real regression this test exists to catch.
+    const onClickMatches = panelSource.match(/onClick/g) ?? [];
+    expect(onClickMatches.length).toBe(1);
+    expect(panelSource).toMatch(/onClick=\{runOperationalEmailTest\}/);
+    expect(panelSource).toMatch(/confirm\(OPERATIONAL_EMAIL_TEST_CONFIRM_MESSAGE\)/);
+    expect(panelSource).toMatch(/isPreview\s*&&/);
   });
 
-  test("only ever performs a GET fetch to its own status endpoint — never POST/PUT/DELETE", () => {
+  test("performs a GET fetch to its own status endpoint, and the only POST is the guarded, confirm()-gated Preview email test — never PUT/DELETE", () => {
     expect(panelSource).toMatch(/\/api\/admin\/automation-status/);
-    expect(panelSource).not.toMatch(/method:\s*["']POST["']/);
+    // Sprint 166E-2A: exactly one POST call exists, to the dedicated,
+    // admin-only, Preview-only, flag-gated test endpoint — never to the
+    // status endpoint itself, and reachable only via the single onClick
+    // asserted above (which itself requires confirm() first).
+    expect(panelSource).toMatch(/\/api\/admin\/operational-email-test/);
+    expect(panelSource).toMatch(/method:\s*["']POST["']/);
     expect(panelSource).not.toMatch(/method:\s*["']DELETE["']/);
     expect(panelSource).not.toMatch(/method:\s*["']PUT["']/);
   });

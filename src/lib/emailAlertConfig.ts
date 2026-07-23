@@ -43,7 +43,18 @@ export interface EmailAlertConfigStatusInput {
 
 export interface EmailAlertConfigStatus {
   enabled: boolean;
-  provider: EmailAlertProvider;
+  /** Sprint 166E-2A — split from the old single `provider` field, which
+   *  conflated "is Resend configured" with "would Resend actually be used
+   *  right now". `configuredProvider` reflects configComplete alone
+   *  (true regardless of the enabled flag) — it answers "if this were
+   *  turned on, which provider would run". */
+  configuredProvider: EmailAlertProvider;
+  /** True only when BOTH enabled and configComplete — answers "is this
+   *  provider actually live right now". Never "resend" while enabled is
+   *  false, even with a fully complete configuration — matches the panel
+   *  requirement that a configured-but-disabled state must never be
+   *  described as an active provider. */
+  activeProvider: EmailAlertProvider;
   /** True only when every required piece of server-side config is present.
    *  Never implies a message was ever sent — see runtime NotificationStatus
    *  for that (still always "disabled" or "no_adapter_configured" this
@@ -60,7 +71,8 @@ export function buildEmailAlertConfigStatus(input: EmailAlertConfigStatusInput):
   const configComplete = input.apiKeyConfigured && input.fromConfigured && input.toConfigured;
   return {
     enabled: input.enabled,
-    provider: input.enabled ? EMAIL_ALERT_PROVIDER_RESEND : EMAIL_ALERT_PROVIDER_NONE,
+    configuredProvider: configComplete ? EMAIL_ALERT_PROVIDER_RESEND : EMAIL_ALERT_PROVIDER_NONE,
+    activeProvider: input.enabled && configComplete ? EMAIL_ALERT_PROVIDER_RESEND : EMAIL_ALERT_PROVIDER_NONE,
     configComplete,
   };
 }
@@ -95,3 +107,43 @@ export const EMAIL_ALERT_MISCONFIGURED_NOTE =
 export const EMAIL_ALERT_READY_NOT_WIRED_NOTE =
   "Alerty e-mail: włączone i skonfigurowane, ale żaden przepływ jeszcze " +
   "ich nie wywołuje — nic nie jest wysyłane automatycznie w tym sprincie.";
+
+// ── Sprint 166E-2A — controlled Preview test section copy (pinned by tests) ──
+
+export const OPERATIONAL_EMAIL_TEST_SECTION_TITLE = "Kontrolowany test e-mail (Preview)";
+
+export const OPERATIONAL_EMAIL_TEST_DISABLED_LABEL =
+  "Test niedostępny — alerty e-mail są wyłączone.";
+
+export const OPERATIONAL_EMAIL_TEST_CONFIRM_MESSAGE =
+  "Czy wysłać dokładnie jeden testowy e-mail z Preview?";
+
+/** Shown next to "Aktywny dostawca" when configuredProvider is Resend
+ *  (configComplete) but the master switch is off — distinct from the
+ *  misconfigured case below, so an admin never confuses "I turned it off"
+ *  with "something is still missing". */
+export const EMAIL_ALERT_ACTIVE_PROVIDER_DISABLED_LABEL = "brak — alerty wyłączone";
+
+/** Shown next to "Aktywny dostawca" when enabled is true but configComplete
+ *  is false — the inverse case: an admin turned it on, but the server-side
+ *  config is still incomplete. */
+export const EMAIL_ALERT_ACTIVE_PROVIDER_MISCONFIGURED_LABEL = "brak — konfiguracja niekompletna";
+
+/** Safe, closed-vocabulary labels for every possible
+ *  OperationalEmailTestResponse the POST /api/admin/operational-email-test
+ *  route can return (see that route's own OperationalEmailTestResponse
+ *  type) — never derived from error.message or any other free-text field,
+ *  so this mapping can never accidentally surface a provider's raw error
+ *  string or any address/key value. */
+export const OPERATIONAL_EMAIL_TEST_RESULT_LABELS_PL: Record<string, string> = {
+  sent: "Wysłano jeden testowy e-mail.",
+  disabled: "Alerty e-mail są wyłączone — nic nie zostało wysłane.",
+  misconfigured: "Konfiguracja jest niekompletna — nic nie zostało wysłane.",
+  provider_auth_error: "Dostawca odrzucił dane uwierzytelniające — nic nie zostało wysłane.",
+  provider_rate_limited: "Dostawca odrzucił żądanie z powodu limitu — nic nie zostało wysłane.",
+  provider_transient_error: "Dostawca zgłosił chwilowy błąd — nic nie zostało wysłane.",
+  provider_permanent_error: "Dostawca zgłosił trwały błąd — nic nie zostało wysłane.",
+};
+
+export const OPERATIONAL_EMAIL_TEST_GENERIC_ERROR_LABEL =
+  "Nie udało się wykonać testu — spróbuj ponownie później.";

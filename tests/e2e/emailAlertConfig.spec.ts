@@ -28,7 +28,7 @@ test.describe("isEmailAlertsEnabled", () => {
 });
 
 test.describe("buildEmailAlertConfigStatus", () => {
-  test("disabled → provider none, configComplete irrelevant to enabled flag", () => {
+  test("disabled but fully configured → configuredProvider resend, activeProvider none", () => {
     const status = buildEmailAlertConfigStatus({
       enabled: false,
       apiKeyConfigured: true,
@@ -36,11 +36,12 @@ test.describe("buildEmailAlertConfigStatus", () => {
       toConfigured: true,
     });
     expect(status.enabled).toBe(false);
-    expect(status.provider).toBe(EMAIL_ALERT_PROVIDER_NONE);
+    expect(status.configuredProvider).toBe(EMAIL_ALERT_PROVIDER_RESEND);
+    expect(status.activeProvider).toBe(EMAIL_ALERT_PROVIDER_NONE);
     expect(status.configComplete).toBe(true);
   });
 
-  test("enabled + all three configured → provider resend, configComplete true", () => {
+  test("enabled + all three configured → configuredProvider and activeProvider both resend, configComplete true", () => {
     const status = buildEmailAlertConfigStatus({
       enabled: true,
       apiKeyConfigured: true,
@@ -48,8 +49,20 @@ test.describe("buildEmailAlertConfigStatus", () => {
       toConfigured: true,
     });
     expect(status.enabled).toBe(true);
-    expect(status.provider).toBe(EMAIL_ALERT_PROVIDER_RESEND);
+    expect(status.configuredProvider).toBe(EMAIL_ALERT_PROVIDER_RESEND);
+    expect(status.activeProvider).toBe(EMAIL_ALERT_PROVIDER_RESEND);
     expect(status.configComplete).toBe(true);
+  });
+
+  test("enabled but incomplete config → configuredProvider none, activeProvider none", () => {
+    const status = buildEmailAlertConfigStatus({
+      enabled: true,
+      apiKeyConfigured: false,
+      fromConfigured: true,
+      toConfigured: true,
+    });
+    expect(status.configuredProvider).toBe(EMAIL_ALERT_PROVIDER_NONE);
+    expect(status.activeProvider).toBe(EMAIL_ALERT_PROVIDER_NONE);
   });
 
   test("enabled but missing API key → configComplete false", () => {
@@ -82,7 +95,7 @@ test.describe("buildEmailAlertConfigStatus", () => {
     expect(status.configComplete).toBe(false);
   });
 
-  test("no field in the output could ever carry a secret value — only booleans and a closed-set provider string", () => {
+  test("no field in the output could ever carry a secret value — only booleans and closed-set provider strings", () => {
     const status = buildEmailAlertConfigStatus({
       enabled: true,
       apiKeyConfigured: true,
@@ -90,7 +103,7 @@ test.describe("buildEmailAlertConfigStatus", () => {
       toConfigured: true,
     });
     for (const [key, value] of Object.entries(status)) {
-      if (key === "provider") {
+      if (key === "configuredProvider" || key === "activeProvider") {
         expect([EMAIL_ALERT_PROVIDER_NONE, EMAIL_ALERT_PROVIDER_RESEND]).toContain(value);
       } else {
         expect(typeof value).toBe("boolean");

@@ -76,3 +76,27 @@ export function buildAlertEmailContent(input: AlertEmailContentInput): AlertEmai
 
   return { subject, textBody };
 }
+
+// ── Sprint 166E-2A — controlled Preview operational-email test content ──────
+//
+// A separate, deliberately stable template — buildAlertEmailContent above
+// is shaped for automation-failure alerts (category/severity/retry/
+// admin-action) and would be the wrong shape for a plain manual test
+// message. This one takes only a server-generated timestamp; no source
+// name, category, severity, or any other variable field — so its content
+// can never accidentally carry a real error detail.
+
+export const OPERATIONAL_EMAIL_TEST_SUBJECT = "[PREVIEW TEST] Alertownik — test alertowania operacyjnego";
+
+export function buildOperationalEmailTestContent(generatedAtIso: string): AlertEmailContent {
+  const textBody = [
+    "To jest ręczny, kontrolowany test mechanizmu alertowania operacyjnego.",
+    "Wiadomość pochodzi ze środowiska Preview.",
+    "Nie oznacza to prawdziwej awarii ani problemu w Production.",
+    `Wygenerowano po stronie serwera: ${generatedAtIso}`,
+    "",
+    "Ta wiadomość nie zawiera żadnych danych źródeł, kandydatów ani szczegółów błędów.",
+  ].join("\n");
+
+  return { subject: OPERATIONAL_EMAIL_TEST_SUBJECT, textBody };
+}

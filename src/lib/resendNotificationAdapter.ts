@@ -24,9 +24,22 @@ export interface ResendLikeSendResult {
   error: { message: string; statusCode: number | null; name: string } | null;
 }
 
+/** Sprint 166E-2A — matches the real Resend SDK's own
+ *  `emails.send(payload, options)` signature exactly (options extends
+ *  IdempotentRequest, whose only field is `idempotencyKey?: string`). The
+ *  second argument is optional so every existing call site
+ *  (createResendNotificationAdapter's own send() below) keeps compiling
+ *  unchanged — only the new operational-email-test route ever passes it. */
+export interface ResendLikeSendOptions {
+  idempotencyKey?: string;
+}
+
 export interface ResendLikeClient {
   emails: {
-    send(payload: { from: string; to: string; subject: string; text: string }): Promise<ResendLikeSendResult>;
+    send(
+      payload: { from: string; to: string; subject: string; text: string },
+      options?: ResendLikeSendOptions
+    ): Promise<ResendLikeSendResult>;
   };
 }
 
@@ -123,6 +136,51 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
       }
     );
   });
+}
+
+/** Sprint 166E-2A — builds the deterministic idempotency key for the
+ *  admin-triggered Preview operational-email-test route (see
+ *  src/app/api/admin/operational-email-test/route.ts). Pure, server-only
+ *  input (never accepts anything from a request): `commitSha` must come
+ *  from `process.env.VERCEL_GIT_COMMIT_SHA` at the call site, never from a
+ *  client. Returns null when no commit SHA is available — the caller must
+ *  fail closed in that case (refuse the test) rather than invent a
+ *  fallback value, so two different deployments can never accidentally
+ *  collide on the same key and so the same deployment always reuses the
+ *  exact same key for every repeated request (Resend's own idempotency
+ *  guarantee then makes a second click on the same deployment a safe
+ *  no-op server-side, never a second real send). */
+export function buildOperationalEmailTestIdempotencyKey(commitSha: string | undefined): string | null {
+  if (!commitSha) return null;
+  return `alertownik-preview-operational-email-test/${commitSha}`;
+}
+
+export type ResendSendOutcome = { ok: true } | { ok: false; category: ResendErrorCategory };
+
+/** Sprint 166E-2A — like createResendNotificationAdapter's send(), but
+ *  exposes the classified ResendErrorCategory directly instead of
+ *  collapsing every failure to the generic NotificationStatus vocabulary.
+ *  Used only by the operational-email-test route, which needs to report a
+ *  more specific (but still fully safe, closed-vocabulary) outcome to the
+ *  admin than the generic alert-notification path does. Never logs
+ *  `payload`, `options`, or the provider's raw error — only the
+ *  classification result. Same bounded timeout, same "never retry"
+ *  guarantee as the adapter above. */
+export async function sendResendEmail(
+  client: ResendLikeClient,
+  payload: { from: string; to: string; subject: string; text: string },
+  options?: ResendLikeSendOptions,
+  timeoutMs: number = RESEND_SEND_TIMEOUT_MS
+): Promise<ResendSendOutcome> {
+  try {
+    const result = await withTimeout(client.emails.send(payload, options), timeoutMs);
+    if (result.error) {
+      return { ok: false, category: classifyResendError(result.error.name, result.error.statusCode) };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, category: "unknown_error" };
+  }
 }
 
 /** Creates the real send-capable adapter. `client` is injected (never

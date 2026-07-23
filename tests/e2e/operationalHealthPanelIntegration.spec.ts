@@ -193,19 +193,28 @@ test.describe("AutomationStatusPanel.tsx — structural audit (Sprint 166D-2B ad
     expect(panelSource).not.toMatch(/service_role/i);
   });
 
-  test("still contains no activation control — no onClick handler anywhere", () => {
-    expect(panelSource).not.toMatch(/onClick/);
+  test("the only activation control is the Sprint 166E-2A Preview-only, confirm()-gated email test button", () => {
+    // Sprint 166E-2A deliberately adds exactly one guarded onClick (a
+    // confirm()-gated, Preview-only, flag-gated test-email button) — see
+    // tests/e2e/automationStatus.spec.ts's own structural-audit test for
+    // the full guard rationale. This test only needs to confirm the
+    // Sprint 166D-2B run-history additions themselves added no second one.
+    const onClickMatches = panelSource.match(/onClick/g) ?? [];
+    expect(onClickMatches.length).toBe(1);
+    expect(panelSource).toMatch(/onClick=\{runOperationalEmailTest\}/);
   });
 
-  test("still only ever performs a GET fetch to its own status endpoint — no new fetch added", () => {
+  test("performs a GET fetch to its own status endpoint, plus the one Sprint 166E-2A guarded POST test call — nothing else", () => {
     expect(panelSource).toMatch(/\/api\/admin\/automation-status/);
-    expect(panelSource).not.toMatch(/method:\s*["']POST["']/);
+    expect(panelSource).toMatch(/\/api\/admin\/operational-email-test/);
+    expect(panelSource).toMatch(/method:\s*["']POST["']/);
     expect(panelSource).not.toMatch(/method:\s*["']DELETE["']/);
     expect(panelSource).not.toMatch(/method:\s*["']PUT["']/);
-    // No second endpoint of any kind — the run-history section is built
-    // entirely from the same status this panel already fetched.
+    // Exactly two authFetch calls: the original status GET (166D-2B) and
+    // the new guarded test POST (166E-2A) — the run-history section itself
+    // adds no additional endpoint.
     const fetchCalls = panelSource.match(/authFetch\(/g) ?? [];
-    expect(fetchCalls.length).toBe(1);
+    expect(fetchCalls.length).toBe(2);
   });
 
   test("renders status.runHistory using the shared label maps, never a raw outcome/category/severity string", () => {
