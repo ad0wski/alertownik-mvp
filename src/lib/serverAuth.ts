@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 // Sprint 161 — shared server-side admin-session check for Route Handlers.
 //
@@ -36,7 +36,7 @@ import { createClient } from "@supabase/supabase-js";
 // declared return type without a cast at every call site — every route's
 // response union already includes an `{ ok: false; error: string }` member.
 export type AdminAuthResult<T> =
-  | { ok: true; userId: string }
+  | { ok: true; userId: string; client: SupabaseClient }
   | { ok: false; response: NextResponse<T> };
 
 function unauthorized<T>(): NextResponse<T> {
@@ -102,7 +102,13 @@ export async function requireAdminSession<T>(req: Request): Promise<AdminAuthRes
       return { ok: false, response: forbidden() };
     }
 
-    return { ok: true, userId: userData.user.id };
+    // Returned so a caller needing a further read-only, RLS-scoped query
+    // (e.g. GET /api/admin/automation-status reading scheduled_writer_runs
+    // via its own admin-only SELECT policy) can reuse this exact
+    // already-authenticated client instead of re-deriving/re-validating
+    // the bearer token a second time — same client, same identity, same
+    // RLS boundary, zero duplicated auth logic.
+    return { ok: true, userId: userData.user.id, client };
   } catch {
     // Supabase unreachable, malformed token, etc. — fail closed, no detail.
     return { ok: false, response: unauthorized() };

@@ -174,9 +174,18 @@ test.describe("buildAutomationStatus — pure snapshot builder", () => {
       fingerprintProtectionEnabled: false,
     });
     for (const [key, value] of Object.entries(status)) {
-      if (key === "canarySources") continue;
+      // canarySources: array of {id, name} — public source identifiers.
+      // runHistory (Sprint 166D-2B): a nested object, checked separately
+      // below for the same "no secret value" guarantee.
+      if (key === "canarySources" || key === "runHistory") continue;
       expect(["boolean", "number"]).toContain(typeof value);
     }
+    // runHistory defaults to the "not configured" shape when omitted from
+    // the input (as here) — still no field that could ever carry a secret.
+    expect(status.runHistory.configured).toBe(false);
+    expect(status.runHistory.lastClosedRun).toBeNull();
+    expect(status.runHistory.openRun).toBeNull();
+    expect(typeof status.runHistory.retryInfoNote).toBe("string");
   });
 });
 
@@ -211,6 +220,13 @@ function mockFetch(impl: typeof fetch) {
 const SUPABASE_ENV = {
   NEXT_PUBLIC_SUPABASE_URL: FAKE_URL,
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: FAKE_KEY,
+  // Sprint 166D-2B: explicitly cleared so these existing tests stay
+  // deterministic regardless of ambient environment — with this unset,
+  // the new run-history read in the route is never attempted, matching
+  // these tests' existing expectations (mockAuthedAdmin() below throws on
+  // any unexpected fetch, which would include an accidental
+  // scheduled_writer_runs query if this were left ambient-dependent).
+  SUPABASE_ENVIRONMENT_TAG: undefined,
 };
 
 function unauthedRequest(): NextRequest {

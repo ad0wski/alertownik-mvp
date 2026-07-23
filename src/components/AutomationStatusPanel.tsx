@@ -9,6 +9,12 @@ import {
   type AutomationStatusSnapshot,
 } from "@/lib/automationStatus";
 import type { ScheduledWriterSourceActivity } from "@/lib/writerCandidateActivity";
+import {
+  OPERATIONAL_HEALTH_NOTIFICATIONS_DISABLED_NOTE,
+  OPERATIONAL_HEALTH_EMAIL_NOT_CONFIGURED_NOTE,
+} from "@/lib/operationalHealthStatus";
+import { AUTOMATION_ERROR_CATEGORY_LABELS_PL, AUTOMATION_SEVERITY_LABELS_PL } from "@/lib/automationErrorClassifier";
+import { RUN_OUTCOME_LABELS_PL, formatRunTrigger } from "@/lib/runHistoryStatus";
 
 type AutomationStatusResponse =
   | { ok: true; status: AutomationStatusSnapshot }
@@ -164,6 +170,80 @@ export function AutomationStatusPanel({ activityRows }: { activityRows: Schedule
                   </span>
                 );
               })()}
+            </div>
+
+            {/* Run history (Sprint 166D-2B) — reads status.runHistory, built
+                server-side by GET /api/admin/automation-status from a
+                read-only, explicit-columns, environment_tag-filtered
+                SELECT against scheduled_writer_runs (admin-only RLS
+                policy, no migration needed). ONE aggregate block for the
+                whole run — this table has no per-source breakdown, so no
+                per-canary-source list is rendered here (see
+                ScheduledWriterMonitoring above for the per-source
+                candidate view, a different data source). error_summary is
+                never selected by the route, so it structurally cannot
+                appear here or anywhere in this panel. */}
+            <div className="pt-2 border-t border-slate-200 dark:border-slate-800 space-y-2">
+              <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                Stan operacyjny automatyzacji
+              </p>
+
+              {!status.runHistory.configured && (
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Historia przebiegów: nieskonfigurowana (brak ustawionego tagu środowiska bazy danych).
+                </p>
+              )}
+
+              {status.runHistory.configured && !status.runHistory.lastClosedRun && (
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Brak historii przebiegów — automat jeszcze nigdy nie zakończył uruchomienia w tym środowisku.
+                </p>
+              )}
+
+              {status.runHistory.lastClosedRun && (
+                <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/60 p-2.5 text-xs text-slate-600 dark:text-slate-400 space-y-0.5">
+                  <p>Wynik ostatniego przebiegu: {RUN_OUTCOME_LABELS_PL[status.runHistory.lastClosedRun.outcome]}</p>
+                  <p>Rozpoczęcie: {formatTimestamp(status.runHistory.lastClosedRun.startedAt)}</p>
+                  <p>Zakończenie: {formatTimestamp(status.runHistory.lastClosedRun.finishedAt)}</p>
+                  <p>Czas trwania: {status.runHistory.lastClosedRun.durationSeconds} s</p>
+                  <p>Wywołanie: {formatRunTrigger(status.runHistory.lastClosedRun.trigger)}</p>
+                  <p>
+                    Kategoria / ważność błędu:{" "}
+                    {AUTOMATION_ERROR_CATEGORY_LABELS_PL[status.runHistory.lastClosedRun.category]} /{" "}
+                    {AUTOMATION_SEVERITY_LABELS_PL[status.runHistory.lastClosedRun.severity]}
+                  </p>
+                  <p>
+                    Wymagana akcja administratora:{" "}
+                    {status.runHistory.lastClosedRun.adminActionRequired ? "tak" : "nie"}
+                  </p>
+                </div>
+              )}
+
+              {status.runHistory.openRun ? (
+                <div className="rounded-lg border border-amber-200 dark:border-amber-500/30 bg-amber-50/60 dark:bg-amber-500/10 p-2.5 text-xs text-amber-800 dark:text-amber-300 space-y-0.5">
+                  <p>
+                    Aktualnie otwarty przebieg: tak ({formatRunTrigger(status.runHistory.openRun.trigger)}, trwa{" "}
+                    {status.runHistory.openRun.ageSeconds} s)
+                  </p>
+                  {status.runHistory.openRun.likelyStuck && (
+                    <p>Uwaga: przebieg trwa dłużej niż zwykle — może być zawieszony, wymaga sprawdzenia.</p>
+                  )}
+                </div>
+              ) : (
+                status.runHistory.configured && (
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Aktualnie otwarty przebieg: nie.</p>
+                )
+              )}
+
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 leading-relaxed">
+                {status.runHistory.retryInfoNote}
+              </p>
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 leading-relaxed">
+                {OPERATIONAL_HEALTH_NOTIFICATIONS_DISABLED_NOTE}
+              </p>
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 leading-relaxed">
+                {OPERATIONAL_HEALTH_EMAIL_NOT_CONFIGURED_NOTE}
+              </p>
             </div>
           </div>
         )}

@@ -1,4 +1,5 @@
 import { getSafeCheckSource } from "@/lib/sourceCheck";
+import { notConfiguredRunHistorySnapshot, type RunHistorySnapshot } from "@/lib/runHistoryStatus";
 
 // Sprint 164B — Safe Auto-Candidate Canary Foundation.
 //
@@ -27,6 +28,12 @@ export interface AutomationStatusInput {
   allowedWriteSourceIds: readonly string[];
   maxCandidatesPerRun: number;
   fingerprintProtectionEnabled: boolean;
+  /** Sprint 166D-2B — optional so every existing call site (and test)
+   *  keeps compiling unchanged; omitting it yields the honest
+   *  "not configured" snapshot, never a guess. The route is the only
+   *  caller that ever supplies a real value, built from an already
+   *  environment-tag-filtered scheduled_writer_runs read. */
+  runHistory?: RunHistorySnapshot;
 }
 
 export interface CanarySourceInfo {
@@ -49,6 +56,7 @@ export interface AutomationStatusSnapshot {
   isSingleSourceCanary: boolean;
   maxCandidatesPerRun: number;
   fingerprintProtectionEnabled: boolean;
+  runHistory: RunHistorySnapshot;
 }
 
 export function buildAutomationStatus(input: AutomationStatusInput): AutomationStatusSnapshot {
@@ -71,6 +79,7 @@ export function buildAutomationStatus(input: AutomationStatusInput): AutomationS
     isSingleSourceCanary: canarySources.length === 1,
     maxCandidatesPerRun: input.maxCandidatesPerRun,
     fingerprintProtectionEnabled: input.fingerprintProtectionEnabled,
+    runHistory: input.runHistory ?? notConfiguredRunHistorySnapshot(),
   };
 }
 
