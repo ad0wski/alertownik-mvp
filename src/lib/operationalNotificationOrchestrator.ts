@@ -14,6 +14,12 @@ import {
 } from "@/lib/operationalNotificationLedger";
 import type { NotificationAdapter, NotificationSendResult } from "@/lib/notificationAdapter";
 import { AUTOMATION_ERROR_CATEGORY_LABELS_PL } from "@/lib/automationErrorClassifier";
+import type { RunOutcome } from "@/lib/scheduledWriterRunSafety";
+import {
+  buildRunLevelNotificationCategoryInput,
+  buildRunLevelSafeSummary,
+} from "@/lib/scheduledWriterNotificationInput";
+import { OPERATIONAL_NOTIFICATION_EVENT_TYPE_LABELS_PL } from "@/lib/operationalNotificationAdminView";
 
 // Sprint 166F-1 — pure orchestration layer describing the FUTURE flow
 // (evaluate → fingerprint → safe content → claim → adapter → finalize),
@@ -184,5 +190,87 @@ function mapSendResultToFinish(sendResult: NotificationSendResult): {
       return { status: "abandoned", providerStatus: null, sentAt: null };
     default:
       return { status: "abandoned", providerStatus: null, sentAt: null };
+  }
+}
+
+// ── Sprint 166G-1 — the run-level composition actually wired into the
+// live writer route (see write-candidates/route.ts). Everything above
+// this point was already pure/injected and unchanged by this sprint; only
+// the two functions below are new. ──────────────────────────────────────
+
+export interface OrchestrateRunNotificationInput {
+  environmentTag: string;
+  runOutcome: RunOutcome;
+  scheduledWriterRunId: string | null;
+  sourcesFailed: number;
+  sourcesChecked: number;
+}
+
+/** The full evaluate → fingerprint → safe content → claim → adapter →
+ *  finalize composition for exactly one run-level scope (scopeKey always
+ *  "run" — see design doc §B for why this sprint evaluates the run as a
+ *  whole rather than per-source). Can throw — propagates any collaborator
+ *  (ledger.claim, adapter.send, ledger.finish) failure as-is. Deliberately
+ *  NOT responsible for the "never affects the writer" guarantee itself —
+ *  see attemptOperationalNotification below, which is the actual function
+ *  wired into the route. */
+export async function orchestrateRunLevelNotification(
+  ledger: OperationalNotificationLedger,
+  adapter: NotificationAdapter,
+  input: OrchestrateRunNotificationInput
+): Promise<void> {
+  const { category, isAbandonedRun } = buildRunLevelNotificationCategoryInput(input.runOutcome);
+  const eligibility = evaluateNotificationEligibility({
+    category,
+    attemptsMade: 0,
+    isAbandonedRun,
+    lastAlertSentAt: null,
+  });
+  if (eligibility.decision !== "notify") return;
+
+  const safeSummary = buildRunLevelSafeSummary({
+    eventType: eligibility.eventType,
+    sourcesFailed: input.sourcesFailed,
+    sourcesChecked: input.sourcesChecked,
+  });
+
+  const claimResult = await claimEventForSending(ledger, {
+    environmentTag: input.environmentTag,
+    scopeKey: "run",
+    eventType: eligibility.eventType,
+    severity: eligibility.severity,
+    scheduledWriterRunId: input.scheduledWriterRunId,
+    sourceId: null,
+    safeSummary,
+  });
+  if (!claimResult.claimed) return;
+
+  const fingerprint = buildOperationalNotificationFingerprint(input.environmentTag, "run", eligibility.eventType);
+  const sendResult = await sendViaAdapter(adapter, {
+    subject: `Alertownik — ${OPERATIONAL_NOTIFICATION_EVENT_TYPE_LABELS_PL[eligibility.eventType]}`,
+    textBody: safeSummary,
+    fingerprint,
+  });
+
+  await finalizeOperationalNotificationEvent(ledger, { eventId: claimResult.eventId, sendResult });
+}
+
+/** The function actually wired into GET /api/cron/write-candidates.
+ *  Swallows every possible failure from orchestrateRunLevelNotification —
+ *  claim, adapter, or finish — and always resolves, never rejects. This is
+ *  the one and only place the "alerting can never change the writer's own
+ *  result" guarantee is implemented; it is independently testable here
+ *  with fakes that throw at each step, without touching the route or any
+ *  network. Deliberately logs nothing (no console.log/console.error) —
+ *  the failure reason is never surfaced anywhere this function can see. */
+export async function attemptOperationalNotification(
+  ledger: OperationalNotificationLedger,
+  adapter: NotificationAdapter,
+  input: OrchestrateRunNotificationInput
+): Promise<void> {
+  try {
+    await orchestrateRunLevelNotification(ledger, adapter, input);
+  } catch {
+    // Deliberately empty — see doc comment above.
   }
 }

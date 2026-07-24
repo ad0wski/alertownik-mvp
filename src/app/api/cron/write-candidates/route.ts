@@ -1,4 +1,5 @@
 import { randomUUID } from "crypto";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 import {
   checkCronAuth,
@@ -22,6 +23,46 @@ import {
 import { fetchAndParseProposals } from "@/lib/scheduledSourceFetch";
 import { createSupabaseScheduledWriterHistory, buildRunHistoryCloseUpdate } from "@/lib/scheduledWriterHistory";
 import type { SafeCheckSourceId } from "@/lib/sourceCheck";
+import type { RunOutcome } from "@/lib/scheduledWriterRunSafety";
+import { isOperationalNotificationRuntimeEnabled } from "@/lib/operationalNotificationRuntimeConfig";
+import { createSupabaseOperationalNotificationLedger } from "@/lib/operationalNotificationLedgerSupabase";
+import { createConfiguredNotificationAdapter } from "@/lib/notificationAdapterFactory";
+import { attemptOperationalNotification } from "@/lib/operationalNotificationOrchestrator";
+
+// Sprint 166G-1 — off by default (OPERATIONAL_NOTIFICATION_RUNTIME_ENABLED
+// is not set in any environment as part of this sprint). See
+// docs/SPRINT_166G_RUNTIME_LEDGER_INTEGRATION_AUDIT_AND_DESIGN_V1.md for
+// the full design. This helper is called strictly AFTER history.closeRun()
+// has already resolved (both call sites below) — never before — and can
+// never affect this route's own response: attemptOperationalNotification
+// already swallows every failure internally, and this wrapper's own
+// try/catch is defense in depth against a failure constructing the ledger
+// or adapter themselves (neither performs I/O during construction today).
+async function runOperationalNotification(input: {
+  environmentTag: string;
+  runOutcome: RunOutcome;
+  scheduledWriterRunId: string | null;
+  sourcesFailed: number;
+  sourcesChecked: number;
+  writerClient: SupabaseClient;
+}): Promise<void> {
+  if (!isOperationalNotificationRuntimeEnabled(process.env.OPERATIONAL_NOTIFICATION_RUNTIME_ENABLED)) {
+    return;
+  }
+  try {
+    const ledger = createSupabaseOperationalNotificationLedger(input.writerClient);
+    const adapter = createConfiguredNotificationAdapter();
+    await attemptOperationalNotification(ledger, adapter, {
+      environmentTag: input.environmentTag,
+      runOutcome: input.runOutcome,
+      scheduledWriterRunId: input.scheduledWriterRunId,
+      sourcesFailed: input.sourcesFailed,
+      sourcesChecked: input.sourcesChecked,
+    });
+  } catch {
+    // Never propagate — see file header comment above.
+  }
+}
 
 // Sprint 147 — Scheduled Writer Foundation v1.
 //
@@ -254,6 +295,15 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       )
       .catch(() => ({ ok: false }));
 
+    await runOperationalNotification({
+      environmentTag,
+      runOutcome: outcome,
+      scheduledWriterRunId: runId,
+      sourcesFailed,
+      sourcesChecked,
+      writerClient: signIn.client,
+    });
+
     return NextResponse.json({
       ok: true,
       dryRun: false,
@@ -297,6 +347,16 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         })
       )
       .catch(() => ({ ok: false }));
+
+    await runOperationalNotification({
+      environmentTag,
+      runOutcome: "total_failure",
+      scheduledWriterRunId: runId,
+      sourcesFailed: 0,
+      sourcesChecked: 0,
+      writerClient: signIn.client,
+    });
+
     return NextResponse.json({ ok: false, error: "Nieoczekiwany błąd." }, { status: 500 });
   }
 }
