@@ -374,3 +374,12 @@ silently returned as a normal row) — identical to
 caller's `.catch(() => ({ opened: false }))` (mirrored here as a future
 `.catch(() => fail-closed)`) collapses every unexpected error into the
 same safe, fail-closed outcome.
+
+## Status update (Sprint 166F-2A/2B, 2026-07-24)
+
+- Migration applied in Preview (`alertownik-preview`): **done**.
+- Controlled concurrency test: **PASS**.
+- Controlled cooldown test: **PASS**.
+- Runtime integration with the scheduled writer: **not started**.
+
+Full detail: `docs/SPRINT_166F_PREVIEW_LEDGER_VALIDATION_CHECKPOINT_V1.md`.
