@@ -187,12 +187,18 @@ test.describe("Retention cleanup script — limits, scope, and structural safety
   });
 
   test("the whole script is a single controlled transaction", () => {
-    expect(cleanupSql.trimStart().startsWith("--") || cleanupSql.includes("\nbegin;\n")).toBe(true);
-    expect(cleanupSql).toMatch(/\nbegin;\n/);
-    expect(cleanupSql).toMatch(/\ncommit;\n/);
+    // \r?\n rather than a literal \n: on Windows checkouts with
+    // core.autocrlf enabled, this file is materialized with CRLF line
+    // endings — readFileSync returns the raw bytes with no newline
+    // normalization, so a literal \n-only regex silently fails to match
+    // regardless of the SQL's actual (line-ending-independent) safety
+    // properties.
+    expect(cleanupSql.trimStart().startsWith("--") || /\r?\nbegin;\r?\n/.test(cleanupSql)).toBe(true);
+    expect(cleanupSql).toMatch(/\r?\nbegin;\r?\n/);
+    expect(cleanupSql).toMatch(/\r?\ncommit;\r?\n/);
     // Exactly one begin/commit pair wrapping exactly one DO block.
-    expect((cleanupSql.match(/\nbegin;\n/g) ?? []).length).toBe(1);
-    expect((cleanupSql.match(/\ncommit;\n/g) ?? []).length).toBe(1);
+    expect((cleanupSql.match(/\r?\nbegin;\r?\n/g) ?? []).length).toBe(1);
+    expect((cleanupSql.match(/\r?\ncommit;\r?\n/g) ?? []).length).toBe(1);
   });
 });
 
