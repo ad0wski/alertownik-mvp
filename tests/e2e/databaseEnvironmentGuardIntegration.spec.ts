@@ -215,18 +215,33 @@ test.describe("§E.9 — read-only/public routes are untouched by the new guard"
     return files;
   }
 
-  test("only the write-candidates route imports databaseEnvironmentGuard — no read/public route pulls it in", () => {
+  test("only the write-candidates route (or a specifically reviewed read-only consumer) imports databaseEnvironmentGuard, and no importer other than write-candidates ever calls the actual gate or constructs the writer", () => {
     // Matches an actual import statement only (`from "@/lib/databaseEnvironmentGuard"`),
     // never a prose mention of the module's name in a comment elsewhere.
     const importPattern = /from\s+["']@\/lib\/databaseEnvironmentGuard["']/;
     const allFiles = listFilesRecursive(srcDir);
+    const writeCandidatesRoute = path.join(srcDir, "app", "api", "cron", "write-candidates", "route.ts");
+    // Sprint 166D-2B/2C — /api/admin/automation-status legitimately imports
+    // this module too, but only the pure, non-secret-exposing
+    // getConfiguredDatabaseEnvironmentTag() helper, for a read-only,
+    // admin-session-gated run-history display. It never calls
+    // checkDatabaseEnvironmentGuard() (the actual write gate) and never
+    // constructs the scheduled writer — both checked below and already
+    // covered independently by the §E.10 tests.
+    const knownReadOnlyConsumers = [path.join(srcDir, "app", "api", "admin", "automation-status", "route.ts")];
     const importers = allFiles.filter((f) => {
-      if (f.endsWith(path.join("app", "api", "cron", "write-candidates", "route.ts"))) return false;
+      if (f === writeCandidatesRoute) return false;
       if (f.endsWith(path.join("lib", "databaseEnvironmentGuard.ts"))) return false;
       const content = readFileSync(f, "utf8");
       return importPattern.test(content);
     });
-    expect(importers).toEqual([]);
+    expect(importers).toEqual(knownReadOnlyConsumers);
+
+    for (const importer of importers) {
+      const content = readFileSync(importer, "utf8");
+      expect(content).not.toMatch(/checkDatabaseEnvironmentGuard\s*\(/);
+      expect(content).not.toMatch(/createSupabaseScheduledWriter\s*\(/);
+    }
   });
 
   test("the two dry-run cron routes (check-sources, check-michalowice) never import the guard or the scheduled writer — their zero-write guarantee stays purely structural, unchanged by this sprint", () => {
