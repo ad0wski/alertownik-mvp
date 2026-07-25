@@ -258,3 +258,54 @@ test.describe("Retention SQL files — no secrets, no automatic invocation, no u
     expect(cleanupSqlCode).toMatch(/channel\s*=\s*'email'/);
   });
 });
+
+test.describe("Sprint 166K-D — Production retention design stays design-only", () => {
+  const PRODUCTION_RETENTION_DESIGN_PATH = path.join(
+    process.cwd(),
+    "docs/SPRINT_166K_D_PRODUCTION_RETENTION_DESIGN_V1.md"
+  );
+
+  test("no executable SQL file exists yet for Production retention", () => {
+    const sqlDir = path.join(process.cwd(), "docs/sql");
+    const files = readdirSync(sqlDir);
+    const productionRetentionFiles = files.filter(
+      (f) => /production/i.test(f) && /retention|cleanup/i.test(f)
+    );
+    expect(productionRetentionFiles).toEqual([]);
+  });
+
+  test("the Production retention design document contains no runnable SQL statement", () => {
+    const content = readFileSync(PRODUCTION_RETENTION_DESIGN_PATH, "utf8");
+    // Prose may mention column/status names in backticks, but must never
+    // contain an actual DO block, transaction, or DML statement.
+    expect(content).not.toMatch(/\bdo\s*\$\$/i);
+    expect(content).not.toMatch(/^\s*delete\s+from\s+public\./im);
+    expect(content).not.toMatch(/^\s*begin;\s*$/im);
+    expect(content).not.toMatch(/^\s*commit;\s*$/im);
+  });
+
+  test("the design document does not weaken or modify the existing Preview-only cleanup file's environment guard", () => {
+    const content = readFileSync(PRODUCTION_RETENTION_DESIGN_PATH, "utf8");
+    expect(content).toMatch(/does not change that file/i);
+    expect(cleanupSql).toMatch(/v_expected_environment_tag\s+constant\s+text\s*:=\s*'preview'/);
+  });
+
+  test("the design document is not referenced or read by any application source file", () => {
+    const srcDir = path.join(process.cwd(), "src");
+    function listFilesRecursive(dir: string): string[] {
+      const entries = readdirSync(dir);
+      let files: string[] = [];
+      for (const entry of entries) {
+        const full = path.join(dir, entry);
+        const stat = statSync(full);
+        if (stat.isDirectory()) files = files.concat(listFilesRecursive(full));
+        else if (/\.(tsx?|jsx?)$/.test(entry)) files.push(full);
+      }
+      return files;
+    }
+    const referencing = listFilesRecursive(srcDir).filter((f) =>
+      readFileSync(f, "utf8").includes("SPRINT_166K_D_PRODUCTION_RETENTION_DESIGN_V1")
+    );
+    expect(referencing).toEqual([]);
+  });
+});
