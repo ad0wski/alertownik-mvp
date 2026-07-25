@@ -6,15 +6,32 @@
 -- docs/SPRINT_166J_RETENTION_POLICY_AND_RUNBOOK_V1.md, before any cleanup
 -- script is ever considered for activation.
 --
--- IMPORTANT — before running this against alertownik-preview: fill in the
--- known Preview synthetic-test record's id below (see
--- docs/SPRINT_166J_RETENTION_POLICY_AND_RUNBOOK_V1.md §2, "The Preview
--- synthetic test record") — left as a placeholder here since this file was
--- prepared without re-reading that specific id from the live table. Do not
--- invent or guess a value; look it up from the live row (its `fingerprint`
--- or `id`) before this file is ever run for real, and update the
--- `v_preview_synthetic_test_id` reference below and in
--- PROPOSED_SPRINT_166J_RETENTION_CLEANUP_V1.sql accordingly.
+-- ── Revision 2 (Sprint 166K-C hardening) ──────────────────────────────────
+--
+-- Revision 1 left both the operational_notification_events check (§6) and
+-- any equivalent check for scheduled_writer_runs unfilled — the ledger
+-- check was a commented-out block referencing an unfilled placeholder id,
+-- and there was no check at all for the scheduled_writer_runs synthetic
+-- test row (see docs/SPRINT_166G_PREVIEW_RUNTIME_VALIDATION_CHECKPOINT_V1.md
+-- §5.1 and docs/SPRINT_166J_PRODUCTION_ACL_AND_RETENTION_AUDIT_V1.md
+-- lines 285-289, which names this row as requiring indefinite retention).
+--
+-- Revision 2 fills both in for real — safely, because every statement in
+-- this file is a plain SELECT with no side effects, unlike the cleanup
+-- script:
+--   - §6 now queries by the durable, already-documented business key
+--     (environment_tag + fingerprint — see
+--     docs/SPRINT_166F_PREVIEW_LEDGER_VALIDATION_CHECKPOINT_V1.md §12),
+--     never a hand-typed UUID.
+--   - §7 (new) reports scheduled_writer_runs rows matching the documented
+--     Preview synthetic test run's properties (environment_tag=preview,
+--     trigger=manual, outcome=success) — a read-only report is safe to key
+--     on these properties even though the cleanup script itself requires
+--     an explicit id parameter for the same row (see that file's Revision
+--     2 header for why the two files use different strategies).
+--   - Both §6 and §7 assert exactly one row is expected — a result of 0 or
+--     more than 1 here means investigate before ever considering
+--     activating the cleanup script, not a retention decision.
 
 -- 1. scheduled_writer_runs — eligible-for-deletion counts by outcome
 --    bucket (see policy doc §2), counting only closed runs
@@ -87,9 +104,27 @@ from public.operational_notification_events
 where status = 'claimed'
   and claimed_at < now() - interval '1 day';
 
--- 6. Confirm the Preview synthetic test record is still present (only
---    meaningful once the placeholder id above has been filled in with the
---    real value — see the note at the top of this file).
--- select id, fingerprint, status, created_at
--- from public.operational_notification_events
--- where id = '00000000-0000-0000-0000-000000000000'; -- REPLACE with the real id before use
+-- 6. Confirm the operational_notification_events Preview synthetic test
+--    record is still present, found by its durable business key — expect
+--    exactly one row. Zero or more than one means stop and investigate
+--    before ever considering the cleanup script.
+select id, fingerprint, status, channel, event_type, created_at
+from public.operational_notification_events
+where environment_tag = 'preview'
+  and fingerprint = 'sprint-166f-2b-controlled-preview-ledger-test-1'
+  and channel = 'email'
+  and status = 'abandoned';
+
+-- 7. Confirm the scheduled_writer_runs Preview synthetic test record
+--    (Sprint 166G-3 controlled test) is still present, found by its
+--    documented properties — expect exactly one row. Zero or more than one
+--    means stop and investigate before ever considering the cleanup
+--    script. The cleanup script itself does NOT rely on this query's
+--    result — it requires the operator to separately paste in the exact
+--    id from the one row this returns (see that file's Revision 2 header
+--    for why).
+select id, environment_tag, trigger, outcome, started_at, finished_at
+from public.scheduled_writer_runs
+where environment_tag = 'preview'
+  and trigger = 'manual'
+  and outcome = 'success';
