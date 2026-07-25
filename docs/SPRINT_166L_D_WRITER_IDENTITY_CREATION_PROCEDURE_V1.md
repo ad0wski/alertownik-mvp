@@ -163,3 +163,48 @@ precedes Layer 3 in the route — see Sprint 166L-C §2's flow diagram).
 - No `/api/cron/write-candidates`, writer, Cron, RPC, claim/finish,
   email, or Resend action occurred.
 - No merge to `main`; no branch deleted.
+
+## 8. Execution checkpoint — new identity created and linked (2026-07-25)
+
+**Status: Path B is now complete.** Adam performed every credential-bearing
+step personally, exactly per §2 above:
+
+- A new, dedicated Supabase Auth account was created in Production
+  (`alertownik-mvp`, project ref `puhcjyffosgohbmxrczb`) via
+  Authentication → Users → Add user → Create new user, with
+  "Auto Confirm User" checked.
+- Read-only verification (via Supabase MCP, `SELECT` only) confirmed
+  before the insert: the account exists in `auth.users`, its email is
+  confirmed, it is not banned or deleted, and no `automation_identities`
+  row referenced its `user_id` yet.
+- `docs/sql/READY_SPRINT_166L_D_NEW_WRITER_IDENTITY_V1.sql` was prepared
+  with the real `user_id` filled in (non-secret — an opaque identifier,
+  same precedent as the existing `...da746` row). The template file
+  (`PROPOSED_SPRINT_166L_D_NEW_WRITER_IDENTITY_V1.sql`, still using the
+  fail-loud placeholder) was left untouched.
+- Adam pasted the single `INSERT` statement into a fresh Supabase SQL
+  Editor tab, confirmed the project header read `alertownik-mvp` /
+  `main` / `PRODUCTION`, and clicked Run himself, exactly once.
+- Post-insert read-only verification (via Supabase MCP, `SELECT` only)
+  confirmed:
+  - Exactly one `automation_identities` row exists for the new
+    `user_id`.
+  - `automation_identities` now holds exactly 2 rows total: the
+    pre-existing `...da746` row (unchanged, `created_at` unchanged) and
+    the new row.
+  - Every other `public` table's row count is unchanged from the
+    Sprint 166L-C/166L-D baseline (`alerts`=3, `alert_categories`=0,
+    `alert_sources`=0, `admin_profiles`=0, `source_checks`=2,
+    `waste_schedule_items`=40, `source_notice_candidates`=2,
+    `scheduled_writer_runs`=0, `operational_notification_events`=0) —
+    the insert touched only `automation_identities`, nothing else.
+
+**Still not done — separate, later, explicitly-approved steps:**
+- `SUPABASE_SCHEDULED_WRITER_EMAIL` / `SUPABASE_SCHEDULED_WRITER_PASSWORD`
+  have not been set in Vercel (see §4 — plan only, unexecuted).
+- No sign-in with the new credentials has been attempted.
+- `SCHEDULED_WRITES_ENABLED` and the notification flags remain
+  false/absent (§5, unchanged).
+- No writer, RPC, Cron, claim/finish, email, or Resend action has
+  occurred.
+- No merge to `main`; no branch deleted.
