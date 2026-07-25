@@ -1,11 +1,19 @@
-# Sprint 166L-A — Production Environment Guard: Fresh Audit and Sprint 166L-B Plan
+# Sprint 166L-A/B — Production Environment Guard: Audit, Plan, and Activation
 
-**Status: audit and plan only.** No Environment Variable has been changed.
-No SQL has been executed. No writer, RPC, Cron, claim/finish, email, or
-Resend action has occurred. This document is the direct successor to the
-Sprint 166K-D runbook addendum's FAZA B — it re-verifies that phase's
-premises with a fresh, independent read-only pass before any real change,
-and adds one new finding that FAZA B's original text did not have.
+**Status: FAZA B is now ACTIVE.** Adam gave explicit, scoped approval
+(see §7) and Sprint 166L-B has been executed: `SUPABASE_ENVIRONMENT_TAG=production`
+and `SUPABASE_EXPECTED_PROJECT_REF=puhcjyffosgohbmxrczb` are now set in
+Production scope only, and a fresh Production deployment picked up the
+change. See §9 for the activation checkpoint. No SQL has been executed.
+No writer, RPC, Cron, claim/finish, email, or Resend action has occurred.
+Every other flag (`SCHEDULED_WRITES_ENABLED`,
+`OPERATIONAL_NOTIFICATION_RUNTIME_ENABLED`, `OPERATIONAL_EMAIL_ALERTS_ENABLED`,
+writer credentials) remains false/absent in Production, unchanged.
+
+This document is the direct successor to the Sprint 166K-D runbook
+addendum's FAZA B — it re-verified that phase's premises with a fresh,
+independent read-only pass before the real change, and surfaced one new
+finding FAZA B's original text did not have.
 
 ---
 
@@ -178,7 +186,7 @@ any real value is ever set:
    remaining absent — Layer 1/2, independent of Layer 0), matching FAZA
    B's original PASS criteria exactly. **Not performed in this sprint.**
 
-## 4. Sprint 166L-B — implementation plan (not started)
+## 4. Sprint 166L-B — implementation plan (executed — see §9 for the activation checkpoint)
 
 1. Adam reviews this document and the new automation_identities finding
    (§2.4) — a decision about that row is not required before 166L-B, but
@@ -223,10 +231,58 @@ authorize any later phase (writer identity, kill switches, Cron, email).
 
 ## 8. What this sprint explicitly does not do
 
-- Does not set any Environment Variable.
 - Does not run any SQL.
 - Does not invoke `/api/cron/write-candidates`, any RPC, any Cron, any
   claim/finish cycle, any email, or Resend.
 - Does not modify `automation_identities` or any other Production data.
-- Does not merge to `main` or trigger a Production deployment from a
-  merge.
+- Does not merge to `main`.
+- Does not touch `SCHEDULED_WRITES_ENABLED`, writer credentials,
+  `OPERATIONAL_NOTIFICATION_RUNTIME_ENABLED`, or
+  `OPERATIONAL_EMAIL_ALERTS_ENABLED` — all remain false/absent.
+- Does not open FAZA C (writer identity/credentials) or any later phase.
+
+## 9. Sprint 166L-B activation checkpoint (2026-07-26)
+
+Executed exactly the approved scope (§7), nothing beyond it.
+
+**Environment Variables set** (Vercel dashboard, Production scope only,
+confirmed via the same names/scopes-only read-only method used throughout
+this document — values never re-read after entry):
+- `SUPABASE_ENVIRONMENT_TAG` — Production, "Added just now"
+- `SUPABASE_EXPECTED_PROJECT_REF` — Production, "Added just now"
+
+Both Preview-scoped entries of the same names (added 2026-07-21) were
+left untouched, confirmed still present and unchanged in the same
+listing. No other variable was added, edited, or removed.
+
+**Deployment:** triggered via Vercel's "Redeploy" action on the current
+Production deployment (commit `1e9380b`, same source code, picks up the
+new Project Settings per Vercel's own dialog copy). New deployment
+reached **Ready** status, Production environment, same domain
+(`alertownik-mvp.vercel.app`).
+
+**Fail-closed tests, re-run after activation (all local/unit-level, zero
+live requests):** `productionEnvironmentGuardPlan.spec.ts`,
+`productionRolloutReadiness.spec.ts`, `databaseEnvironmentGuard.spec.ts`,
+`databaseEnvironmentGuardIntegration.spec.ts` — **72/72 passed**, no
+regressions.
+
+**Read-only Production smoke test** (`alertownik-mvp.vercel.app`, after
+the new deployment went Ready):
+- Homepage: identical rendering to before activation (real WKD alert),
+  zero console errors, zero `/api/*` requests.
+- `/admin/sources`: identical rendering, copy still reads "cron jeszcze
+  nieaktywny", zero console errors, exactly one legitimate
+  `GET /api/admin/automation-status` request (200) — the same single
+  call observed before activation, nothing new.
+
+**Conclusion:** Production behavior is observably unchanged, as
+predicted by §6 — the environment guard change is invisible to any
+caller because `SCHEDULED_WRITES_ENABLED` (Layer 1/2) and writer
+credentials (Layer 3) remain absent, so `write-candidates` still fails
+closed at the same generic `503`, now for a different internal reason.
+No writer, RPC, Cron, claim/finish, email, or Resend action occurred at
+any point in this activation.
+
+**Stopped exactly where instructed:** before FAZA C, before any writer
+identity or credential configuration, before any merge to `main`.

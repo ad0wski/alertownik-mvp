@@ -138,7 +138,14 @@ test.describe("Sprint 166L-A — the audit/plan document itself stays plan-only"
     expect(doc).not.toMatch(/[a-z0-9._%+-]+@(gmail|outlook|hotmail|yahoo)\.[a-z]{2,}/i);
   });
 
-  test("the document explicitly states no Environment Variable has been changed yet", () => {
-    expect(doc).toMatch(/No Environment Variable has been changed/);
+  test("the document accurately states FAZA B's activation status and stays scoped to exactly the two approved variables", () => {
+    // This document's own status line legitimately changes once Sprint
+    // 166L-B is actually executed (see its §9 activation checkpoint) —
+    // this test pins that the document stays honest about that status,
+    // not that it forever claims "nothing changed."
+    expect(doc).toMatch(/FAZA B is now ACTIVE/);
+    expect(doc).toMatch(/No SQL has been executed/);
+    expect(doc).toMatch(/No writer, RPC, Cron, claim\/finish, email, or\s*\n?Resend action has occurred/);
+    expect(doc).toMatch(/SCHEDULED_WRITES_ENABLED.*remains false\/absent|remains false\/absent.*SCHEDULED_WRITES_ENABLED/s);
   });
 });
