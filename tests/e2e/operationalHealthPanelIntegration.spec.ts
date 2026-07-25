@@ -4,11 +4,14 @@ import { join } from "path";
 import {
   formatOperationalHealthRow,
   OPERATIONAL_HEALTH_NO_DATA_LABEL,
-  OPERATIONAL_HEALTH_NOTIFICATIONS_DISABLED_NOTE,
-  OPERATIONAL_HEALTH_EMAIL_NOT_CONFIGURED_NOTE,
   type OperationalHealthSourceRow,
 } from "@/lib/operationalHealthStatus";
 import { classifyAutomationEvent } from "@/lib/automationErrorClassifier";
+import {
+  EMAIL_ALERT_DISABLED_NOTE,
+  EMAIL_ALERT_MISCONFIGURED_NOTE,
+  EMAIL_ALERT_READY_NOT_WIRED_NOTE,
+} from "@/lib/emailAlertConfig";
 
 /**
  * Sprint 166D-2A — integration of the operational-health formatter into
@@ -239,9 +242,18 @@ test.describe("AutomationStatusPanel.tsx — structural audit (Sprint 166D-2B ad
     expect(panelSource).not.toMatch(/canarySources\.map[\s\S]{0,80}RUN_OUTCOME_LABELS_PL/);
   });
 
-  test("references the notifications-disabled and email-not-configured copy constants (never a hardcoded 'enabled' claim)", () => {
-    expect(panelSource).toMatch(/OPERATIONAL_HEALTH_NOTIFICATIONS_DISABLED_NOTE/);
-    expect(panelSource).toMatch(/OPERATIONAL_HEALTH_EMAIL_NOT_CONFIGURED_NOTE/);
+  // Sprint 166E-1 (commit 1fb46be) replaced the original binary
+  // disabled/not-configured email copy pair (operationalHealthStatus.ts's
+  // OPERATIONAL_HEALTH_NOTIFICATIONS_DISABLED_NOTE /
+  // OPERATIONAL_HEALTH_EMAIL_NOT_CONFIGURED_NOTE) with a more honest
+  // three-state model in emailAlertConfig.ts, which distinguishes
+  // "disabled" from "enabled but misconfigured" from "enabled and
+  // configured but not wired to any send path" — a genuine correctness
+  // improvement, not a regression. This test now pins the current set.
+  test("references the three email-alert-config copy constants for every enabled/configComplete combination (never a hardcoded 'enabled' claim)", () => {
+    expect(panelSource).toMatch(/EMAIL_ALERT_DISABLED_NOTE/);
+    expect(panelSource).toMatch(/EMAIL_ALERT_MISCONFIGURED_NOTE/);
+    expect(panelSource).toMatch(/EMAIL_ALERT_READY_NOT_WIRED_NOTE/);
   });
 });
 
@@ -276,13 +288,19 @@ test.describe("OperationalHealthPanel.tsx — removed as dead code (Sprint 166D-
   });
 });
 
-test.describe("copy constants — pinned", () => {
-  test("notifications-disabled note says notifications are off and nothing was sent", () => {
-    expect(OPERATIONAL_HEALTH_NOTIFICATIONS_DISABLED_NOTE).toMatch(/wyłączone/);
-    expect(OPERATIONAL_HEALTH_NOTIFICATIONS_DISABLED_NOTE).toMatch(/nic nie jest ani nie było wysyłane/);
+test.describe("copy constants — pinned (Sprint 166E-1 email-alert-config three-state model)", () => {
+  test("disabled note says alerts are off and nothing was sent", () => {
+    expect(EMAIL_ALERT_DISABLED_NOTE).toMatch(/wyłączone/);
+    expect(EMAIL_ALERT_DISABLED_NOTE).toMatch(/nic nie jest ani nie było wysyłane/);
   });
 
-  test("email-not-configured note says the provider is not configured", () => {
-    expect(OPERATIONAL_HEALTH_EMAIL_NOT_CONFIGURED_NOTE).toMatch(/nieskonfigurowany/);
+  test("misconfigured note says enabled but configuration is incomplete, so nothing sends yet", () => {
+    expect(EMAIL_ALERT_MISCONFIGURED_NOTE).toMatch(/włączone/);
+    expect(EMAIL_ALERT_MISCONFIGURED_NOTE).toMatch(/niekompletna/);
+  });
+
+  test("ready-not-wired note says enabled and configured but no flow calls it yet", () => {
+    expect(EMAIL_ALERT_READY_NOT_WIRED_NOTE).toMatch(/skonfigurowane/);
+    expect(EMAIL_ALERT_READY_NOT_WIRED_NOTE).toMatch(/nie jest wysyłane automatycznie/);
   });
 });
