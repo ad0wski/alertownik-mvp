@@ -14,6 +14,14 @@ test.describe("Bottom navigation — visibility", () => {
   test("visible on a public mobile page (/alerty)", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/alerty");
+    // /alerty may be the first-ever hit to this route for the whole test
+    // run (only this file and public.spec.ts, which sorts after it
+    // alphabetically, visit it) — the dev server compiles routes on
+    // demand, and CSS/JS assets for a never-before-compiled route can
+    // still be in flight when goto() resolves. Waiting for network idle
+    // here mirrors what a real first-time visitor's browser does before
+    // the fixed nav's sm:hidden breakpoint styling is guaranteed applied.
+    await page.waitForLoadState("networkidle");
     await expect(page.getByRole("navigation", { name: "Nawigacja główna" })).toBeVisible();
   });
 
