@@ -146,6 +146,6 @@ test.describe("Sprint 166L-A — the audit/plan document itself stays plan-only"
     expect(doc).toMatch(/FAZA B is now ACTIVE/);
     expect(doc).toMatch(/No SQL has been executed/);
     expect(doc).toMatch(/No writer, RPC, Cron, claim\/finish, email, or\s*\n?Resend action has occurred/);
-    expect(doc).toMatch(/SCHEDULED_WRITES_ENABLED.*remains false\/absent|remains false\/absent.*SCHEDULED_WRITES_ENABLED/s);
+    expect(doc).toMatch(/SCHEDULED_WRITES_ENABLED[\s\S]*remains false\/absent|remains false\/absent[\s\S]*SCHEDULED_WRITES_ENABLED/);
   });
 });
