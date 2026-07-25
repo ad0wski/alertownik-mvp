@@ -73,7 +73,12 @@ test.describe("Theme — manual selection", () => {
     expect(await htmlHasDarkClass(page)).toBe(false);
 
     await page.getByRole("radio", { name: "Ciemny" }).click();
-    expect(await htmlHasDarkClass(page)).toBe(true);
+    // A click's setPreference() call triggers a React state update and an
+    // effect that applies the .dark class asynchronously — the same
+    // settle-time the file's own matchMedia-change tests already account
+    // for with expect.poll() below; reading the DOM synchronously right
+    // after .click() races that effect under load.
+    await expect.poll(() => htmlHasDarkClass(page)).toBe(true);
     expect(
       await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)
     ).toBe("dark");
@@ -92,7 +97,7 @@ test.describe("Theme — manual selection", () => {
     expect(await htmlHasDarkClass(page)).toBe(true);
 
     await page.getByRole("radio", { name: "Jasny" }).click();
-    expect(await htmlHasDarkClass(page)).toBe(false);
+    await expect.poll(() => htmlHasDarkClass(page)).toBe(false);
   });
 
   test("clicking Systemowy after a manual choice reverts to following the OS", async ({ page }) => {
@@ -105,7 +110,7 @@ test.describe("Theme — manual selection", () => {
     expect(await htmlHasDarkClass(page)).toBe(false);
 
     await page.getByRole("radio", { name: "Systemowy" }).click();
-    expect(await htmlHasDarkClass(page)).toBe(true);
+    await expect.poll(() => htmlHasDarkClass(page)).toBe(true);
   });
 });
 
