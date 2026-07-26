@@ -52,19 +52,19 @@ pure addition — nothing was modified or removed.**
   reference to the *concept* ("service_role key was entered via hidden
   SecureString") in prose, never an actual value. **Zero real secret
   values found.**
-- **Private addresses — one honest finding:** three real personal email
-  addresses (`ak.jurkowski@gmail.com`, `4money.aj@gmail.com`,
-  `alertownik.kontakt+scheduled-writer@gmail.com`) appear in
+- **Private addresses — found and redacted before merge:** three real
+  personal email addresses (Adam's own project-owner accounts — three
+  distinct project accounts, not a third party's) appeared in
   `SPRINT_166O_D_PREVIEW_ADMIN_LOGIN_CHECKPOINT_V1.md`, quoted verbatim
   from a read-only `auth.users` query result to document *why* the
   `supabase-alertownik` MCP tool was found to be wired to Production
-  rather than Preview. These are Adam's own project-owner accounts, not a
-  third party's — the same accounts already implicit throughout this
-  project's Supabase configuration — included for a legitimate technical
-  reason (proving which project a tool call actually hit), not incidental
-  exposure. Flagged here explicitly rather than silently passed; not
-  treated as a blocker, but Adam's call if he'd rather these be redacted
-  before merge.
+  rather than Preview. Flagged during this audit, then replaced with
+  neutral placeholders (`<redacted-project-email-1/2/3>`) in a follow-up
+  sanitization commit before this branch was merged — see that commit's
+  own message for the exact change. The underlying technical point (the
+  MCP tool is wired to Production, evidenced by real accounts rather than
+  the `@example.invalid` synthetic ones) is preserved; only the literal
+  addresses were removed.
 - **Admin guard / environment guard / RLS / fail-closed:** every mention
   in the diff is documentation *confirming* these mechanisms held
   (`requireAdminSession`, `checkDatabaseEnvironmentGuard`, RLS, "remains

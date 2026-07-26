@@ -13,11 +13,11 @@ file changed. No Production data or Environment Variable was touched.
 Discovered via the Supabase Studio SQL Editor against project
 `alertownik-preview` (ref `nowvcdbtgaigutyxpmdp`) — **not** via the
 `supabase-alertownik` MCP tool, which was confirmed this sprint to be
-wired to **Production** (`auth.users` there lists only real accounts:
-`ak.jurkowski@gmail.com`, `4money.aj@gmail.com`,
-`alertownik.kontakt+scheduled-writer@gmail.com` — no `@example.invalid`
-rows). All Preview reads/writes this sprint went through the Supabase
-Studio browser UI instead.
+wired to **Production** (`auth.users` there lists only three real,
+distinct project-owner accounts — `<redacted-project-email-1>`,
+`<redacted-project-email-2>`, `<redacted-project-email-3>`, redacted here
+for privacy — no `@example.invalid` rows). All Preview reads/writes this
+sprint went through the Supabase Studio browser UI instead.
 
 - `auth.users` in `alertownik-preview` contains exactly 2 rows:
   - `preview-test-writer@example.invalid` (UID ending `...a966c52`) — the
