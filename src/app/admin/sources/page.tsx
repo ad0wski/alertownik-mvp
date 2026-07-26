@@ -33,7 +33,12 @@ import { getAdminSupabaseAlerts } from "@/lib/getAdminSupabaseAlerts";
 import { findSimilarText, trimAtWord } from "@/lib/candidateWarnings";
 import { OfficialSourceChecklist } from "@/components/OfficialSourceChecklist";
 import { SourceHealthDashboard } from "@/components/SourceHealthDashboard";
-import { buildSourceHealthRows, type HealthCandidate } from "@/lib/sourceHealth";
+import {
+  buildSourceHealthRows,
+  nextSessionCheckOutcome,
+  type HealthCandidate,
+  type SessionCheckOutcome,
+} from "@/lib/sourceHealth";
 import { ScheduledWriterMonitoring } from "@/components/ScheduledWriterMonitoring";
 import { AutomationStatusPanel } from "@/components/AutomationStatusPanel";
 import { LinkHealthPanel } from "@/components/LinkHealthPanel";
@@ -1359,6 +1364,19 @@ export default function SourcesPage() {
   // same fetch as candidateCounts, no extra query.
   const [healthCandidates, setHealthCandidates] = useState<HealthCandidate[]>([]);
 
+  // Sprint 171: this session's own manual-check outcomes (success/failure +
+  // consecutive-failure streak), keyed by checklist id — mirrored onto the
+  // matching Source Health row. Never persisted; resets on reload. See
+  // sourceHealth.ts's SessionCheckOutcome for the full rationale.
+  const [sessionCheckOutcomes, setSessionCheckOutcomes] = useState<Record<string, SessionCheckOutcome>>({});
+
+  function handleCheckOutcome(checklistId: string, outcome: { ok: boolean; message?: string; at: string }) {
+    setSessionCheckOutcomes((prev) => ({
+      ...prev,
+      [checklistId]: nextSessionCheckOutcome(prev[checklistId], outcome),
+    }));
+  }
+
   // Sprint 149: same persistent-candidate fetch as healthCandidates above,
   // projected down to what the Scheduled Writer monitoring panel needs
   // (source_key + status) — no extra query.
@@ -1651,6 +1669,7 @@ export default function SourcesPage() {
             checks: Object.values(sourceChecks).flat(),
             candidates: healthCandidates,
           })}
+          sessionCheckOutcomes={sessionCheckOutcomes}
         />
       )}
 
@@ -1699,6 +1718,7 @@ export default function SourcesPage() {
       <OfficialSourceChecklist
         registrySources={sources}
         dedupTexts={[...existingCandidateTexts, ...alertTitles]}
+        onCheckOutcome={handleCheckOutcome}
       />
 
       {/* Add button + pilot suggestions toggle */}

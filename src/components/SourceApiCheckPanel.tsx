@@ -30,6 +30,11 @@ interface SourceApiCheckPanelProps {
   registrySources: AlertSource[];
   /** Existing candidate texts + alert titles for the duplicate heuristic. */
   dedupTexts: string[];
+  /** Sprint 171 — reports this check's outcome (success or the already-safe
+   *  Polish error message) so the Source Health dashboard row for this
+   *  source can show it too. Session-only, never persisted by this
+   *  callback — see sourceHealth.ts's SessionCheckOutcome for why. */
+  onCheckOutcome?: (outcome: { ok: boolean; message?: string; at: string }) => void;
 }
 
 type CheckState =
@@ -47,6 +52,7 @@ export function SourceApiCheckPanel({
   source,
   registrySources,
   dedupTexts,
+  onCheckOutcome,
 }: SourceApiCheckPanelProps) {
   const [check, setCheck] = useState<CheckState>({ status: "idle" });
   const [savingIdx, setSavingIdx] = useState<number | null>(null);
@@ -74,6 +80,7 @@ export function SourceApiCheckPanel({
       const data: SourceCheckApiResponse = await res.json();
       if (!data.ok) {
         setCheck({ status: "error", error: data.error });
+        onCheckOutcome?.({ ok: false, message: data.error, at: new Date().toISOString() });
         return;
       }
       setCheck({
@@ -82,11 +89,11 @@ export function SourceApiCheckPanel({
         fetchedAt: data.fetchedAt,
         pageTitle: data.pageTitle,
       });
+      onCheckOutcome?.({ ok: true, at: data.fetchedAt });
     } catch {
-      setCheck({
-        status: "error",
-        error: "Nie udało się połączyć z API sprawdzania. Spróbuj ponownie.",
-      });
+      const message = "Nie udało się połączyć z API sprawdzania. Spróbuj ponownie.";
+      setCheck({ status: "error", error: message });
+      onCheckOutcome?.({ ok: false, message, at: new Date().toISOString() });
     }
   }
 

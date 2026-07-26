@@ -51,10 +51,12 @@ function ChecklistCard({
   source,
   registrySources,
   dedupTexts,
+  onCheckOutcome,
 }: {
   source: OfficialSourceCheck;
   registrySources: AlertSource[];
   dedupTexts: string[];
+  onCheckOutcome?: (checklistId: string, outcome: { ok: boolean; message?: string; at: string }) => void;
 }) {
   const safeCheckSource = getSafeCheckSource(source.id);
   return (
@@ -117,6 +119,7 @@ function ChecklistCard({
           source={safeCheckSource}
           registrySources={registrySources}
           dedupTexts={dedupTexts}
+          onCheckOutcome={onCheckOutcome ? (outcome) => onCheckOutcome(source.id, outcome) : undefined}
         />
       )}
     </div>
@@ -126,11 +129,16 @@ function ChecklistCard({
 export function OfficialSourceChecklist({
   registrySources = [],
   dedupTexts = [],
+  onCheckOutcome,
 }: {
   /** alert_sources rows — lets the API-check panel attach source_id + log history. */
   registrySources?: AlertSource[];
   /** Existing candidate texts + alert titles for the duplicate heuristic. */
   dedupTexts?: string[];
+  /** Sprint 171 — forwarded to each card's SourceApiCheckPanel, keyed by
+   *  checklist id, so the page can mirror session-only check outcomes onto
+   *  the Source Health dashboard rows above. */
+  onCheckOutcome?: (checklistId: string, outcome: { ok: boolean; message?: string; at: string }) => void;
 }) {
   return (
     <section id="checklista" className="mb-8 rounded-2xl border border-blue-200 dark:border-blue-500/30 bg-blue-50/50 dark:bg-blue-500/10 p-4 sm:p-5">
@@ -184,6 +192,7 @@ export function OfficialSourceChecklist({
               source={source}
               registrySources={registrySources}
               dedupTexts={dedupTexts}
+              onCheckOutcome={onCheckOutcome}
             />
           ))}
         </div>

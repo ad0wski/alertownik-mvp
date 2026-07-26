@@ -4,6 +4,7 @@ import type { AlertCategory } from "@/types/alert";
 import type { SourceCheckResult } from "@/types/alertSource";
 import {
   summarizeSourceHealth,
+  describeSessionCheckOutcome,
   HEALTH_STATUS_LABELS,
   HEALTH_BADGE_MANUAL,
   HEALTH_BADGE_NO_CRON,
@@ -15,6 +16,7 @@ import {
   RECENT_CANDIDATE_DAYS,
   type SourceHealthRow,
   type SourceHealthStatus,
+  type SessionCheckOutcome,
 } from "@/lib/sourceHealth";
 
 // Sprint 137 — Source Health Dashboard v1 (admin-only, rendered on
@@ -56,7 +58,17 @@ function formatCheckedAt(iso: string): string {
   });
 }
 
-export function SourceHealthDashboard({ rows }: { rows: SourceHealthRow[] }) {
+export function SourceHealthDashboard({
+  rows,
+  sessionCheckOutcomes,
+}: {
+  rows: SourceHealthRow[];
+  /** Sprint 171 — this session's own manual-check outcomes, keyed by
+   *  checklistId. Optional and purely additive: with nothing yet this
+   *  session, no row shows anything extra (fail-closed by construction —
+   *  see describeSessionCheckOutcome). Never persisted, never historical. */
+  sessionCheckOutcomes?: Record<string, SessionCheckOutcome>;
+}) {
   const summary = summarizeSourceHealth(rows);
 
   return (
@@ -162,6 +174,23 @@ export function SourceHealthDashboard({ rows }: { rows: SourceHealthRow[] }) {
                   Otwórz źródło ↗
                 </a>
               </div>
+
+              {(() => {
+                const sessionNote = describeSessionCheckOutcome(sessionCheckOutcomes?.[row.checklistId]);
+                if (!sessionNote) return null;
+                const isError = sessionCheckOutcomes?.[row.checklistId]?.ok === false;
+                return (
+                  <p
+                    className={`text-xs mt-1.5 rounded-lg px-2.5 py-1.5 ${
+                      isError
+                        ? "text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30"
+                        : "text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30"
+                    }`}
+                  >
+                    {sessionNote}
+                  </p>
+                );
+              })()}
             </div>
           ))}
         </div>

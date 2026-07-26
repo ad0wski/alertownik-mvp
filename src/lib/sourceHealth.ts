@@ -182,6 +182,73 @@ export function summarizeSourceHealth(rows: SourceHealthRow[]): SourceHealthSumm
   };
 }
 
+// ── Session-only check outcomes (Sprint 171) ──────────────────────────────────
+//
+// source_checks has no failure/error result value (SourceCheckResult is
+// no_changes/found_notice/alert_created/needs_followup only — see
+// docs/SPRINT_171_SOURCE_HEALTH_OBSERVABILITY_V1.md for the exact schema
+// gap this works around, and HEALTH_ERROR_FALLBACK_NOTE above for the
+// existing honest disclosure of that gap). A failed manual check is
+// therefore never persisted — this sprint does NOT change that (no
+// migration). What it does add: while the admin is on the page, the
+// outcome of each "Sprawdź teraz przez aplikację" click (success or
+// failure, plus a session-only consecutive-failure count) is surfaced on
+// the matching Source Health row, not just inside that one check panel —
+// so a source that just failed twice in a row is visible where the admin
+// is actually looking for source health, not only at the bottom of the
+// page where they clicked the button. This is explicitly NOT history: it
+// resets on every page reload, exactly like every other piece of ephemeral
+// state in this admin UI (source preview, inline AI draft, etc.).
+
+export interface SessionCheckOutcome {
+  ok: boolean;
+  /** Already-composed, safe Polish message from the check API — never a
+   *  raw exception, stack trace, token, or secret. See
+   *  manualSourceCheckFetch.ts: every failure message it returns is
+   *  hand-written Polish copy, not err.message/err.stack. */
+  message?: string;
+  /** ISO timestamp of this check, this browser session only. */
+  at: string;
+  /** Consecutive failures in a row this session, resetting to 0 on any
+   *  success. Never persisted, never compared across sessions/admins. */
+  consecutiveFailures: number;
+}
+
+/** Folds a new check result into the previous session-only outcome for
+ *  the same source. Pure so the counting logic is testable without a
+ *  browser or React state. */
+export function nextSessionCheckOutcome(
+  previous: SessionCheckOutcome | undefined,
+  next: { ok: boolean; message?: string; at: string }
+): SessionCheckOutcome {
+  return {
+    ok: next.ok,
+    message: next.message,
+    at: next.at,
+    consecutiveFailures: next.ok ? 0 : (previous?.consecutiveFailures ?? 0) + 1,
+  };
+}
+
+const SESSION_OUTCOME_TIME_FORMAT: Intl.DateTimeFormatOptions = {
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "Europe/Warsaw",
+};
+
+// Fail-closed by construction: with no outcome yet this session, the
+// function returns null and the caller renders nothing extra — never a
+// false "zdrowe"/"OK" claim (item 16 of the Sprint 171 brief).
+export function describeSessionCheckOutcome(outcome: SessionCheckOutcome | undefined): string | null {
+  if (!outcome) return null;
+  const time = new Date(outcome.at).toLocaleTimeString("pl-PL", SESSION_OUTCOME_TIME_FORMAT);
+  if (outcome.ok) {
+    return `Ostatni check w tej sesji: powodzenie (${time}) — niezapisane w historii, znika po odświeżeniu strony.`;
+  }
+  const streak = outcome.consecutiveFailures > 1 ? ` (${outcome.consecutiveFailures} razy z rzędu w tej sesji)` : "";
+  return `Ostatni check w tej sesji: błąd${streak} — ${outcome.message ?? "nieznany błąd"} (${time}). ` +
+    "Niezapisane w historii, znika po odświeżeniu strony.";
+}
+
 // ── Copy (pinned by tests against automation-promise drift) ──────────────────
 // Sprint 137 requirement: the dashboard must say, in so many words, that
 // checking is manual, no cron exists yet, and publishing needs a human.
