@@ -54,7 +54,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<SourceCheckAp
     );
   }
 
-  const result = await fetchAndParseManualCheck(source.officialUrl);
+  const result = await fetchAndParseManualCheck({ officialUrl: source.officialUrl, apiUrl: source.apiUrl });
   if (!result.ok) {
     return NextResponse.json({ ok: false, error: result.message });
   }

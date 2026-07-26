@@ -39,6 +39,12 @@ export interface OfficialSourceCheck {
   risk: CheckRisk;
   /** Why this source is riskier/awkward (bot-blocking, region picker, scans…). */
   riskNote?: string;
+  /** Sprint 168 — when set, the manual in-app check fetches this WordPress
+   *  REST API endpoint (JSON) instead of parsing `officialUrl`'s HTML.
+   *  `officialUrl` still stays the human-facing link ("Otwórz źródło").
+   *  See src/lib/manualSourceCheckFetch.ts and
+   *  src/lib/sourceParsers/pageParser.ts's parseWordpressRestPosts. */
+  apiUrl?: string;
 }
 
 export const FREQUENCY_LABELS: Record<CheckFrequency, string> = {
@@ -163,7 +169,16 @@ export const OFFICIAL_SOURCE_CHECKS: OfficialSourceCheck[] = [
     id: "wodociagi-michalowice",
     name: "Wodociągi Michałowice — awarie i przerwy",
     category: "water",
-    officialUrl: "https://wodociagimichalowice.pl/",
+    officialUrl: "https://wodociagimichalowice.pl/category/aktualnosci/",
+    // Sprint 168 — the homepage itself exposes no notice list in a
+    // recognizable shape; the real content lives in this WordPress site's
+    // "Aktualności" category (verified live: 294 posts, overwhelmingly
+    // genuine water-interruption notices — "Przerwa w dostawie wody" —
+    // plus occasional office-hours/pricing announcements). The category
+    // archive page is kept as the human-facing officialUrl; the actual
+    // check uses the WordPress REST API below (apiUrl), which returns
+    // clean, structured, official data — not a scrape.
+    apiUrl: "https://wodociagimichalowice.pl/wp-json/wp/v2/posts?categories=1&per_page=6",
     whatToCheck:
       "Przerwy w dostawie wody, awarie sieci, płukanie sieci. Dla ciepłej wody/ciepła " +
       "w Pruszkowie patrz też aktualności Pruszkowa (komunikaty ciepłownicze).",

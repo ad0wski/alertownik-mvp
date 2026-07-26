@@ -45,8 +45,12 @@ const FIXTURE_HTML = `
 `;
 
 test.describe("safe-source allowlist (getSafeCheckSource)", () => {
-  test("exactly two safe sources after Sprint 139 — growing the list stays a per-sprint decision", () => {
-    expect(SAFE_CHECK_SOURCE_IDS).toEqual(["michalowice-komunikaty", "wkd-aktualnosci"]);
+  test("exactly three safe sources after Sprint 168 — growing the list stays a per-sprint decision", () => {
+    expect(SAFE_CHECK_SOURCE_IDS).toEqual([
+      "michalowice-komunikaty",
+      "wkd-aktualnosci",
+      "wodociagi-michalowice",
+    ]);
   });
 
   test("resolves the Michałowice komunikaty source from the canonical checklist config", () => {

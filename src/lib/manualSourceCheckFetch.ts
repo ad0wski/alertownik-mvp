@@ -1,4 +1,9 @@
-import { parsePageHtml, describePageFetchFailure } from "@/lib/sourceParsers/pageParser";
+import {
+  parsePageHtml,
+  parseWordpressRestPosts,
+  isWordpressRestPostArray,
+  describePageFetchFailure,
+} from "@/lib/sourceParsers/pageParser";
 import { buildCheckProposals, type CheckProposal } from "@/lib/sourceCheck";
 import { readLimitedText } from "@/lib/ssrfGuard";
 import {
@@ -48,7 +53,74 @@ export interface ManualCheckFetchFailure {
   message: string;
 }
 
-async function attemptManualCheckFetch(
+export interface ManualCheckFetchTarget {
+  officialUrl: string;
+  /** Sprint 168 — when set, fetches this WordPress REST API endpoint
+   *  (JSON) instead of parsing officialUrl's HTML. See
+   *  officialSourceChecklist.ts's own field doc for the full rationale. */
+  apiUrl?: string;
+}
+
+async function attemptWordpressRestFetch(
+  apiUrl: string
+): Promise<ManualCheckFetchSuccess | ManualCheckFetchFailure> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), CHECK_FETCH_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(apiUrl, {
+      signal: controller.signal,
+      headers: {
+        "User-Agent": "Alertownik-Monitor/1.0 (admin source check)",
+        Accept: "application/json",
+      },
+    });
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      return {
+        ok: false,
+        diagnostic: response.status >= 500 ? "http_5xx" : "http_4xx",
+        message: describePageFetchFailure(response.status),
+      };
+    }
+
+    const raw = await readLimitedText(response, MAX_RESPONSE_BYTES);
+    let json: unknown;
+    try {
+      json = JSON.parse(raw);
+    } catch {
+      return {
+        ok: false,
+        diagnostic: "parse_exception",
+        message: "Źródło zwróciło nieprawidłowe dane (JSON). Sprawdź stronę ręcznie w przeglądarce.",
+      };
+    }
+
+    if (!isWordpressRestPostArray(json)) {
+      return {
+        ok: false,
+        diagnostic: "parse_exception",
+        message: "Źródło zwróciło nieoczekiwany format danych. Sprawdź stronę ręcznie w przeglądarce.",
+      };
+    }
+
+    const parse = parseWordpressRestPosts(json);
+    return { ok: true, pageTitle: parse.title, proposals: buildCheckProposals(parse) };
+  } catch (err) {
+    clearTimeout(timeoutId);
+    const isTimeout = err instanceof Error && err.name === "AbortError";
+    return {
+      ok: false,
+      diagnostic: isTimeout ? "timeout_10s" : "network_error",
+      message: isTimeout
+        ? "Źródło nie odpowiada (timeout 10 s). Spróbuj później albo sprawdź stronę ręcznie."
+        : "Nie udało się pobrać strony źródła. Spróbuj później albo sprawdź stronę ręcznie.",
+    };
+  }
+}
+
+async function attemptManualCheckHtmlFetch(
   officialUrl: string
 ): Promise<ManualCheckFetchSuccess | ManualCheckFetchFailure> {
   const controller = new AbortController();
@@ -99,6 +171,14 @@ async function attemptManualCheckFetch(
   }
 }
 
+async function attemptManualCheckFetch(
+  target: ManualCheckFetchTarget
+): Promise<ManualCheckFetchSuccess | ManualCheckFetchFailure> {
+  return target.apiUrl
+    ? attemptWordpressRestFetch(target.apiUrl)
+    : attemptManualCheckHtmlFetch(target.officialUrl);
+}
+
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -106,12 +186,15 @@ function delay(ms: number): Promise<void> {
 /** Same bounded-retry policy as fetchAndParseProposals: exactly one retry,
  *  transient failures only (http_5xx, timeout_10s, network_error), never a
  *  third attempt. `delayMs` is overridable only for tests — the real route
- *  always uses the default RETRY_DELAY_MS. */
+ *  always uses the default RETRY_DELAY_MS. Accepts either a plain URL
+ *  string (existing HTML-page sources) or a full target object (Sprint
+ *  168: sources with an `apiUrl` fetch the WordPress REST API instead). */
 export async function fetchAndParseManualCheck(
-  officialUrl: string,
+  target: string | ManualCheckFetchTarget,
   delayMs: number = RETRY_DELAY_MS
 ): Promise<ManualCheckFetchSuccess | ManualCheckFetchFailure> {
-  let lastResult = await attemptManualCheckFetch(officialUrl);
+  const resolved: ManualCheckFetchTarget = typeof target === "string" ? { officialUrl: target } : target;
+  let lastResult = await attemptManualCheckFetch(resolved);
   let attempts = 1;
   while (
     !lastResult.ok &&
@@ -119,7 +202,7 @@ export async function fetchAndParseManualCheck(
     attempts < MAX_FETCH_ATTEMPTS
   ) {
     await delay(delayMs);
-    lastResult = await attemptManualCheckFetch(officialUrl);
+    lastResult = await attemptManualCheckFetch(resolved);
     attempts++;
   }
   return lastResult;

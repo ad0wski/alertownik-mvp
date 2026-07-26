@@ -30,10 +30,18 @@ import { trimAtWord } from "@/lib/candidateWarnings";
 // picker — both still unsuitable). Sprint 134 started with Michałowice;
 // Sprint 139 added WKD after verifying the live page fetches cleanly (HTTP
 // 200 for our UA) and its Joomla blogPost markup parses deterministically
-// (pageParser.extractBlogPostItems, fixture-tested).
+// (pageParser.extractBlogPostItems, fixture-tested). Sprint 168 added
+// Wodociągi Michałowice after verifying its WordPress REST API returns
+// clean, structured JSON (294 posts in the "Aktualności" category,
+// overwhelmingly genuine water-interruption notices) and that a
+// deterministic keyword filter (pageParser.parseWordpressRestPosts)
+// separates operational notices from generic informational/PR posts —
+// fixture-tested (tests/e2e/wordpressRestParser.spec.ts,
+// tests/e2e/manualSourceCheckWordpressRest.spec.ts).
 export const SAFE_CHECK_SOURCE_IDS = [
   "michalowice-komunikaty",
   "wkd-aktualnosci",
+  "wodociagi-michalowice",
 ] as const;
 
 export type SafeCheckSourceId = (typeof SAFE_CHECK_SOURCE_IDS)[number];

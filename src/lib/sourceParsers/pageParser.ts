@@ -214,6 +214,89 @@ function extractBlogPostItems(html: string): PageCandidate[] {
   return items;
 }
 
+// ── WordPress REST API extraction (Sprint 168) ───────────────────────────────
+
+// wodociagimichalowice.pl (and potentially other municipal-adjacent sites
+// on WordPress) exposes its own notices as structured JSON via the
+// standard `/wp-json/wp/v2/posts` REST API — verified live in Sprint 168:
+// 294 posts in category 1 ("Aktualności"), overwhelmingly genuine water-
+// interruption notices ("Przerwa w dostawie wody") plus occasional
+// office-hours/pricing announcements. Reading this JSON directly is
+// preferred over scraping the rendered HTML archive page (more stable
+// across theme/markup changes, official structured data, not a scrape)
+// — see manualSourceCheckFetch.ts for the fetch branch that calls this.
+//
+// This pass owns its own domain-specific relevance filter (mirrors
+// extractNewsListItems/extractBlogPostItems each owning their own
+// domain-specific extraction) rather than pushing that decision onto the
+// generic buildCheckProposals boilerplate filter, which knows nothing
+// about "is this actually an operational notice" — only "is this too
+// short / obviously chrome". A plain informational/PR post (e.g. an
+// educational article about tap water) is deliberately excluded here:
+// it would otherwise pollute the review queue with content this source
+// isn't meant to surface, exactly the failure mode Sprint 168's own
+// audit found unacceptable in a different candidate source
+// (roboty-drogowe).
+
+const OPERATIONAL_NOTICE_KEYWORDS_RX =
+  /przerw[a-złńóśźż]*|awari[a-złńóśźż]*|brak wody|wyłącz[a-złńóśźż]*|nieczynn[a-złńóśźż]*|prac[a-złńóśźż]* (?:na )?sieci|remont[a-złńóśźż]* sieci|płuka[a-złńóśźż]* sieci|jakoś[cć] wody/i;
+
+export interface WordpressRestPost {
+  title?: { rendered?: string };
+  excerpt?: { rendered?: string };
+  content?: { rendered?: string };
+  date?: string;
+  link?: string;
+  slug?: string;
+}
+
+/** True only for JSON that is genuinely "an array of WordPress REST API
+ *  post objects" — anything else (a single object, an error payload, a
+ *  plugin-shaped response) is rejected rather than guessed at, matching
+ *  this codebase's existing "fail closed on unexpected shape" convention
+ *  (see e.g. getRegistrySourceId in scheduledWriter.ts). */
+export function isWordpressRestPostArray(json: unknown): json is WordpressRestPost[] {
+  return Array.isArray(json);
+}
+
+/** Turns already-fetched, already-JSON-parsed WordPress REST API post
+ *  objects into the same PageParseResult shape every other extraction
+ *  pass produces, so it flows through the exact same
+ *  buildCheckProposals() safety filtering (min length, boilerplate,
+ *  count cap, title dedup) as HTML-sourced candidates — no parallel
+ *  pipeline. Robust to extra/unexpected fields (plugins routinely add
+ *  their own top-level keys to WP REST responses) and to individual
+ *  posts missing title/excerpt/content — those are skipped, never
+ *  thrown on. */
+export function parseWordpressRestPosts(posts: WordpressRestPost[]): PageParseResult {
+  const candidates: PageCandidate[] = [];
+
+  for (const post of posts) {
+    const heading = stripTags(post.title?.rendered ?? "").trim();
+    const bodySource = post.excerpt?.rendered || post.content?.rendered || "";
+    const body = stripTags(bodySource).trim();
+
+    const combined = `${heading} ${body}`.trim();
+    if (!combined) continue;
+    if (!OPERATIONAL_NOTICE_KEYWORDS_RX.test(combined)) continue;
+
+    candidates.push({
+      heading: heading ? heading.slice(0, 120) : undefined,
+      text: body || heading,
+      hasDate: detectDateInText(combined),
+    });
+  }
+
+  return {
+    title: "Wodociągi Michałowice — Aktualności",
+    candidates,
+    rawText: candidates
+      .map((c) => (c.heading ? c.heading + "\n" : "") + c.text)
+      .join("\n\n")
+      .slice(0, 5000),
+  };
+}
+
 // Lightweight RSS/Atom autodiscovery — only looks at the page's own <head>
 // <link> tags already present in the HTML we already fetched. Never
 // fetches or parses the feed itself.
