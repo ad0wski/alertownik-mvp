@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { OFFICIAL_SOURCE_CHECKS } from "@/lib/officialSourceChecklist";
+import { SAFE_CHECK_SOURCE_IDS } from "@/lib/sourceCheck";
 import {
   buildSourceHealthRows,
   summarizeSourceHealth,
@@ -60,11 +61,12 @@ test.describe("buildSourceHealthRows — coverage and API-support flags", () => 
     expect(rows.map((r) => r.checklistId)).toEqual(OFFICIAL_SOURCE_CHECKS.map((s) => s.id));
   });
 
-  test("exactly two sources are API-supported after Sprint 139: WKD + Michałowice", () => {
+  test("exactly three sources are API-supported after Sprint 168: WKD + Michałowice + Wodociągi", () => {
     const rows = rowsFor();
     const supported = rows.filter((r) => r.apiSupported).map((r) => r.checklistId);
-    // Checklist order: WKD is listed first in officialSourceChecklist.ts.
-    expect(supported).toEqual(["wkd-aktualnosci", "michalowice-komunikaty"]);
+    // Checklist order: WKD, then Michałowice komunikaty, then Wodociągi
+    // Michałowice, matching their order in officialSourceChecklist.ts.
+    expect(supported).toEqual(["wkd-aktualnosci", "michalowice-komunikaty", "wodociagi-michalowice"]);
   });
 
   test("registry matching ignores www. and trailing slash", () => {
@@ -162,7 +164,7 @@ test.describe("summarizeSourceHealth", () => {
     });
     const summary = summarizeSourceHealth(rows);
     expect(summary.total).toBe(OFFICIAL_SOURCE_CHECKS.length);
-    expect(summary.apiSupported).toBe(2);
+    expect(summary.apiSupported).toBe(3);
     expect(summary.checkedRecently).toBe(1); // only reg-mich has a fresh check
     expect(summary.needsAttention).toBe(summary.total - summary.checkedRecently);
   });
@@ -184,7 +186,16 @@ test.describe("dashboard copy (anti-drift — Sprint 137 req. 5/6/7)", () => {
     expect(HEALTH_API_SUPPORTED_LABEL).toContain("check przez aplikację");
     expect(HEALTH_API_SUPPORT_NOTE).toContain("Gmina Michałowice — komunikaty");
     expect(HEALTH_API_SUPPORT_NOTE).toContain("WKD — aktualności");
+    expect(HEALTH_API_SUPPORT_NOTE).toContain("Wodociągi Michałowice — awarie i przerwy");
     expect(HEALTH_API_SUPPORT_NOTE).toContain("ręcznie");
+  });
+
+  // Sprint 168 fix — this note previously hardcoded "dokładnie dwóch źródeł"
+  // and went stale the moment Sprint 168 added a third safe-check source
+  // without updating it. It's now derived from SAFE_CHECK_SOURCE_IDS, so
+  // this test pins that derivation instead of a fixed count.
+  test("API-support note count always matches the live allowlist size (never hardcoded again)", () => {
+    expect(HEALTH_API_SUPPORT_NOTE).toContain(`dla ${SAFE_CHECK_SOURCE_IDS.length} źródeł`);
   });
 
   test("last-error fallback is documented as a deliberate no-schema-change gap", () => {

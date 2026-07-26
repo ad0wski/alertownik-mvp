@@ -195,10 +195,17 @@ export const HEALTH_DASHBOARD_DISCLAIMER =
   "zawsze przez szkic w Kreatorze. Alertownik nie jest oficjalną aplikacją " +
   "WKD, PGE ani żadnej gminy.";
 
+// Sprint 168 fix: built from SAFE_CHECK_SOURCE_IDS instead of hardcoded, so
+// this note can never drift out of sync with the allowlist again the way it
+// did when Sprint 168 added a third source without updating this string.
+const API_SUPPORTED_NAMES = SAFE_CHECK_SOURCE_IDS.map(
+  (id) => OFFICIAL_SOURCE_CHECKS.find((s) => s.id === id)?.name ?? id
+);
+
 export const HEALTH_API_SUPPORT_NOTE =
-  "Check przez aplikację działa dziś dla dokładnie dwóch źródeł: " +
-  "„Gmina Michałowice — komunikaty” oraz „WKD — aktualności”. Pozostałe " +
-  "źródła sprawdzasz ręcznie w przeglądarce według checklisty.";
+  `Check przez aplikację działa dziś dla ${API_SUPPORTED_NAMES.length} źródeł: ` +
+  API_SUPPORTED_NAMES.map((name) => `„${name}”`).join(", ") +
+  ". Pozostałe źródła sprawdzasz ręcznie w przeglądarce według checklisty.";
 
 // Honest fallback for "last error" (Sprint 137 req. 9): failed fetches are
 // shown in the moment of the check but are NOT persisted anywhere —
