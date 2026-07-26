@@ -26,22 +26,32 @@ import { trimAtWord } from "@/lib/candidateWarnings";
 // (officialSourceChecklist.ts) so name/URL/category can never drift between
 // the checklist card and the API. Growing this list is a deliberate
 // per-source decision, not a config tweak — each source needs a parse check
-// + risk review first (e.g. pruszkow.pl is bot-blocked, PGE needs a region
-// picker — both still unsuitable). Sprint 134 started with Michałowice;
-// Sprint 139 added WKD after verifying the live page fetches cleanly (HTTP
-// 200 for our UA) and its Joomla blogPost markup parses deterministically
-// (pageParser.extractBlogPostItems, fixture-tested). Sprint 168 added
-// Wodociągi Michałowice after verifying its WordPress REST API returns
-// clean, structured JSON (294 posts in the "Aktualności" category,
-// overwhelmingly genuine water-interruption notices) and that a
-// deterministic keyword filter (pageParser.parseWordpressRestPosts)
-// separates operational notices from generic informational/PR posts —
-// fixture-tested (tests/e2e/wordpressRestParser.spec.ts,
-// tests/e2e/manualSourceCheckWordpressRest.spec.ts).
+// + risk review first (e.g. PGE needs a manual region picker and its site
+// actively rejects automated requests behind a WAF — still unsuitable).
+// Sprint 134 started with Michałowice; Sprint 139 added WKD after verifying
+// the live page fetches cleanly (HTTP 200 for our UA) and its Joomla
+// blogPost markup parses deterministically (pageParser.extractBlogPostItems,
+// fixture-tested). Sprint 168 added Wodociągi Michałowice after verifying
+// its WordPress REST API returns clean, structured JSON (294 posts in the
+// "Aktualności" category, overwhelmingly genuine water-interruption
+// notices) and that a deterministic keyword filter
+// (pageParser.parseWordpressRestPosts) separates operational notices from
+// generic informational/PR posts — fixture-tested
+// (tests/e2e/wordpressRestParser.spec.ts,
+// tests/e2e/manualSourceCheckWordpressRest.spec.ts). Sprint 169 added
+// Pruszków aktualności: the historical HTTP 403 (Sprint 73/77) turned out
+// to apply only to the rendered HTML page — pruszkow.pl's own WordPress
+// REST API is publicly reachable, and pageParser.parsePruszkowRestPosts
+// applies its own, broader keyword filter (road/traffic, heat/hot-water,
+// waste-schedule, alarm-siren notices) to separate operational content
+// from this source's much larger share of general municipal PR/event
+// posts — fixture-tested (tests/e2e/pruszkowRestParser.spec.ts,
+// tests/e2e/manualSourceCheckPruszkowRest.spec.ts).
 export const SAFE_CHECK_SOURCE_IDS = [
   "michalowice-komunikaty",
   "wkd-aktualnosci",
   "wodociagi-michalowice",
+  "pruszkow-aktualnosci",
 ] as const;
 
 export type SafeCheckSourceId = (typeof SAFE_CHECK_SOURCE_IDS)[number];

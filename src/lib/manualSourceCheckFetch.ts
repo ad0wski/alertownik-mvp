@@ -3,6 +3,8 @@ import {
   parseWordpressRestPosts,
   isWordpressRestPostArray,
   describePageFetchFailure,
+  type PageParseResult,
+  type WordpressRestPost,
 } from "@/lib/sourceParsers/pageParser";
 import { buildCheckProposals, type CheckProposal } from "@/lib/sourceCheck";
 import { readLimitedText } from "@/lib/ssrfGuard";
@@ -59,10 +61,17 @@ export interface ManualCheckFetchTarget {
    *  (JSON) instead of parsing officialUrl's HTML. See
    *  officialSourceChecklist.ts's own field doc for the full rationale. */
   apiUrl?: string;
+  /** Sprint 169 — which relevance filter/parser to run over the fetched
+   *  posts. Defaults to parseWordpressRestPosts (Wodociągi's water-topic
+   *  filter) so Sprint 168 callers that never set this keep working
+   *  unchanged. The caller (the route) picks this per source.id, since
+   *  this module deliberately knows nothing about specific sources. */
+  parseRestPosts?: (posts: WordpressRestPost[]) => PageParseResult;
 }
 
 async function attemptWordpressRestFetch(
-  apiUrl: string
+  apiUrl: string,
+  parseRestPosts: (posts: WordpressRestPost[]) => PageParseResult = parseWordpressRestPosts
 ): Promise<ManualCheckFetchSuccess | ManualCheckFetchFailure> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), CHECK_FETCH_TIMEOUT_MS);
@@ -105,7 +114,7 @@ async function attemptWordpressRestFetch(
       };
     }
 
-    const parse = parseWordpressRestPosts(json);
+    const parse = parseRestPosts(json);
     return { ok: true, pageTitle: parse.title, proposals: buildCheckProposals(parse) };
   } catch (err) {
     clearTimeout(timeoutId);
@@ -175,7 +184,7 @@ async function attemptManualCheckFetch(
   target: ManualCheckFetchTarget
 ): Promise<ManualCheckFetchSuccess | ManualCheckFetchFailure> {
   return target.apiUrl
-    ? attemptWordpressRestFetch(target.apiUrl)
+    ? attemptWordpressRestFetch(target.apiUrl, target.parseRestPosts)
     : attemptManualCheckHtmlFetch(target.officialUrl);
 }
 

@@ -100,6 +100,16 @@ export const OFFICIAL_SOURCE_CHECKS: OfficialSourceCheck[] = [
     name: "Miasto Pruszków — aktualności",
     category: "municipal",
     officialUrl: "https://www.pruszkow.pl/mieszkancy/aktualnosci-mieszkaniec/",
+    // Sprint 169 — the historical HTTP 403 (Sprint 73/77) turned out to
+    // apply to the rendered HTML page, not to this site's own WordPress
+    // REST API, which is publicly reachable (verified live: category 371
+    // "Aktualności dla Mieszkańców", 2843 posts). Unlike Wodociągi's
+    // category, most posts here are general municipal PR/event content —
+    // parsePruszkowRestPosts (pageParser.ts) applies its own, broader
+    // keyword filter tuned to this source's actual whatToCheck scope
+    // (road/traffic changes, heat/hot-water interruptions, waste-schedule
+    // changes, alarm-siren tests) so off-topic posts never get proposed.
+    apiUrl: "https://www.pruszkow.pl/wp-json/wp/v2/posts?categories=371&per_page=6",
     whatToCheck:
       "Ogłoszenia urzędu miasta: remonty, przerwy w dostawie ciepła/ciepłej wody, " +
       "zmiany w odbiorze odpadów, wydarzenia zamykające ulice.",
@@ -107,7 +117,10 @@ export const OFFICIAL_SOURCE_CHECKS: OfficialSourceCheck[] = [
     frequency: "weekly",
     risk: "medium",
     riskNote:
-      "Strona blokuje automatyczne pobieranie (HTTP 403) — wyłącznie ręcznie w przeglądarce.",
+      "Renderowana strona HTML blokuje automatyczne pobieranie (HTTP 403) — check przez " +
+      "aplikację używa WordPress REST API tego serwisu (publicznie dostępne), nie scrapuje " +
+      "HTML. Cloudflare tej domeny może zachować się inaczej dla ruchu z Vercela niż lokalnie " +
+      "— jeśli check zacznie zawodzić, wróć do ręcznego sprawdzania w przeglądarce.",
   },
   {
     id: "pge-planowane",

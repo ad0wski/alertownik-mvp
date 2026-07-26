@@ -61,12 +61,17 @@ test.describe("buildSourceHealthRows — coverage and API-support flags", () => 
     expect(rows.map((r) => r.checklistId)).toEqual(OFFICIAL_SOURCE_CHECKS.map((s) => s.id));
   });
 
-  test("exactly three sources are API-supported after Sprint 168: WKD + Michałowice + Wodociągi", () => {
+  test("exactly four sources are API-supported after Sprint 169: WKD + Michałowice + Pruszków + Wodociągi", () => {
     const rows = rowsFor();
     const supported = rows.filter((r) => r.apiSupported).map((r) => r.checklistId);
-    // Checklist order: WKD, then Michałowice komunikaty, then Wodociągi
-    // Michałowice, matching their order in officialSourceChecklist.ts.
-    expect(supported).toEqual(["wkd-aktualnosci", "michalowice-komunikaty", "wodociagi-michalowice"]);
+    // Checklist order: WKD, Michałowice komunikaty, Pruszków aktualności,
+    // then Wodociągi Michałowice, matching officialSourceChecklist.ts.
+    expect(supported).toEqual([
+      "wkd-aktualnosci",
+      "michalowice-komunikaty",
+      "pruszkow-aktualnosci",
+      "wodociagi-michalowice",
+    ]);
   });
 
   test("registry matching ignores www. and trailing slash", () => {
@@ -164,7 +169,7 @@ test.describe("summarizeSourceHealth", () => {
     });
     const summary = summarizeSourceHealth(rows);
     expect(summary.total).toBe(OFFICIAL_SOURCE_CHECKS.length);
-    expect(summary.apiSupported).toBe(3);
+    expect(summary.apiSupported).toBe(4);
     expect(summary.checkedRecently).toBe(1); // only reg-mich has a fresh check
     expect(summary.needsAttention).toBe(summary.total - summary.checkedRecently);
   });
@@ -187,6 +192,7 @@ test.describe("dashboard copy (anti-drift — Sprint 137 req. 5/6/7)", () => {
     expect(HEALTH_API_SUPPORT_NOTE).toContain("Gmina Michałowice — komunikaty");
     expect(HEALTH_API_SUPPORT_NOTE).toContain("WKD — aktualności");
     expect(HEALTH_API_SUPPORT_NOTE).toContain("Wodociągi Michałowice — awarie i przerwy");
+    expect(HEALTH_API_SUPPORT_NOTE).toContain("Miasto Pruszków — aktualności");
     expect(HEALTH_API_SUPPORT_NOTE).toContain("ręcznie");
   });
 

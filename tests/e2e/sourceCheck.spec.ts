@@ -45,11 +45,12 @@ const FIXTURE_HTML = `
 `;
 
 test.describe("safe-source allowlist (getSafeCheckSource)", () => {
-  test("exactly three safe sources after Sprint 168 — growing the list stays a per-sprint decision", () => {
+  test("exactly four safe sources after Sprint 169 — growing the list stays a per-sprint decision", () => {
     expect(SAFE_CHECK_SOURCE_IDS).toEqual([
       "michalowice-komunikaty",
       "wkd-aktualnosci",
       "wodociagi-michalowice",
+      "pruszkow-aktualnosci",
     ]);
   });
 
@@ -70,10 +71,16 @@ test.describe("safe-source allowlist (getSafeCheckSource)", () => {
   });
 
   test("rejects unknown, unlisted and empty keys — the API can never fetch an arbitrary source", () => {
-    expect(getSafeCheckSource("pruszkow-aktualnosci")).toBeNull(); // bot-blocked, must stay manual
-    expect(getSafeCheckSource("pge-planowane")).toBeNull(); // region picker, must stay manual
+    expect(getSafeCheckSource("pge-planowane")).toBeNull(); // region picker + active WAF block, must stay manual
+    expect(getSafeCheckSource("michalowice-wylaczenia-pradu")).toBeNull(); // not yet reviewed
     expect(getSafeCheckSource("https://evil.example/page")).toBeNull();
     expect(getSafeCheckSource("")).toBeNull();
+  });
+
+  test("resolves the Pruszków aktualności source from the canonical checklist config (Sprint 169)", () => {
+    const source = getSafeCheckSource("pruszkow-aktualnosci");
+    expect(source?.name).toBe("Miasto Pruszków — aktualności");
+    expect(source?.apiUrl).toBe("https://www.pruszkow.pl/wp-json/wp/v2/posts?categories=371&per_page=6");
   });
 });
 

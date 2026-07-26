@@ -241,6 +241,23 @@ function extractBlogPostItems(html: string): PageCandidate[] {
 const OPERATIONAL_NOTICE_KEYWORDS_RX =
   /przerw[a-złńóśźż]*|awari[a-złńóśźż]*|brak wody|wyłącz[a-złńóśźż]*|nieczynn[a-złńóśźż]*|prac[a-złńóśźż]* (?:na )?sieci|remont[a-złńóśźż]* sieci|płuka[a-złńóśźż]* sieci|jakoś[cć] wody/i;
 
+// Sprint 169 — pruszkow.pl's own "Aktualności dla Mieszkańców" WordPress
+// category (id 371, verified live: 2843 posts) is a genuinely mixed general
+// news feed — unlike Wodociągi's category, most posts are unrelated PR/
+// cultural/event content (lost-pet appeals, exhibitions, workshops, a
+// weekly "Co? Gdzie? Kiedy?" digest). This is exactly the failure mode
+// Sprint 168's own investigation already rejected for `roboty-drogowe`
+// (a general gmina news feed with zero on-topic posts in its sample).
+// Pruszków's category is different in one respect that makes it viable:
+// live sampling (20 posts) found a genuine, keyword-matchable subset of
+// real operational notices (traffic/road changes, heat/hot-water
+// interruptions, transit diversions, alarm-siren tests) that this regex
+// targets specifically — narrower than Wodociągi's single-topic filter
+// because Pruszków's checklist entry itself covers multiple topics
+// (remonty, ciepło/woda, odpady, zamknięcia ulic — see its whatToCheck).
+const PRUSZKOW_NOTICE_KEYWORDS_RX =
+  /przerw[a-złńóśźż]*|utrudni[a-złńóśźż]*|remont[a-złńóśźż]*|objazd[a-złńóśźż]*|zamkni[ęe][a-złńóśźż]*|wyłącz[a-złńóśźż]*|awari[a-złńóśźż]*|zmian[ay] organizacj[a-złńóśźż]* ruchu|odbi[oó]r[a-złńóśźż]* odpad[a-złńóśźż]*|harmonogram[a-złńóśźż]* odpad[a-złńóśźż]*|ciepł[a-złńóśźż]* wod[a-złńóśźż]*|energi[a-złńóśźż]* ciepln[a-złńóśźż]*|syren[a-złńóśźż]* alarmow[a-złńóśźż]*/i;
+
 export interface WordpressRestPost {
   title?: { rendered?: string };
   excerpt?: { rendered?: string };
@@ -259,16 +276,17 @@ export function isWordpressRestPostArray(json: unknown): json is WordpressRestPo
   return Array.isArray(json);
 }
 
-/** Turns already-fetched, already-JSON-parsed WordPress REST API post
- *  objects into the same PageParseResult shape every other extraction
- *  pass produces, so it flows through the exact same
- *  buildCheckProposals() safety filtering (min length, boilerplate,
- *  count cap, title dedup) as HTML-sourced candidates — no parallel
- *  pipeline. Robust to extra/unexpected fields (plugins routinely add
- *  their own top-level keys to WP REST responses) and to individual
- *  posts missing title/excerpt/content — those are skipped, never
- *  thrown on. */
-export function parseWordpressRestPosts(posts: WordpressRestPost[]): PageParseResult {
+/** Shared mechanics for every WordPress-REST extraction pass: strip tags,
+ *  apply the pass's own relevance regex, detect dates. Each pass still owns
+ *  its own keyword regex and result title — this only avoids duplicating
+ *  the per-post extraction loop, not the relevance judgment itself. Robust
+ *  to extra/unexpected fields (plugins routinely add their own top-level
+ *  keys to WP REST responses) and to individual posts missing
+ *  title/excerpt/content — those are skipped, never thrown on. */
+function extractWordpressRestCandidates(
+  posts: WordpressRestPost[],
+  keywordsRx: RegExp
+): PageCandidate[] {
   const candidates: PageCandidate[] = [];
 
   for (const post of posts) {
@@ -278,7 +296,7 @@ export function parseWordpressRestPosts(posts: WordpressRestPost[]): PageParseRe
 
     const combined = `${heading} ${body}`.trim();
     if (!combined) continue;
-    if (!OPERATIONAL_NOTICE_KEYWORDS_RX.test(combined)) continue;
+    if (!keywordsRx.test(combined)) continue;
 
     candidates.push({
       heading: heading ? heading.slice(0, 120) : undefined,
@@ -287,14 +305,41 @@ export function parseWordpressRestPosts(posts: WordpressRestPost[]): PageParseRe
     });
   }
 
+  return candidates;
+}
+
+function candidatesToPageParseResult(title: string, candidates: PageCandidate[]): PageParseResult {
   return {
-    title: "Wodociągi Michałowice — Aktualności",
+    title,
     candidates,
     rawText: candidates
       .map((c) => (c.heading ? c.heading + "\n" : "") + c.text)
       .join("\n\n")
       .slice(0, 5000),
   };
+}
+
+/** Turns already-fetched, already-JSON-parsed WordPress REST API post
+ *  objects from wodociagimichalowice.pl into the same PageParseResult
+ *  shape every other extraction pass produces, so it flows through the
+ *  exact same buildCheckProposals() safety filtering (min length,
+ *  boilerplate, count cap, title dedup) as HTML-sourced candidates — no
+ *  parallel pipeline. */
+export function parseWordpressRestPosts(posts: WordpressRestPost[]): PageParseResult {
+  return candidatesToPageParseResult(
+    "Wodociągi Michałowice — Aktualności",
+    extractWordpressRestCandidates(posts, OPERATIONAL_NOTICE_KEYWORDS_RX)
+  );
+}
+
+/** Same mechanics as parseWordpressRestPosts, for pruszkow.pl's own
+ *  WordPress REST API — see PRUSZKOW_NOTICE_KEYWORDS_RX above for why this
+ *  source needs its own, broader relevance filter. */
+export function parsePruszkowRestPosts(posts: WordpressRestPost[]): PageParseResult {
+  return candidatesToPageParseResult(
+    "Miasto Pruszków — Aktualności dla Mieszkańców",
+    extractWordpressRestCandidates(posts, PRUSZKOW_NOTICE_KEYWORDS_RX)
+  );
 }
 
 // Lightweight RSS/Atom autodiscovery — only looks at the page's own <head>
