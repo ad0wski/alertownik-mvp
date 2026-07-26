@@ -1,4 +1,5 @@
 import { supabase } from "./supabaseClient";
+import { sanitizeErrorSummary } from "./sourceHealth";
 import type {
   AlertSource,
   AlertSourceInput,
@@ -169,6 +170,12 @@ function rowToSourceCheck(row: Record<string, unknown>): SourceCheck {
     relatedAlertId: (row.related_alert_id as string) || undefined,
     createdBy: (row.created_by as string) || undefined,
     createdAt: row.created_at as string,
+    // Sprint 172 (proposed): undefined for every row until the migration
+    // adds these columns — `row.error_code`/`row.error_summary` are simply
+    // absent from the query result today, so this stays undefined
+    // automatically, no special-casing needed.
+    errorCode: (row.error_code as SourceCheck["errorCode"]) || undefined,
+    errorSummary: (row.error_summary as string) || undefined,
   };
 }
 
@@ -240,6 +247,13 @@ export async function createSourceCheck(input: SourceCheckInput): Promise<SaveRe
     related_alert_id: input.relatedAlertId ?? null,
     created_by: user?.id ?? null,
     checked_at: now,
+    // Sprint 172 (proposed) — only meaningful (and only sent) for
+    // result: "failed"; requires PROPOSED_SPRINT_172_SOURCE_CHECK_
+    // FAILURE_PERSISTENCE_V1.sql to be applied first (the columns don't
+    // exist until then — do not deploy this to Production before that
+    // migration runs, per the sprint's own explicit constraint).
+    error_code: input.errorCode ?? null,
+    error_summary: sanitizeErrorSummary(input.errorSummary),
   });
 
   if (insertError) {

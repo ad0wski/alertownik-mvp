@@ -55,6 +55,12 @@ const PENDING_SOURCE_KEY      = "alertownik_pending_source_for_ai";
 const AI_PENDING_KEY          = "alertownik_pending_ai_alert_json";
 const AI_PENDING_SOURCE_ID_KEY = "alertownik_pending_alert_source_id";
 
+// Sprint 172 (proposed) — how many of each source's most recent checks
+// loadChecks() keeps client-side, bumped from 3 to give
+// buildSourceHealthRows's consecutiveFailures count real signal once
+// result: "failed" rows can exist.
+const CHECK_HISTORY_LIMIT = 10;
+
 // ── Labels ────────────────────────────────────────────────────────────────────
 
 const categoryLabels: Record<AlertCategory, string> = {
@@ -329,6 +335,10 @@ const CHECK_RESULT_OPTIONS: { value: SourceCheckResult; label: string }[] = [
   { value: "found_notice",   label: "Znaleziono komunikat" },
   { value: "alert_created",  label: "Przygotowano alert" },
   { value: "needs_followup", label: "Wymaga późniejszego sprawdzenia" },
+  // Sprint 172 (proposed) — lets an admin manually log a failed check by
+  // hand too (e.g. the site was down when they tried in a browser), not
+  // only via SourceApiCheckPanel's own "Zapisz błąd w historii" button.
+  { value: "failed",         label: "Błąd sprawdzenia" },
 ];
 
 const resultConfig: Record<SourceCheckResult, { label: string; color: string }> = {
@@ -336,6 +346,7 @@ const resultConfig: Record<SourceCheckResult, { label: string; color: string }> 
   found_notice:   { label: "Znaleziono komunikat",           color: "text-blue-600 dark:text-blue-400" },
   alert_created:  { label: "Przygotowano alert",             color: "text-emerald-600" },
   needs_followup: { label: "Wymaga późniejszego sprawdzenia", color: "text-amber-600 dark:text-amber-300" },
+  failed:         { label: "Błąd sprawdzenia",               color: "text-red-600 dark:text-red-400" },
 };
 
 const severityConfig: Record<string, { label: string; color: string }> = {
@@ -1494,12 +1505,17 @@ export default function SourcesPage() {
   async function loadChecks() {
     const result = await getSourceChecks();
     if (result.error) return;
-    // Group by sourceId, keep the 3 most recent per source
-    // getSourceChecks returns rows ordered by checked_at DESC, so first 3 per source = most recent
+    // Group by sourceId, keep the CHECK_HISTORY_LIMIT most recent per
+    // source. getSourceChecks returns rows ordered by checked_at DESC, so
+    // the first N per source = most recent. Sprint 172 (proposed) bumped
+    // this from 3 to 10: buildSourceHealthRows's consecutiveFailures
+    // count is capped by however much history is loaded here, and 3 was
+    // too little to make that count meaningful once failures can be
+    // persisted (see docs/SPRINT_172_SOURCE_HEALTH_PERSISTENCE_V1.md).
     const grouped: Record<string, SourceCheck[]> = {};
     for (const check of result.checks) {
       if (!grouped[check.sourceId]) grouped[check.sourceId] = [];
-      if (grouped[check.sourceId].length < 3) grouped[check.sourceId].push(check);
+      if (grouped[check.sourceId].length < CHECK_HISTORY_LIMIT) grouped[check.sourceId].push(check);
     }
     setSourceChecks(grouped);
   }

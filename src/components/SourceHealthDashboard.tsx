@@ -5,6 +5,7 @@ import type { SourceCheckResult } from "@/types/alertSource";
 import {
   summarizeSourceHealth,
   describeSessionCheckOutcome,
+  describePersistedFailure,
   HEALTH_STATUS_LABELS,
   HEALTH_BADGE_MANUAL,
   HEALTH_BADGE_NO_CRON,
@@ -36,6 +37,10 @@ const categoryLabels: Record<AlertCategory, string> = {
 const statusBadgeClass: Record<SourceHealthStatus, string> = {
   checked_recently: "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-200",
   stale:            "bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 ring-1 ring-amber-200",
+  // Sprint 172 (proposed) — unreachable today (no row can have result:
+  // "failed" until PROPOSED_SPRINT_172_..._V1.sql is applied), styled red
+  // to sit clearly below "stale" in severity once it can occur.
+  failing:          "bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 ring-1 ring-red-200",
   never_checked:    "bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 ring-1 ring-amber-200",
   unregistered:     "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 ring-1 ring-slate-200",
 };
@@ -45,6 +50,7 @@ const resultLabels: Record<SourceCheckResult, string> = {
   found_notice:   "znaleziono komunikat",
   alert_created:  "przygotowano alert",
   needs_followup: "wymaga późniejszego sprawdzenia",
+  failed:         "błąd sprawdzenia",
 };
 
 function formatCheckedAt(iso: string): string {
@@ -174,6 +180,22 @@ export function SourceHealthDashboard({
                   Otwórz źródło ↗
                 </a>
               </div>
+
+              {/* Sprint 172 (proposed) — unreachable today: no loaded
+                  check can have result "failed" until the migration in
+                  PROPOSED_SPRINT_172_SOURCE_CHECK_FAILURE_PERSISTENCE_V1.sql
+                  is applied, so describePersistedFailure always returns
+                  null. Kept here, inert, so the UI is ready the moment
+                  it is. */}
+              {(() => {
+                const persistedFailure = describePersistedFailure(row);
+                if (!persistedFailure) return null;
+                return (
+                  <p className="text-xs mt-1.5 rounded-lg px-2.5 py-1.5 text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30">
+                    {persistedFailure}
+                  </p>
+                );
+              })()}
 
               {(() => {
                 const sessionNote = describeSessionCheckOutcome(sessionCheckOutcomes?.[row.checklistId]);

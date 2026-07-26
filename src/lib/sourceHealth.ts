@@ -33,15 +33,26 @@ export const RECENT_CANDIDATE_DAYS = 14;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+// Sprint 172 (proposed) — "failing" requires source_checks.result to
+// actually contain a persisted "failed" value, which requires
+// PROPOSED_SPRINT_172_SOURCE_CHECK_FAILURE_PERSISTENCE_V1.sql to be
+// applied first. Before that migration runs, no check row can ever have
+// result: "failed", so this status can never be produced today — this is
+// forward-compatible code, not yet reachable behavior. It takes priority
+// over "stale"/"checked_recently": a source whose most recent LOGGED
+// attempt failed is worse than merely "not checked in a while", and must
+// never be shown as healthy just because the failure happened recently.
 export type SourceHealthStatus =
   | "checked_recently" // latest check within HEALTH_STALE_DAYS
   | "stale" // has a check, but older than HEALTH_STALE_DAYS
+  | "failing" // latest LOGGED check attempt failed (result: "failed")
   | "never_checked" // registered in alert_sources, zero check history
   | "unregistered"; // no alert_sources row matches the official URL
 
 export const HEALTH_STATUS_LABELS: Record<SourceHealthStatus, string> = {
   checked_recently: "sprawdzone niedawno",
   stale: `dawno nie sprawdzane (>${HEALTH_STALE_DAYS} dni)`,
+  failing: "ostatnia próba nieudana",
   never_checked: "nigdy nie sprawdzone",
   unregistered: "brak w rejestrze — historia niedostępna",
 };
@@ -62,6 +73,24 @@ export interface SourceHealthRow {
   /** Result of the most recent source_checks row, or null when the only
    *  signal is alert_sources.last_checked_at (no history row loaded). */
   lastCheckResult: SourceCheckResult | null;
+  /** Sprint 172 (proposed) — ISO timestamp of the most recent NON-failed
+   *  check (any result other than "failed"), or null when every loaded
+   *  check failed or there is no history at all. Distinct from
+   *  lastCheckAt, which is the most recent attempt regardless of outcome. */
+  lastSuccessAt: string | null;
+  /** Sprint 172 (proposed) — count of trailing "failed" results in the
+   *  loaded check history for this source, most-recent-first, stopping at
+   *  the first non-failed result. 0 when the latest loaded check
+   *  succeeded or there's no history. Capped by however much history the
+   *  caller loaded (see getSourceChecks's per-source limit) — never
+   *  claims more precision than the data actually supports. */
+  consecutiveFailures: number;
+  /** Sprint 172 (proposed) — set only when lastCheckResult === "failed".
+   *  Matches FetchDiagnosticCode. Never a raw exception or stack trace. */
+  lastErrorCode: string | null;
+  /** Sprint 172 (proposed) — set only when lastCheckResult === "failed".
+   *  Already-curated, safe, ≤200-char admin-facing Polish message. */
+  lastErrorSummary: string | null;
   /** Persistent candidates attached to this source within RECENT_CANDIDATE_DAYS. */
   recentCandidateCount: number;
 }
@@ -78,6 +107,10 @@ export interface HealthSourceCheck {
   sourceId: string;
   checkedAt: string;
   result: SourceCheckResult;
+  /** Sprint 172 (proposed) — present only on result: "failed" rows, and
+   *  only once the migration + app code are both deployed. */
+  errorCode?: string;
+  errorSummary?: string;
 }
 
 export interface HealthCandidate {
@@ -115,6 +148,20 @@ export function buildSourceHealthRows({
     }
   }
 
+  // Sprint 172 (proposed) — full check history per source, sorted
+  // newest-first, so lastSuccessAt/consecutiveFailures can be computed
+  // by walking real history instead of a second, separately-maintained
+  // counter column (avoids write-time drift between the two).
+  const checksBySource = new Map<string, HealthSourceCheck[]>();
+  for (const check of checks) {
+    const list = checksBySource.get(check.sourceId) ?? [];
+    list.push(check);
+    checksBySource.set(check.sourceId, list);
+  }
+  for (const list of checksBySource.values()) {
+    list.sort((a, b) => (a.checkedAt < b.checkedAt ? 1 : a.checkedAt > b.checkedAt ? -1 : 0));
+  }
+
   // Recent-candidate counts per registry source id. Candidates without a
   // sourceId (saved before the source was registered) can't be attributed
   // to a checklist row — skipped, not guessed.
@@ -131,6 +178,7 @@ export function buildSourceHealthRows({
   return checklist.map((source) => {
     const registryMatch = findMatchingRegistrySource(registrySources, source.officialUrl);
     const check = registryMatch ? latestCheck.get(registryMatch.id) : undefined;
+    const history = registryMatch ? (checksBySource.get(registryMatch.id) ?? []) : [];
 
     // createSourceCheck also bumps alert_sources.last_checked_at, so the two
     // signals normally agree — but a source can carry last_checked_at without
@@ -138,11 +186,29 @@ export function buildSourceHealthRows({
     // history row (it has a result); fall back to the registry timestamp.
     const lastCheckAt = check?.checkedAt ?? registryMatch?.lastCheckedAt ?? null;
 
+    // Sprint 172 (proposed) — walk newest-first history: count a leading
+    // streak of "failed" results, and find the first non-failed result's
+    // timestamp (lastSuccessAt). Both stay at their empty defaults (0,
+    // null) when there's no history or result: "failed" never appears —
+    // exactly today's behavior before the migration exists.
+    let consecutiveFailures = 0;
+    let lastSuccessAt: string | null = null;
+    for (const h of history) {
+      if (h.result === "failed") {
+        consecutiveFailures++;
+      } else {
+        lastSuccessAt = h.checkedAt;
+        break;
+      }
+    }
+
     let status: SourceHealthStatus;
     if (!registryMatch) {
       status = "unregistered";
     } else if (!lastCheckAt) {
       status = "never_checked";
+    } else if (check?.result === "failed") {
+      status = "failing";
     } else {
       status = daysBetween(lastCheckAt, now) > HEALTH_STALE_DAYS ? "stale" : "checked_recently";
     }
@@ -157,11 +223,56 @@ export function buildSourceHealthRows({
       status,
       lastCheckAt,
       lastCheckResult: check?.result ?? null,
+      lastSuccessAt,
+      consecutiveFailures,
+      lastErrorCode: check?.result === "failed" ? (check.errorCode ?? null) : null,
+      lastErrorSummary: check?.result === "failed" ? (check.errorSummary ?? null) : null,
       recentCandidateCount: registryMatch
         ? (recentCandidates.get(registryMatch.id) ?? 0)
         : 0,
     };
   });
+}
+
+// ── Persisted failure helpers (Sprint 172, proposed) ──────────────────────────
+//
+// Both are pure so they're testable without Supabase or a browser, and so
+// the exact same 200-char cap is enforced in application code as a
+// defense-in-depth match for the database's own
+// char_length(error_summary) <= 200 CHECK constraint — belt and suspenders,
+// not a substitute for it.
+
+const ERROR_SUMMARY_MAX_LENGTH = 200;
+
+/** Caps and trims a check-failure message before it's ever sent to
+ *  Supabase. Returns null for empty/undefined input — a missing message
+ *  stays missing, never becomes an empty string in the database. */
+export function sanitizeErrorSummary(message: string | undefined): string | null {
+  const trimmed = message?.trim();
+  if (!trimmed) return null;
+  return trimmed.slice(0, ERROR_SUMMARY_MAX_LENGTH);
+}
+
+/** Formats the Source Health row's PERSISTED failure info (distinct from
+ *  Sprint 171's describeSessionCheckOutcome, which is session-only and
+ *  never touches the database). Returns null whenever there's nothing
+ *  persisted to say — fail-closed, never implies a status the row's own
+ *  `status` field doesn't already carry. */
+export function describePersistedFailure(row: SourceHealthRow): string | null {
+  if (row.status !== "failing") return null;
+  const streak = row.consecutiveFailures > 1 ? ` (${row.consecutiveFailures} razy z rzędu)` : "";
+  const summary = row.lastErrorSummary ? `: ${row.lastErrorSummary}` : "";
+  const lastSuccess = row.lastSuccessAt
+    ? ` · Ostatni sukces: ${new Date(row.lastSuccessAt).toLocaleString("pl-PL", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: "Europe/Warsaw",
+      })}`
+    : "";
+  return `Ostatnia zapisana próba nie powiodła się${streak}${summary}${lastSuccess}`;
 }
 
 // ── Summary ───────────────────────────────────────────────────────────────────

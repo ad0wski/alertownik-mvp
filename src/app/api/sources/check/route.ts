@@ -8,6 +8,7 @@ import {
   type PageParseResult,
   type WordpressRestPost,
 } from "@/lib/sourceParsers/pageParser";
+import type { FetchDiagnosticCode } from "@/lib/scheduledWriterRunSafety";
 
 // Sprint 169 — which WordPress-REST relevance filter applies to which
 // apiUrl-backed source. Kept here (not in manualSourceCheckFetch.ts, which
@@ -48,7 +49,17 @@ export type SourceCheckApiResponse =
       fetchedAt: string;
       proposals: CheckProposal[];
     }
-  | { ok: false; error: string };
+  | {
+      ok: false;
+      error: string;
+      /** Sprint 172 (proposed) — the same safe, closed-vocabulary
+       *  diagnostic bucket used internally by manualSourceCheckFetch.ts.
+       *  Absent for failures that never reached a fetch attempt (bad
+       *  request body, unsupported source). Lets the client optionally
+       *  persist this failure via createSourceCheck once the Sprint 172
+       *  migration is applied — never a raw exception or stack trace. */
+      errorCode?: FetchDiagnosticCode;
+    };
 
 export async function POST(req: NextRequest): Promise<NextResponse<SourceCheckApiResponse>> {
   const auth = await requireAdminSession<SourceCheckApiResponse>(req);
@@ -76,7 +87,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<SourceCheckAp
     parseRestPosts: REST_PARSERS_BY_SOURCE_ID[source.id],
   });
   if (!result.ok) {
-    return NextResponse.json({ ok: false, error: result.message });
+    return NextResponse.json({ ok: false, error: result.message, errorCode: result.diagnostic });
   }
 
   return NextResponse.json({

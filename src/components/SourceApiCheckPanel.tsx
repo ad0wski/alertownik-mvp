@@ -16,6 +16,7 @@ import { authFetch } from "@/lib/apiClientAuth";
 import { createSourceCandidateNotice } from "@/lib/supabaseCandidateWrites";
 import { createSourceCheck } from "@/lib/supabaseSourceWrites";
 import { findSimilarText } from "@/lib/candidateWarnings";
+import type { FetchDiagnosticCode } from "@/lib/scheduledWriterRunSafety";
 
 // Sprint 134 (A2) — the manual trigger for /api/sources/check, rendered only
 // on checklist cards whose source is on the safe-source allowlist (Sprint
@@ -40,7 +41,7 @@ interface SourceApiCheckPanelProps {
 type CheckState =
   | { status: "idle" }
   | { status: "loading" }
-  | { status: "error"; error: string }
+  | { status: "error"; error: string; errorCode?: FetchDiagnosticCode }
   | {
       status: "done";
       proposals: CheckProposal[];
@@ -61,6 +62,15 @@ export function SourceApiCheckPanel({
   const [loggingCheck, setLoggingCheck] = useState(false);
   const [checkLogged, setCheckLogged] = useState(false);
   const [checkLogError, setCheckLogError] = useState<string | null>(null);
+  // Sprint 172 (proposed) — logging a FAILED check requires
+  // PROPOSED_SPRINT_172_SOURCE_CHECK_FAILURE_PERSISTENCE_V1.sql to be
+  // applied first (source_checks.result doesn't accept "failed" and the
+  // two error columns don't exist until then). This button only appears
+  // after that migration ships and this code is deployed alongside it —
+  // never before, per the sprint's own explicit constraint.
+  const [loggingFailure, setLoggingFailure] = useState(false);
+  const [failureLogged, setFailureLogged] = useState(false);
+  const [failureLogError, setFailureLogError] = useState<string | null>(null);
 
   const registryMatch = findMatchingRegistrySource(registrySources, source.officialUrl);
 
@@ -70,6 +80,8 @@ export function SourceApiCheckPanel({
     setSaveError(null);
     setCheckLogged(false);
     setCheckLogError(null);
+    setFailureLogged(false);
+    setFailureLogError(null);
 
     try {
       const res = await authFetch("/api/sources/check", {
@@ -79,7 +91,7 @@ export function SourceApiCheckPanel({
       });
       const data: SourceCheckApiResponse = await res.json();
       if (!data.ok) {
-        setCheck({ status: "error", error: data.error });
+        setCheck({ status: "error", error: data.error, errorCode: data.errorCode });
         onCheckOutcome?.({ ok: false, message: data.error, at: new Date().toISOString() });
         return;
       }
@@ -92,7 +104,7 @@ export function SourceApiCheckPanel({
       onCheckOutcome?.({ ok: true, at: data.fetchedAt });
     } catch {
       const message = "Nie udało się połączyć z API sprawdzania. Spróbuj ponownie.";
-      setCheck({ status: "error", error: message });
+      setCheck({ status: "error", error: message, errorCode: "network_error" });
       onCheckOutcome?.({ ok: false, message, at: new Date().toISOString() });
     }
   }
@@ -133,6 +145,30 @@ export function SourceApiCheckPanel({
     setCheckLogged(true);
   }
 
+  // Sprint 172 (proposed) — see the loggingFailure state comment above:
+  // only reachable in practice once the migration has shipped. Mirrors
+  // logCheckToHistory exactly, but for a failed attempt: passes the same
+  // already-curated, safe message the admin is already looking at as
+  // errorSummary, capped to 200 chars server-side by createSourceCheck.
+  async function logFailureToHistory() {
+    if (!registryMatch || check.status !== "error") return;
+    setFailureLogError(null);
+    setLoggingFailure(true);
+    const result = await createSourceCheck({
+      sourceId: registryMatch.id,
+      result: "failed",
+      errorCode: check.errorCode,
+      errorSummary: check.error,
+      notes: `Check przez aplikację (/api/sources/check) — próba nieudana. ${source.officialUrl}`,
+    });
+    setLoggingFailure(false);
+    if (!result.ok) {
+      setFailureLogError(result.error ?? "Nie udało się zapisać błędu checku.");
+      return;
+    }
+    setFailureLogged(true);
+  }
+
   return (
     <div className="mt-3 rounded-xl border border-purple-200 dark:border-purple-500/30 bg-purple-50/60 dark:bg-purple-500/10 p-3">
       <div className="flex flex-wrap items-center gap-2">
@@ -152,9 +188,27 @@ export function SourceApiCheckPanel({
       </p>
 
       {check.status === "error" && (
-        <p className="mt-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-lg px-3 py-2">
-          {check.error}
-        </p>
+        <div className="mt-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-lg px-3 py-2">
+          <p>{check.error}</p>
+          {/* Sprint 172 (proposed) — see the loggingFailure state comment
+              above: requires the migration to be applied first. */}
+          {registryMatch && (
+            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+              <button
+                onClick={logFailureToHistory}
+                disabled={loggingFailure || failureLogged}
+                className="text-xs font-medium text-red-700 dark:text-red-300 hover:text-red-900 hover:underline disabled:opacity-50"
+              >
+                {failureLogged
+                  ? "Błąd zapisany w historii ✓"
+                  : loggingFailure
+                    ? "Zapisywanie…"
+                    : "Zapisz błąd w historii →"}
+              </button>
+              {failureLogError && <span className="text-red-700 dark:text-red-400">{failureLogError}</span>}
+            </div>
+          )}
+        </div>
       )}
 
       {check.status === "done" && (
