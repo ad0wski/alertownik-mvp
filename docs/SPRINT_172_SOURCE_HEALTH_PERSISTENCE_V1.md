@@ -1,11 +1,39 @@
 # Sprint 172 — Source Health Persistence (Plan Day 5)
 
-**Status: code, tests, and migration files ready. Migration NOT executed.
-Not merged to `main`, not deployed. Awaiting Adam's decision.**
+**Status: migration EXECUTED on Production and verified read-only. Code
+and tests ready and re-verified against the post-migration schema. Not
+merged to `main`, not deployed to Vercel. Awaiting Adam's decision on the
+final merge.**
 
-This is a checkpoint document, not a closeout — per this sprint's explicit
-instruction, the agent stops here and presents the full plan for review
-before any SQL runs.
+## Migration execution record
+
+- **Executed by:** Adam, manually, in the Supabase SQL Editor for project
+  `alertownik-mvp` (ref `puhcjyffosgohbmxrczb`), breadcrumb confirmed
+  `ad0wski's Org / alertownik-mvp / main / PRODUCTION`.
+- **File run:** `docs/sql/PROPOSED_SPRINT_172_SOURCE_CHECK_FAILURE_PERSISTENCE_V1.sql`,
+  content verified byte-for-byte against the repo file via SHA-256 digest
+  comparison before Run was clicked (first/last 4 digest bytes compared
+  directly; combined with matching length (4397) and line count (82),
+  this is conclusive given SHA-256's avalanche property).
+- **Result:** `Success. No rows returned` — the transaction committed
+  cleanly, no error, no partial application (the DDL is wrapped in a
+  single `begin;`/`commit;` block, so failure would have rolled back
+  everything atomically — this did not happen).
+- **Note on the paste mechanism:** the first attempt to enter the SQL via
+  simulated keystrokes was corrupted by the editor's own IntelliSense/
+  autocomplete (a stray word inserted mid-comment). This was caught by
+  inspecting the editor's content *before* anything was run, the
+  corrupted text was cleared, and the exact file content was set directly
+  via the editor's own API (bypassing keystroke simulation) and verified
+  by hash before the checkpoint was handed back for review. Nothing was
+  ever run against Production with the corrupted content.
+- **Full read-only VERIFY performed after execution** (see §14) — every
+  check passed: the `result` CHECK constraint now allows exactly five
+  values including `'failed'`; `error_code`/`error_summary` exist,
+  nullable, with the expected CHECK constraints; all pre-existing
+  `source_checks` rows are untouched with `NULL` in both new columns;
+  RLS policy count/coverage and the scheduled-writer policy's own
+  `with_check` clause are byte-identical to before the migration.
 
 ---
 
@@ -281,19 +309,71 @@ anywhere.
   none of it does.
 - [x] Read-only verification queries prepared for both before and after.
 
-## 12. What this session did NOT do
+## 12. Post-migration VERIFY results (Production, read-only)
 
-**No SQL was executed.** No `apply_migration` call was made. No
-`execute_sql` write query was made — every Supabase MCP call this sprint
-was a read (`list_tables`, `pg_policies`/`pg_constraint` introspection via
-`execute_sql` with `SELECT` only). No Environment Variable was changed.
-No cron was touched. No writer identity was touched. No email/Resend was
-touched. No alert was auto-published. No manual source check was run
-against Production. No merge to `main` was performed.
+Run via the Supabase MCP (read-only `execute_sql`, `SELECT` only) against
+`alertownik-mvp` immediately after the forward migration committed,
+mirroring every query in `VERIFY_SPRINT_172_SOURCE_CHECK_FAILURE_PERSISTENCE_READ_ONLY_V1.sql`:
 
-## 13. Branch
+| Check | Result |
+|---|---|
+| `error_code`/`error_summary` columns exist, nullable | Both present: `text`, `is_nullable: YES` |
+| `source_checks_result_check` definition | `CHECK (result = ANY (ARRAY['no_changes','found_notice','alert_created','needs_followup','failed']))` — exactly the original four plus `'failed'` |
+| `error_code` CHECK | `CHECK (error_code IS NULL OR error_code = ANY (ARRAY['http_4xx','http_5xx','non_html_content_type','network_error','timeout_10s','parse_exception']))` — exact match |
+| `error_summary` CHECK | `CHECK (error_summary IS NULL OR char_length(error_summary) <= 200)` — exact match |
+| Existing rows unaffected | `total_rows: 2` (unchanged), `rows_with_error_code: 0`, `rows_with_error_summary: 0`, `rows_with_failed_result: 0` — zero backfill, confirmed |
+| RLS policy count/coverage | Exactly 5 policies on `source_checks`, same names/commands as before (4× `admin_profiles`-gated + 1× scheduled-writer) |
+| Scheduled-writer `with_check` clause | Byte-identical to the pre-migration read: still `result = ANY (ARRAY['no_changes','found_notice'])` only — writer/cron capability unchanged |
+
+**All checks passed exactly as expected.**
+
+## 13. Table-count comparison (Production, before vs. after)
+
+| Table | Before | After | Delta |
+|---|---|---|---|
+| `alert_sources` | 4 | 4 | 0 |
+| `source_checks` | 2 | 2 | 0 |
+| `source_notice_candidates` | 3 | 3 | 0 |
+| `scheduled_writer_runs` | 1 | 1 | 0 |
+| `operational_notification_events` | 1 | 1 | 0 |
+| `alerts` | 3 (stale reading) | 6 | +3, unrelated |
+
+Every table the migration could plausibly touch, and every table this
+sprint's own constraints explicitly named (source_checks,
+source_notice_candidates, scheduled_writer_runs,
+operational_notification_events), shows **zero** change — the migration
+created no new candidates, checks, writer runs, or notification events,
+exactly as required.
+
+**`alerts` note:** the "before" figure of 3 was a stale baseline carried
+forward from an earlier point in this multi-sprint session, never
+refreshed immediately before this migration. Investigated read-only: the
+3 additional alerts are dated 2026-07-04 through 2026-07-06 — real,
+already-published civic alerts (`source_id: null`, i.e. created by hand
+through the normal Kreator workflow, not by any automated pipeline) —
+created well before this Sprint 172 session began. The migration file
+contains zero statements referencing the `alerts` table at all, so it
+cannot have created them. This is a bookkeeping artifact in this
+session's own baseline tracking, not a side effect of the migration —
+disclosed here rather than silently reconciled.
+
+## 14. What this session did NOT do
+
+No `apply_migration` MCP call was ever made — the only Supabase MCP calls
+this sprint were reads (`list_tables`, and `execute_sql` used exclusively
+with `SELECT` statements for schema/RLS/row-count introspection, both
+before and after the migration). The forward migration itself was run by
+Adam directly in the Supabase SQL Editor, once, after his own explicit
+review of the checkpoint. No Environment Variable was changed. No cron
+was touched. No writer identity was touched. No email/Resend was touched.
+No alert was auto-published. No manual source check was run against
+Production. No merge to `main` was performed — this branch stops there,
+awaiting a separate decision.
+
+## 15. Branch
 
 `sprint-172-source-health-persistence-v1`, branched from `main` at
-`f02fa67`. Not merged to `main`. **Stopping here per the sprint's own
-explicit instruction — full checkpoint below awaits Adam's decision
-before the migration file is ever run.**
+`f02fa67`. Migration executed and verified (§12–13). Application code,
+tests, and this documentation are ready. **Not merged to `main`** —
+stopping here per the sprint's own explicit instruction, awaiting a
+separate decision on the final merge.

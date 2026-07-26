@@ -1,5 +1,13 @@
--- Sprint 172 — Proposed forward migration for persisting failed manual
--- source checks. NOT EXECUTED as part of Sprint 172. Review, then run
+-- Sprint 172 — EXECUTED on Production (alertownik-mvp) by Adam via the
+-- Supabase SQL Editor, one time, after explicit review of a hash-verified
+-- checkpoint. Result: "Success. No rows returned" — clean commit, no
+-- error. Read-only VERIFY passed in full afterward — see
+-- docs/SPRINT_172_SOURCE_HEALTH_PERSISTENCE_V1.md §12–13 for the record.
+-- This file's SQL body below is unchanged from what was actually run —
+-- kept verbatim as the historical, exact record of the migration.
+--
+-- Sprint 172 — forward migration for persisting failed manual
+-- source checks. Review, then run
 -- manually in the Supabase SQL editor. Pair with
 -- VERIFY_SPRINT_172_SOURCE_CHECK_FAILURE_PERSISTENCE_READ_ONLY_V1.sql
 -- before and after, and keep
