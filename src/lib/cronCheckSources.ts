@@ -1,5 +1,11 @@
 import { createHash, timingSafeEqual } from "crypto";
-import { parsePageHtml, type PageParseResult } from "@/lib/sourceParsers/pageParser";
+import {
+  parsePageHtml,
+  parseWordpressRestPosts,
+  isWordpressRestPostArray,
+  type PageParseResult,
+  type WordpressRestPost,
+} from "@/lib/sourceParsers/pageParser";
 import {
   SAFE_CHECK_SOURCE_IDS,
   getSafeCheckSource,
@@ -240,7 +246,57 @@ function classifyFetchError(err: unknown): CronDiagnosticCode {
   return "network_error";
 }
 
-export async function checkOneSource(
+// Sprint 173 — dry-run twin of the fix in scheduledSourceFetch.ts: without
+// this, a dry-run preview of Wodociągi Michałowice or Pruszków aktualności
+// would fetch their officialUrl as HTML and report a misleading result
+// (zero candidates or a permanent error) instead of previewing what a real
+// scheduled run would actually see via their REST API.
+async function checkOneSourceRest(
+  sourceKey: SafeCheckSourceId,
+  name: string,
+  apiUrl: string,
+  parseRestPosts: (posts: WordpressRestPost[]) => PageParseResult
+): Promise<CronSourceResult> {
+  const startedAt = Date.now();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), CRON_FETCH_TIMEOUT_MS);
+  try {
+    const response = await fetch(apiUrl, {
+      signal: controller.signal,
+      headers: {
+        "User-Agent": "Alertownik-Monitor/1.0 (scheduled dry-run check)",
+        Accept: "application/json",
+      },
+    });
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const diagnostic: CronDiagnosticCode = response.status >= 500 ? "http_5xx" : "http_4xx";
+      return errorResult(sourceKey, name, "fetch_error", diagnostic, Date.now() - startedAt);
+    }
+
+    const raw = await response.text();
+    let json: unknown;
+    try {
+      json = JSON.parse(raw.slice(0, 2_000_000));
+    } catch {
+      return errorResult(sourceKey, name, "parse_error", "parse_exception", Date.now() - startedAt);
+    }
+    if (!isWordpressRestPostArray(json)) {
+      return errorResult(sourceKey, name, "parse_error", "parse_exception", Date.now() - startedAt);
+    }
+
+    const parse = parseRestPosts(json);
+    return summarizeParseResult(sourceKey, name, parse, Date.now() - startedAt);
+  } catch (err) {
+    clearTimeout(timeoutId);
+    const diagnostic = classifyFetchError(err);
+    const outcome = diagnostic === "timeout_10s" ? "timeout" : "fetch_error";
+    return errorResult(sourceKey, name, outcome, diagnostic, Date.now() - startedAt);
+  }
+}
+
+async function checkOneSourceHtml(
   sourceKey: SafeCheckSourceId,
   name: string,
   officialUrl: string
@@ -285,4 +341,16 @@ export async function checkOneSource(
   } catch {
     return errorResult(sourceKey, name, "parse_error", "parse_exception", Date.now() - startedAt);
   }
+}
+
+export async function checkOneSource(
+  sourceKey: SafeCheckSourceId,
+  name: string,
+  officialUrl: string,
+  apiUrl?: string,
+  parseRestPosts?: (posts: WordpressRestPost[]) => PageParseResult
+): Promise<CronSourceResult> {
+  return apiUrl
+    ? checkOneSourceRest(sourceKey, name, apiUrl, parseRestPosts ?? parseWordpressRestPosts)
+    : checkOneSourceHtml(sourceKey, name, officialUrl);
 }

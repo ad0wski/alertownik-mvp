@@ -193,12 +193,35 @@ test.describe("GET /api/cron/check-sources — authentication (kill switch enabl
   });
 });
 
+// Sprint 173 — SAFE_CHECK_SOURCE_IDS grew from 2 (Sprint 139) to 4 (Sprints
+// 168/169: wodociagi-michalowice, pruszkow-aktualnosci added). Those two
+// are REST-API-backed (apiUrl set), so a no-filter dry run now fetches a
+// mix of HTML and JSON targets — this fixture mock serves the right shape
+// per URL, mirroring how checkOneSource actually dispatches.
+const REST_FIXTURE_POSTS = JSON.stringify([
+  {
+    title: { rendered: "Przerwa w dostawie wody" },
+    excerpt: {
+      rendered:
+        "<p>W dniu 16 lipca 2026 roku wystąpi przerwa w dostawie wody w miejscowości testowej z powodu awarii sieci.</p>",
+    },
+  },
+]);
+
+function mixedFixtureFetch(): typeof fetch {
+  return (async (input: RequestInfo | URL) => {
+    const url = typeof input === "string" ? input : input.toString();
+    if (url.includes("wp-json")) {
+      return new Response(REST_FIXTURE_POSTS, { status: 200, headers: { "content-type": "application/json" } });
+    }
+    return new Response(FIXTURE_HTML, { status: 200, headers: { "content-type": "text/html" } });
+  }) as typeof fetch;
+}
+
 test.describe("GET /api/cron/check-sources — dry-run behavior (authorized)", () => {
-  test("correct fake token + fixture HTML for both allowlisted sources → safe dry-run summary, zero writes claimed", async () => {
+  test("correct fake token + fixture responses for all four allowlisted sources → safe dry-run summary, zero writes claimed", async () => {
     await withEnv({ SCHEDULED_CHECKS_ENABLED: "true", CRON_SECRET: FAKE_TEST_SECRET }, async () => {
-      const restore = mockFetch(async () =>
-        new Response(FIXTURE_HTML, { status: 200, headers: { "content-type": "text/html" } })
-      );
+      const restore = mockFetch(mixedFixtureFetch());
       try {
         const res = await GET(authedRequest());
         expect(res.status).toBe(200);
@@ -207,10 +230,15 @@ test.describe("GET /api/cron/check-sources — dry-run behavior (authorized)", (
         expect(body.savedCandidates).toBe(0);
         expect(body.savedSourceChecks).toBe(0);
         expect(body.published).toBe(false);
-        expect(body.checkedSources).toBe(2); // michalowice + wkd
-        expect(body.results).toHaveLength(2);
+        expect(body.checkedSources).toBe(4);
+        expect(body.results).toHaveLength(4);
         for (const r of body.results) {
-          expect(["michalowice-komunikaty", "wkd-aktualnosci"]).toContain(r.sourceKey);
+          expect([
+            "michalowice-komunikaty",
+            "wkd-aktualnosci",
+            "wodociagi-michalowice",
+            "pruszkow-aktualnosci",
+          ]).toContain(r.sourceKey);
           expect(r.outcome).toBe("success");
           expect(r).not.toHaveProperty("title");
           expect(r).not.toHaveProperty("rawText");
@@ -223,12 +251,15 @@ test.describe("GET /api/cron/check-sources — dry-run behavior (authorized)", (
     });
   });
 
-  test("one source failing does not block the other (per-source isolation)", async () => {
+  test("one source failing does not block the others (per-source isolation)", async () => {
     await withEnv({ SCHEDULED_CHECKS_ENABLED: "true", CRON_SECRET: FAKE_TEST_SECRET }, async () => {
       const restore = mockFetch(async (input) => {
         const url = typeof input === "string" ? input : input.toString();
         if (url.includes("wkd.com.pl")) {
           throw new Error("simulated network failure for WKD only");
+        }
+        if (url.includes("wp-json")) {
+          return new Response(REST_FIXTURE_POSTS, { status: 200, headers: { "content-type": "application/json" } });
         }
         return new Response(FIXTURE_HTML, { status: 200, headers: { "content-type": "text/html" } });
       });
@@ -236,8 +267,8 @@ test.describe("GET /api/cron/check-sources — dry-run behavior (authorized)", (
         const res = await GET(authedRequest());
         expect(res.status).toBe(200);
         const body = await res.json();
-        expect(body.checkedSources).toBe(2);
-        expect(body.successfulSources).toBe(1);
+        expect(body.checkedSources).toBe(4);
+        expect(body.successfulSources).toBe(3);
         expect(body.failedSources).toBe(1);
         const wkdResult = body.results.find((r: { sourceKey: string }) => r.sourceKey === "wkd-aktualnosci");
         const michalowiceResult = body.results.find(
@@ -252,13 +283,16 @@ test.describe("GET /api/cron/check-sources — dry-run behavior (authorized)", (
     });
   });
 
+  // Scoped to a single HTML-based source (?sourceKey=) — a non-html
+  // content-type is a permanent failure mode specific to the HTML fetch
+  // path; the REST path has its own distinct malformed-body test below.
   test("a non-html content-type response is classified as fetch_error, not a crash", async () => {
     await withEnv({ SCHEDULED_CHECKS_ENABLED: "true", CRON_SECRET: FAKE_TEST_SECRET }, async () => {
       const restore = mockFetch(async () =>
         new Response("{}", { status: 200, headers: { "content-type": "application/json" } })
       );
       try {
-        const res = await GET(authedRequest());
+        const res = await GET(authedRequest("?sourceKey=michalowice-komunikaty"));
         const body = await res.json();
         expect(body.results.every((r: { outcome: string }) => r.outcome === "fetch_error")).toBe(true);
       } finally {
@@ -280,6 +314,8 @@ test.describe("GET /api/cron/check-sources — dry-run behavior (authorized)", (
     });
   });
 
+  // Scoped to a single HTML-based source — see the content-type test above
+  // for why REST-backed sources get their own dedicated test instead.
   test("empty/boilerplate page yields no_proposals, not an error", async () => {
     await withEnv({ SCHEDULED_CHECKS_ENABLED: "true", CRON_SECRET: FAKE_TEST_SECRET }, async () => {
       const restore = mockFetch(async () =>
@@ -289,10 +325,47 @@ test.describe("GET /api/cron/check-sources — dry-run behavior (authorized)", (
         })
       );
       try {
-        const res = await GET(authedRequest());
+        const res = await GET(authedRequest("?sourceKey=michalowice-komunikaty"));
         const body = await res.json();
         expect(body.results.every((r: { outcome: string }) => r.outcome === "no_proposals")).toBe(true);
         expect(body.totalProposalCount).toBe(0);
+      } finally {
+        restore();
+      }
+    });
+  });
+
+  // Sprint 173 — dedicated coverage for the REST-backed sources' dry-run
+  // path (wodociagi-michalowice/pruszkow-aktualnosci), added alongside the
+  // fix that made checkOneSource actually use their apiUrl.
+  test("a REST-backed source (wodociagi-michalowice) parses a genuine JSON response into a real proposal", async () => {
+    await withEnv({ SCHEDULED_CHECKS_ENABLED: "true", CRON_SECRET: FAKE_TEST_SECRET }, async () => {
+      const restore = mockFetch(async () =>
+        new Response(REST_FIXTURE_POSTS, { status: 200, headers: { "content-type": "application/json" } })
+      );
+      try {
+        const res = await GET(authedRequest("?sourceKey=wodociagi-michalowice"));
+        const body = await res.json();
+        expect(body.results).toHaveLength(1);
+        expect(body.results[0].sourceKey).toBe("wodociagi-michalowice");
+        expect(body.results[0].outcome).toBe("success");
+        expect(body.results[0].proposalCount).toBe(1);
+      } finally {
+        restore();
+      }
+    });
+  });
+
+  test("a REST-backed source with a malformed (non-array) JSON body fails closed as parse_error, not a crash", async () => {
+    await withEnv({ SCHEDULED_CHECKS_ENABLED: "true", CRON_SECRET: FAKE_TEST_SECRET }, async () => {
+      const restore = mockFetch(async () =>
+        new Response("{}", { status: 200, headers: { "content-type": "application/json" } })
+      );
+      try {
+        const res = await GET(authedRequest("?sourceKey=wodociagi-michalowice"));
+        const body = await res.json();
+        expect(body.results[0].outcome).toBe("parse_error");
+        expect(body.results[0].diagnostic).toBe("parse_exception");
       } finally {
         restore();
       }

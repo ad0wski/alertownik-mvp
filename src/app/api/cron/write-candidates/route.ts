@@ -22,6 +22,7 @@ import {
 } from "@/lib/databaseEnvironmentGuard";
 import { fetchAndParseProposals } from "@/lib/scheduledSourceFetch";
 import { createSupabaseScheduledWriterHistory, buildRunHistoryCloseUpdate } from "@/lib/scheduledWriterHistory";
+import { REST_PARSERS_BY_SOURCE_ID } from "@/lib/sourceParsers/pageParser";
 import type { SafeCheckSourceId } from "@/lib/sourceCheck";
 import type { RunOutcome } from "@/lib/scheduledWriterRunSafety";
 import { isOperationalNotificationRuntimeEnabled } from "@/lib/operationalNotificationRuntimeConfig";
@@ -200,7 +201,11 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       sources.map(async (source) => {
         const sourceKey = source.id as SafeCheckSourceId;
         try {
-          const fetched = await fetchAndParseProposals(source.officialUrl);
+          const fetched = await fetchAndParseProposals({
+            officialUrl: source.officialUrl,
+            apiUrl: source.apiUrl,
+            parseRestPosts: REST_PARSERS_BY_SOURCE_ID[source.id],
+          });
           if (!fetched.ok) {
             return {
               sourceKey,

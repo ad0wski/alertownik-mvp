@@ -109,9 +109,17 @@ test.describe("server-only boundary — no Client Component imports the writer m
   });
 
   test("no 'use client' file imports src/lib/scheduledWriter", () => {
+    // Sprint 173: matches only an import path ending exactly at
+    // "scheduledWriter" (the real, credentialed module) — not its safe,
+    // credential-free sibling modules (scheduledWriterRunSafety,
+    // scheduledWriterHistory, scheduledWriterNotificationInput), which a
+    // plain substring match would incorrectly flag. Those siblings contain
+    // no Supabase client, no sign-in logic, no credentials — importing
+    // e.g. FetchDiagnosticCode from scheduledWriterRunSafety in a client
+    // component (Sprint 172) is intentional and safe.
     const offenders = clientComponentFiles.filter((f) => {
       const content = readFileSync(f, "utf8");
-      return /scheduledWriter/.test(content);
+      return /["']@\/lib\/scheduledWriter["']/.test(content);
     });
     expect(offenders).toEqual([]);
   });

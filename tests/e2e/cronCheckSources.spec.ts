@@ -102,7 +102,11 @@ test.describe("resolveCronSources — allowlist only, never an arbitrary URL", (
   });
 
   test("an unknown or arbitrary sourceKey resolves to zero sources — never a fetch of anything", () => {
-    expect(resolveCronSources("pruszkow-aktualnosci")).toEqual([]); // real checklist id, but not allowlisted
+    // Sprint 173: pruszkow-aktualnosci was added to SAFE_CHECK_SOURCE_IDS
+    // in Sprint 169 — pge-planowane is a real checklist id that has never
+    // been safe-check-allowlisted (WAF-blocked, confirmed Sprint 169/170),
+    // so it stays a valid "real id, but not allowlisted" example.
+    expect(resolveCronSources("pge-planowane")).toEqual([]);
     expect(resolveCronSources("https://evil.example/page")).toEqual([]);
     expect(resolveCronSources("' OR 1=1")).toEqual([]);
   });

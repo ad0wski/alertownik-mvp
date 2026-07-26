@@ -342,6 +342,22 @@ export function parsePruszkowRestPosts(posts: WordpressRestPost[]): PageParseRes
   );
 }
 
+// Sprint 173 — single source of truth for "which WordPress-REST relevance
+// filter applies to which apiUrl-backed source", shared by both the manual
+// check route (src/app/api/sources/check/route.ts) and the scheduled fetch
+// layer (src/lib/scheduledSourceFetch.ts, src/lib/cronCheckSources.ts).
+// Previously duplicated only in the manual route (Sprint 169); the
+// scheduled path had no equivalent at all, which meant a hypothetical
+// scheduled run would try to parse Wodociągi/Pruszków's officialUrl as
+// plain HTML instead of using their REST APIs — exactly the thing those
+// sources were built not to need. Centralizing here means a future new
+// REST-backed source only needs one map updated, not two kept in sync by
+// hand. Sources without an apiUrl never look this up.
+export const REST_PARSERS_BY_SOURCE_ID: Record<string, (posts: WordpressRestPost[]) => PageParseResult> = {
+  "wodociagi-michalowice": parseWordpressRestPosts,
+  "pruszkow-aktualnosci": parsePruszkowRestPosts,
+};
+
 // Lightweight RSS/Atom autodiscovery — only looks at the page's own <head>
 // <link> tags already present in the HTML we already fetched. Never
 // fetches or parses the feed itself.

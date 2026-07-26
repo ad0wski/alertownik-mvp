@@ -6,6 +6,7 @@ import {
   buildDryRunSummary,
   checkOneSource,
 } from "@/lib/cronCheckSources";
+import { REST_PARSERS_BY_SOURCE_ID } from "@/lib/sourceParsers/pageParser";
 import type { SafeCheckSourceId } from "@/lib/sourceCheck";
 
 // Sprint 142 — Protected Cron-Compatible Dry-Run Endpoint v1.
@@ -52,7 +53,15 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const sources = resolveCronSources(sourceKeyFilter);
 
   const results = await Promise.all(
-    sources.map((source) => checkOneSource(source.id as SafeCheckSourceId, source.name, source.officialUrl))
+    sources.map((source) =>
+      checkOneSource(
+        source.id as SafeCheckSourceId,
+        source.name,
+        source.officialUrl,
+        source.apiUrl,
+        REST_PARSERS_BY_SOURCE_ID[source.id]
+      )
+    )
   );
 
   return NextResponse.json(buildDryRunSummary(results));

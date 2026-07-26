@@ -2,23 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSafeCheckSource, UNSUPPORTED_SOURCE_ERROR, type CheckProposal } from "@/lib/sourceCheck";
 import { requireAdminSession } from "@/lib/serverAuth";
 import { fetchAndParseManualCheck } from "@/lib/manualSourceCheckFetch";
-import {
-  parseWordpressRestPosts,
-  parsePruszkowRestPosts,
-  type PageParseResult,
-  type WordpressRestPost,
-} from "@/lib/sourceParsers/pageParser";
+import { REST_PARSERS_BY_SOURCE_ID } from "@/lib/sourceParsers/pageParser";
 import type { FetchDiagnosticCode } from "@/lib/scheduledWriterRunSafety";
-
-// Sprint 169 — which WordPress-REST relevance filter applies to which
-// apiUrl-backed source. Kept here (not in manualSourceCheckFetch.ts, which
-// deliberately knows nothing about specific sources) alongside the other
-// per-source wiring this route already owns (getSafeCheckSource, the
-// allowlist). Sources without an apiUrl never look this up.
-const REST_PARSERS_BY_SOURCE_ID: Record<string, (posts: WordpressRestPost[]) => PageParseResult> = {
-  "wodociagi-michalowice": parseWordpressRestPosts,
-  "pruszkow-aktualnosci": parsePruszkowRestPosts,
-};
 
 // Sprint 134 (A2) — manual Source Check API for allowlisted safe official
 // sources (Sprint 139: exactly two — Gmina Michałowice komunikaty + WKD

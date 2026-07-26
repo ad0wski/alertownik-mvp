@@ -1,6 +1,13 @@
-import { parsePageHtml } from "@/lib/sourceParsers/pageParser";
+import {
+  parsePageHtml,
+  parseWordpressRestPosts,
+  isWordpressRestPostArray,
+  type WordpressRestPost,
+  type PageParseResult,
+} from "@/lib/sourceParsers/pageParser";
 import { buildCheckProposals } from "@/lib/sourceCheck";
 import { CRON_FETCH_TIMEOUT_MS } from "@/lib/cronCheckSources";
+import { readLimitedText } from "@/lib/ssrfGuard";
 import {
   classifyFetchFailure,
   MAX_FETCH_ATTEMPTS,
@@ -15,6 +22,23 @@ import {
 // handlers and a small config allowlist — arbitrary helper exports are
 // not supported there). Behavior is otherwise unchanged from the
 // pre-Sprint-166C version of this function.
+//
+// Sprint 173 — this module previously only knew how to fetch a source's
+// officialUrl as HTML, which meant it silently could never work for
+// Wodociągi Michałowice or Pruszków aktualności (Sprints 168/169): both
+// were deliberately built to be checked via their WordPress REST API
+// instead, precisely because their rendered HTML doesn't yield real
+// candidates (Wodociągi's homepage) or is bot-blocked (Pruszków). Before
+// this sprint, a scheduled run covering those two sources would have
+// fetched the wrong thing every single time — not a hypothetical bug,
+// but a certainty, since that's exactly why they needed the REST path in
+// the first place. This mirrors src/lib/manualSourceCheckFetch.ts's own
+// apiUrl-aware dispatch (Sprint 168/169) so the scheduled path can now
+// correctly cover all four current safe-check sources, not just the
+// original two HTML-based ones — no code duplication between the two
+// modules beyond what already existed, deliberately kept separate per
+// this file's own established "isolated write-path modules" convention
+// (see write-candidates/route.ts's header comment for why).
 
 export interface FetchOutcomeFailure {
   ok: false;
@@ -27,7 +51,63 @@ export interface FetchOutcomeSuccess {
   proposals: ReturnType<typeof buildCheckProposals>;
 }
 
-async function attemptFetchAndParseProposals(
+/** Sprint 173 — accepts either a plain URL string (existing HTML-page
+ *  sources, unchanged) or a full target with an apiUrl, mirroring
+ *  ManualCheckFetchTarget in manualSourceCheckFetch.ts. `parseRestPosts`
+ *  defaults to the water-topic filter (parseWordpressRestPosts) so a
+ *  caller that only sets apiUrl without specifying a parser still gets a
+ *  reasonable default — real call sites always pass the correct one via
+ *  pageParser.REST_PARSERS_BY_SOURCE_ID. */
+export interface ScheduledFetchTarget {
+  officialUrl: string;
+  apiUrl?: string;
+  parseRestPosts?: (posts: WordpressRestPost[]) => PageParseResult;
+}
+
+const REST_FETCH_MAX_RESPONSE_BYTES = 2_000_000;
+
+async function attemptWordpressRestFetch(
+  apiUrl: string,
+  parseRestPosts: (posts: WordpressRestPost[]) => PageParseResult = parseWordpressRestPosts
+): Promise<FetchOutcomeFailure | FetchOutcomeSuccess> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), CRON_FETCH_TIMEOUT_MS);
+  try {
+    const response = await fetch(apiUrl, {
+      signal: controller.signal,
+      headers: {
+        "User-Agent": "Alertownik-Monitor/1.0 (scheduled writer)",
+        Accept: "application/json",
+      },
+    });
+    clearTimeout(timeoutId);
+    if (!response.ok) {
+      return { ok: false, outcome: "fetch_error", diagnostic: response.status >= 500 ? "http_5xx" : "http_4xx" };
+    }
+    const raw = await readLimitedText(response, REST_FETCH_MAX_RESPONSE_BYTES);
+    let json: unknown;
+    try {
+      json = JSON.parse(raw);
+    } catch {
+      return { ok: false, outcome: "fetch_error", diagnostic: "parse_exception" };
+    }
+    if (!isWordpressRestPostArray(json)) {
+      return { ok: false, outcome: "fetch_error", diagnostic: "parse_exception" };
+    }
+    const parse = parseRestPosts(json);
+    return { ok: true, proposals: buildCheckProposals(parse) };
+  } catch (err) {
+    clearTimeout(timeoutId);
+    const isTimeout = err instanceof Error && err.name === "AbortError";
+    return {
+      ok: false,
+      outcome: isTimeout ? "timeout" : "fetch_error",
+      diagnostic: isTimeout ? "timeout_10s" : "network_error",
+    };
+  }
+}
+
+async function attemptFetchAndParseProposalsHtml(
   officialUrl: string
 ): Promise<FetchOutcomeFailure | FetchOutcomeSuccess> {
   const controller = new AbortController();
@@ -63,6 +143,14 @@ async function attemptFetchAndParseProposals(
   }
 }
 
+async function attemptFetchAndParseProposals(
+  target: ScheduledFetchTarget
+): Promise<FetchOutcomeFailure | FetchOutcomeSuccess> {
+  return target.apiUrl
+    ? attemptWordpressRestFetch(target.apiUrl, target.parseRestPosts)
+    : attemptFetchAndParseProposalsHtml(target.officialUrl);
+}
+
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -78,10 +166,11 @@ function delay(ms: number): Promise<void> {
  *  become a retry loop. `delayMs` is overridable only for tests — the
  *  real route always uses the default RETRY_DELAY_MS. */
 export async function fetchAndParseProposals(
-  officialUrl: string,
+  target: string | ScheduledFetchTarget,
   delayMs: number = RETRY_DELAY_MS
 ): Promise<FetchOutcomeFailure | FetchOutcomeSuccess> {
-  let lastResult = await attemptFetchAndParseProposals(officialUrl);
+  const resolved: ScheduledFetchTarget = typeof target === "string" ? { officialUrl: target } : target;
+  let lastResult = await attemptFetchAndParseProposals(resolved);
   let attempts = 1;
   while (
     !lastResult.ok &&
@@ -89,7 +178,7 @@ export async function fetchAndParseProposals(
     attempts < MAX_FETCH_ATTEMPTS
   ) {
     await delay(delayMs);
-    lastResult = await attemptFetchAndParseProposals(officialUrl);
+    lastResult = await attemptFetchAndParseProposals(resolved);
     attempts++;
   }
   return lastResult;
