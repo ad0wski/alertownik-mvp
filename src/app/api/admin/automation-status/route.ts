@@ -9,6 +9,7 @@ import {
 } from "@/lib/scheduledWriter";
 import { getConfiguredDatabaseEnvironmentTag } from "@/lib/databaseEnvironmentGuard";
 import { isEmailAlertsEnabled } from "@/lib/emailAlertConfig";
+import { isOperationalNotificationRuntimeEnabled } from "@/lib/operationalNotificationRuntimeConfig";
 import { buildAutomationStatus, type AutomationStatusSnapshot } from "@/lib/automationStatus";
 import {
   buildRunHistorySnapshot,
@@ -102,6 +103,13 @@ export async function GET(req: NextRequest): Promise<NextResponse<AutomationStat
     maxCandidatesPerRun: getMaxCandidatesPerInvocation(),
     fingerprintProtectionEnabled: isContentFingerprintEnabled(),
     runHistory,
+    // Sprint 166N-A — closes the gap the Sprint 166M-B audit found: this
+    // panel had no field at all for OPERATIONAL_NOTIFICATION_RUNTIME_ENABLED,
+    // even though the flag was already live code. Boolean presence only,
+    // same convention as every other flag below.
+    operationalNotificationRuntimeEnabled: isOperationalNotificationRuntimeEnabled(
+      process.env.OPERATIONAL_NOTIFICATION_RUNTIME_ENABLED
+    ),
     // Sprint 166E-1 — presence booleans only, mirroring every other secret
     // check in this route (CRON_SECRET, writer credentials above): never
     // the API key, from, or to values themselves.

@@ -215,7 +215,7 @@ test.describe("§E.9 — read-only/public routes are untouched by the new guard"
     return files;
   }
 
-  test("only the write-candidates route (or a specifically reviewed read-only consumer) imports databaseEnvironmentGuard, and no importer other than write-candidates ever calls the actual gate or constructs the writer", () => {
+  test("only write-candidates and specifically reviewed consumers import databaseEnvironmentGuard; every reviewed consumer's use of the actual gate and the writer is exactly what it's reviewed for", () => {
     // Matches an actual import statement only (`from "@/lib/databaseEnvironmentGuard"`),
     // never a prose mention of the module's name in a comment elsewhere.
     const importPattern = /from\s+["']@\/lib\/databaseEnvironmentGuard["']/;
@@ -226,20 +226,35 @@ test.describe("§E.9 — read-only/public routes are untouched by the new guard"
     // getConfiguredDatabaseEnvironmentTag() helper, for a read-only,
     // admin-session-gated run-history display. It never calls
     // checkDatabaseEnvironmentGuard() (the actual write gate) and never
-    // constructs the scheduled writer — both checked below and already
-    // covered independently by the §E.10 tests.
+    // constructs the scheduled writer.
     const knownReadOnlyConsumers = [path.join(srcDir, "app", "api", "admin", "automation-status", "route.ts")];
+    // Sprint 166N-B — /api/admin/operational-notification-ledger-test
+    // legitimately calls the REAL gate (checkDatabaseEnvironmentGuard),
+    // mirroring write-candidates' own Layer 0, because it too signs in as
+    // the scheduled writer (via signInScheduledWriter, checked below) to
+    // reach the ledger RPCs' automation_identities check. It never calls
+    // createSupabaseScheduledWriter — it never writes a candidate or
+    // source_check, only a ledger claim/finish — so it stays out of the
+    // §E.10 createSupabaseScheduledWriter caller list untouched.
+    const knownFullGateConsumers = [
+      path.join(srcDir, "app", "api", "admin", "operational-notification-ledger-test", "route.ts"),
+    ];
     const importers = allFiles.filter((f) => {
       if (f === writeCandidatesRoute) return false;
       if (f.endsWith(path.join("lib", "databaseEnvironmentGuard.ts"))) return false;
       const content = readFileSync(f, "utf8");
       return importPattern.test(content);
     });
-    expect(importers).toEqual(knownReadOnlyConsumers);
+    expect(importers.slice().sort()).toEqual([...knownReadOnlyConsumers, ...knownFullGateConsumers].sort());
 
-    for (const importer of importers) {
+    for (const importer of knownReadOnlyConsumers) {
       const content = readFileSync(importer, "utf8");
       expect(content).not.toMatch(/checkDatabaseEnvironmentGuard\s*\(/);
+      expect(content).not.toMatch(/createSupabaseScheduledWriter\s*\(/);
+    }
+    for (const importer of knownFullGateConsumers) {
+      const content = readFileSync(importer, "utf8");
+      expect(content).toMatch(/checkDatabaseEnvironmentGuard\s*\(/);
       expect(content).not.toMatch(/createSupabaseScheduledWriter\s*\(/);
     }
   });

@@ -40,6 +40,15 @@ export interface AutomationStatusInput {
    *  route builds this from process.env presence booleans only — never
    *  the secret values themselves. */
   emailAlertConfig?: EmailAlertConfigStatusInput;
+  /** Sprint 166N-A — same optionality convention as runHistory/emailAlertConfig
+   *  above: omitting it yields the honest "disabled" default. Reflects
+   *  OPERATIONAL_NOTIFICATION_RUNTIME_ENABLED (operationalNotificationRuntimeConfig.ts)
+   *  — the single flag gating whether the writer ever attempts ledger
+   *  claim/finish orchestration at all. Deliberately separate from
+   *  emailAlertConfig.enabled (OPERATIONAL_EMAIL_ALERTS_ENABLED): a run can
+   *  claim/finish a ledger event with this true while email stays fully
+   *  noop, exactly as Sprint 166G-1 designed it. */
+  operationalNotificationRuntimeEnabled?: boolean;
 }
 
 export interface CanarySourceInfo {
@@ -64,6 +73,7 @@ export interface AutomationStatusSnapshot {
   fingerprintProtectionEnabled: boolean;
   runHistory: RunHistorySnapshot;
   emailAlertConfig: EmailAlertConfigStatus;
+  operationalNotificationRuntimeEnabled: boolean;
 }
 
 export function buildAutomationStatus(input: AutomationStatusInput): AutomationStatusSnapshot {
@@ -87,6 +97,7 @@ export function buildAutomationStatus(input: AutomationStatusInput): AutomationS
     maxCandidatesPerRun: input.maxCandidatesPerRun,
     fingerprintProtectionEnabled: input.fingerprintProtectionEnabled,
     runHistory: input.runHistory ?? notConfiguredRunHistorySnapshot(),
+    operationalNotificationRuntimeEnabled: input.operationalNotificationRuntimeEnabled ?? false,
     emailAlertConfig: buildEmailAlertConfigStatus(
       input.emailAlertConfig ?? {
         enabled: false,

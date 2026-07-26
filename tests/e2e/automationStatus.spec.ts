@@ -197,6 +197,38 @@ test.describe("buildAutomationStatus — pure snapshot builder", () => {
   });
 });
 
+// ── Sprint 166N-A — operational notification runtime visibility ───────────
+
+test.describe("buildAutomationStatus — operationalNotificationRuntimeEnabled", () => {
+  test("omitted from input → defaults to false, never a guess", () => {
+    const status = buildAutomationStatus({
+      checksEnabled: false,
+      writesEnabled: false,
+      cronSecretConfigured: false,
+      writerCredentialsConfigured: false,
+      allowedWriteSourceIds: [],
+      maxCandidatesPerRun: 1,
+      fingerprintProtectionEnabled: false,
+    });
+    expect(status.operationalNotificationRuntimeEnabled).toBe(false);
+  });
+
+  test("true in input → true in output, independent of emailAlertConfig.enabled", () => {
+    const status = buildAutomationStatus({
+      checksEnabled: false,
+      writesEnabled: false,
+      cronSecretConfigured: false,
+      writerCredentialsConfigured: false,
+      allowedWriteSourceIds: [],
+      maxCandidatesPerRun: 1,
+      fingerprintProtectionEnabled: false,
+      operationalNotificationRuntimeEnabled: true,
+    });
+    expect(status.operationalNotificationRuntimeEnabled).toBe(true);
+    expect(status.emailAlertConfig.enabled).toBe(false);
+  });
+});
+
 // ── Route auth gate ───────────────────────────────────────────────────────
 
 const FAKE_URL = "https://fake-test-project.supabase.co";
@@ -409,6 +441,36 @@ test.describe("GET /api/admin/automation-status — admin session, real environm
       }
     );
   });
+
+  test("Sprint 166N-A — OPERATIONAL_NOTIFICATION_RUNTIME_ENABLED absent → reported false", async () => {
+    await withEnv({ ...SUPABASE_ENV, OPERATIONAL_NOTIFICATION_RUNTIME_ENABLED: undefined }, async () => {
+      const restore = mockFetch(mockAuthedAdmin());
+      try {
+        const res = await automationStatusGet(authedRequest("a-genuinely-valid-admin-token"));
+        const body = await res.json();
+        expect(body.status.operationalNotificationRuntimeEnabled).toBe(false);
+      } finally {
+        restore();
+      }
+    });
+  });
+
+  test("Sprint 166N-A — OPERATIONAL_NOTIFICATION_RUNTIME_ENABLED=true → reported true, independent of email alerts staying disabled", async () => {
+    await withEnv(
+      { ...SUPABASE_ENV, OPERATIONAL_NOTIFICATION_RUNTIME_ENABLED: "true" },
+      async () => {
+        const restore = mockFetch(mockAuthedAdmin());
+        try {
+          const res = await automationStatusGet(authedRequest("a-genuinely-valid-admin-token"));
+          const body = await res.json();
+          expect(body.status.operationalNotificationRuntimeEnabled).toBe(true);
+          expect(body.status.emailAlertConfig.enabled).toBe(false);
+        } finally {
+          restore();
+        }
+      }
+    );
+  });
 });
 
 // ── Panel copy anti-drift ────────────────────────────────────────────────
@@ -456,6 +518,15 @@ test.describe("AutomationStatusPanel.tsx — structural audit", () => {
     expect(panelSource).toMatch(/onClick=\{runOperationalEmailTest\}/);
     expect(panelSource).toMatch(/confirm\(OPERATIONAL_EMAIL_TEST_CONFIRM_MESSAGE\)/);
     expect(panelSource).toMatch(/isPreview\s*&&/);
+  });
+
+  test("Sprint 166N-A — renders the operational notification runtime badge, purely informational, no new onClick", () => {
+    expect(panelSource).toMatch(/operationalNotificationRuntimeEnabled/);
+    expect(panelSource).toMatch(/Runtime ledgera powiadomień operacyjnych/);
+    // Still exactly one onClick in the whole file — this badge introduces
+    // no control, matching the existing pin one test above.
+    const onClickMatches = panelSource.match(/onClick/g) ?? [];
+    expect(onClickMatches.length).toBe(1);
   });
 
   test("performs a GET fetch to its own status endpoint, and the only POST is the guarded, confirm()-gated Preview email test — never PUT/DELETE", () => {

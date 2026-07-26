@@ -274,6 +274,23 @@ export function AutomationStatusPanel({ activityRows }: { activityRows: Schedule
               </p>
             </div>
 
+            {/* Operational notification ledger runtime (Sprint 166N-A) —
+                reads status.operationalNotificationRuntimeEnabled, built
+                server-side from OPERATIONAL_NOTIFICATION_RUNTIME_ENABLED
+                presence only. Purely informational, no control — mirrors
+                every other badge in this panel. Deliberately separate from
+                the email section below: this flag governs whether the
+                writer ever attempts a ledger claim/finish cycle at all,
+                independent of whether email sending is also enabled. */}
+            <div className="pt-2 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center gap-2">
+              <span className="text-xs text-slate-500 dark:text-slate-400">Runtime ledgera powiadomień operacyjnych:</span>
+              <StatusBadge
+                active={status.operationalNotificationRuntimeEnabled}
+                activeLabel="aktywny"
+                inactiveLabel="wyłączony"
+              />
+            </div>
+
             {/* Email alerting (Sprint 166E-1) — reads status.emailAlertConfig,
                 built server-side from presence-only booleans
                 (OPERATIONAL_EMAIL_ALERTS_ENABLED / RESEND_API_KEY /
