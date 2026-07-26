@@ -1,16 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  parsePageHtml,
-  describePageFetchFailure,
-} from "@/lib/sourceParsers/pageParser";
-import {
-  getSafeCheckSource,
-  buildCheckProposals,
-  UNSUPPORTED_SOURCE_ERROR,
-  type CheckProposal,
-} from "@/lib/sourceCheck";
+import { getSafeCheckSource, UNSUPPORTED_SOURCE_ERROR, type CheckProposal } from "@/lib/sourceCheck";
 import { requireAdminSession } from "@/lib/serverAuth";
-import { readLimitedText } from "@/lib/ssrfGuard";
+import { fetchAndParseManualCheck } from "@/lib/manualSourceCheckFetch";
 
 // Sprint 134 (A2) — manual Source Check API for allowlisted safe official
 // sources (Sprint 139: exactly two — Gmina Michałowice komunikaty + WKD
@@ -25,6 +16,13 @@ import { readLimitedText } from "@/lib/ssrfGuard";
 // existing admin-only RLS — zero new secrets, zero service_role (see
 // Obsidian: Manual Candidate Create API Design § Autoryzacja). No cron
 // calls this; the only trigger is the admin's button on /admin/sources.
+//
+// Sprint 167 — the actual fetch/parse/retry logic now lives in
+// fetchAndParseManualCheck (src/lib/manualSourceCheckFetch.ts), which
+// applies the same bounded-retry policy (one retry, transient failures
+// only) the scheduled writer's own fetchAndParseProposals already uses —
+// see that module's header for the full rationale. Every admin-facing
+// message this route returns is unchanged from before this sprint.
 
 export type SourceCheckApiResponse =
   | {
@@ -35,8 +33,6 @@ export type SourceCheckApiResponse =
       proposals: CheckProposal[];
     }
   | { ok: false; error: string };
-
-const MAX_RESPONSE_BYTES = 2_000_000;
 
 export async function POST(req: NextRequest): Promise<NextResponse<SourceCheckApiResponse>> {
   const auth = await requireAdminSession<SourceCheckApiResponse>(req);
@@ -58,55 +54,10 @@ export async function POST(req: NextRequest): Promise<NextResponse<SourceCheckAp
     );
   }
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10_000);
-
-  let html: string;
-  try {
-    const response = await fetch(source.officialUrl, {
-      signal: controller.signal,
-      headers: {
-        "User-Agent": "Alertownik-Monitor/1.0 (admin source check)",
-        Accept: "text/html,application/xhtml+xml,*/*;q=0.8",
-      },
-    });
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      return NextResponse.json({
-        ok: false,
-        error: describePageFetchFailure(response.status),
-      });
-    }
-
-    const contentType = response.headers.get("content-type") ?? "";
-    if (!contentType.includes("html")) {
-      const typeName = contentType.split(";")[0].trim() || "nieznany";
-      return NextResponse.json({
-        ok: false,
-        error: `Źródło zwróciło typ ${typeName} zamiast HTML. Sprawdź stronę ręcznie w przeglądarce.`,
-      });
-    }
-
-    const raw = await readLimitedText(response, MAX_RESPONSE_BYTES);
-    html = raw.slice(0, 500_000);
-  } catch (err) {
-    clearTimeout(timeoutId);
-    if (err instanceof Error && err.name === "AbortError") {
-      return NextResponse.json({
-        ok: false,
-        error: "Źródło nie odpowiada (timeout 10 s). Spróbuj później albo sprawdź stronę ręcznie.",
-      });
-    }
-    console.error("[sources/check] fetch error:", err);
-    return NextResponse.json({
-      ok: false,
-      error: "Nie udało się pobrać strony źródła. Spróbuj później albo sprawdź stronę ręcznie.",
-    });
+  const result = await fetchAndParseManualCheck(source.officialUrl);
+  if (!result.ok) {
+    return NextResponse.json({ ok: false, error: result.message });
   }
-
-  const parse = parsePageHtml(html, source.officialUrl);
-  const proposals = buildCheckProposals(parse);
 
   return NextResponse.json({
     ok: true,
@@ -116,8 +67,8 @@ export async function POST(req: NextRequest): Promise<NextResponse<SourceCheckAp
       url: source.officialUrl,
       category: source.category,
     },
-    pageTitle: parse.title,
+    pageTitle: result.pageTitle,
     fetchedAt: new Date().toISOString(),
-    proposals,
+    proposals: result.proposals,
   });
 }
