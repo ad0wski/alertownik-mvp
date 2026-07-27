@@ -162,6 +162,71 @@ export function classifyCandidateAgainstExisting(
   return "new";
 }
 
+// ── Cross-table dedup (Sprint 177D) ──────────────────────────────────────────
+//
+// Sprints 175D and 177C independently found the same gap: the classifier
+// above only ever sees OTHER candidates (from findExistingCandidateTexts,
+// itself scoped to one source_key) — an already-PUBLISHED alert is never
+// part of the comparison pool at all, so a source re-publishing (or a
+// different source re-describing) the same official notice could be
+// proposed again as if it were brand new. This section closes that gap
+// for the one alert scope the scheduled-writer identity can actually read
+// without a schema/RLS change (see findPublishedAlertComparisons below) —
+// draft and archived alerts remain genuinely out of reach until a future,
+// separately-approved RLS migration grants automation_identities members
+// read access to them; that is a known, documented limit of this fix, not
+// an oversight.
+//
+// Deliberately does NOT introduce a new similarity threshold or a
+// same-road/same-town heuristic: doing so risks exactly the false-positive
+// this project has explicitly ruled out (a new, unrelated phase of
+// roadworks on the same street must still be allowed through). Two
+// independent, conservative signals only:
+//   1. Exact-URL match against a published alert's own source_url — the
+//      strongest possible signal (the identical article, re-scraped), and
+//   2. The EXISTING word-overlap thresholds (DUPLICATE_CONFIDENCE_THRESHOLD /
+//      AMBIGUOUS_SIMILARITY_THRESHOLD), simply given a wider pool of
+//      existing texts to compare against — never a new threshold value.
+
+export interface DedupComparisonItem {
+  text: string;
+  url?: string | null;
+}
+
+/** Trim + strip exactly one trailing slash, nothing else — never touches
+ *  scheme, host, path segments, or query string in any way that could
+ *  cause two genuinely different articles to compare equal. Matches the
+ *  minimal, conservative normalization this sprint's brief calls for. */
+function normalizeUrlForCompare(url: string): string {
+  const trimmed = url.trim();
+  return trimmed.endsWith("/") ? trimmed.slice(0, -1) : trimmed;
+}
+
+/** Given a proposal (its raw text and, when the parser found one, its
+ *  direct permalink) and the merged pool of existing comparison items
+ *  (other candidates for this source + readable published alerts),
+ *  decides new / duplicate / ambiguous. An exact URL match against any
+ *  existing item is treated as a confident duplicate regardless of text
+ *  drift (SAME article, re-scraped or re-worded); otherwise falls back to
+ *  the existing, unmodified classifyCandidateAgainstExisting() over the
+ *  merged text pool — same thresholds, same algorithm, wider input. */
+export function classifyProposalAgainstExisting(
+  proposal: { text: string; url?: string },
+  existingItems: DedupComparisonItem[]
+): DuplicateClassification {
+  if (proposal.url) {
+    const normalizedProposalUrl = normalizeUrlForCompare(proposal.url);
+    const urlMatch = existingItems.some(
+      (item) => item.url && normalizeUrlForCompare(item.url) === normalizedProposalUrl
+    );
+    if (urlMatch) return "duplicate";
+  }
+  return classifyCandidateAgainstExisting(
+    proposal.text,
+    existingItems.map((item) => item.text)
+  );
+}
+
 // ── Insert payload builders ──────────────────────────────────────────────────
 // These functions are the actual safety mechanism for the sensitive
 // candidate columns: none of the RLS-constrained fields (status,
@@ -392,6 +457,13 @@ export type InsertPendingCandidateResult =
 
 export interface ScheduledSourceWriter {
   findExistingCandidateTexts(sourceKey: string, registrySourceId: string | null): Promise<string[]>;
+  /** Sprint 177D — optional so every existing hand-written fake writer in
+   *  the test suite keeps compiling and passing unmodified: when a fake
+   *  doesn't implement it, writeCandidatesForSource treats the result as
+   *  "no published alerts available for comparison" (empty list), the
+   *  exact same behavior as before this method existed. Real
+   *  (createSupabaseScheduledWriter) call sites always implement it. */
+  findPublishedAlertComparisons?(): Promise<DedupComparisonItem[]>;
   insertPendingCandidate(payload: ReturnType<typeof buildPendingCandidateInsert>): Promise<InsertPendingCandidateResult>;
   insertSourceCheck(payload: ReturnType<typeof buildAutomatedSourceCheckInsert>): Promise<{ ok: boolean }>;
 }
@@ -406,6 +478,39 @@ interface CandidateTextRow {
   title?: string;
   excerpt?: string;
   raw_text?: string;
+}
+
+interface PublishedAlertRow {
+  title?: string;
+  change?: string;
+  source_url?: string;
+}
+
+/** Bounds the published-alerts comparison pool the same way
+ *  findExistingCandidateTexts already bounds its own query (limit 50) —
+ *  a single, capped read per source per invocation, never unbounded
+ *  history, never one query per proposal. */
+const PUBLISHED_ALERT_COMPARISON_LIMIT = 200;
+
+/** A fresh, unauthenticated (anon-key) client — deliberately NOT the
+ *  signed-in writer session passed into createSupabaseScheduledWriter.
+ *  The writer's own authenticated session has zero RLS access to
+ *  `alerts` (Sprint 146/166H: automation_identities membership was
+ *  never wired into any `alerts` policy, by design). Reading published
+ *  alerts anonymously instead grants nothing new: it is the exact same
+ *  "Public can read published alerts" policy (status='published', role
+ *  anon) any unauthenticated visitor to the public site already relies
+ *  on — see src/lib/supabaseClient.ts's own anon client for the
+ *  identical, already-proven-safe construction pattern. Draft and
+ *  archived alerts are NOT reachable this way (both require the same
+ *  admin-membership check `alerts`'s other policies already use) — a
+ *  known, documented scope limit of this fix, not an oversight; see
+ *  docs/SPRINT_177_ALERT_CROSS_TABLE_DEDUP_HARDENING_V1.md. */
+function createAnonAlertsReaderClient(): SupabaseClient | null {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
 
 /** The only real (Supabase-backed) implementation of ScheduledSourceWriter.
@@ -451,6 +556,22 @@ export function createSupabaseScheduledWriter(client: SupabaseClient): Scheduled
     async insertSourceCheck(payload) {
       const { error } = await client.from("source_checks").insert(payload);
       return { ok: !error };
+    },
+    async findPublishedAlertComparisons() {
+      const reader = createAnonAlertsReaderClient();
+      if (!reader) return [];
+      const { data } = await reader
+        .from("alerts")
+        .select("title, change, source_url")
+        .eq("status", "published")
+        .order("created_at", { ascending: false })
+        .limit(PUBLISHED_ALERT_COMPARISON_LIMIT);
+      return ((data as PublishedAlertRow[] | null) ?? [])
+        .map((row) => ({
+          text: [row.title, row.change].filter(Boolean).join(" ").trim(),
+          url: row.source_url || null,
+        }))
+        .filter((item) => item.text.length > 0);
     },
   };
 }
@@ -526,6 +647,23 @@ export async function writeCandidatesForSource(
   }
 
   const existingTexts = await writer.findExistingCandidateTexts(input.sourceKey, input.registrySourceId);
+  // Sprint 177D — one bounded read per source per invocation (never per
+  // proposal), same call-once shape as findExistingCandidateTexts above.
+  // A missing method (older/test fakes) or a failed read degrades to "no
+  // published alerts available" — never breaks candidate creation, per
+  // this sprint's own requirement.
+  let publishedAlerts: DedupComparisonItem[] = [];
+  if (writer.findPublishedAlertComparisons) {
+    try {
+      publishedAlerts = await writer.findPublishedAlertComparisons();
+    } catch {
+      publishedAlerts = [];
+    }
+  }
+  const existingItems: DedupComparisonItem[] = [
+    ...existingTexts.map((text) => ({ text })),
+    ...publishedAlerts,
+  ];
 
   let candidatesInserted = 0;
   let duplicatesSkipped = 0;
@@ -534,7 +672,7 @@ export async function writeCandidatesForSource(
   let duplicatesPreventedByDatabase = 0;
   for (const proposal of input.proposals) {
     const text = proposal.rawText || proposal.excerpt || proposal.title;
-    const classification = classifyCandidateAgainstExisting(text, existingTexts);
+    const classification = classifyProposalAgainstExisting({ text, url: proposal.url }, existingItems);
 
     if (classification === "duplicate") {
       duplicatesSkipped++;
@@ -571,7 +709,7 @@ export async function writeCandidatesForSource(
     );
     if (result.ok) {
       candidatesInserted++;
-      existingTexts.push(text);
+      existingItems.push({ text, url: proposal.url });
     } else if (result.reason === "duplicate_prevented_by_database") {
       // A genuine race loss: our in-memory check said "new" (it could not
       // see the other invocation's not-yet-committed row), but the
