@@ -310,7 +310,7 @@ export function AlertList() {
               {!prefsSet ? (
                 // State 1 — nothing saved yet.
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
                     Ustaw swoją okolicę, aby widzieć tylko alerty, które mogą Cię dotyczyć.
                   </p>
                   <button
@@ -388,8 +388,8 @@ export function AlertList() {
           {/* ── "Co sprawdzić teraz" status (Sprint 96, +freshness Sprint 97) ─ */}
           {!loading && (
             <div className={`flex flex-col gap-2 ${prefsReady ? "pt-2 border-t border-slate-200 dark:border-slate-800" : ""}`}>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-sm text-slate-600 dark:text-slate-400">
+              <div className="flex flex-nowrap items-center justify-between gap-2">
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 truncate min-w-0">
                   <span className="font-semibold text-slate-800 dark:text-slate-100">
                     {liveAlertsForMe.length}
                   </span>{" "}
@@ -398,13 +398,14 @@ export function AlertList() {
                 </p>
                 <Link
                   href="/odpady"
-                  className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline shrink-0"
+                  className="text-xs sm:text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline shrink-0"
                 >
-                  Sprawdź najbliższy odbiór odpadów →
+                  <span className="sm:hidden">Odbiór odpadów →</span>
+                  <span className="hidden sm:inline">Sprawdź najbliższy odbiór odpadów →</span>
                 </Link>
               </div>
               {recentlyTouched.length > 0 && (
-                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                <p className="text-xs text-slate-500 dark:text-slate-400 truncate" title={`Nowe albo zmienione w tym tygodniu: ${recentlyTouched.map((a) => a.title).join(", ")}`}>
                   Nowe albo zmienione w tym tygodniu:{" "}
                   {recentlyTouched.slice(0, 2).map((a, i) => (
                     <span key={a.id}>
