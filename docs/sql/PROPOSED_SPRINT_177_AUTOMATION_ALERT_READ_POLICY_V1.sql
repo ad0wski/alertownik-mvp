@@ -1,9 +1,47 @@
 -- ============================================================================
--- PROPOSED MIGRATION — DO NOT RUN WITHOUT EXPLICIT APPROVAL
+-- ALREADY EXECUTED ON PRODUCTION — SEE CORRECTIVE HOTFIX, DO NOT RE-RUN
+-- ============================================================================
+-- Sprint 177F-E POST-INCIDENT NOTE (2026-07-27): the CREATE POLICY
+-- statement below was executed on Production exactly once, manually, in
+-- Sprint 177F, EXACTLY AS WRITTEN in this file at that time — i.e.
+-- WITHOUT a `to authenticated` clause. That omission caused a real,
+-- confirmed Production incident: because the policy had no role scope it
+-- applied to `public` (every role, including anon), and evaluating its
+-- automation_identities EXISTS clause for anon requests requires
+-- table-level privilege anon deliberately does not have on
+-- automation_identities — so every anonymous read of public.alerts
+-- (including the public homepage) began failing with `42501 permission
+-- denied for table automation_identities`. This was NOT a hypothetical;
+-- it was reproduced live via browser console, a raw anon REST call
+-- returning HTTP 401, and a pg_policies audit confirming roles={public}.
+--
+-- This file has since been edited (see the `to authenticated` clause now
+-- present below) so that its text reflects what SHOULD have been run.
+-- That edit is retroactive and cosmetic only — it does NOT change
+-- anything on Production by itself. This file is not re-run. The actual
+-- fix that must be applied to Production is the separate corrective
+-- migration:
+--   docs/sql/CORRECTIVE_SPRINT_177_SCHEDULED_WRITER_POLICY_ROLE_SCOPE_V1.sql
+-- which drops and recreates the live policy scoped `to authenticated`,
+-- along with three other structurally identical pre-existing policies
+-- found to share the same gap. Do not re-run this file on Production —
+-- it would be redundant (the policy already exists) and does not, by
+-- itself, correct the role-scope defect; only the corrective hotfix file
+-- above does that.
+-- ============================================================================
+
+
+-- ============================================================================
+-- HISTORICAL PROPOSAL TEXT (Sprint 177E) — ALREADY EXECUTED, SEE NOTE ABOVE
 -- ============================================================================
 -- Sprint 177E — Automation Alert Read Policy v1.
 --
--- This is a PROPOSAL only. It has NOT been executed. It is NOT placed in
+-- NOTE: despite the wording below (written before this file was executed
+-- on Production, in Sprint 177F), this proposal HAS since been run —
+-- see the post-incident note at the top of this file. It is left largely
+-- intact for historical accuracy: this is what was reviewed and approved
+-- at the time, aside from the retroactive `to authenticated` addition to
+-- the CREATE POLICY statement itself and this note. It is NOT placed in
 -- any auto-applied Supabase migrations directory (this repo has none —
 -- every schema/RLS change lives in docs/sql/*.sql as a reviewed artifact,
 -- run manually by Adam in the Supabase SQL Editor, per project
@@ -88,10 +126,19 @@ begin;
 -- of them is dropped, replaced, or altered by this file.
 -- ============================================================================
 
+-- CORRECTED (Sprint 177F-E, retroactive): the version actually executed
+-- on Production in Sprint 177F had no `to authenticated` clause here —
+-- that omission is the confirmed cause of the anon-read incident
+-- described in the note at the top of this file. `to authenticated` is
+-- added below to reflect what should have been run; this file itself is
+-- not re-run — docs/sql/CORRECTIVE_SPRINT_177_SCHEDULED_WRITER_POLICY_
+-- ROLE_SCOPE_V1.sql is the actual fix applied to Production.
+
 drop policy if exists "Scheduled writer can select alerts for deduplication" on public.alerts;
 
 create policy "Scheduled writer can select alerts for deduplication"
   on public.alerts for select
+  to authenticated
   using (
     exists (
       select 1 from public.automation_identities
