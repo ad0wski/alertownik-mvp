@@ -1,5 +1,35 @@
 -- ============================================================================
--- PROPOSED MIGRATION — DO NOT RUN WITHOUT EXPLICIT APPROVAL
+-- DO NOT APPLY — ALREADY EXECUTED, HISTORICAL RECORD ONLY (Sprint 178A note)
+-- ============================================================================
+-- Sprint 178A audit (2026-07-27) found this file's header below still
+-- claims "has NOT been executed" — that is stale and incorrect. This
+-- exact file WAS executed on Production (it is the origin of the four
+-- "Scheduled writer can ..." policies on source_checks/
+-- source_notice_candidates). The CREATE POLICY statements below have NO
+-- `to authenticated` clause, which defaults their scope to `public` —
+-- every role, including anon. That exact gap was later confirmed to
+-- cause a real Production incident when a structurally identical policy
+-- was added to `alerts` in Sprint 177F (see
+-- docs/SPRINT_177_RLS_AND_MOBILE_CLOSEOUT_V1.md): any table that both (a)
+-- has one of these unscoped policies and (b) is also readable by anon for
+-- an unrelated reason will fail anon reads with `42501 permission denied
+-- for table automation_identities`. `source_checks`/
+-- `source_notice_candidates` happen not to be anon-readable today, so the
+-- live policies these statements created have NOT caused a public-facing
+-- incident — but the corrective hotfix (docs/sql/CORRECTIVE_SPRINT_177_
+-- SCHEDULED_WRITER_POLICY_ROLE_SCOPE_V1.sql) already re-scoped the live
+-- versions of these same four policies to `to authenticated` on
+-- Production. This file's own text was NOT edited to match (preserved
+-- exactly as originally written/approved, for historical accuracy) — do
+-- not use it as a reference for the current live policy shape, and do
+-- NOT re-run it: doing so would recreate these policies without the
+-- `to authenticated` scope, reintroducing the exact defect the Sprint
+-- 177F corrective hotfix already fixed.
+-- ============================================================================
+
+
+-- ============================================================================
+-- HISTORICAL PROPOSAL TEXT (Sprint 145) — SEE DO-NOT-APPLY NOTE ABOVE
 -- ============================================================================
 -- Sprint 145 — Least-Privilege RLS Migration Package v1.
 --
