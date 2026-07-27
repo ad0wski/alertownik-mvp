@@ -1,7 +1,11 @@
 # Sprint 174 — Controlled Activation Execution (Day 7)
 
-**Status: executed. One controlled Production write occurred, was verified, and
-the write kill switch was returned to its resting (off) state. This document
+**Status: CLOSED — full success. One controlled Production write occurred,
+its single resulting candidate was manually verified against the live
+official source, approved, converted to a draft, completed with the missing
+fields, saved, and published as the first real alert produced end-to-end
+through the scheduled-writer pipeline. The write kill switch was returned to
+its resting (off) state and confirmed via a dedicated redeploy. This document
 records what actually happened, not a plan — see
 `docs/SPRINT_173_ACTIVATION_CHECKPOINT_V1.md` for the pre-approved plan this
 execution followed.**
@@ -151,19 +155,179 @@ Both this sprint's activation and rollback needed their own redeploy step;
 treat this as a hard requirement, not an optional "near-instant propagation"
 convenience, for any future flag flip on this project.
 
-## 7. Outstanding item for Adam
+## 7. Candidate outcome (superseded by § 9 — kept for the historical record)
 
 Candidate `72a01ba0-8549-456d-8e72-102bbca1273a`
-(`michalowice-komunikaty`, `status=pending`) is waiting for manual review in
-`/admin/queue` — approve, reject, or convert to draft. No automated path can
-act on it further; `SCHEDULED_WRITES_ENABLED` is off again.
+(`michalowice-komunikaty`) was left `pending`, awaiting manual review in
+`/admin/queue`, at the point this section was first written. § 9 documents
+its full review, approval, and conversion to a published alert later the
+same day.
 
-## 8. What this sprint did NOT do
+## 8. What §§ 1–7 of this sprint did NOT do
 
-No SQL other than read-only `SELECT`s was executed. No RPC was called. No
-schema or RLS change was made. No email or Resend send occurred
-(`OPERATIONAL_EMAIL_ALERTS_ENABLED` stayed off throughout). No alert was
-created or published. No merge to `main`. No branch deleted. No
-`SCHEDULED_CHECKS_ENABLED`, `CRON_SECRET`, or
-`SCHEDULER_WRITER_ALLOWED_SOURCE_IDS` change. No second `write-candidates`,
-`check-sources`, or manual source-check request was sent.
+Up through the rollback (§§ 1–4), no SQL other than read-only `SELECT`s was
+executed, no RPC was called, no schema or RLS change was made, no email or
+Resend send occurred, no alert existed yet, no merge to `main` happened, no
+branch was deleted, no `SCHEDULED_CHECKS_ENABLED`/`CRON_SECRET`/
+`SCHEDULER_WRITER_ALLOWED_SOURCE_IDS` change was made, and no second
+`write-candidates`/`check-sources`/manual source-check request was sent. **§ 9
+below describes later, separately-approved steps (candidate review through
+publish) that did legitimately write to `alerts` and
+`source_notice_candidates` — see that section for exactly what changed and
+under what authorization.**
+
+## 9. Day 7 — Final closeout: candidate review through publish
+
+Continuing the same session, later on 2026-07-27, Adam reviewed and
+progressed the one candidate produced by § 3 through to a published public
+alert. Every step below was individually authorized by Adam before being
+carried out; none were implied by an earlier approval.
+
+### 9.1 Manual verification against the live official source
+
+Candidate `72a01ba0…`'s title and excerpt ("Utrudnienia w ruchu drogowym -
+DW nr 719 Nowa Wieś") were checked against
+`https://www.michalowice.pl/dzieje-sie/aktualnosci/komunikaty` (optional
+statistics cookies declined) and the full article page
+(`.../komunikaty/rok-2026/utrudnienia-w-ruchu-drogowym-dw-nr-719-nowa-wies,p2027957373`).
+The notice was confirmed live, current (not marked "Archiwalny" unlike older
+roadwork notices on the same listing), and attributed to the gmina's own
+editor. Full article text added detail the raw candidate excerpt lacked:
+lane narrowed but two-way traffic maintained, expected completion August
+2026, contractor STRABAG sp. z o.o.
+
+The candidate itself had **no** `category`, `place`, `starts_at`/`ends_at`,
+`confidence_score`, or `risk_level` populated, and no direct article URL
+(`candidate_url` was `NULL`; `source_url` pointed only at the listing page)
+— the scheduled-writer path captures raw notice text only, by design; a
+human filling in the missing structured fields before publish is the
+intended workflow, not a gap to fix in code.
+
+### 9.2 Approve
+
+One click on the candidate's "Zatwierdź" button in `/admin/queue`.
+**Procedural note:** the first two click attempts (coordinate-based, after
+an earlier `scroll_to` call) silently missed — the candidate list's DOM was
+temporarily offset far outside the viewport (confirmed via
+`getBoundingClientRect()`, x/y in the thousands negative) after that
+`scroll_to` call, so the synthetic clicks landed on empty page background;
+no request fired, no state changed (verified by SQL before/after each
+attempt — both no-ops). A page reload reset the layout, and a direct
+`element.click()` call on the freshly-located button (rather than a
+coordinate-based click) fired the real `onClick` handler correctly.
+Confirmed via Supabase: `status: pending → approved`, one `UPDATE`, no other
+row touched.
+
+### 9.3 Convert to draft (client-side only, then re-done once)
+
+Clicking "Utwórz draft z kandydata →" only writes to `sessionStorage` and
+navigates to `/builder` — it makes **no** Supabase call by itself (confirmed
+by reading `createBuilderDraftFromNotice()` in
+`src/app/admin/queue/page.tsx` and `updateCandidateStatus()`'s call site).
+**Procedural note:** an unrelated page permission issue required reloading
+`/builder` once; since the pre-fill `sessionStorage` key is consumed on
+first read, the reload silently cleared the pre-filled (but never-saved)
+form. No database state was affected by this (confirmed: candidate still
+`approved`, `converted_alert_id` still `NULL` before and after). Recovery
+was to click the same safe, side-effect-free "Utwórz draft z kandydata"
+action a second time to regenerate the pre-fill, then complete the fill
+without reloading again.
+
+### 9.4 Manual completion of the draft form
+
+Adam supplied the corrected values; Claude applied them to the React
+form's controlled inputs via native value setters + `input`/`change` events
+(so React state updates the same as real typing) and read every field back
+verbatim before reporting:
+
+| Field | Auto-filled (candidate raw text) | Manually corrected |
+|---|---|---|
+| Title | "Utrudnienia w ruchu drogowym - DW nr 719 Nowa Wieś" | "Utrudnienia w ruchu drogowym – DW nr 719, Nowa Wieś" |
+| Category | *(none — form default `municipal`)* | `roads` |
+| Severity | `info` | `info` (unchanged) |
+| Location (`place`) | *(empty)* | "Nowa Wieś" |
+| Starts at | today's detection date (`2026-07-27`) | `2026-07-09` (the actual works-start date from the article) |
+| Ends at | *(empty)* | left empty — official source gives only "sierpień 2026", no exact day; **no date was invented** |
+| "Co się zmienia" | raw one-paragraph excerpt | expanded to include lane-narrowing/two-way-traffic/August-2026 detail from the full article |
+| "Co zrobić" | *(empty)* | "Zachowaj ostrożność i stosuj się do tymczasowego oznakowania." |
+| `source_url` | listing page (`.../komunikaty`) | direct article URL (`.../komunikaty/rok-2026/utrudnienia-w-ruchu-drogowym-dw-nr-719-nowa-wies,p2027957373`) |
+| Slug | auto-generated from title + timestamp | left untouched (auto-regenerated once, matching the timestamp of the second "Utwórz draft" click — never hand-edited) |
+
+Both in-form warnings ("Brak lokalizacji", "Brak opisu „Co zrobić"")
+disappeared once the corrected values were applied. Save/Publish were not
+clicked until each was separately authorized.
+
+### 9.5 Save as draft
+
+One click on "Zapisz jako draft w Supabase". Result: exactly one new
+`alerts` row, `id=80983ceb-3f97-4d7b-8cbc-f2f0083aa7bc`,
+`status=draft`, `published_at=NULL`; `alerts` count 6→7; candidate
+`72a01ba0…` transitioned `approved → converted_to_draft` with
+`converted_alert_id` set to the new alert's id. No duplicate row. All other
+counters unchanged.
+
+### 9.6 Publish
+
+After a final read-only re-check (status still `draft`, `published_at`
+still `NULL`, exactly one alert with that id, all fields still correct, 7
+total alerts, 3 published), one click on the "Opublikuj" button scoped to
+that specific alert's card in Builder's "Alerty w Supabase" list (targeted
+by its unique slug, not the top-level form's generic publish button — this
+guarantees only this one alert could have been affected).
+
+**Result:**
+
+| Field | Value |
+|---|---|
+| Alert ID | `80983ceb-3f97-4d7b-8cbc-f2f0083aa7bc` |
+| Title | Utrudnienia w ruchu drogowym – DW nr 719, Nowa Wieś |
+| `status` | `published` |
+| `published_at` | `2026-07-27 05:58:47.111+00` |
+| `alerts` count | 7 → 7 (unchanged — publish updates a row, doesn't insert one) |
+| `alerts` published count | 3 → 4 |
+| Duplicate/second row | None (`matching_alert_count = 1`) |
+| Candidate final state | `converted_to_draft`, `converted_alert_id` unchanged (publish is alerts-only; it does not re-touch the candidate row) |
+| `operational_notification_events` | 1 → 1, unchanged — no email/Resend send occurred |
+| Public visibility | Confirmed live on both `/` and `/alerty`: category "Drogi", location "Nowa Wieś", date "09.07.2026", source "Gmina Michałowice — komunikaty", badges "Nowe"/"Trwa" |
+
+### 9.7 Final closeout audit (read-only)
+
+| Check | Result |
+|---|---|
+| `git status` | Clean except untracked `.vscode/` (not ours to commit) |
+| Branch | `sprint-174-scheduled-checks-activation-planning-v1`, in sync with origin (0 ahead / 0 behind) |
+| Unintended code changes | None — only this doc file changed |
+| Open `scheduled_writer_runs` | None (`finished_at IS NULL` → 0 rows) |
+| `SCHEDULED_WRITES_ENABLED` | `false` (confirmed live via `automation-status`: `writesEnabled: false`, `writeAttemptsPossible: false`) |
+| `SCHEDULED_CHECKS_ENABLED` | `true` (unchanged, pre-existing, dry-run only) |
+| Public alert visible | Yes, confirmed again at closeout |
+
+**Final table counts:** `alert_sources=4`, `source_checks=2`,
+`source_notice_candidates=4`, `alerts=7`, `alerts published=4`,
+`scheduled_writer_runs=2`, `operational_notification_events=1`,
+`automation_identities=2`.
+
+### 9.8 Conclusion
+
+**The first real, controlled, end-to-end run of the scheduled-writer →
+candidate-review → draft → publish pipeline on Production succeeded in
+full**, from the single authorized `write-candidates` HTTP call through to
+one genuine, correctly-categorized, publicly-visible alert — with every
+write-capable step individually authorized, every state change verified
+read-only before and after, zero duplicates, zero unintended writes, zero
+emails, and the write kill switch confirmed back at its safe resting state
+before the session closed.
+
+## 10. What this entire sprint (§§ 1–9) did NOT do
+
+No SQL other than read-only `SELECT`s was ever executed by Claude. No RPC
+was called outside the two authorized UI button clicks (Save, Publish) and
+their underlying Supabase client calls. No schema or RLS change was made.
+No email or Resend send occurred at any point
+(`OPERATIONAL_EMAIL_ALERTS_ENABLED` stayed off throughout;
+`operational_notification_events` never changed from 1). No merge to
+`main`. No branch deleted. No `SCHEDULED_CHECKS_ENABLED`, `CRON_SECRET`, or
+`SCHEDULER_WRITER_ALLOWED_SOURCE_IDS` change. No second
+`write-candidates`, `check-sources`, or manual source-check request was
+ever sent. No candidate or alert other than the one named throughout this
+document was touched.
