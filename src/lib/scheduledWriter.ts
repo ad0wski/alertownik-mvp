@@ -183,6 +183,13 @@ export interface PendingCandidateInput {
   title: string;
   excerpt: string;
   rawText: string;
+  /** Direct public permalink to the specific article, when the parser
+   *  found one (CheckProposal.url, sourceCheck.ts). Absent for
+   *  HTML-scraped sources with no reliable per-item link — stored as
+   *  null in that case, matching the existing manual "Zapisz jako
+   *  kandydata" write path (supabaseCandidateWrites.ts), never an empty
+   *  string. */
+  candidateUrl?: string;
 }
 
 // Sprint 150A — race-condition closure (proposal, not yet migrated: see
@@ -226,6 +233,7 @@ export function buildPendingCandidateInsert(input: PendingCandidateInput) {
     source_key: input.sourceKey,
     source_name: input.sourceName,
     source_url: input.sourceUrl,
+    candidate_url: input.candidateUrl?.trim() || null,
     title: input.title,
     excerpt: input.excerpt,
     raw_text: input.rawText,
@@ -558,6 +566,7 @@ export async function writeCandidatesForSource(
         title: proposal.title,
         excerpt: proposal.excerpt,
         rawText: proposal.rawText,
+        candidateUrl: proposal.url,
       })
     );
     if (result.ok) {

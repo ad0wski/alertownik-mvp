@@ -9,6 +9,11 @@ export interface PageCandidate {
   heading?: string;
   text: string;
   hasDate: boolean;
+  /** Direct public permalink to the source article, when the parser has
+   *  one available (currently: WordPress REST passes — see
+   *  extractWordpressRestCandidates below). Absent for HTML-scraped
+   *  sources, which have no reliable per-item link in their markup. */
+  url?: string;
 }
 
 export interface PageParseResult {
@@ -276,6 +281,28 @@ export function isWordpressRestPostArray(json: unknown): json is WordpressRestPo
   return Array.isArray(json);
 }
 
+/** A WordPress REST `link` field is trusted only when it's an absolute
+ *  http(s) permalink — never the wp-json API endpoint itself (some sites'
+ *  `link` values have been seen pointing back at their own REST resource
+ *  rather than the public post) and never a relative/empty string a
+ *  malformed or plugin-altered response could send. Anything that doesn't
+ *  pass is treated as "no safe link" (undefined), matching this
+ *  codebase's existing "fail closed on unexpected shape" convention (see
+ *  isWordpressRestPostArray above) rather than risk saving a broken or
+ *  misleading URL as candidate_url. */
+function safePostPermalink(link: string | undefined): string | undefined {
+  if (!link) return undefined;
+  let parsed: URL;
+  try {
+    parsed = new URL(link);
+  } catch {
+    return undefined;
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return undefined;
+  if (parsed.pathname.startsWith("/wp-json/")) return undefined;
+  return link;
+}
+
 /** Shared mechanics for every WordPress-REST extraction pass: strip tags,
  *  apply the pass's own relevance regex, detect dates. Each pass still owns
  *  its own keyword regex and result title — this only avoids duplicating
@@ -302,6 +329,7 @@ function extractWordpressRestCandidates(
       heading: heading ? heading.slice(0, 120) : undefined,
       text: body || heading,
       hasDate: detectDateInText(combined),
+      url: safePostPermalink(post.link),
     });
   }
 

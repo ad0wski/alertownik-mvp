@@ -72,6 +72,10 @@ export interface CheckProposal {
   rawText: string;
   /** Whether a date was detected in the block (pageParser heuristic). */
   hasDate: boolean;
+  /** Direct public permalink to the source article, when the parser has
+   *  one (see PageCandidate.url in pageParser.ts). Absent for
+   *  HTML-scraped sources. */
+  url?: string;
 }
 
 // Exported so tests pin the caps by name instead of magic numbers.
@@ -124,6 +128,7 @@ export function buildCheckProposals(parse: PageParseResult): CheckProposal[] {
       excerpt: trimAtWord(text, 300),
       rawText: text,
       hasDate: c.hasDate,
+      url: c.url,
     });
   }
 
