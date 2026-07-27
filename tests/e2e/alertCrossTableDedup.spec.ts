@@ -8,34 +8,37 @@ import {
 } from "@/lib/scheduledWriter";
 
 /**
- * Sprint 177D — cross-table dedup hardening. Confirms a proposal is
- * checked against readable published alerts, not just other candidates of
- * the same source, closing the gap independently found in Sprint 175D
- * (computed similarity) and Sprint 177C (a live Pruszków/Michałowice
- * DW-719 example). No test here touches Supabase — classifyProposalAgainstExisting
- * is a pure function, and writeCandidatesForSource is exercised with a
- * hand-written in-memory fake writer, matching this suite's existing
- * convention.
+ * Sprint 177D/177E — cross-table dedup hardening. Confirms a proposal is
+ * checked against readable alerts (draft, published, and archived alike
+ * as of 177E), not just other candidates of the same source, closing the
+ * gap independently found in Sprint 175D (computed similarity) and
+ * Sprint 177C (a live Pruszków/Michałowice DW-719 example). No test here
+ * touches Supabase — classifyProposalAgainstExisting is a pure function,
+ * and writeCandidatesForSource is exercised with a hand-written
+ * in-memory fake writer, matching this suite's existing convention.
  *
- * IMPORTANT SCOPE NOTE (read before extending these tests): the
- * scheduled-writer's authenticated session has zero RLS access to
- * `alerts` (verified live in Sprint 177D — no policy on `alerts`
- * references `automation_identities`). findPublishedAlertComparisons()
- * therefore reads anonymously, which only the "Public can read published
- * alerts" policy permits — PUBLISHED alerts only. Draft and archived
- * alerts remain genuinely unreachable without a future, separately
- * approved RLS migration; the tests below reflect that honestly instead
- * of asserting coverage that does not exist.
+ * IMPORTANT SCOPE NOTE: the classifier and writer orchestration below are
+ * status-agnostic by design — a DedupComparisonItem returned by
+ * findExistingAlertComparisons() is compared identically regardless of
+ * which alert status it came from. Real draft/published/archived
+ * coverage depends on the proposed, NOT YET APPLIED RLS migration
+ * (docs/sql/PROPOSED_SPRINT_177_AUTOMATION_ALERT_READ_POLICY_V1.sql) —
+ * see automationAlertReadPolicySqlAntiDrift.spec.ts for that migration's
+ * own static audit. Until Adam applies it on Production, the real
+ * createSupabaseScheduledWriter implementation reads through the
+ * writer's authenticated session and gets RLS-filtered to zero rows —
+ * safe, but not yet exercising the draft/archived coverage these tests
+ * verify at the decision-logic level.
  */
 
-function makeFakeWriter(publishedAlerts: DedupComparisonItem[] = []) {
+function makeFakeWriter(existingAlerts: DedupComparisonItem[] = []) {
   const insertedCandidates: ReturnType<typeof buildPendingCandidateInsert>[] = [];
   const writer: ScheduledSourceWriter = {
     async findExistingCandidateTexts() {
       return [];
     },
-    async findPublishedAlertComparisons() {
-      return publishedAlerts;
+    async findExistingAlertComparisons() {
+      return existingAlerts;
     },
     async insertPendingCandidate(payload) {
       insertedCandidates.push(payload);
@@ -114,30 +117,86 @@ test.describe("Identical URL against a published alert", () => {
   });
 });
 
-// ── 2 & 3. Draft / archived alerts — documented scope limit, not a false claim ──
+// ── 2 & 3. Draft / archived alerts — real coverage once the proposed
+// migration (docs/sql/PROPOSED_SPRINT_177_AUTOMATION_ALERT_READ_POLICY_V1.sql)
+// is applied and findExistingAlertComparisons() returns them ────────────────
 
-test.describe("Draft and archived alerts — known, documented scope limit (no RLS migration in this sprint)", () => {
-  test("findPublishedAlertComparisons is published-only by construction: a fake seeded with only a 'draft-equivalent' item is not consulted unless the writer itself returns it", async () => {
-    // This test documents the architectural boundary rather than pretending
-    // to cover it: the real createSupabaseScheduledWriter implementation
-    // can only ever populate findPublishedAlertComparisons() from published
-    // alerts (RLS permits nothing else to the anon-key reader it uses).
-    // Whatever a fake writer chooses to return here is a stand-in for "the
-    // published alerts read"; there is no separate draft/archived read path
-    // to test, by design. Draft/archived duplicate protection would require
-    // a future, separately-approved RLS migration granting
-    // automation_identities members SELECT on alerts filtered to those
-    // statuses — explicitly out of scope for this sprint.
-    const { writer, insertedCandidates } = makeFakeWriter([]);
+test.describe("Identical URL against a draft alert", () => {
+  test("a draft alert's URL still protects against a duplicate candidate — status is never consulted by the classifier", async () => {
+    const { writer, insertedCandidates } = makeFakeWriter([
+      {
+        text: "Remont chodnika przy wiadukcie na ul. Poznańskiej — wciąż w draftcie, nieopublikowany",
+        url: "https://www.pruszkow.pl/mieszkancy/remont-chodnika-przy-wiadukcie/",
+      },
+    ]);
     const result = await writeCandidatesForSource(writer, {
       ...baseSourceInfo,
       proposals: [
         {
-          title: "Nowy komunikat, żaden draft go nie blokuje dziś",
+          title: "Remont chodnika przy wiadukcie",
           excerpt: "e",
-          rawText: "Treść niepowiązana z żadnym istniejącym draftem w tym teście",
-          hasDate: false,
+          rawText: "Zupełnie inaczej sformułowany opis tego samego artykułu draftu",
+          hasDate: true,
+          url: "https://www.pruszkow.pl/mieszkancy/remont-chodnika-przy-wiadukcie/",
         },
+      ],
+      registrySourceId: null,
+    });
+    expect(result.candidatesInserted).toBe(0);
+    expect(result.duplicatesSkipped).toBe(1);
+    expect(insertedCandidates).toHaveLength(0);
+  });
+});
+
+test.describe("Identical URL against an archived alert", () => {
+  test("an archived alert's URL still protects against re-creating a candidate for the same official article", async () => {
+    const { writer, insertedCandidates } = makeFakeWriter([
+      {
+        text: "Brak wody — Granica, Nowa Wieś, już zarchiwizowany",
+        url: "https://www.michalowice.pl/dzieje-sie/aktualnosci/komunikaty/rok-2026/brak-wody-granica-nowa-wies,p1882508487",
+      },
+    ]);
+    const result = await writeCandidatesForSource(writer, {
+      ...baseSourceInfo,
+      sourceKey: "michalowice-komunikaty",
+      proposals: [
+        {
+          title: "Brak wody — Granica, Nowa Wieś",
+          excerpt: "e",
+          rawText: "Ten sam artykuł, ponownie wykryty przez scheduled writer po zarchiwizowaniu",
+          hasDate: true,
+          url: "https://www.michalowice.pl/dzieje-sie/aktualnosci/komunikaty/rok-2026/brak-wody-granica-nowa-wies,p1882508487",
+        },
+      ],
+      registrySourceId: null,
+    });
+    expect(result.candidatesInserted).toBe(0);
+    expect(result.duplicatesSkipped).toBe(1);
+    expect(insertedCandidates).toHaveLength(0);
+  });
+});
+
+test.describe("Similar text (no URL) against draft and archived alerts", () => {
+  test("high word-overlap against a draft alert's text is classified duplicate using the existing threshold", () => {
+    const draftAlertText = "przerwa dostawa wody komorow ulica krakowska godzina dziewiata czternasta czwartek";
+    const proposal = { text: "przerwa dostawa wody komorow ulica krakowska godzina dziewiata czternasta czwartek" };
+    expect(classifyProposalAgainstExisting(proposal, [{ text: draftAlertText }])).toBe("duplicate");
+  });
+
+  test("high word-overlap against an archived alert's text is classified duplicate using the existing threshold", () => {
+    const archivedAlertText = "brak wody granica nowa wies ulica glowna godziny konserwacja sieci wodociagowej";
+    const proposal = { text: "brak wody granica nowa wies ulica glowna godziny konserwacja sieci wodociagowej" };
+    expect(classifyProposalAgainstExisting(proposal, [{ text: archivedAlertText }])).toBe("duplicate");
+  });
+
+  test("a genuinely new proposal is still inserted when only unrelated draft/archived alerts exist", async () => {
+    const { writer, insertedCandidates } = makeFakeWriter([
+      { text: "Zupełnie niepowiązany, stary, zarchiwizowany komunikat o czymś innym" },
+    ]);
+    const result = await writeCandidatesForSource(writer, {
+      ...baseSourceInfo,
+      proposals: [
+        { title: "Nowy komunikat", excerpt: "e", rawText: "Treść niepowiązana z żadnym istniejącym alertem w tym teście", hasDate: false },
       ],
       registrySourceId: null,
     });
@@ -245,7 +304,7 @@ test.describe("No published alerts available", () => {
       async findExistingCandidateTexts() {
         return [...existing];
       },
-      async findPublishedAlertComparisons() {
+      async findExistingAlertComparisons() {
         return [];
       },
       async insertPendingCandidate(payload) {
@@ -272,7 +331,7 @@ test.describe("No published alerts available", () => {
     expect(insertedCandidates).toHaveLength(0);
   });
 
-  test("a writer that doesn't implement findPublishedAlertComparisons at all (older fake) behaves identically to an empty result", async () => {
+  test("a writer that doesn't implement findExistingAlertComparisons at all (older fake) behaves identically to an empty result", async () => {
     const insertedCandidates: ReturnType<typeof buildPendingCandidateInsert>[] = [];
     const writer: ScheduledSourceWriter = {
       async findExistingCandidateTexts() {

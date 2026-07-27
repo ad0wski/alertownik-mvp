@@ -162,20 +162,20 @@ export function classifyCandidateAgainstExisting(
   return "new";
 }
 
-// ── Cross-table dedup (Sprint 177D) ──────────────────────────────────────────
+// ── Cross-table dedup (Sprint 177D/177E) ─────────────────────────────────────
 //
 // Sprints 175D and 177C independently found the same gap: the classifier
 // above only ever sees OTHER candidates (from findExistingCandidateTexts,
-// itself scoped to one source_key) — an already-PUBLISHED alert is never
-// part of the comparison pool at all, so a source re-publishing (or a
-// different source re-describing) the same official notice could be
-// proposed again as if it were brand new. This section closes that gap
-// for the one alert scope the scheduled-writer identity can actually read
-// without a schema/RLS change (see findPublishedAlertComparisons below) —
-// draft and archived alerts remain genuinely out of reach until a future,
-// separately-approved RLS migration grants automation_identities members
-// read access to them; that is a known, documented limit of this fix, not
-// an oversight.
+// itself scoped to one source_key) — an existing alert (draft, published,
+// or archived) is never part of the comparison pool at all, so a source
+// re-publishing (or a different source re-describing) the same official
+// notice could be proposed again as if it were brand new. Sprint 177D
+// closed this for published alerts only, via a temporary anon-client
+// workaround (removed in 177E — see findExistingAlertComparisons below).
+// Sprint 177E closes it for draft/published/archived alike, through a
+// proposed, NOT YET APPLIED RLS migration (docs/sql/PROPOSED_SPRINT_177_
+// AUTOMATION_ALERT_READ_POLICY_V1.sql) granting the scheduled-writer
+// identity a narrow, SELECT-only policy on `alerts`.
 //
 // Deliberately does NOT introduce a new similarity threshold or a
 // same-road/same-town heuristic: doing so risks exactly the false-positive
@@ -457,13 +457,13 @@ export type InsertPendingCandidateResult =
 
 export interface ScheduledSourceWriter {
   findExistingCandidateTexts(sourceKey: string, registrySourceId: string | null): Promise<string[]>;
-  /** Sprint 177D — optional so every existing hand-written fake writer in
-   *  the test suite keeps compiling and passing unmodified: when a fake
-   *  doesn't implement it, writeCandidatesForSource treats the result as
-   *  "no published alerts available for comparison" (empty list), the
-   *  exact same behavior as before this method existed. Real
+  /** Sprint 177D/177E — optional so every existing hand-written fake
+   *  writer in the test suite keeps compiling and passing unmodified:
+   *  when a fake doesn't implement it, writeCandidatesForSource treats
+   *  the result as "no alerts available for comparison" (empty list),
+   *  the exact same behavior as before this method existed. Real
    *  (createSupabaseScheduledWriter) call sites always implement it. */
-  findPublishedAlertComparisons?(): Promise<DedupComparisonItem[]>;
+  findExistingAlertComparisons?(): Promise<DedupComparisonItem[]>;
   insertPendingCandidate(payload: ReturnType<typeof buildPendingCandidateInsert>): Promise<InsertPendingCandidateResult>;
   insertSourceCheck(payload: ReturnType<typeof buildAutomatedSourceCheckInsert>): Promise<{ ok: boolean }>;
 }
@@ -480,38 +480,17 @@ interface CandidateTextRow {
   raw_text?: string;
 }
 
-interface PublishedAlertRow {
+interface ExistingAlertRow {
   title?: string;
   change?: string;
   source_url?: string;
 }
 
-/** Bounds the published-alerts comparison pool the same way
+/** Bounds the alert comparison pool the same way
  *  findExistingCandidateTexts already bounds its own query (limit 50) —
  *  a single, capped read per source per invocation, never unbounded
  *  history, never one query per proposal. */
-const PUBLISHED_ALERT_COMPARISON_LIMIT = 200;
-
-/** A fresh, unauthenticated (anon-key) client — deliberately NOT the
- *  signed-in writer session passed into createSupabaseScheduledWriter.
- *  The writer's own authenticated session has zero RLS access to
- *  `alerts` (Sprint 146/166H: automation_identities membership was
- *  never wired into any `alerts` policy, by design). Reading published
- *  alerts anonymously instead grants nothing new: it is the exact same
- *  "Public can read published alerts" policy (status='published', role
- *  anon) any unauthenticated visitor to the public site already relies
- *  on — see src/lib/supabaseClient.ts's own anon client for the
- *  identical, already-proven-safe construction pattern. Draft and
- *  archived alerts are NOT reachable this way (both require the same
- *  admin-membership check `alerts`'s other policies already use) — a
- *  known, documented scope limit of this fix, not an oversight; see
- *  docs/SPRINT_177_ALERT_CROSS_TABLE_DEDUP_HARDENING_V1.md. */
-function createAnonAlertsReaderClient(): SupabaseClient | null {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-  if (!url || !key) return null;
-  return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
-}
+const EXISTING_ALERT_COMPARISON_LIMIT = 200;
 
 /** The only real (Supabase-backed) implementation of ScheduledSourceWriter.
  *  Tests never construct this — they hand-write a fake ScheduledSourceWriter
@@ -557,16 +536,35 @@ export function createSupabaseScheduledWriter(client: SupabaseClient): Scheduled
       const { error } = await client.from("source_checks").insert(payload);
       return { ok: !error };
     },
-    async findPublishedAlertComparisons() {
-      const reader = createAnonAlertsReaderClient();
-      if (!reader) return [];
-      const { data } = await reader
+    // Sprint 177E — reads through the writer's OWN authenticated session
+    // (the same `client` this factory was constructed with), relying on
+    // the proposed, not-yet-applied "Scheduled writer can select alerts
+    // for deduplication" SELECT policy (docs/sql/PROPOSED_SPRINT_177_
+    // AUTOMATION_ALERT_READ_POLICY_V1.sql) rather than Sprint 177D's
+    // anon-client workaround. Until that migration is applied on
+    // Production, this query is silently RLS-filtered to zero rows —
+    // safe (no crash, no privilege escalation, degrades to "no alerts
+    // available for comparison", identical to a missing/optional
+    // implementation) but NOT a substitute for actually applying the
+    // migration first. Deployment ordering matters: this code must not
+    // reach Production before the migration does, or it would regress
+    // even the published-only comparison Sprint 177D already achieved
+    // (that anon-client path is removed by this change, on purpose —
+    // duplicating both approaches indefinitely would leave two ways to
+    // read `alerts`, one of them permanently dead weight once the
+    // migration lands). No error-vs-empty distinction is surfaced in the
+    // run result here — matches this file's own pre-existing convention
+    // for findExistingCandidateTexts just above, which also does not
+    // distinguish "zero relevant rows" from "read failed". A dedicated
+    // diagnostic (e.g. counting RLS-denied reads in the run history) is
+    // future work, not part of this change.
+    async findExistingAlertComparisons() {
+      const { data } = await client
         .from("alerts")
         .select("title, change, source_url")
-        .eq("status", "published")
         .order("created_at", { ascending: false })
-        .limit(PUBLISHED_ALERT_COMPARISON_LIMIT);
-      return ((data as PublishedAlertRow[] | null) ?? [])
+        .limit(EXISTING_ALERT_COMPARISON_LIMIT);
+      return ((data as ExistingAlertRow[] | null) ?? [])
         .map((row) => ({
           text: [row.title, row.change].filter(Boolean).join(" ").trim(),
           url: row.source_url || null,
@@ -647,22 +645,22 @@ export async function writeCandidatesForSource(
   }
 
   const existingTexts = await writer.findExistingCandidateTexts(input.sourceKey, input.registrySourceId);
-  // Sprint 177D — one bounded read per source per invocation (never per
-  // proposal), same call-once shape as findExistingCandidateTexts above.
-  // A missing method (older/test fakes) or a failed read degrades to "no
-  // published alerts available" — never breaks candidate creation, per
-  // this sprint's own requirement.
-  let publishedAlerts: DedupComparisonItem[] = [];
-  if (writer.findPublishedAlertComparisons) {
+  // Sprint 177D/177E — one bounded read per source per invocation (never
+  // per proposal), same call-once shape as findExistingCandidateTexts
+  // above. A missing method (older/test fakes) or a failed read degrades
+  // to "no alerts available for comparison" — never breaks candidate
+  // creation, per this sprint's own requirement.
+  let existingAlerts: DedupComparisonItem[] = [];
+  if (writer.findExistingAlertComparisons) {
     try {
-      publishedAlerts = await writer.findPublishedAlertComparisons();
+      existingAlerts = await writer.findExistingAlertComparisons();
     } catch {
-      publishedAlerts = [];
+      existingAlerts = [];
     }
   }
   const existingItems: DedupComparisonItem[] = [
     ...existingTexts.map((text) => ({ text })),
-    ...publishedAlerts,
+    ...existingAlerts,
   ];
 
   let candidatesInserted = 0;
