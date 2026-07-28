@@ -69,7 +69,12 @@ export default function AboutPage() {
             urzędów, operatorów transportu czy dostawców usług). Do przygotowania
             treści admin może korzystać z pomocy AI, ale AI nigdy nie publikuje
             alertów samodzielnie — każdy alert trafia na stronę główną tylko po
-            akceptacji administratora.
+            akceptacji administratora. Jedyny wyjątek: dla jednego, ściśle
+            zdefiniowanego zaufanego źródła (aktualności Miasta Pruszków) działa
+            wąski, w pełni deterministyczny (bez udziału AI) mechanizm
+            automatycznej publikacji, uruchamiany tylko po jednoczesnym
+            spełnieniu wszystkich zdefiniowanych warunków bezpieczeństwa —
+            odwracalny natychmiast, jednym przełącznikiem.
           </p>
         </section>
 
@@ -92,7 +97,7 @@ export default function AboutPage() {
           <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-1.5 list-disc list-inside leading-relaxed">
             <li>To wczesny pilotaż — funkcje i wygląd mogą się jeszcze zmieniać.</li>
             <li>Nie wszystkie lokalne źródła są jeszcze monitorowane — część okolic i kategorii (np. drogi) ma na razie mniej alertów.</li>
-            <li>Alerty są przygotowywane i zatwierdzane ręcznie przez admina, nie w czasie rzeczywistym.</li>
+            <li>Alerty są przygotowywane i zatwierdzane ręcznie przez admina, nie w czasie rzeczywistym — poza jednym wąskim, w pełni odwracalnym wyjątkiem automatycznej publikacji dla jednego zaufanego źródła.</li>
             <li>AI pomaga przygotować szkic alertu, ale nigdy nie publikuje go samodzielnie.</li>
             <li>Oficjalne źródła pozostają ostatecznym potwierdzeniem informacji — Alertownik je tylko ułatwia znaleźć.</li>
           </ul>

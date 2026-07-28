@@ -6,6 +6,8 @@ import {
   AUTOMATION_STATUS_TITLE,
   AUTOMATION_STATUS_NO_PUBLISH_NOTE,
   AUTOMATION_STATUS_INFO_ONLY_NOTE,
+  AUTOMATION_STATUS_AUTO_PUBLISH_TITLE,
+  AUTOMATION_STATUS_AUTO_PUBLISH_NOTE,
   type AutomationStatusSnapshot,
 } from "@/lib/automationStatus";
 import type { ScheduledWriterSourceActivity } from "@/lib/writerCandidateActivity";
@@ -289,6 +291,37 @@ export function AutomationStatusPanel({ activityRows }: { activityRows: Schedule
                 activeLabel="aktywny"
                 inactiveLabel="wyłączony"
               />
+            </div>
+
+            {/* Trusted-source auto-publish (Sprint 180C) — the one, scoped
+                exception to "every alert is published manually" (CLAUDE.md
+                Security Rule #10 amendment). Purely informational, same
+                convention as every other section here: no button, no
+                control, just presence/boolean/allowlist visibility. */}
+            <div className="pt-2 border-t border-slate-200 dark:border-slate-800 space-y-1.5">
+              <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                {AUTOMATION_STATUS_AUTO_PUBLISH_TITLE}
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                {AUTOMATION_STATUS_AUTO_PUBLISH_NOTE}
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs text-slate-500 dark:text-slate-400">Auto-publikacja:</span>
+                <StatusBadge active={status.autoPublish.enabled} activeLabel="aktywna" inactiveLabel="wyłączona" />
+                <span className="text-xs text-slate-500 dark:text-slate-400 ml-3">Limit publikacji na uruchomienie:</span>
+                <span className="text-sm font-medium text-slate-800 dark:text-slate-100">{status.autoPublish.maxPerRun}</span>
+              </div>
+              <div>
+                <span className="text-xs text-slate-500 dark:text-slate-400">Allowlista auto-publikacji: </span>
+                <span className="text-sm font-medium text-slate-800 dark:text-slate-100">
+                  {status.autoPublish.allowlistedSources.map((s) => s.name).join(", ") || "brak"}
+                </span>
+                {!status.autoPublish.isSingleSourceAllowlist && (
+                  <span className="ml-2 inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 ring-1 ring-amber-200">
+                    uwaga: nie jest to pojedyncze źródło
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Email alerting (Sprint 166E-1) — reads status.emailAlertConfig,

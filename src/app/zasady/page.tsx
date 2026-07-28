@@ -56,7 +56,12 @@ export default function TermsPage() {
               Każdy alert jest przygotowywany i publikowany ręcznie przez
               administratora, po sprawdzeniu źródła. AI może pomagać w
               przygotowaniu szkicu tekstu, ale nigdy nie publikuje niczego
-              samodzielnie.
+              samodzielnie. Jedyny wyjątek: dla jednego, ściśle
+              zdefiniowanego zaufanego źródła (aktualności Miasta Pruszków)
+              działa wąski, w pełni deterministyczny (bez udziału AI)
+              mechanizm automatycznej publikacji — uruchamia się wyłącznie,
+              gdy komunikat jednocześnie spełnia wszystkie zdefiniowane
+              warunki bezpieczeństwa, i można go natychmiast wyłączyć.
             </li>
             <li>
               Przy każdym alercie podajemy źródło — to oficjalny komunikat

@@ -10,6 +10,11 @@ import {
 import { getConfiguredDatabaseEnvironmentTag } from "@/lib/databaseEnvironmentGuard";
 import { isEmailAlertsEnabled } from "@/lib/emailAlertConfig";
 import { isOperationalNotificationRuntimeEnabled } from "@/lib/operationalNotificationRuntimeConfig";
+import {
+  isAutoPublishEnabled,
+  getAutoPublishSourceIds,
+  getMaxAutoPublishPerInvocation,
+} from "@/lib/trustedSourceAutoPublish";
 import { buildAutomationStatus, type AutomationStatusSnapshot } from "@/lib/automationStatus";
 import {
   buildRunHistorySnapshot,
@@ -110,6 +115,15 @@ export async function GET(req: NextRequest): Promise<NextResponse<AutomationStat
     operationalNotificationRuntimeEnabled: isOperationalNotificationRuntimeEnabled(
       process.env.OPERATIONAL_NOTIFICATION_RUNTIME_ENABLED
     ),
+    // Sprint 180C — presence/boolean only, mirroring every other flag in
+    // this route: never a secret, always the same three functions the
+    // real auto-publish route itself gates on (trustedSourceAutoPublish.ts),
+    // never a second, parallel resolution of the same env vars.
+    autoPublish: {
+      enabled: isAutoPublishEnabled(process.env.SCHEDULED_AUTO_PUBLISH_ENABLED),
+      allowlistedSourceIds: getAutoPublishSourceIds(),
+      maxPerRun: getMaxAutoPublishPerInvocation(),
+    },
     // Sprint 166E-1 — presence booleans only, mirroring every other secret
     // check in this route (CRON_SECRET, writer credentials above): never
     // the API key, from, or to values themselves.

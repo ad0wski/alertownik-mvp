@@ -7,6 +7,7 @@ import {
   buildAutomationStatus,
   AUTOMATION_STATUS_NO_PUBLISH_NOTE,
   AUTOMATION_STATUS_INFO_ONLY_NOTE,
+  AUTOMATION_STATUS_AUTO_PUBLISH_NOTE,
 } from "@/lib/automationStatus";
 
 /**
@@ -178,9 +179,15 @@ test.describe("buildAutomationStatus — pure snapshot builder", () => {
       // runHistory (Sprint 166D-2B) and emailAlertConfig (Sprint 166E-1):
       // nested objects, checked separately below for the same "no secret
       // value" guarantee.
-      if (key === "canarySources" || key === "runHistory" || key === "emailAlertConfig") continue;
+      if (key === "canarySources" || key === "runHistory" || key === "emailAlertConfig" || key === "autoPublish") continue;
       expect(["boolean", "number"]).toContain(typeof value);
     }
+    // autoPublish (Sprint 180C): same "no secret value" guarantee — every
+    // field is a boolean, a number, or an array of public {id, name}.
+    expect(status.autoPublish.enabled).toBe(false);
+    expect(status.autoPublish.allowlistedSources).toEqual([]);
+    expect(status.autoPublish.isSingleSourceAllowlist).toBe(false);
+    expect(status.autoPublish.maxPerRun).toBe(0);
     // runHistory defaults to the "not configured" shape when omitted from
     // the input (as here) — still no field that could ever carry a secret.
     expect(status.runHistory.configured).toBe(false);
@@ -226,6 +233,69 @@ test.describe("buildAutomationStatus — operationalNotificationRuntimeEnabled",
     });
     expect(status.operationalNotificationRuntimeEnabled).toBe(true);
     expect(status.emailAlertConfig.enabled).toBe(false);
+  });
+});
+
+// ── Sprint 180C — trusted-source auto-publish visibility ──────────────────
+
+test.describe("buildAutomationStatus — autoPublish", () => {
+  test("omitted from input → disabled, empty allowlist, never a guess", () => {
+    const status = buildAutomationStatus({
+      checksEnabled: false,
+      writesEnabled: false,
+      cronSecretConfigured: false,
+      writerCredentialsConfigured: false,
+      allowedWriteSourceIds: [],
+      maxCandidatesPerRun: 1,
+      fingerprintProtectionEnabled: false,
+    });
+    expect(status.autoPublish.enabled).toBe(false);
+    expect(status.autoPublish.allowlistedSources).toHaveLength(0);
+    expect(status.autoPublish.isSingleSourceAllowlist).toBe(false);
+  });
+
+  test("enabled with exactly one allowlisted source → isSingleSourceAllowlist true, resolves the real Pruszków source name", () => {
+    const status = buildAutomationStatus({
+      checksEnabled: false,
+      writesEnabled: false,
+      cronSecretConfigured: false,
+      writerCredentialsConfigured: false,
+      allowedWriteSourceIds: [],
+      maxCandidatesPerRun: 1,
+      fingerprintProtectionEnabled: false,
+      autoPublish: { enabled: true, allowlistedSourceIds: ["pruszkow-aktualnosci"], maxPerRun: 1 },
+    });
+    expect(status.autoPublish.enabled).toBe(true);
+    expect(status.autoPublish.isSingleSourceAllowlist).toBe(true);
+    expect(status.autoPublish.allowlistedSources).toHaveLength(1);
+    expect(status.autoPublish.allowlistedSources[0].id).toBe("pruszkow-aktualnosci");
+    expect(status.autoPublish.allowlistedSources[0].name.length).toBeGreaterThan(0);
+    expect(status.autoPublish.maxPerRun).toBe(1);
+  });
+
+  test("two allowlisted sources → isSingleSourceAllowlist is false, surfaced honestly (not a hard error)", () => {
+    const status = buildAutomationStatus({
+      checksEnabled: false,
+      writesEnabled: false,
+      cronSecretConfigured: false,
+      writerCredentialsConfigured: false,
+      allowedWriteSourceIds: [],
+      maxCandidatesPerRun: 1,
+      fingerprintProtectionEnabled: false,
+      autoPublish: { enabled: true, allowlistedSourceIds: ["pruszkow-aktualnosci", "wkd-aktualnosci"], maxPerRun: 1 },
+    });
+    expect(status.autoPublish.isSingleSourceAllowlist).toBe(false);
+    expect(status.autoPublish.allowlistedSources).toHaveLength(2);
+  });
+});
+
+test.describe("Auto-publish note — anti-drift (discloses the exception honestly, never overstates it)", () => {
+  test("names the flag, the cap, dedup, and the instant no-code rollback — never silent about what it can do", () => {
+    expect(AUTOMATION_STATUS_AUTO_PUBLISH_NOTE).toMatch(/wyjątek/i);
+    expect(AUTOMATION_STATUS_AUTO_PUBLISH_NOTE).toMatch(/allowlisty/i);
+    expect(AUTOMATION_STATUS_AUTO_PUBLISH_NOTE).toMatch(/duplikatem/i);
+    expect(AUTOMATION_STATUS_AUTO_PUBLISH_NOTE).toMatch(/Maksymalnie jedna publikacja/i);
+    expect(AUTOMATION_STATUS_AUTO_PUBLISH_NOTE).toMatch(/SCHEDULED_AUTO_PUBLISH_ENABLED=false/);
   });
 });
 
@@ -471,6 +541,50 @@ test.describe("GET /api/admin/automation-status — admin session, real environm
       }
     );
   });
+
+  test("Sprint 180C — SCHEDULED_AUTO_PUBLISH_ENABLED unset → autoPublish reported disabled with the default single-source allowlist", async () => {
+    await withEnv(
+      { ...SUPABASE_ENV, SCHEDULED_AUTO_PUBLISH_ENABLED: undefined, SCHEDULED_AUTO_PUBLISH_SOURCE_IDS: undefined, SCHEDULED_AUTO_PUBLISH_MAX_PER_RUN: undefined },
+      async () => {
+        const restore = mockFetch(mockAuthedAdmin());
+        try {
+          const res = await automationStatusGet(authedRequest("a-genuinely-valid-admin-token"));
+          const body = await res.json();
+          expect(body.status.autoPublish.enabled).toBe(false);
+          expect(body.status.autoPublish.isSingleSourceAllowlist).toBe(true);
+          expect(body.status.autoPublish.allowlistedSources[0].id).toBe("pruszkow-aktualnosci");
+          expect(body.status.autoPublish.maxPerRun).toBe(1);
+        } finally {
+          restore();
+        }
+      }
+    );
+  });
+
+  test("Sprint 180C — the three canary env vars, exactly as set on Production for this sprint, are reflected accurately", async () => {
+    await withEnv(
+      {
+        ...SUPABASE_ENV,
+        SCHEDULED_AUTO_PUBLISH_ENABLED: "true",
+        SCHEDULED_AUTO_PUBLISH_SOURCE_IDS: '["pruszkow-aktualnosci"]',
+        SCHEDULED_AUTO_PUBLISH_MAX_PER_RUN: "1",
+      },
+      async () => {
+        const restore = mockFetch(mockAuthedAdmin());
+        try {
+          const res = await automationStatusGet(authedRequest("a-genuinely-valid-admin-token"));
+          const body = await res.json();
+          expect(body.status.autoPublish.enabled).toBe(true);
+          expect(body.status.autoPublish.allowlistedSources).toHaveLength(1);
+          expect(body.status.autoPublish.allowlistedSources[0].id).toBe("pruszkow-aktualnosci");
+          expect(body.status.autoPublish.isSingleSourceAllowlist).toBe(true);
+          expect(body.status.autoPublish.maxPerRun).toBe(1);
+        } finally {
+          restore();
+        }
+      }
+    );
+  });
 });
 
 // ── Panel copy anti-drift ────────────────────────────────────────────────
@@ -525,6 +639,15 @@ test.describe("AutomationStatusPanel.tsx — structural audit", () => {
     expect(panelSource).toMatch(/Runtime ledgera powiadomień operacyjnych/);
     // Still exactly one onClick in the whole file — this badge introduces
     // no control, matching the existing pin one test above.
+    const onClickMatches = panelSource.match(/onClick/g) ?? [];
+    expect(onClickMatches.length).toBe(1);
+  });
+
+  test("Sprint 180C — renders the trusted-source auto-publish section, purely informational, no new onClick", () => {
+    expect(panelSource).toMatch(/AUTOMATION_STATUS_AUTO_PUBLISH_TITLE/);
+    expect(panelSource).toMatch(/AUTOMATION_STATUS_AUTO_PUBLISH_NOTE/);
+    expect(panelSource).toMatch(/status\.autoPublish\.enabled/);
+    expect(panelSource).toMatch(/status\.autoPublish\.allowlistedSources/);
     const onClickMatches = panelSource.match(/onClick/g) ?? [];
     expect(onClickMatches.length).toBe(1);
   });

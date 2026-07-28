@@ -49,6 +49,31 @@ export interface AutomationStatusInput {
    *  claim/finish a ledger event with this true while email stays fully
    *  noop, exactly as Sprint 166G-1 designed it. */
   operationalNotificationRuntimeEnabled?: boolean;
+  /** Sprint 180C — same optionality convention as every other block above:
+   *  omitting it yields the honest "disabled, default allowlist" snapshot.
+   *  Reflects the trusted-source auto-publish exception (CLAUDE.md Security
+   *  Rule #10 amendment) — a SEPARATE mechanism from writesEnabled/
+   *  candidate creation above: this one CAN create a published `alerts`
+   *  row, but only for an allowlisted source and only when every fail-closed
+   *  condition in trustedSourceAutoPublish.ts holds. */
+  autoPublish?: AutoPublishStatusInput;
+}
+
+export interface AutoPublishStatusInput {
+  enabled: boolean;
+  /** From getAutoPublishSourceIds() — already narrowed to the safe-check
+   *  allowlist, same guarantee as allowedWriteSourceIds above. */
+  allowlistedSourceIds: readonly string[];
+  maxPerRun: number;
+}
+
+export interface AutoPublishStatusSnapshot {
+  enabled: boolean;
+  allowlistedSources: CanarySourceInfo[];
+  /** True only when exactly one source is allowlisted — mirrors
+   *  isSingleSourceCanary's own meaning for this separate mechanism. */
+  isSingleSourceAllowlist: boolean;
+  maxPerRun: number;
 }
 
 export interface CanarySourceInfo {
@@ -74,10 +99,17 @@ export interface AutomationStatusSnapshot {
   runHistory: RunHistorySnapshot;
   emailAlertConfig: EmailAlertConfigStatus;
   operationalNotificationRuntimeEnabled: boolean;
+  autoPublish: AutoPublishStatusSnapshot;
 }
 
 export function buildAutomationStatus(input: AutomationStatusInput): AutomationStatusSnapshot {
   const canarySources: CanarySourceInfo[] = input.allowedWriteSourceIds.map((id) => {
+    const source = getSafeCheckSource(id);
+    return { id, name: source?.name ?? id };
+  });
+
+  const autoPublishInput = input.autoPublish ?? { enabled: false, allowlistedSourceIds: [], maxPerRun: 0 };
+  const allowlistedSources: CanarySourceInfo[] = autoPublishInput.allowlistedSourceIds.map((id) => {
     const source = getSafeCheckSource(id);
     return { id, name: source?.name ?? id };
   });
@@ -98,6 +130,12 @@ export function buildAutomationStatus(input: AutomationStatusInput): AutomationS
     fingerprintProtectionEnabled: input.fingerprintProtectionEnabled,
     runHistory: input.runHistory ?? notConfiguredRunHistorySnapshot(),
     operationalNotificationRuntimeEnabled: input.operationalNotificationRuntimeEnabled ?? false,
+    autoPublish: {
+      enabled: autoPublishInput.enabled,
+      allowlistedSources,
+      isSingleSourceAllowlist: allowlistedSources.length === 1,
+      maxPerRun: autoPublishInput.maxPerRun,
+    },
     emailAlertConfig: buildEmailAlertConfigStatus(
       input.emailAlertConfig ?? {
         enabled: false,
@@ -114,10 +152,23 @@ export function buildAutomationStatus(input: AutomationStatusInput): AutomationS
 export const AUTOMATION_STATUS_TITLE = "Stan automatyzacji (canary)";
 
 export const AUTOMATION_STATUS_NO_PUBLISH_NOTE =
-  "Automat nigdy nie publikuje, nie edytuje ani nie archiwizuje alertów, i nigdy nie " +
-  "tworzy wiersza w tabeli alerts. Może wyłącznie zapisać maksymalnie jednego nowego " +
-  "kandydata ze statusem „pending” na jedno uruchomienie — każdy taki kandydat wymaga " +
-  "ręcznej weryfikacji administratora w kolejce, dokładnie tak jak kandydat zapisany ręcznie.";
+  "To automatyczne tworzenie kandydatów (sekcja powyżej) nigdy nie publikuje, nie edytuje " +
+  "ani nie archiwizuje alertów, i nigdy nie tworzy wiersza w tabeli alerts. Może wyłącznie " +
+  "zapisać maksymalnie jednego nowego kandydata ze statusem „pending” na jedno uruchomienie " +
+  "— każdy taki kandydat wymaga ręcznej weryfikacji administratora w kolejce, dokładnie tak " +
+  "jak kandydat zapisany ręcznie. Jedyny wyjątek od tej reguły w całym serwisie jest opisany " +
+  "osobno w sekcji „Automatyczna publikacja zaufanych źródeł” poniżej.";
+
+export const AUTOMATION_STATUS_AUTO_PUBLISH_TITLE = "Automatyczna publikacja zaufanych źródeł";
+
+export const AUTOMATION_STATUS_AUTO_PUBLISH_NOTE =
+  "Jedyny wyjątek od zasady „każdy alert publikuje ręcznie administrator” (Sprint 180C, " +
+  "CLAUDE.md Reguła Bezpieczeństwa #10). Działa wyłącznie dla źródeł z osobnej allowlisty " +
+  "poniżej, w pełni deterministycznie (bez udziału AI), i tylko gdy kandydat jednocześnie: " +
+  "jest wciąż „pending” i nieprzekonwertowany, ma bezpośredni bezpieczny link do źródła, " +
+  "jest aktualny lub nadchodzący, ma komplet wymaganych pól, i nie jest duplikatem ani " +
+  "przypadkiem niejednoznacznym. Maksymalnie jedna publikacja na jedno uruchomienie. " +
+  "Wyłączane natychmiast, bez zmiany kodu, ustawieniem SCHEDULED_AUTO_PUBLISH_ENABLED=false.";
 
 export const AUTOMATION_STATUS_INFO_ONLY_NOTE =
   "Ten panel jest wyłącznie informacyjny — nie ma tu przycisku uruchamiającego " +
