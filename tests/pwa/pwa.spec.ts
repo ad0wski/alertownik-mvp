@@ -64,6 +64,42 @@ test.describe("Manifest (M1)", () => {
       }
     }
   });
+
+  // Sprint 181B — PWA installation audit.
+  test("manifest declares screenshots, and every declared screenshot resolves with the declared pixel size — never a dangling reference", async ({
+    request,
+  }) => {
+    const manifestRes = await request.get("/manifest.webmanifest");
+    const manifest = await manifestRes.json();
+
+    expect(Array.isArray(manifest.screenshots)).toBe(true);
+    expect(manifest.screenshots.length).toBeGreaterThan(0);
+
+    const formFactors = manifest.screenshots.map((s: { form_factor?: string }) => s.form_factor);
+    expect(formFactors).toContain("narrow");
+
+    for (const shot of manifest.screenshots as { src: string; sizes: string; type: string }[]) {
+      const res = await request.get(shot.src);
+      expect(res.status(), `${shot.src} should return 200`).toBe(200);
+      expect(res.headers()["content-type"], `${shot.src} content-type`).toContain("png");
+
+      const buffer = await res.body();
+      const { width, height } = readPngSize(buffer);
+      const [expectedW, expectedH] = shot.sizes.split("x").map(Number);
+      expect(width, `${shot.src} width`).toBe(expectedW);
+      expect(height, `${shot.src} height`).toBe(expectedH);
+    }
+  });
+});
+
+test.describe("Safe area / viewport-fit (Sprint 181B)", () => {
+  test("the root layout requests viewport-fit=cover, so env(safe-area-inset-*) is not silently zero on notched devices", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const content = await page.locator('meta[name="viewport"]').getAttribute("content");
+    expect(content).toContain("viewport-fit=cover");
+  });
 });
 
 test.describe("Service worker (M2)", () => {

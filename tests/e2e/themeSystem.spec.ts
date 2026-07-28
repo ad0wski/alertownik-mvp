@@ -260,3 +260,23 @@ test.describe("Theme — no horizontal scroll on mobile widths", () => {
     });
   }
 });
+
+// Sprint 181B — PWA installation audit: the homepage's own mobile-width
+// coverage above never extended to /alerty or /instalacja, both real
+// install-flow-adjacent surfaces (the second is the install instructions
+// page itself). Same convention, same tolerance.
+test.describe("PWA-relevant pages — no horizontal scroll on mobile widths", () => {
+  for (const width of [375, 390, 414]) {
+    for (const path of ["/alerty", "/instalacja"]) {
+      test(`${path} has no horizontal overflow at ${width}px`, async ({ page }) => {
+        await page.setViewportSize({ width, height: 844 });
+        await page.goto(path);
+        const { scrollWidth, clientWidth } = await page.evaluate(() => ({
+          scrollWidth: document.documentElement.scrollWidth,
+          clientWidth: document.documentElement.clientWidth,
+        }));
+        expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 1);
+      });
+    }
+  }
+});

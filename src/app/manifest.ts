@@ -66,5 +66,36 @@ export default function manifest(): MetadataRoute.Manifest {
         type: "image/x-icon",
       },
     ],
+    // Sprint 181B — PWA installation audit. Real captures of the live
+    // public site (Production, 2026-07-28) at a phone viewport (390×844)
+    // and a desktop viewport (1280×800) — never fabricated data, never an
+    // admin/private surface. Enables the richer Android/desktop install UI
+    // (a preview carousel in the install prompt); optional per spec, so
+    // its absence was never a hard installability blocker, but its
+    // presence is checked by PWA audit tooling and improves the install
+    // decision for a first-time visitor.
+    screenshots: [
+      {
+        src: "/screenshots/home-narrow.png",
+        sizes: "390x844",
+        type: "image/png",
+        form_factor: "narrow",
+        label: "Strona główna — dzisiejsze alerty",
+      },
+      {
+        src: "/screenshots/alerty-narrow.png",
+        sizes: "390x844",
+        type: "image/png",
+        form_factor: "narrow",
+        label: "Lista alertów z filtrowaniem",
+      },
+      {
+        src: "/screenshots/home-wide.png",
+        sizes: "1280x800",
+        type: "image/png",
+        form_factor: "wide",
+        label: "Strona główna na komputerze",
+      },
+    ],
   };
 }

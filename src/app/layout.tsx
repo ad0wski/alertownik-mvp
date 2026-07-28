@@ -32,6 +32,13 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   minimumScale: 1,
+  // Sprint 181B — PWA installability audit: without this, iOS Safari never
+  // applies viewport-fit=cover, so env(safe-area-inset-bottom) resolves to
+  // 0 everywhere. BottomNav.tsx already has pb-[env(safe-area-inset-bottom)]
+  // (Sprint 163) but it was silently a no-op on iPhone until this fix — the
+  // fixed bottom nav could sit flush against (or under) the home indicator
+  // on notched/Dynamic-Island devices in standalone/installed mode.
+  viewportFit: "cover",
 };
 
 export const metadata: Metadata = {
