@@ -501,7 +501,21 @@ export interface AutoPublishAlertInsertPayload {
 }
 
 export interface ScheduledSourceWriter {
-  findExistingCandidateTexts(sourceKey: string, registrySourceId: string | null): Promise<string[]>;
+  /** Sprint 180C fix — `excludeCandidateId` (optional, defaults to no
+   *  exclusion) lets a caller that is re-evaluating an ALREADY-EXISTING
+   *  candidate row (trustedSourceAutoPublish.ts) exclude that row's own
+   *  id from the comparison pool. writeCandidatesForSource's own regular
+   *  call site never needs this — the proposal it checks doesn't exist in
+   *  the table yet — so it keeps calling this with only two arguments,
+   *  unchanged. Without this, a pending candidate's own text is
+   *  trivially "duplicate" against itself (real Production incident,
+   *  2026-07-28: both canary candidates were wrongly skipped as
+   *  self-duplicates). */
+  findExistingCandidateTexts(
+    sourceKey: string,
+    registrySourceId: string | null,
+    excludeCandidateId?: string
+  ): Promise<string[]>;
   /** Sprint 177D/177E — optional so every existing hand-written fake
    *  writer in the test suite keeps compiling and passing unmodified:
    *  when a fake doesn't implement it, writeCandidatesForSource treats
@@ -586,7 +600,7 @@ export function createSupabaseScheduledWriter(client: SupabaseClient): Scheduled
     // check. Matching on source_id as well (when a registry id is
     // configured) closes that gap without any RLS/schema change — pure
     // widening of an already-permitted read.
-    async findExistingCandidateTexts(sourceKey, registrySourceId) {
+    async findExistingCandidateTexts(sourceKey, registrySourceId, excludeCandidateId) {
       let query = client
         .from("source_notice_candidates")
         .select("title, excerpt, raw_text")
@@ -595,6 +609,7 @@ export function createSupabaseScheduledWriter(client: SupabaseClient): Scheduled
       query = registrySourceId
         ? query.or(`source_key.eq.${sourceKey},source_id.eq.${registrySourceId}`)
         : query.eq("source_key", sourceKey);
+      if (excludeCandidateId) query = query.neq("id", excludeCandidateId);
       const { data } = await query;
       return ((data as CandidateTextRow[] | null) ?? [])
         .map((r) => r.raw_text || r.excerpt || r.title || "")

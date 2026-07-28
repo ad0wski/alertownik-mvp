@@ -436,4 +436,80 @@ test.describe("runTrustedSourceAutoPublish — end to end", () => {
     expect(outcome.status).toBe("no_eligible_candidate");
     expect(insertedAlerts).toHaveLength(0);
   });
+
+  // ── Sprint 180C fix — self-comparison regression (real Production
+  // incident, 2026-07-28: both canary candidates were classified
+  // "duplicate" purely because findExistingCandidateTexts's own-source
+  // query included the very candidate being evaluated). This fake
+  // reproduces that exact shape: it returns the candidate's OWN text
+  // unless the caller correctly excludes it by id — the same behavior
+  // the real Supabase-backed .neq("id", excludeCandidateId) now
+  // implements. ─────────────────────────────────────────────────────────
+  test("a candidate is never compared against its own text — excludeCandidateId is always passed and honored", async () => {
+    const candidate = makeCandidate();
+    let receivedExcludeId: string | undefined;
+    const writer: ScheduledSourceWriter = {
+      async findExistingCandidateTexts(_sourceKey, _registrySourceId, excludeCandidateId) {
+        receivedExcludeId = excludeCandidateId;
+        // Simulates the real query: same-source rows INCLUDING the
+        // candidate's own row, unless excludeCandidateId filters it out.
+        const rows = [{ id: candidate.id, text: candidate.text }];
+        return rows.filter((r) => r.id !== excludeCandidateId).map((r) => r.text);
+      },
+      async findExistingAlertComparisons() {
+        return [];
+      },
+      async insertPendingCandidate() {
+        return { ok: true };
+      },
+      async insertSourceCheck() {
+        return { ok: true };
+      },
+      async findPendingAutoPublishCandidates() {
+        return [candidate];
+      },
+      async insertPublishedAlert() {
+        return { ok: true, id: "alert-1" };
+      },
+      async markCandidateAutoPublished() {
+        return { ok: true };
+      },
+    };
+    const outcome = await runTrustedSourceAutoPublish(writer, FIXED_NOW);
+    expect(receivedExcludeId).toBe(candidate.id);
+    expect(outcome.status).toBe("published");
+    expect(outcome.skipped).toHaveLength(0);
+  });
+
+  test("without the exclusion (older/misbehaving writer), the candidate self-matches as duplicate — pinning the bug this fix closes", async () => {
+    const candidate = makeCandidate();
+    const writer: ScheduledSourceWriter = {
+      // Deliberately ignores excludeCandidateId — reproduces the exact
+      // pre-fix real-world query shape.
+      async findExistingCandidateTexts() {
+        return [candidate.text];
+      },
+      async findExistingAlertComparisons() {
+        return [];
+      },
+      async insertPendingCandidate() {
+        return { ok: true };
+      },
+      async insertSourceCheck() {
+        return { ok: true };
+      },
+      async findPendingAutoPublishCandidates() {
+        return [candidate];
+      },
+      async insertPublishedAlert() {
+        return { ok: true, id: "alert-1" };
+      },
+      async markCandidateAutoPublished() {
+        return { ok: true };
+      },
+    };
+    const outcome = await runTrustedSourceAutoPublish(writer, FIXED_NOW);
+    expect(outcome.status).toBe("no_eligible_candidate");
+    expect(outcome.skipped).toEqual([{ candidateId: candidate.id, reason: "duplicate" }]);
+  });
 });

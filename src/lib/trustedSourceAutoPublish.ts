@@ -407,8 +407,16 @@ export async function runTrustedSourceAutoPublish(
   if (getMaxAutoPublishPerInvocation() <= 0) return { status: "no_eligible_candidate", skipped };
 
   for (const candidate of candidates) {
+    // Sprint 180C fix — excludeCandidateId=candidate.id: this candidate
+    // ALREADY EXISTS as a row in source_notice_candidates (unlike
+    // writeCandidatesForSource's own use of this same method, which
+    // checks a proposal that isn't in the table yet), so without this
+    // exclusion the pool always contains — and trivially self-matches —
+    // the very candidate being evaluated. Confirmed against real
+    // Production data 2026-07-28: both canary candidates were wrongly
+    // classified "duplicate" against themselves before this fix.
     const existingTexts = writer.findExistingCandidateTexts
-      ? await writer.findExistingCandidateTexts(candidate.sourceKey, null)
+      ? await writer.findExistingCandidateTexts(candidate.sourceKey, null, candidate.id)
       : [];
     let existingAlerts: DedupComparisonItem[] = [];
     if (writer.findExistingAlertComparisons) {
