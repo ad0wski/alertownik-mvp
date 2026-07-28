@@ -427,3 +427,47 @@ test.describe("Sprint 177C regression — same official communique reported with
     expect(insertedCandidates).toHaveLength(0);
   });
 });
+
+// ── 12. Sprint 180B — the real live case, confirmed ─────────────────────────
+
+test.describe("Sprint 180B regression — the real, live-fired DW nr 719 stage-2 candidate is confirmed 'new', not a duplicate", () => {
+  test("candidate 758819cc (2026-07-28, Vercel-Cron-triggered write-candidates run) reproduces classification 'new' with the exact production text", () => {
+    // This is not a hypothetical any more — group 6 above ("Same road,
+    // different permalink/segment/date") modeled this scenario in advance
+    // (Sprint 177C/177E); Sprint 180's first real scheduled Cron run then
+    // produced the actual live case it predicted: candidate
+    // 758819cc-b532-4b54-af86-d25d28da45b4, "Zmiana organizacji ruchu na
+    // drodze wojewódzkiej nr 719", inserted 2026-07-28 06:34:51 UTC. Every
+    // string below is copied verbatim from the live Production database
+    // (source_notice_candidates.raw_text, truncated to 321 chars by the
+    // parser exactly as stored — the trailing "[...]" is real, not an
+    // ellipsis added here) and the live published alerts row
+    // (80983ceb-3f97-4d7b-8cbc-f2f0083aa7bc, title + change). Forensic
+    // audit (docs/SPRINT_180_DW719_DEDUP_AND_CRON_KILLSWITCH_AUDIT_V1.md)
+    // reproduced the exact word-overlap score by hand: 8 shared
+    // significant words out of a 24-word candidate set = 0.333 — well
+    // under AMBIGUOUS_SIMILARITY_THRESHOLD (0.6). Both notices describe
+    // the same underlying investment (STRABAG, DW 719, Nowa Wieś, km
+    // 22+531–23+274) but a genuinely different, future-dated traffic
+    // reorganization stage (9 lipca "obowiązuje" vs 29 lipca "zostanie
+    // wprowadzona") — classification B (a distinct stage of a larger
+    // event), never C (duplicate), matching this suite's group-6 finding.
+    const existingAlert: DedupComparisonItem = {
+      text:
+        "Utrudnienia w ruchu drogowym – DW nr 719, Nowa Wieś " +
+        "Od 9 lipca 2026 r. na odcinku DW nr 719 w Nowej Wsi obowiązuje czasowa organizacja ruchu " +
+        "w związku z pracami prowadzonymi przez STRABAG. Jezdnia jest zwężona, ale ruch dwukierunkowy " +
+        "pozostaje zachowany. Przewidywane zakończenie prac: sierpień 2026 r.",
+      url: "https://www.michalowice.pl/dzieje-sie/aktualnosci/komunikaty/rok-2026/utrudnienia-w-ruchu-drogowym-dw-nr-719-nowa-wies,p2027957373",
+    };
+    const liveCandidateProposal = {
+      text:
+        "Od 29 lipca 2026 r. od godz. 9:00 zostanie wprowadzona czasowa organizacja ruchu na drodze " +
+        "wojewódzkiej nr 719 w Nowej Wsi, na terenie gminy Michałowice. Zmiany obejmą odcinek od km " +
+        "22+531 do km 23+274 i są związane z realizacją inwestycji pn. „Rozbudowa DW nr 719 od km " +
+        "22+531 do km 23+274 w miejscowości Nowa Wieś [...]",
+      url: "https://www.pruszkow.pl/mieszkancy/aktualnosci-mieszkaniec/zmiana-organizacji-ruchu-na-drodze-wojewodzkiej-nr-719/",
+    };
+    expect(classifyProposalAgainstExisting(liveCandidateProposal, [existingAlert])).toBe("new");
+  });
+});
