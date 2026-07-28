@@ -14,8 +14,13 @@ import path from "path";
 // to Production), but it must carry an unmistakable DO-NOT-APPLY warning
 // so nobody mistakes it for a safe, ready-to-run proposal again.
 
+// Normalizes CRLF/CR line endings to LF right after reading, so every
+// assertion below (all of which reason about "--" comment joins and line
+// wraps in terms of "\n") behaves identically regardless of the checkout's
+// line-ending config (e.g. Windows core.autocrlf) — the file content and
+// the strength of every assertion are otherwise unchanged.
 function readFile(relativePath: string): string {
-  return readFileSync(path.join(process.cwd(), relativePath), "utf8");
+  return readFileSync(path.join(process.cwd(), relativePath), "utf8").replace(/\r\n?/g, "\n");
 }
 
 test.describe("Sprint 178A — historical scheduled-writer RLS migration carries a DO NOT APPLY warning", () => {
