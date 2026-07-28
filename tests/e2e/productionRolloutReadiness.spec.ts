@@ -243,7 +243,11 @@ test.describe("14 — the retention mechanism cannot run automatically", () => {
     const vercelJsonPath = path.join(process.cwd(), "vercel.json");
     const config = JSON.parse(readFileSync(vercelJsonPath, "utf8")) as { crons?: Array<{ path: string }> };
     const paths = (config.crons ?? []).map((c) => c.path);
-    const knownReviewedPaths = ["/api/cron/check-michalowice", "/api/cron/write-candidates"];
+    const knownReviewedPaths = [
+      "/api/cron/check-michalowice",
+      "/api/cron/write-candidates",
+      "/api/cron/auto-publish-trusted-source",
+    ];
     for (const p of paths) {
       expect(p).not.toMatch(/cleanup|retention/i);
       expect(knownReviewedPaths).toContain(p);

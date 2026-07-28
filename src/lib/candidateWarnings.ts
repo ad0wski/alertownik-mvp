@@ -2,7 +2,7 @@
 // likely-stale candidate notices using only data already loaded by the
 // queue/source-check UI — no new schema, no fuzzy-matching library.
 
-const MONTHS_PL =
+export const MONTHS_PL =
   "stycznia|lutego|marca|kwietnia|maja|czerwca|lipca|sierpnia|wrze[sś]nia|pa[zź]dziernika|listopada|grudnia";
 
 const DATE_PATTERNS = [

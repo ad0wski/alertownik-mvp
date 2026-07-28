@@ -141,7 +141,20 @@ Only the **anon/publishable key** is used (named `NEXT_PUBLIC_SUPABASE_PUBLISHAB
 7. **Never modify `.env.local`**.
 8. **Never use `NEXT_PUBLIC_` prefix for AI API keys.** The `NEXT_PUBLIC_` prefix exposes env vars to the browser. AI keys (`ANTHROPIC_API_KEY`, etc.) must be server-only, accessed only in route handlers or server components — never in `src/app/**/page.tsx` client components.
 9. **Never call external AI APIs from client-side code.** All calls to Anthropic, OpenAI, or any AI API must go through a server-side route handler (e.g. `/api/ai/draft-alert`). The API key must never leave the server.
-10. **Never publish AI-generated drafts automatically.** AI output is always loaded into Builder for admin review. Admin must explicitly click "Opublikuj w Supabase" — no auto-publish path exists.
+10. **AI-generated drafts require manual admin review by default — no exceptions to this default.** AI output is loaded into Builder for admin review; admin must explicitly click "Opublikuj w Supabase" for every draft **unless** it qualifies for the narrow Trusted Source Auto-Publish path below.
+
+    **Trusted Source Auto-Publish (scoped exception, Sprint 180C):** a single, explicit, revocable automated path exists for candidates from an allowlisted trusted source — currently only `pruszkow-aktualnosci`. Auto-publish may fire **only** when every one of the following is simultaneously true; any single failing condition fails closed (candidate stays `pending`, no partial write):
+    - `SCHEDULED_AUTO_PUBLISH_ENABLED=true` (separate flag, independent of `SCHEDULED_WRITES_ENABLED`, off by default).
+    - The candidate's `source_key` is on the dedicated auto-publish allowlist (currently `pruszkow-aktualnosci` only).
+    - `candidate_url` is a direct, safe, public `http(s)` permalink — never a `/wp-json/` API endpoint, never missing.
+    - The notice is current or upcoming (not expired/past).
+    - Every required alert field (title, category, location/area, dates, description, "co zrobić", source URL) can be populated completely and faithfully from the source.
+    - Cross-table dedup classifies the candidate as `new` — never `duplicate`, never `ambiguous`.
+    - The candidate is still `status = pending` and `converted_alert_id IS NULL` at the moment of conversion (no double-processing).
+    - At most one candidate is auto-published per scheduled run (cap = 1).
+    - The conversion is idempotent — re-running against an already-converted candidate publishes nothing a second time.
+
+    Duplicate, ambiguous, expired, incomplete candidates, and candidates from any source not on the auto-publish allowlist must **never** be auto-published — always fail closed to `pending`, never partially published. The flag and allowlist must both support instant, code-free rollback (env var flip + redeploy only, never a code revert) back to fully manual review. This exception never widens `anon`/`public` RLS access and never bypasses RLS — the automation identity's existing narrow policies are the only write path, unchanged.
 
 ---
 

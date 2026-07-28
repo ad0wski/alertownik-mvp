@@ -455,6 +455,51 @@ export type InsertPendingCandidateResult =
   | { ok: true }
   | { ok: false; reason: "duplicate_prevented_by_database" | "unknown_error" };
 
+/** Sprint 180C — Trusted Source Auto-Publish. Distinct from
+ *  InsertPendingCandidateResult: this insert either fully succeeds (and
+ *  returns the new alert's id) or fully fails — there is no
+ *  "partially inserted" outcome, matching the fail-closed requirement
+ *  the whole trustedSourceAutoPublish.ts module is built around. */
+export type InsertPublishedAlertResult =
+  | { ok: true; id: string }
+  | { ok: false; reason: "duplicate_prevented_by_database" | "unknown_error" };
+
+/** Shape of the row trustedSourceAutoPublish.ts's buildAutoPublishAlertInsert()
+ *  produces — defined here (the module ScheduledSourceWriter itself lives
+ *  in) rather than imported from trustedSourceAutoPublish.ts, so the
+ *  import direction stays one-way (feature module depends on this core
+ *  module, never the reverse). */
+/** A pending candidate row shaped for trustedSourceAutoPublish.ts's own
+ *  evaluateAutoPublishEligibility() — defined here for the same
+ *  one-way-import reason as AutoPublishAlertInsertPayload below. */
+export interface PendingAutoPublishCandidateRow {
+  id: string;
+  sourceKey: string;
+  sourceName: string;
+  sourceUrl: string;
+  candidateUrl: string | null;
+  title: string;
+  text: string;
+  status: string;
+  convertedAlertId: string | null;
+}
+
+export interface AutoPublishAlertInsertPayload {
+  slug: string;
+  category: string;
+  severity: string;
+  title: string;
+  place: string;
+  starts_at: string;
+  change: string;
+  action: string;
+  source_name: string;
+  source_url: string;
+  source_id: null;
+  status: "published";
+  published_at: string;
+}
+
 export interface ScheduledSourceWriter {
   findExistingCandidateTexts(sourceKey: string, registrySourceId: string | null): Promise<string[]>;
   /** Sprint 177D/177E — optional so every existing hand-written fake
@@ -466,6 +511,24 @@ export interface ScheduledSourceWriter {
   findExistingAlertComparisons?(): Promise<DedupComparisonItem[]>;
   insertPendingCandidate(payload: ReturnType<typeof buildPendingCandidateInsert>): Promise<InsertPendingCandidateResult>;
   insertSourceCheck(payload: ReturnType<typeof buildAutomatedSourceCheckInsert>): Promise<{ ok: boolean }>;
+  /** Sprint 180C — both optional for the same reason findExistingAlertComparisons
+   *  is: every pre-existing hand-written fake writer keeps compiling and
+   *  passing unmodified. Requires the (not yet applied — see
+   *  docs/sql/PROPOSED_SPRINT_180C_TRUSTED_SOURCE_AUTO_PUBLISH_RLS_V1.sql)
+   *  INSERT-on-alerts / UPDATE-on-source_notice_candidates policies to
+   *  actually succeed against Production; until that migration is applied,
+   *  the real implementation's calls fail closed with a Postgres 42501,
+   *  surfaced as `{ ok: false, reason: "unknown_error" }` — never a crash,
+   *  never a partial write. */
+  insertPublishedAlert?(payload: AutoPublishAlertInsertPayload): Promise<InsertPublishedAlertResult>;
+  markCandidateAutoPublished?(candidateId: string, alertId: string): Promise<{ ok: boolean }>;
+  /** Bounded read (never unbounded) of `pending`, not-yet-converted
+   *  candidates whose source_key is in `sourceIds` — the writer's existing
+   *  unrestricted (non source-scoped) SELECT policy on
+   *  source_notice_candidates already permits this, no new read grant
+   *  needed. Ordered oldest-first so a long-pending candidate is
+   *  considered before a just-created one. */
+  findPendingAutoPublishCandidates?(sourceIds: readonly string[]): Promise<PendingAutoPublishCandidateRow[]>;
 }
 
 /** Postgres unique_violation — the exact code the proposed migration's
@@ -478,6 +541,19 @@ interface CandidateTextRow {
   title?: string;
   excerpt?: string;
   raw_text?: string;
+}
+
+interface PendingCandidateFullRow {
+  id: string;
+  source_key: string;
+  source_name: string;
+  source_url: string;
+  candidate_url?: string | null;
+  title?: string;
+  excerpt?: string;
+  raw_text?: string;
+  status: string;
+  converted_alert_id?: string | null;
 }
 
 interface ExistingAlertRow {
@@ -535,6 +611,58 @@ export function createSupabaseScheduledWriter(client: SupabaseClient): Scheduled
     async insertSourceCheck(payload) {
       const { error } = await client.from("source_checks").insert(payload);
       return { ok: !error };
+    },
+    // Sprint 180C — relies on the (not yet applied — see
+    // docs/sql/PROPOSED_SPRINT_180C_TRUSTED_SOURCE_AUTO_PUBLISH_RLS_V1.sql)
+    // narrow INSERT policy on `alerts`. Until that migration is applied,
+    // every call here fails at the database with 42501, surfaced below as
+    // `unknown_error` — the same safe, generic-diagnostic convention every
+    // other write path in this file already follows. `.insert()`, never
+    // `.upsert()`: a genuine slug collision with an unrelated existing
+    // alert must fail closed (unique_violation), never silently overwrite.
+    async insertPublishedAlert(payload) {
+      const { data, error } = await client.from("alerts").insert(payload).select("id").single();
+      if (!error) return { ok: true, id: (data?.id as string) ?? "" };
+      if (error.code === POSTGRES_UNIQUE_VIOLATION) {
+        return { ok: false, reason: "duplicate_prevented_by_database" };
+      }
+      return { ok: false, reason: "unknown_error" };
+    },
+    // Sprint 180C — relies on the same not-yet-applied migration's narrow
+    // UPDATE policy on `source_notice_candidates` (pending → published
+    // only). Always called AFTER insertPublishedAlert succeeds, never
+    // before — see writeCandidatesForSource's own sibling function in
+    // trustedSourceAutoPublish.ts for the exact ordering and why a failure
+    // here does not risk a double-publish on retry (the exact-URL dedup
+    // check against the now-published alert's own source_url is the real
+    // idempotency guarantee, not this update's own success).
+    async markCandidateAutoPublished(candidateId, alertId) {
+      const { error } = await client
+        .from("source_notice_candidates")
+        .update({ status: "published", converted_alert_id: alertId })
+        .eq("id", candidateId);
+      return { ok: !error };
+    },
+    async findPendingAutoPublishCandidates(sourceIds) {
+      if (sourceIds.length === 0) return [];
+      const { data } = await client
+        .from("source_notice_candidates")
+        .select("id, source_key, source_name, source_url, candidate_url, title, excerpt, raw_text, status, converted_alert_id")
+        .eq("status", "pending")
+        .in("source_key", [...sourceIds])
+        .order("created_at", { ascending: true })
+        .limit(20);
+      return ((data as PendingCandidateFullRow[] | null) ?? []).map((row) => ({
+        id: row.id,
+        sourceKey: row.source_key,
+        sourceName: row.source_name,
+        sourceUrl: row.source_url,
+        candidateUrl: row.candidate_url ?? null,
+        title: row.title ?? "",
+        text: row.raw_text || row.excerpt || row.title || "",
+        status: row.status,
+        convertedAlertId: row.converted_alert_id ?? null,
+      }));
     },
     // Sprint 177E — reads through the writer's OWN authenticated session
     // (the same `client` this factory was constructed with), relying on

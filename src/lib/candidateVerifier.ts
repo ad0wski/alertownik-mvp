@@ -98,7 +98,13 @@ const CATEGORY_KEYWORDS: [AlertCategory, string[]][] = [
   ["power", ["prąd", "prądu", "energii elektrycznej", "wyłączeni", "elektryczn", "pge"]],
   ["waste", ["odpad", "śmieci", "harmonogram odbioru", "segregacj", "wywóz"]],
   ["transport", ["wkd", "pociąg", "kolej", "autobus", "rozkład jazdy", "komunikacj"]],
-  ["roads", ["drog", "ulic", "remont", "objazd", "frezowanie", "ruchu drogow", "przejazd"]],
+  // Sprint 180C forensic finding: "drog" alone misses "drodze" (the
+  // locative/dative case of "droga" — Polish's g→dz consonant alternation
+  // means this inflected form contains no "g" at all), which is exactly
+  // the form the real DW 719 candidate text uses ("na drodze
+  // wojewódzkiej"). Added explicitly rather than loosening the "drog"
+  // stem itself, so no other word gains an unintended match.
+  ["roads", ["drog", "drodze", "ulic", "remont", "objazd", "frezowanie", "ruchu drogow", "przejazd"]],
 ];
 
 export function detectCandidateCategory(text: string): AlertCategory | null {

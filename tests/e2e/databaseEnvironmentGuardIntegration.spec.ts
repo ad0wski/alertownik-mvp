@@ -221,6 +221,11 @@ test.describe("§E.9 — read-only/public routes are untouched by the new guard"
     const importPattern = /from\s+["']@\/lib\/databaseEnvironmentGuard["']/;
     const allFiles = listFilesRecursive(srcDir);
     const writeCandidatesRoute = path.join(srcDir, "app", "api", "cron", "write-candidates", "route.ts");
+    // Sprint 180C — /api/cron/auto-publish-trusted-source is structurally
+    // identical to write-candidates itself (full guard + real writer
+    // construction, both reviewed together), not one of the narrower
+    // read-only/guard-only consumers below — excluded here the same way.
+    const autoPublishRoute = path.join(srcDir, "app", "api", "cron", "auto-publish-trusted-source", "route.ts");
     // Sprint 166D-2B/2C — /api/admin/automation-status legitimately imports
     // this module too, but only the pure, non-secret-exposing
     // getConfiguredDatabaseEnvironmentTag() helper, for a read-only,
@@ -241,6 +246,7 @@ test.describe("§E.9 — read-only/public routes are untouched by the new guard"
     ];
     const importers = allFiles.filter((f) => {
       if (f === writeCandidatesRoute) return false;
+      if (f === autoPublishRoute) return false;
       if (f.endsWith(path.join("lib", "databaseEnvironmentGuard.ts"))) return false;
       const content = readFileSync(f, "utf8");
       return importPattern.test(content);
@@ -287,19 +293,36 @@ test.describe("§E.10 — nothing bypasses the guard via a direct import of the 
     return files;
   }
 
-  test("createSupabaseScheduledWriter is only ever called from the one guarded route", () => {
+  test("createSupabaseScheduledWriter is only ever called from the two guarded, reviewed routes", () => {
     const allFiles = listFilesRecursive(srcDir);
     const callers = allFiles.filter((f) => {
       if (f.endsWith(path.join("lib", "scheduledWriter.ts"))) return false;
       const content = readFileSync(f, "utf8");
       return /createSupabaseScheduledWriter\s*\(/.test(content);
     });
-    expect(callers).toEqual([path.join(srcDir, "app/api/cron/write-candidates/route.ts")]);
+    expect(callers.slice().sort()).toEqual(
+      [
+        path.join(srcDir, "app/api/cron/write-candidates/route.ts"),
+        path.join(srcDir, "app/api/cron/auto-publish-trusted-source/route.ts"),
+      ].sort()
+    );
   });
 
   test("the guarded route itself calls checkDatabaseEnvironmentGuard before constructing any writer", () => {
     const routeSrc = readFileSync(
       path.join(srcDir, "app/api/cron/write-candidates/route.ts"),
+      "utf8"
+    );
+    const guardIndex = routeSrc.indexOf("checkDatabaseEnvironmentGuard(");
+    const writerIndex = routeSrc.indexOf("createSupabaseScheduledWriter(");
+    expect(guardIndex).toBeGreaterThan(-1);
+    expect(writerIndex).toBeGreaterThan(-1);
+    expect(guardIndex).toBeLessThan(writerIndex);
+  });
+
+  test("the auto-publish route itself calls checkDatabaseEnvironmentGuard before constructing any writer", () => {
+    const routeSrc = readFileSync(
+      path.join(srcDir, "app/api/cron/auto-publish-trusted-source/route.ts"),
       "utf8"
     );
     const guardIndex = routeSrc.indexOf("checkDatabaseEnvironmentGuard(");
