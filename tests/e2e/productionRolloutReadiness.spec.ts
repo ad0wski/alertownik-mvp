@@ -232,13 +232,21 @@ test.describe("14 — the retention mechanism cannot run automatically", () => {
     expect(referencing).toEqual([]);
   });
 
-  test("vercel.json's crons array never targets write-candidates or any retention/cleanup endpoint", () => {
+  // Sprint 180A — deliberately allows exactly one known, reviewed
+  // write-candidates cron entry (the sprint's own explicit mandate; see
+  // tests/e2e/vercelCronConfig.spec.ts for its full contract: no query
+  // string, daily-only schedule, single-source allowlist enforced
+  // server-side). Retention/cleanup endpoints remain categorically
+  // forbidden — nothing in this sprint touches that guarantee — and no
+  // OTHER, unreviewed path may ever appear here.
+  test("vercel.json's crons array never targets a retention/cleanup endpoint, and only ever targets the two known, reviewed cron routes", () => {
     const vercelJsonPath = path.join(process.cwd(), "vercel.json");
     const config = JSON.parse(readFileSync(vercelJsonPath, "utf8")) as { crons?: Array<{ path: string }> };
     const paths = (config.crons ?? []).map((c) => c.path);
+    const knownReviewedPaths = ["/api/cron/check-michalowice", "/api/cron/write-candidates"];
     for (const p of paths) {
-      expect(p).not.toMatch(/write-candidates/);
       expect(p).not.toMatch(/cleanup|retention/i);
+      expect(knownReviewedPaths).toContain(p);
     }
   });
 });

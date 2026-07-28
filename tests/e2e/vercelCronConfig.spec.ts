@@ -4,58 +4,77 @@ import path from "path";
 
 /**
  * Sprint 153 — contract tests for the root vercel.json cron configuration.
- *
- * This is a feature-branch-only file: it is not merged to main and not
- * deployed to Production as part of Sprint 153A. These tests exist so that
- * whenever it IS eventually merged, CI enforces the exact shape agreed in
- * the Sprint 153 runbook — one cron, once daily, targeting only the
- * Michałowice dry-run wrapper, never the write-candidates or WKD routes.
+ * Sprint 180A extended this contract to a second cron entry, the first
+ * write-capable one (`/api/cron/write-candidates`). Both entries stay
+ * Hobby-plan-safe (daily granularity, no sub-day wildcards). The
+ * write-candidates entry deliberately carries NO query string — Vercel's
+ * documented `crons[].path` spec never covers query-string behavior, so
+ * (matching the existing check-michalowice wrapper's own reasoning) source
+ * scoping for the cron-triggered write path is enforced entirely
+ * server-side via SCHEDULED_WRITER_ALLOWED_SOURCE_IDS, never via an
+ * undocumented `?sourceKey=` on the cron path itself.
  */
 
 const VERCEL_JSON_PATH = path.join(process.cwd(), "vercel.json");
+
+function isDailySafe(schedule: string): boolean {
+  const [minute, hour] = schedule.split(" ");
+  return minute !== "*" && !/\*\//.test(minute) && hour !== "*" && !/\*\//.test(hour);
+}
 
 test.describe("root vercel.json — cron configuration contract", () => {
   test("vercel.json exists at the repo root", () => {
     expect(existsSync(VERCEL_JSON_PATH)).toBe(true);
   });
 
-  test("is valid JSON with exactly one cron entry", () => {
+  test("is valid JSON with exactly two cron entries", () => {
     const raw = readFileSync(VERCEL_JSON_PATH, "utf8");
     const parsed = JSON.parse(raw);
     expect(Array.isArray(parsed.crons)).toBe(true);
-    expect(parsed.crons).toHaveLength(1);
+    expect(parsed.crons).toHaveLength(2);
   });
 
-  test("the single cron targets only the Michałowice dry-run wrapper route", () => {
+  test("the first cron targets only the Michałowice dry-run wrapper route", () => {
     const parsed = JSON.parse(readFileSync(VERCEL_JSON_PATH, "utf8"));
-    const [cron] = parsed.crons;
-    expect(cron.path).toBe("/api/cron/check-michalowice");
+    const cron = parsed.crons.find((c: { path: string }) => c.path === "/api/cron/check-michalowice");
+    expect(cron).toBeDefined();
     expect(cron.path.startsWith("/")).toBe(true);
     expect(cron.path).not.toContain("?");
   });
 
-  test("the cron never targets the write-candidates or WKD-specific routes", () => {
-    const raw = readFileSync(VERCEL_JSON_PATH, "utf8");
-    expect(raw).not.toContain("write-candidates");
-    expect(raw).not.toContain("wkd-aktualnosci");
-  });
-
-  test("schedule is once daily (0 5 * * *) — Hobby-plan safe", () => {
+  test("Michałowice dry-run cron is daily (0 5 * * *) — Hobby-plan safe", () => {
     const parsed = JSON.parse(readFileSync(VERCEL_JSON_PATH, "utf8"));
-    const [cron] = parsed.crons;
+    const cron = parsed.crons.find((c: { path: string }) => c.path === "/api/cron/check-michalowice");
     expect(cron.schedule).toBe("0 5 * * *");
   });
 
-  test("schedule expression cannot run more than once per day (no minute/hour wildcards below day granularity)", () => {
+  test("the second cron targets only the write-candidates route, with no query string", () => {
     const parsed = JSON.parse(readFileSync(VERCEL_JSON_PATH, "utf8"));
-    const [cron] = parsed.crons;
-    const [minute, hour] = cron.schedule.split(" ");
-    // A fixed minute AND a fixed hour (neither is "*" or a "*/n" step) is
-    // the only shape that resolves to exactly one invocation per day.
-    expect(minute).not.toBe("*");
-    expect(minute).not.toMatch(/\*\//);
-    expect(hour).not.toBe("*");
-    expect(hour).not.toMatch(/\*\//);
+    const cron = parsed.crons.find((c: { path: string }) => c.path === "/api/cron/write-candidates");
+    expect(cron).toBeDefined();
+    expect(cron.path).toBe("/api/cron/write-candidates");
+    expect(cron.path).not.toContain("?");
+  });
+
+  test("write-candidates cron is daily (30 5 * * *) — Hobby-plan safe, offset from the dry-run cron", () => {
+    const parsed = JSON.parse(readFileSync(VERCEL_JSON_PATH, "utf8"));
+    const cron = parsed.crons.find((c: { path: string }) => c.path === "/api/cron/write-candidates");
+    expect(cron.schedule).toBe("30 5 * * *");
+    expect(cron.schedule).not.toBe(
+      parsed.crons.find((c: { path: string }) => c.path === "/api/cron/check-michalowice").schedule
+    );
+  });
+
+  test("no cron schedule can run more than once per day (no minute/hour wildcards below day granularity)", () => {
+    const parsed = JSON.parse(readFileSync(VERCEL_JSON_PATH, "utf8"));
+    for (const cron of parsed.crons as { schedule: string }[]) {
+      expect(isDailySafe(cron.schedule)).toBe(true);
+    }
+  });
+
+  test("the WKD-specific route is never targeted by any cron", () => {
+    const raw = readFileSync(VERCEL_JSON_PATH, "utf8");
+    expect(raw).not.toContain("wkd-aktualnosci");
   });
 
   test("contains no secret-shaped values and no hardcoded Production URL", () => {
