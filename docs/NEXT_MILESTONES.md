@@ -43,13 +43,28 @@ Gates are passed in order. Preparation for a later gate is fine; execution is no
 4. Reach 3–5 fresh alerts → local smoke test round 2 (5–10 testers).
 5. Partner demo page → soft outreach (feedback first, money later).
 6. Source engine stages: candidate queue → AI verifier → risk scoring → one-click
-   approve. Guarded autopublish stays beyond this horizon, behind hard safeguards.
+   approve. A first, narrow, guarded auto-publish exception shipped in Sprint
+   180C (see Standing rules below) — currently disabled pending a second,
+   separately-approved canary attempt (Sprint 181A hardened its dedup logic).
 7. Android packaging decision (stay PWA vs TWA) and, only after its gate, Google
    Play Console. iOS remains LATER.
 
-## Standing rules (unchanged)
+## Standing rules
 
-- No auto-publish; a human approves every alert.
+- **Manual admin approval remains the default for every alert.** Sprint 180C
+  (CLAUDE.md Security Rule #10 amendment) added exactly one narrow, fail-closed
+  exception: Trusted Source Auto-Publish. It only ever considers sources on a
+  dedicated, code-narrowed allowlist (currently `pruszkow-aktualnosci` alone),
+  requires nine simultaneous conditions (allowlisted source, safe direct
+  permalink, current/upcoming, complete fields, non-duplicate/non-ambiguous
+  dedup result, still-pending and unconverted, cap of one publish per run,
+  idempotent re-runs), and fails closed on any single unmet condition — see
+  `docs/SPRINT_180_TRUSTED_SOURCE_AUTO_PUBLISH_CANARY_V1.md` for the full
+  design and the first canary's outcome. **As of this writing the mechanism is
+  built, RLS-backed, and deployed but DISABLED** (`SCHEDULED_AUTO_PUBLISH_ENABLED`
+  unset on Production) — the first canary surfaced a real bug (since fixed),
+  and a second live attempt has not yet been approved. Instant rollback is a
+  flag flip + allowlist removal, never a code revert or SQL change.
 - Official sources only (PGE / gmina / WKD / utilities); Facebook and community
   posts are discovery clues, never publication sources.
 - No payments code, no push notifications, no scraping without explicit approval.

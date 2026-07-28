@@ -52,6 +52,69 @@ function significantWords(text: string): Set<string> {
   return new Set(normalizeForCompare(text).split(" ").filter((w) => w.length > 3));
 }
 
+// Sprint 181A — confirmed Polish municipal-notice boilerplate phrases,
+// applied ONLY by classifyCandidateAgainstExisting's dedup path
+// (scheduledWriter.ts), never by getCandidateWarnings/findSimilarText
+// below (that advisory feature keeps its existing, unchanged behavior —
+// smallest possible blast radius). Every phrase here was verified present
+// (after normalizeForCompare) in real Production candidate/alert text
+// (Sprint 180C canary: the DW 719 and ul. Działkowej notices) before being
+// added — this is a confirmed, hand-vetted list, not a speculative or
+// auto-generated one, and it is never extended without the same
+// verification. Root cause this addresses: textSimilarity's ratio divides
+// by the SMALLER text's significant-word count, so a short text (e.g. a
+// bare title-only comparison — a real, reachable shape via
+// findExistingCandidateTexts's `raw_text || excerpt || title` fallback)
+// sharing just a few generic administrative words with an unrelated
+// notice can cross AMBIGUOUS_SIMILARITY_THRESHOLD on boilerplate alone
+// (confirmed near-miss: title-only "Czasowa organizacja ruchu na ul.
+// Działkowej w Pruszkowie" vs. the real DW 719 candidate text scored
+// exactly 0.6000 — the threshold itself — before this change).
+//
+// Every phrase is a connective/procedural fragment of the standard Polish
+// "czasowa organizacja ruchu" traffic-notice template — never a street
+// name, locality, road number, date, or description of what actually
+// happened. Stripping is symmetric (applied to both texts being
+// compared), so it can only ever REDUCE a shared-boilerplate score — it
+// removes overlap that both texts have in common, and has no way to
+// manufacture new overlap. A genuine duplicate/near-duplicate still
+// shares all of its substantive content (street, dates, kilometrage,
+// event specifics) after stripping, so it still scores high; only
+// overlap that was ENTIRELY administrative filler can be erased down to
+// zero. Longest phrases first, so a shorter phrase never leaves an
+// orphan fragment of one already consumed by a longer match.
+const CONFIRMED_DEDUP_BOILERPLATE_PHRASES = [
+  "zostanie wprowadzona czasowa organizacja ruchu",
+  "wprowadzona zostanie czasowa organizacja ruchu",
+  "szanowni panstwo informujemy ze",
+  "czasowa organizacja ruchu",
+  "zmiany obejma odcinek",
+  "jednym pasem ruchu",
+  "jednym pasie ruchu",
+  "na zasadzie mijanki",
+  "zostanie zamkniety",
+  "zamkniety zostanie",
+  "na odcinku od",
+  "w zwiazku z",
+  "szanowni panstwo",
+  "informujemy ze",
+  "prosimy wszystkich",
+].sort((a, b) => b.length - a.length);
+
+/** Dedup-only preprocessing step (Sprint 181A) — NOT used by
+ *  getCandidateWarnings/findSimilarText, only by
+ *  classifyCandidateAgainstExisting. Reuses normalizeForCompare exactly
+ *  as-is (idempotent — textSimilarity's own internal normalization of an
+ *  already-normalized string is a no-op), never a second normalization
+ *  algorithm. */
+export function stripConfirmedDedupBoilerplate(text: string): string {
+  let normalized = normalizeForCompare(text);
+  for (const phrase of CONFIRMED_DEDUP_BOILERPLATE_PHRASES) {
+    normalized = normalized.split(phrase).join(" ");
+  }
+  return normalized.replace(/\s+/g, " ").trim();
+}
+
 // Word-overlap ratio, not real fuzzy matching — good enough to flag an
 // obvious resemblance, not precise enough to auto-merge or auto-discard.
 export function textSimilarity(a: string, b: string): number {

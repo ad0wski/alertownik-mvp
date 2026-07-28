@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { createHash } from "crypto";
-import { textSimilarity, normalizeForCompare } from "@/lib/candidateWarnings";
+import { textSimilarity, normalizeForCompare, stripConfirmedDedupBoilerplate } from "@/lib/candidateWarnings";
 import type { CheckProposal } from "@/lib/sourceCheck";
 import { SAFE_CHECK_SOURCE_IDS } from "@/lib/sourceCheck";
 
@@ -151,10 +151,18 @@ export function classifyCandidateAgainstExisting(
   candidateText: string,
   existingTexts: string[]
 ): DuplicateClassification {
+  // Sprint 181A — both sides pass through stripConfirmedDedupBoilerplate
+  // before scoring. Thresholds below are UNCHANGED (still 0.9 / 0.6) —
+  // this only cleans the input, never the decision boundary. See that
+  // function's own doc comment (candidateWarnings.ts) for why this is
+  // safe: stripping is symmetric and can only remove shared filler, never
+  // manufacture overlap, so a genuine duplicate/near-duplicate still
+  // scores exactly as high on its substantive content.
+  const strippedCandidate = stripConfirmedDedupBoilerplate(candidateText);
   let bestScore = 0;
   for (const existing of existingTexts) {
     if (!existing) continue;
-    const score = textSimilarity(candidateText, existing);
+    const score = textSimilarity(strippedCandidate, stripConfirmedDedupBoilerplate(existing));
     if (score > bestScore) bestScore = score;
   }
   if (bestScore >= DUPLICATE_CONFIDENCE_THRESHOLD) return "duplicate";

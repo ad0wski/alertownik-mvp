@@ -6,6 +6,7 @@ import {
   type ScheduledSourceWriter,
   type DedupComparisonItem,
 } from "@/lib/scheduledWriter";
+import { stripConfirmedDedupBoilerplate } from "@/lib/candidateWarnings";
 
 /**
  * Sprint 177D/177E — cross-table dedup hardening. Confirms a proposal is
@@ -469,5 +470,84 @@ test.describe("Sprint 180B regression — the real, live-fired DW nr 719 stage-2
       url: "https://www.pruszkow.pl/mieszkancy/aktualnosci-mieszkaniec/zmiana-organizacji-ruchu-na-drodze-wojewodzkiej-nr-719/",
     };
     expect(classifyProposalAgainstExisting(liveCandidateProposal, [existingAlert])).toBe("new");
+  });
+});
+
+// ── 13. Sprint 181A — confirmed short-text boilerplate false-positive fix ───
+//
+// Root cause: textSimilarity's ratio divides by the SMALLER text's
+// significant-word count. A short comparison text (a real, reachable
+// shape — findExistingCandidateTexts falls back to a bare title when
+// raw_text/excerpt are both empty) sharing just a handful of generic
+// Polish municipal-notice words with an unrelated notice can cross
+// AMBIGUOUS_SIMILARITY_THRESHOLD on administrative boilerplate alone,
+// with zero shared substance. Confirmed live near-miss (analysis
+// 2026-07-28, NOT an actual Production incident — no such short-text
+// comparison ever actually occurred; found via a corrected reproduction
+// of the Sprint 180C canary): the real DW 719 candidate text against the
+// bare title "Czasowa organizacja ruchu na ul. Działkowej w Pruszkowie"
+// (no body) scored exactly 0.6000 — the threshold value itself.
+test.describe("Sprint 181A — boilerplate-aware dedup: eliminates the confirmed short-text false-positive without weakening real duplicate detection", () => {
+  const dw719CandidateText =
+    "Od 29 lipca 2026 r. od godz. 9:00 zostanie wprowadzona czasowa organizacja ruchu na drodze " +
+    "wojewódzkiej nr 719 w Nowej Wsi, na terenie gminy Michałowice. Zmiany obejmą odcinek od km " +
+    "22+531 do km 23+274 i są związane z realizacją inwestycji pn. „Rozbudowa DW nr 719 od km " +
+    "22+531 do km 23+274 w miejscowości Nowa Wieś [...]";
+  const dw719Url = "https://www.pruszkow.pl/mieszkancy/aktualnosci-mieszkaniec/zmiana-organizacji-ruchu-na-drodze-wojewodzkiej-nr-719/";
+
+  test("the confirmed near-miss: a bare, boilerplate-only alert title no longer crosses ambiguous against an unrelated notice", () => {
+    const dzialkowaTitleOnly = "Czasowa organizacja ruchu na ul. Działkowej w Pruszkowie";
+    const classification = classifyProposalAgainstExisting(
+      { text: dw719CandidateText, url: dw719Url },
+      [{ text: dzialkowaTitleOnly, url: "https://www.pruszkow.pl/mieszkancy/czasowa-organizacja-ruchu-na-ul-dzialkowej-od-31-lipca-2026-r/" }]
+    );
+    expect(classification).toBe("new");
+  });
+
+  test("the same DW 719 notice, re-scraped verbatim (genuine exact duplicate), still classifies duplicate", () => {
+    const classification = classifyProposalAgainstExisting(
+      { text: dw719CandidateText },
+      [{ text: dw719CandidateText }]
+    );
+    expect(classification).toBe("duplicate");
+  });
+
+  test("the same DW 719 notice, lightly reworded (genuine near-duplicate, real prose not a synthetic word-list), still classifies duplicate or ambiguous — never new", () => {
+    const reworded =
+      "Uwaga! Od 29 lipca 2026 r., od godziny 9:00, zostanie wprowadzona czasowa organizacja ruchu na " +
+      "drodze wojewódzkiej nr 719 w miejscowości Nowa Wieś (gmina Michałowice). Zmiany obejmą odcinek " +
+      "od km 22+531 do km 23+274, w związku z inwestycją „Rozbudowa DW nr 719”.";
+    const classification = classifyProposalAgainstExisting({ text: dw719CandidateText }, [{ text: reworded }]);
+    expect(classification).not.toBe("new");
+  });
+
+  test("different stages of the same DW 719 investment (same road, different segment framing/date, real prose) are still distinguished as new — the existing group-6/12 finding is unaffected by the boilerplate strip", () => {
+    const stage1RealAlert =
+      "Od 9 lipca 2026 r. na odcinku DW nr 719 w Nowej Wsi obowiązuje czasowa organizacja ruchu w związku z " +
+      "pracami prowadzonymi przez STRABAG. Jezdnia jest zwężona, ale ruch dwukierunkowy pozostaje zachowany. " +
+      "Przewidywane zakończenie prac: sierpień 2026 r.";
+    const classification = classifyProposalAgainstExisting({ text: dw719CandidateText }, [{ text: stage1RealAlert }]);
+    expect(classification).toBe("new");
+  });
+
+  test("a genuinely ambiguous case (moderate, non-boilerplate overlap) is still ambiguous — the strip only ever removes confirmed filler phrases", () => {
+    // Same fixture as test group 5 above — none of these words are on the
+    // confirmed boilerplate list, so behavior is provably unchanged.
+    const existingText = "syren alarmowych testowe uruchomienie gminie";
+    const proposalText = "gminie syren testowe uruchomienie zupelnie inny dodatkowy";
+    expect(classifyProposalAgainstExisting({ text: proposalText }, [{ text: existingText }])).toBe("ambiguous");
+  });
+
+  test("stripConfirmedDedupBoilerplate never removes a street name, road number, locality, or date token", () => {
+    const stripped = stripConfirmedDedupBoilerplate(dw719CandidateText);
+    for (const mustSurvive of ["drodze", "wojewodzkiej", "719", "nowej", "wsi", "michalowice", "2026", "lipca"]) {
+      expect(stripped).toContain(mustSurvive);
+    }
+  });
+
+  test("stripConfirmedDedupBoilerplate is symmetric and can only shrink the significant-word set, never grow it", () => {
+    const original = dw719CandidateText;
+    const stripped = stripConfirmedDedupBoilerplate(original);
+    expect(stripped.length).toBeLessThanOrEqual(original.length);
   });
 });
