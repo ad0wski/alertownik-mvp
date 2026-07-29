@@ -426,6 +426,39 @@ test.describe("Partner page (/partnerzy)", () => {
     await expect(page.getByText(/oficjalnego źródła/).first()).toBeVisible();
     await expect(page.getByText(/nie duplikuje już istniejącego alertu/)).toBeVisible();
   });
+
+  test("names Gmina Michałowice, Miasto Pruszków, and Powiat Pruszkowski as target audiences", async ({ page }) => {
+    await page.goto("/partnerzy");
+    await expect(page.getByText(/Gminy Michałowice/)).toBeVisible();
+    await expect(page.getByText(/Miasta Pruszków/)).toBeVisible();
+    await expect(page.getByText(/Powiatu Pruszkowskiego/)).toBeVisible();
+  });
+
+  test("demo scenario is a short numbered list, with a link to the live app", async ({ page }) => {
+    await page.goto("/partnerzy");
+    await expect(page.getByRole("listitem").filter({ hasText: "Komorowa" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Zobacz aplikację →" })).toHaveAttribute("href", "/");
+  });
+
+  for (const width of [375, 390, 414]) {
+    test(`/partnerzy has no horizontal scroll at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 812 });
+      await page.goto("/partnerzy");
+      const bodyOverflows = await page.evaluate(
+        () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1
+      );
+      expect(bodyOverflows).toBe(false);
+    });
+  }
+
+  test("/partnerzy has no horizontal scroll on desktop (1280px)", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/partnerzy");
+    const bodyOverflows = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1
+    );
+    expect(bodyOverflows).toBe(false);
+  });
 });
 
 // Sprint 110 — public PWA install instructions. Static content, honest by

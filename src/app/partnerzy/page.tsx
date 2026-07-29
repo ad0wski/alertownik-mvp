@@ -19,7 +19,7 @@ const cooperationTypes = [
   },
   {
     title: "Gmina / lokalna instytucja",
-    text: "Urzędy i instytucje publikują komunikaty w wielu miejscach. Chętnie porozmawiamy, jak ułatwić mieszkańcom ich znajdowanie — z pełnym poszanowaniem oficjalnych źródeł.",
+    text: "Dotyczy w szczególności Gminy Michałowice, Miasta Pruszków, Powiatu Pruszkowskiego oraz lokalnych zarządców infrastruktury (drogi, wodociągi). Urzędy i instytucje publikują komunikaty w wielu miejscach — chętnie porozmawiamy, jak ułatwić mieszkańcom ich znajdowanie, z pełnym poszanowaniem oficjalnych źródeł.",
   },
   {
     title: "Partner źródłowy / danych",
@@ -108,12 +108,19 @@ export default function PartnersPage() {
           <h2 className="text-base font-semibold text-slate-900 dark:text-white mb-2">
             Jak to wygląda w praktyce
           </h2>
-          <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-4">
-            Mieszkaniec Komorowa sprawdza rano Alertownika przed wyjściem z domu i
-            widzi, że na jego trasie do stacji WKD trwa czasowe zamknięcie ulicy —
-            klika alert, widzi dokładny odcinek, daty i link do oficjalnego źródła,
-            i wybiera objazd, zanim wyjdzie z domu. Poniżej realne zrzuty
-            aktualnej wersji serwisu (bez retuszu, bez wymyślonych danych).
+          <ol className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed list-decimal list-inside space-y-1 mb-4">
+            <li>Mieszkaniec Komorowa otwiera Alertownika rano przed wyjściem z domu.</li>
+            <li>Widzi, że na jego trasie do stacji WKD trwa czasowe zamknięcie ulicy.</li>
+            <li>Klika alert i widzi dokładny odcinek, daty oraz link do oficjalnego źródła.</li>
+            <li>Wybiera objazd, zanim jeszcze wyjdzie z domu.</li>
+          </ol>
+          <p className="text-sm mb-4">
+            <Link href="/" className="font-medium text-emerald-700 dark:text-emerald-300 hover:text-emerald-900 hover:underline">
+              Zobacz aplikację →
+            </Link>
+          </p>
+          <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed mb-3">
+            Poniżej realne zrzuty aktualnej wersji serwisu (bez retuszu, bez wymyślonych danych).
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <Image
