@@ -47,11 +47,21 @@ import { trimAtWord } from "@/lib/candidateWarnings";
 // from this source's much larger share of general municipal PR/event
 // posts — fixture-tested (tests/e2e/pruszkowRestParser.spec.ts,
 // tests/e2e/manualSourceCheckPruszkowRest.spec.ts).
+// Sprint 183A added Powiat Pruszkowski's "Wiadomości" listing: a genuine
+// gov.pl portal with deterministic Liferay markup (verified live, HTTP 200,
+// no bot-protection signals), the first source to need a bounded, capped
+// article-body fetch rather than a single listing fetch — see
+// src/lib/sourceParsers/powiatPruszkowskiFetch.ts for the fail-closed
+// two-stage logic and its own topic pre-filter (this source covers the
+// whole Powiat Pruszkowski, not just Alertownik's 6-locality pilot area, so
+// most of its feed is off-topic PR/event content that must never reach the
+// review queue).
 export const SAFE_CHECK_SOURCE_IDS = [
   "michalowice-komunikaty",
   "wkd-aktualnosci",
   "wodociagi-michalowice",
   "pruszkow-aktualnosci",
+  "powiat-pruszkowski-wiadomosci",
 ] as const;
 
 export type SafeCheckSourceId = (typeof SAFE_CHECK_SOURCE_IDS)[number];

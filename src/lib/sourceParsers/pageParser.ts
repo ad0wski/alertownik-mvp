@@ -28,6 +28,23 @@ export interface PageParseResult {
 
 // ── HTML parsing helpers ──────────────────────────────────────────────────────
 
+// Sprint 183A — samorzad.gov.pl's WYSIWYG editor output (verified live in
+// Powiat Pruszkowski article bodies) uses named HTML4 acute-accent entities
+// (e.g. "rob&oacute;t" for "robót") rather than the numeric/UTF-8 forms every
+// other source in this codebase has used so far. Previously these fell
+// through to the catch-all "unknown named entity → space" rule below,
+// silently breaking words ("rob t"). Added narrowly — the specific family
+// actually observed, not a general HTML entity table — to keep this
+// function's behavior easy to reason about.
+const NAMED_ENTITIES: Record<string, string> = {
+  aacute: "á", Aacute: "Á",
+  eacute: "é", Eacute: "É",
+  iacute: "í", Iacute: "Í",
+  oacute: "ó", Oacute: "Ó",
+  uacute: "ú", Uacute: "Ú",
+  yacute: "ý", Yacute: "Ý",
+};
+
 function decodeEntities(text: string): string {
   return text
     .replace(/&#(\d+);/g, (_, n: string) => String.fromCodePoint(parseInt(n, 10)))
@@ -41,10 +58,10 @@ function decodeEntities(text: string): string {
     .replace(/&hellip;/g, "...")
     .replace(/&mdash;/g, "—")
     .replace(/&ndash;/g, "–")
-    .replace(/&[a-zA-Z]+;/g, " ");
+    .replace(/&([a-zA-Z]+);/g, (m, name: string) => NAMED_ENTITIES[name] ?? " ");
 }
 
-function stripTags(html: string): string {
+export function stripTags(html: string): string {
   return decodeEntities(
     html
       .replace(/<br\s*\/?>/gi, "\n")

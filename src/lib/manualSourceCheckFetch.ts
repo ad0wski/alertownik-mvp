@@ -9,6 +9,10 @@ import {
 import { buildCheckProposals, type CheckProposal } from "@/lib/sourceCheck";
 import { readLimitedText } from "@/lib/ssrfGuard";
 import {
+  buildPowiatWiadomosciParse,
+  POWIAT_PRUSZKOWSKI_SOURCE_ID,
+} from "@/lib/sourceParsers/powiatPruszkowskiFetch";
+import {
   classifyFetchFailure,
   MAX_FETCH_ATTEMPTS,
   RETRY_DELAY_MS,
@@ -67,6 +71,10 @@ export interface ManualCheckFetchTarget {
    *  unchanged. The caller (the route) picks this per source.id, since
    *  this module deliberately knows nothing about specific sources. */
   parseRestPosts?: (posts: WordpressRestPost[]) => PageParseResult;
+  /** Sprint 183A — set to the source's own id only for sources needing the
+   *  bounded two-stage (listing + article-body) fetch; see
+   *  powiatPruszkowskiFetch.ts. Currently only POWIAT_PRUSZKOWSKI_SOURCE_ID. */
+  multiFetchSourceId?: string;
 }
 
 async function attemptWordpressRestFetch(
@@ -180,12 +188,70 @@ async function attemptManualCheckHtmlFetch(
   }
 }
 
+// Sprint 183A — same listing-page fetch as attemptManualCheckHtmlFetch
+// (single request, same timeout/size caps); buildPowiatWiadomosciParse owns
+// the additional, separately-bounded article-body requests.
+async function attemptManualCheckPowiatFetch(
+  officialUrl: string
+): Promise<ManualCheckFetchSuccess | ManualCheckFetchFailure> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), CHECK_FETCH_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(officialUrl, {
+      signal: controller.signal,
+      headers: {
+        "User-Agent": "Alertownik-Monitor/1.0 (admin source check)",
+        Accept: "text/html,application/xhtml+xml,*/*;q=0.8",
+      },
+    });
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      return {
+        ok: false,
+        diagnostic: response.status >= 500 ? "http_5xx" : "http_4xx",
+        message: describePageFetchFailure(response.status),
+      };
+    }
+
+    const contentType = response.headers.get("content-type") ?? "";
+    if (!contentType.includes("html")) {
+      const typeName = contentType.split(";")[0].trim() || "nieznany";
+      return {
+        ok: false,
+        diagnostic: "non_html_content_type",
+        message: `Źródło zwróciło typ ${typeName} zamiast HTML. Sprawdź stronę ręcznie w przeglądarce.`,
+      };
+    }
+
+    const raw = await readLimitedText(response, MAX_RESPONSE_BYTES);
+    const html = raw.slice(0, 500_000);
+    const parse = await buildPowiatWiadomosciParse(html, officialUrl);
+    return { ok: true, pageTitle: parse.title, proposals: buildCheckProposals(parse) };
+  } catch (err) {
+    clearTimeout(timeoutId);
+    const isTimeout = err instanceof Error && err.name === "AbortError";
+    return {
+      ok: false,
+      diagnostic: isTimeout ? "timeout_10s" : "network_error",
+      message: isTimeout
+        ? "Źródło nie odpowiada (timeout 10 s). Spróbuj później albo sprawdź stronę ręcznie."
+        : "Nie udało się pobrać strony źródła. Spróbuj później albo sprawdź stronę ręcznie.",
+    };
+  }
+}
+
 async function attemptManualCheckFetch(
   target: ManualCheckFetchTarget
 ): Promise<ManualCheckFetchSuccess | ManualCheckFetchFailure> {
-  return target.apiUrl
-    ? attemptWordpressRestFetch(target.apiUrl, target.parseRestPosts)
-    : attemptManualCheckHtmlFetch(target.officialUrl);
+  if (target.apiUrl) {
+    return attemptWordpressRestFetch(target.apiUrl, target.parseRestPosts);
+  }
+  if (target.multiFetchSourceId === POWIAT_PRUSZKOWSKI_SOURCE_ID) {
+    return attemptManualCheckPowiatFetch(target.officialUrl);
+  }
+  return attemptManualCheckHtmlFetch(target.officialUrl);
 }
 
 function delay(ms: number): Promise<void> {

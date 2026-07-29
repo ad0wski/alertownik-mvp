@@ -208,18 +208,43 @@ const REST_FIXTURE_POSTS = JSON.stringify([
   },
 ]);
 
+// Sprint 183A — Powiat Pruszkowski's listing needs its own template shape
+// (the generic FIXTURE_HTML above has no `art-prev` container, so it would
+// legitimately parse to zero items for this source — not a bug, just the
+// wrong fixture). One long-intro item is enough to clear
+// MIN_PROPOSAL_TEXT_LENGTH without any article-body fetch.
+const POWIAT_FIXTURE_HTML = `
+  <html><body><main>
+  <article class="article-area__article ">
+  <h2>Wiadomości</h2>
+  <div class="art-prev art-prev--near-menu" >
+  <ul>
+  <li><a href="/web/powiat-pruszkowski/test-utrudnienia">
+  <div><div class="title">Utrudnienia w ruchu na drodze powiatowej</div>
+  <div class="intro">W dniach 16-20 lipca 2026 roku na drodze powiatowej wystąpią utrudnienia w ruchu związane z remontem nawierzchni, prosimy o ostrożność.</div></div>
+  </a></li>
+  </ul>
+  </div>
+  <nav class="pagination"></nav>
+  </article>
+  </main></body></html>
+`;
+
 function mixedFixtureFetch(): typeof fetch {
   return (async (input: RequestInfo | URL) => {
     const url = typeof input === "string" ? input : input.toString();
     if (url.includes("wp-json")) {
       return new Response(REST_FIXTURE_POSTS, { status: 200, headers: { "content-type": "application/json" } });
     }
+    if (url.includes("samorzad.gov.pl")) {
+      return new Response(POWIAT_FIXTURE_HTML, { status: 200, headers: { "content-type": "text/html" } });
+    }
     return new Response(FIXTURE_HTML, { status: 200, headers: { "content-type": "text/html" } });
   }) as typeof fetch;
 }
 
 test.describe("GET /api/cron/check-sources — dry-run behavior (authorized)", () => {
-  test("correct fake token + fixture responses for all four allowlisted sources → safe dry-run summary, zero writes claimed", async () => {
+  test("correct fake token + fixture responses for all five allowlisted sources → safe dry-run summary, zero writes claimed", async () => {
     await withEnv({ SCHEDULED_CHECKS_ENABLED: "true", CRON_SECRET: FAKE_TEST_SECRET }, async () => {
       const restore = mockFetch(mixedFixtureFetch());
       try {
@@ -230,14 +255,15 @@ test.describe("GET /api/cron/check-sources — dry-run behavior (authorized)", (
         expect(body.savedCandidates).toBe(0);
         expect(body.savedSourceChecks).toBe(0);
         expect(body.published).toBe(false);
-        expect(body.checkedSources).toBe(4);
-        expect(body.results).toHaveLength(4);
+        expect(body.checkedSources).toBe(5);
+        expect(body.results).toHaveLength(5);
         for (const r of body.results) {
           expect([
             "michalowice-komunikaty",
             "wkd-aktualnosci",
             "wodociagi-michalowice",
             "pruszkow-aktualnosci",
+            "powiat-pruszkowski-wiadomosci",
           ]).toContain(r.sourceKey);
           expect(r.outcome).toBe("success");
           expect(r).not.toHaveProperty("title");
@@ -261,14 +287,17 @@ test.describe("GET /api/cron/check-sources — dry-run behavior (authorized)", (
         if (url.includes("wp-json")) {
           return new Response(REST_FIXTURE_POSTS, { status: 200, headers: { "content-type": "application/json" } });
         }
+        if (url.includes("samorzad.gov.pl")) {
+          return new Response(POWIAT_FIXTURE_HTML, { status: 200, headers: { "content-type": "text/html" } });
+        }
         return new Response(FIXTURE_HTML, { status: 200, headers: { "content-type": "text/html" } });
       });
       try {
         const res = await GET(authedRequest());
         expect(res.status).toBe(200);
         const body = await res.json();
-        expect(body.checkedSources).toBe(4);
-        expect(body.successfulSources).toBe(3);
+        expect(body.checkedSources).toBe(5);
+        expect(body.successfulSources).toBe(4);
         expect(body.failedSources).toBe(1);
         const wkdResult = body.results.find((r: { sourceKey: string }) => r.sourceKey === "wkd-aktualnosci");
         const michalowiceResult = body.results.find(

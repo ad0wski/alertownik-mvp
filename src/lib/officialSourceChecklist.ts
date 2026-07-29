@@ -200,6 +200,40 @@ export const OFFICIAL_SOURCE_CHECKS: OfficialSourceCheck[] = [
     risk: "low",
   },
   {
+    id: "powiat-pruszkowski-wiadomosci",
+    name: "Powiat Pruszkowski — Wiadomości (utrudnienia drogowe)",
+    category: "roads",
+    officialUrl: "https://samorzad.gov.pl/web/powiat-pruszkowski/wiadomosci",
+    // Sprint 183A — a genuine gov.pl self-government portal, deterministic
+    // Liferay listing markup, verified live (HTTP 200, no Cloudflare/bot
+    // signals, no robots.txt disallow — /robots.txt itself redirects to the
+    // homepage). Real road/traffic items exist in the feed (found live both
+    // in Sprint 170 and this sprint's re-check) but are published with only
+    // a bare title, no teaser — see src/lib/sourceParsers/
+    // powiatPruszkowskiParser.ts and powiatPruszkowskiFetch.ts for how a
+    // bounded, fail-closed article-body fetch fills that in without
+    // lowering the shared MIN_PROPOSAL_TEXT_LENGTH filter every source
+    // relies on. This source covers the WHOLE Powiat Pruszkowski, which
+    // includes towns outside Alertownik's own 6-locality pilot (e.g.
+    // Piastów) — an admin converting a candidate here must still check
+    // whether it actually concerns the pilot area before publishing, same
+    // as every other Draft-from-Source conversion.
+    whatToCheck:
+      "Utrudnienia drogowe, zamknięcia ulic, remonty/rozbudowa dróg powiatowych, zmiany " +
+      "organizacji ruchu, objazdy. Komunikat musi realnie dotyczyć utrudnienia — nie " +
+      "promocji, wydarzenia ani ostrzeżenia pogodowego/hydrologicznego (poza zakresem " +
+      "aplikacji). Sprawdź, czy dotyczy faktycznie okolic pilotażu, nie tylko powiatu " +
+      "jako całości (powiat obejmuje też miejscowości spoza pilotażu, np. Piastów).",
+    localities: ["Komorów", "Nowa Wieś", "Granica", "Michałowice", "Reguły", "Pruszków"],
+    frequency: "weekly",
+    risk: "medium",
+    riskNote:
+      "Nowe źródło (Sprint 183A) — deterministyczna struktura HTML, ale wymaga dwuetapowego " +
+      "pobierania (lista + do 3 stron artykułów na sprawdzenie) dla wpisów bez zajawki. " +
+      "Jeśli portal gov.pl zmieni szablon, check bezpiecznie zwróci zero propozycji " +
+      "zamiast błędu — wróć wtedy do ręcznego sprawdzania w przeglądarce.",
+  },
+  {
     id: "roboty-drogowe",
     name: "Remonty i utrudnienia drogowe — gmina + Pruszków",
     category: "roads",

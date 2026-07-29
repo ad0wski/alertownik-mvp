@@ -12,6 +12,10 @@ import {
   buildCheckProposals,
   type SafeCheckSourceId,
 } from "@/lib/sourceCheck";
+import {
+  buildPowiatWiadomosciParse,
+  POWIAT_PRUSZKOWSKI_SOURCE_ID,
+} from "@/lib/sourceParsers/powiatPruszkowskiFetch";
 
 // Sprint 142 — Protected Cron-Compatible Dry-Run Endpoint v1.
 //
@@ -343,6 +347,58 @@ async function checkOneSourceHtml(
   }
 }
 
+// Sprint 183A — Powiat Pruszkowski needs a bounded, two-stage fetch (listing
+// + up to a few article pages for short items) instead of a single fetch.
+// This still fetches exactly one page here (the listing, same timeout/size
+// caps as any other HTML source); buildPowiatWiadomosciParse owns the
+// additional, separately-capped article requests.
+async function checkOneSourcePowiat(
+  sourceKey: SafeCheckSourceId,
+  name: string,
+  officialUrl: string
+): Promise<CronSourceResult> {
+  const startedAt = Date.now();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), CRON_FETCH_TIMEOUT_MS);
+
+  let html: string;
+  try {
+    const response = await fetch(officialUrl, {
+      signal: controller.signal,
+      headers: {
+        "User-Agent": "Alertownik-Monitor/1.0 (scheduled dry-run check)",
+        Accept: "text/html,application/xhtml+xml,*/*;q=0.8",
+      },
+    });
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const diagnostic: CronDiagnosticCode = response.status >= 500 ? "http_5xx" : "http_4xx";
+      return errorResult(sourceKey, name, "fetch_error", diagnostic, Date.now() - startedAt);
+    }
+
+    const contentType = response.headers.get("content-type") ?? "";
+    if (!contentType.includes("html")) {
+      return errorResult(sourceKey, name, "fetch_error", "non_html_content_type", Date.now() - startedAt);
+    }
+
+    const raw = await response.text();
+    html = raw.slice(0, 500_000);
+  } catch (err) {
+    clearTimeout(timeoutId);
+    const diagnostic = classifyFetchError(err);
+    const outcome = diagnostic === "timeout_10s" ? "timeout" : "fetch_error";
+    return errorResult(sourceKey, name, outcome, diagnostic, Date.now() - startedAt);
+  }
+
+  try {
+    const parse = await buildPowiatWiadomosciParse(html, officialUrl);
+    return summarizeParseResult(sourceKey, name, parse, Date.now() - startedAt);
+  } catch {
+    return errorResult(sourceKey, name, "parse_error", "parse_exception", Date.now() - startedAt);
+  }
+}
+
 export async function checkOneSource(
   sourceKey: SafeCheckSourceId,
   name: string,
@@ -350,7 +406,11 @@ export async function checkOneSource(
   apiUrl?: string,
   parseRestPosts?: (posts: WordpressRestPost[]) => PageParseResult
 ): Promise<CronSourceResult> {
-  return apiUrl
-    ? checkOneSourceRest(sourceKey, name, apiUrl, parseRestPosts ?? parseWordpressRestPosts)
-    : checkOneSourceHtml(sourceKey, name, officialUrl);
+  if (apiUrl) {
+    return checkOneSourceRest(sourceKey, name, apiUrl, parseRestPosts ?? parseWordpressRestPosts);
+  }
+  if (sourceKey === POWIAT_PRUSZKOWSKI_SOURCE_ID) {
+    return checkOneSourcePowiat(sourceKey, name, officialUrl);
+  }
+  return checkOneSourceHtml(sourceKey, name, officialUrl);
 }

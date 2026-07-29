@@ -3,6 +3,7 @@ import { getSafeCheckSource, UNSUPPORTED_SOURCE_ERROR, type CheckProposal } from
 import { requireAdminSession } from "@/lib/serverAuth";
 import { fetchAndParseManualCheck } from "@/lib/manualSourceCheckFetch";
 import { REST_PARSERS_BY_SOURCE_ID } from "@/lib/sourceParsers/pageParser";
+import { POWIAT_PRUSZKOWSKI_SOURCE_ID } from "@/lib/sourceParsers/powiatPruszkowskiFetch";
 import type { FetchDiagnosticCode } from "@/lib/scheduledWriterRunSafety";
 
 // Sprint 134 (A2) — manual Source Check API for allowlisted safe official
@@ -70,6 +71,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<SourceCheckAp
     officialUrl: source.officialUrl,
     apiUrl: source.apiUrl,
     parseRestPosts: REST_PARSERS_BY_SOURCE_ID[source.id],
+    multiFetchSourceId: source.id === POWIAT_PRUSZKOWSKI_SOURCE_ID ? source.id : undefined,
   });
   if (!result.ok) {
     return NextResponse.json({ ok: false, error: result.message, errorCode: result.diagnostic });

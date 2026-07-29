@@ -22,6 +22,7 @@ const OFFICIAL_DOMAINS = [
   "pruszkow.pl",
   "pgedystrybucja.pl",
   "wodociagimichalowice.pl",
+  "samorzad.gov.pl",
 ];
 
 test.describe("OFFICIAL_SOURCE_CHECKS definitions", () => {

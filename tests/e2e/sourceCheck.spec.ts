@@ -45,12 +45,13 @@ const FIXTURE_HTML = `
 `;
 
 test.describe("safe-source allowlist (getSafeCheckSource)", () => {
-  test("exactly four safe sources after Sprint 169 — growing the list stays a per-sprint decision", () => {
+  test("exactly five safe sources after Sprint 183A — growing the list stays a per-sprint decision", () => {
     expect(SAFE_CHECK_SOURCE_IDS).toEqual([
       "michalowice-komunikaty",
       "wkd-aktualnosci",
       "wodociagi-michalowice",
       "pruszkow-aktualnosci",
+      "powiat-pruszkowski-wiadomosci",
     ]);
   });
 

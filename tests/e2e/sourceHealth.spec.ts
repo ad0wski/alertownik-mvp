@@ -61,16 +61,18 @@ test.describe("buildSourceHealthRows — coverage and API-support flags", () => 
     expect(rows.map((r) => r.checklistId)).toEqual(OFFICIAL_SOURCE_CHECKS.map((s) => s.id));
   });
 
-  test("exactly four sources are API-supported after Sprint 169: WKD + Michałowice + Pruszków + Wodociągi", () => {
+  test("exactly five sources are API-supported after Sprint 183A: WKD + Michałowice + Pruszków + Wodociągi + Powiat Pruszkowski", () => {
     const rows = rowsFor();
     const supported = rows.filter((r) => r.apiSupported).map((r) => r.checklistId);
     // Checklist order: WKD, Michałowice komunikaty, Pruszków aktualności,
-    // then Wodociągi Michałowice, matching officialSourceChecklist.ts.
+    // Wodociągi Michałowice, then Powiat Pruszkowski Wiadomości, matching
+    // officialSourceChecklist.ts.
     expect(supported).toEqual([
       "wkd-aktualnosci",
       "michalowice-komunikaty",
       "pruszkow-aktualnosci",
       "wodociagi-michalowice",
+      "powiat-pruszkowski-wiadomosci",
     ]);
   });
 
@@ -169,7 +171,7 @@ test.describe("summarizeSourceHealth", () => {
     });
     const summary = summarizeSourceHealth(rows);
     expect(summary.total).toBe(OFFICIAL_SOURCE_CHECKS.length);
-    expect(summary.apiSupported).toBe(4);
+    expect(summary.apiSupported).toBe(5);
     expect(summary.checkedRecently).toBe(1); // only reg-mich has a fresh check
     expect(summary.needsAttention).toBe(summary.total - summary.checkedRecently);
   });
