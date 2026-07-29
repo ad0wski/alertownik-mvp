@@ -46,6 +46,11 @@ Gates are passed in order. Preparation for a later gate is fine; execution is no
    approve. A first, narrow, guarded auto-publish exception shipped in Sprint
    180C (see Standing rules below) — currently disabled pending a second,
    separately-approved canary attempt (Sprint 181A hardened its dedup logic).
+   Source coverage itself grew in Sprint 183A: a 5th safe-check source
+   (Powiat Pruszkowski — Wiadomości, roads/traffic) was audited live, found
+   GO, and shipped check-only (manual button + dry-run cron) — not added to
+   the scheduled writer's own allowlist, so it produces zero real writes
+   until a separate, later activation decision.
 7. Android packaging decision (stay PWA vs TWA) and, only after its gate, Google
    Play Console. iOS remains LATER.
 
