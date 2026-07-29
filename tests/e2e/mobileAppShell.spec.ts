@@ -181,7 +181,7 @@ test.describe("'Dzisiaj' view (/)", () => {
 test.describe("Full alert list (/alerty)", () => {
   test("renders the original hero, search, and category filters", async ({ page }) => {
     await page.goto("/alerty");
-    await expect(page.locator("h1")).toContainText("Lokalne zmiany");
+    await expect(page.locator("h1")).toContainText("Lokalne alerty");
     await expect(page.getByPlaceholder(/Szukaj po tytule lub treści/)).toBeVisible();
     await expect(page.getByRole("button", { name: "Wszystkie alerty" })).toBeVisible();
   });

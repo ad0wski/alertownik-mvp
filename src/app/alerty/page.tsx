@@ -16,23 +16,32 @@ export const metadata = {
 export default function AlertyPage() {
   return (
     <main className="max-w-3xl mx-auto w-full px-4 sm:px-6 py-2 sm:py-10">
-      <div className="mb-2 sm:mb-6">
-        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight leading-snug mb-2">
-          Lokalne zmiany i utrudnienia w prostym formacie.
+      <div className="mb-2 sm:mb-4">
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight leading-snug mb-1">
+          Lokalne alerty dla Komorowa, Pruszkowa i okolic.
         </h1>
-        <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 leading-snug sm:leading-relaxed">
-          Sprawdź, co może dziś wpłynąć na Twój dzień w okolicy. Alertownik
-          zbiera w jednym miejscu komunikaty o transporcie, wodzie, prądzie,
-          drogach i odpadach dla{" "}
-          <span className="font-medium text-slate-600 dark:text-slate-400">Komorowa, Pruszkowa i okolic</span>.
-        </p>
-        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
-          Wczesny pilotaż —{" "}
-          <Link href="/about#chce-testowac" className="font-medium text-emerald-600 hover:text-emerald-800 underline">
-            zgłoś się jako tester
-          </Link>
-          .
-        </p>
+        {/* Sprint 182A — first real user feedback (Adam's mom, via mailto)
+            said the intro had too much text before search/alerts appeared.
+            Nothing removed, just moved behind a closed-by-default <details>
+            so the first paint is one sentence + search/filters/list. */}
+        <details className="mt-1">
+          <summary className="text-xs font-medium text-slate-400 dark:text-slate-500 underline underline-offset-2 cursor-pointer w-fit">
+            Jak działa Alertownik?
+          </summary>
+          <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 leading-snug sm:leading-relaxed mt-1.5">
+            Sprawdź, co może dziś wpłynąć na Twój dzień w okolicy. Alertownik
+            zbiera w jednym miejscu komunikaty o transporcie, wodzie, prądzie,
+            drogach i odpadach dla{" "}
+            <span className="font-medium text-slate-600 dark:text-slate-400">Komorowa, Pruszkowa i okolic</span>.
+          </p>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
+            Wczesny pilotaż —{" "}
+            <Link href="/about#chce-testowac" className="font-medium text-emerald-600 hover:text-emerald-800 underline">
+              zgłoś się jako tester
+            </Link>
+            .
+          </p>
+        </details>
       </div>
 
       <BetaStatusCard />

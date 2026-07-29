@@ -11,15 +11,22 @@ import { test, expect } from "@playwright/test";
 test.describe("Public homepage", () => {
   test("main heading is visible", async ({ page }) => {
     await page.goto("/alerty");
-    await expect(page.locator("h1")).toContainText("Lokalne zmiany");
+    await expect(page.locator("h1")).toContainText("Lokalne alerty");
   });
 
   // Sprint 95 — the hero must say *where* this is for, not just what it
   // does: a visitor deciding "is this for me" in the first few seconds
   // needs the location, not just the category list.
+  // Sprint 182A — the covered-area sentence lives inside "Jak działa
+  // Alertownik?" now (collapsed by default, real user feedback said the
+  // intro had too much text on first paint); the H1 itself still states
+  // the area directly, so check that first, then confirm the detail is
+  // still there once expanded.
   test("hero states the pilot's covered area", async ({ page }) => {
     await page.goto("/alerty");
-    await expect(page.getByText(/Komorowa, Pruszkowa i okolic/)).toBeVisible();
+    await expect(page.locator("h1")).toContainText(/Komorowa, Pruszkowa i okolic/);
+    await page.getByText("Jak działa Alertownik?").click();
+    await expect(page.getByText(/Komorowa, Pruszkowa i okolic/).last()).toBeVisible();
   });
 
   // Sprint 96 — a practical "reason to return" status line, computed from
@@ -300,6 +307,9 @@ test.describe("Public homepage", () => {
 
   test("homepage links to the tester-interest section", async ({ page }) => {
     await page.goto("/alerty");
+    // Sprint 182A — this link now lives inside the collapsed "Jak działa
+    // Alertownik?" details element, opened here before clicking.
+    await page.getByText("Jak działa Alertownik?").click();
     await page.getByRole("link", { name: /zgłoś się jako tester/ }).click();
     await expect(page).toHaveURL(/\/about#chce-testowac$/);
   });
@@ -526,10 +536,14 @@ test.describe("Legal pages (/prywatnosc, /zasady)", () => {
 // category filters hidden behind an undiscoverable horizontal scroll, and
 // the waste page leading with too much text before the actual schedule.
 test.describe("Sprint 156B — homepage value-first + personalization", () => {
-  test("hero is short (two sentences) and states the covered area", async ({ page }) => {
+  // Sprint 182A — the hero itself is now a single sentence (H1 only); the
+  // "two sentences" description moved into the collapsed "Jak działa
+  // Alertownik?" detail, per real user feedback about too much intro text.
+  test("hero is short (one sentence) and states the covered area", async ({ page }) => {
     await page.goto("/alerty");
+    await expect(page.locator("h1")).toContainText(/Komorowa, Pruszkowa i okolic/);
+    await page.getByText("Jak działa Alertownik?").click();
     await expect(page.getByText(/Sprawdź, co może dziś wpłynąć na Twój dzień/)).toBeVisible();
-    await expect(page.getByText(/Komorowa, Pruszkowa i okolic/)).toBeVisible();
   });
 
   test("compact beta status card keeps the independence disclaimer and a link to the full explanation", async ({ page }) => {

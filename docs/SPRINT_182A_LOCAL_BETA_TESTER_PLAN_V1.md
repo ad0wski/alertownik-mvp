@@ -107,3 +107,63 @@ Po zamknięciu Gate 2, Gate 3 (Partner Demo) korzysta wprost z tego, co już pow
 - Brak nowej tabeli Supabase do trackingu feedbacku — arkusz ręczny wystarczy dla 5–10 osób.
 - Brak płatności, brak powiadomień push, brak zmian w RLS/schemacie.
 - Brak masowej rekrutacji (reklama, posty publiczne) — tylko osobiste zaproszenia, zgodnie z duchem "Local Beta".
+
+---
+
+## 10. Wynik rekrutacji — stan na 2026-07-29 (Dzień 14)
+
+**Status: rekrutacja NIE zakończona sukcesem. Odłożona, nie zablokowana.**
+
+Osoby zaproszone przez Adama nie odpowiedziały. Nie osiągnięto progu z §8 (5–10
+zainstalowanych, 3–5 odpowiedzi). To **nie jest** powód do zatrzymania dalszego
+rozwoju produktu — decyzją właściciela projektu prace produktowe/techniczne są
+kontynuowane równolegle z odłożoną rekrutacją.
+
+### Tracker (uczciwy stan)
+
+| Miernik | Wartość |
+|---|---|
+| Zaproszeni | liczba nieznana — Adam nie podał dokładnej |
+| Zainstalowali i użyli | nieznane (brak odpowiedzi od zaproszonych) |
+| Zakończone testy z odpowiedzią | **1** |
+| Kompletne odpowiedzi (§6, wszystkie punkty) | **1** |
+| Minimalne wymaganie „3–5 odpowiedzi" (§8) | **niespełnione** |
+| Minimalne wymaganie „5–10 zainstalowanych" (§8) | **niespełnione** |
+| Pozostali zaproszeni bez odpowiedzi | „Brak odpowiedzi — walidacja odłożona, nie blocker techniczny" |
+
+### Pierwszy zakończony test użytkownika — mama Adama
+
+Źródło: bezpośrednia relacja od Adama (nie mailto, nie ankieta). Poniżej wyłącznie
+to, co zostało realnie przekazane — bez dopisywania modelu telefonu, systemu ani
+innych szczegółów, których Adam nie podał.
+
+**Feedback (dosłownie przekazane treści):**
+1. Ogólnie aplikacja wygląda ładnie.
+2. Działanie aplikacji, wyszukiwanie, filtrowanie i korzystanie z funkcji są zrozumiałe i nie sprawiły problemu.
+3. Na stronie „Alerty" u góry znajduje się zbyt dużo tekstu.
+4. Użytkowniczka prawdopodobnie nie czytałaby tak długiego wprowadzenia.
+5. Aplikację warto możliwie upraszczać, również z myślą o seniorach, o ile nie psuje to wyglądu ani funkcjonalności.
+6. Ogólna ocena działania aplikacji jest pozytywna.
+
+**Klasyfikacja:**
+- ✅ **Pozytywny sygnał: wygląd aplikacji** (punkt 1, 6) — drugi pozytywny sygnał
+  po Gate 1 „jest git", nadal nie n=1 statystycznie istotne, ale nie samo n=1 już.
+- ✅ **Pozytywny sygnał: działanie wyszukiwania i obsługi** (punkt 2) — wyszukiwanie,
+  filtrowanie i ogólna obsługa nie sprawiły problemu bez wcześniejszego tłumaczenia.
+- ⚠️ **Ważna uwaga UX: za dużo tekstu na górze strony „Alerty"** (punkt 3, 4) —
+  zaadresowana w tym samym dniu, patrz Część 3 poniżej.
+- 🧭 **Kierunek dostępności: dalsze upraszczanie dla starszych użytkowników**
+  (punkt 5) — kierunek na przyszłość, nie jednorazowa poprawka; brać pod uwagę
+  przy kolejnych zmianach UI, nie tylko przy tej jednej stronie.
+
+### Status Gate 2
+
+**Gate 2 NIE jest w pełni zaliczony.** Rozbicie:
+- Gotowość techniczna: ✅ 100% (zamknięte w Sprincie 181B, realny test na
+  fizycznym iPhone).
+- Walidacja prawdziwych użytkowników: ⬜ **niepełna** — 1 zakończony test
+  zamiast wymaganych 3–5, próg 5–10 zainstalowanych niespełniony.
+- Rekrutacja pozostałych testerów: **odłożona, nadal możliwa w przyszłości** —
+  nie porzucona, nie oznaczona jako "done".
+- Dalsze prace produktowe/techniczne: **kontynuowane** decyzją właściciela
+  projektu, niezależnie od stanu rekrutacji (Dzień 14, Część 3 i dalej).
