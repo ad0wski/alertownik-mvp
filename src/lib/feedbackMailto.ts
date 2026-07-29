@@ -58,6 +58,19 @@ function buildReasonMailto(subjectSuffix: string, prompt: string): string {
   return `mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(prompt)}`;
 }
 
+// Sprint 185A — /demo's single CTA for institutions/partners interested in
+// a pilot. Reuses the same mailto pattern as every other feedback link on
+// the site (no new form, no new Supabase table) — just its own subject and
+// prompt, since "zainteresowanie pilotażem" is a different ask than a bug
+// report or general opinion.
+export function buildPilotInterestMailto(): string {
+  const subject = "Alertownik — zainteresowanie pilotażem";
+  const body =
+    "Cześć, jesteśmy zainteresowani krótką rozmową o pilotażu Alertownika dla naszej okolicy/instytucji.\n\n" +
+    "Kilka słów o nas i o czym chcielibyśmy porozmawiać:\n\n";
+  return `mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
 export function buildFeedbackQuickReasons(): FeedbackQuickReason[] {
   return [
     {
