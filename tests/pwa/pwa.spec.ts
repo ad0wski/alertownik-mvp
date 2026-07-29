@@ -256,6 +256,43 @@ test.describe("Install UX (M6)", () => {
     await page.getByRole("link", { name: "Zainstaluj Alertownik" }).click();
     await expect(page).toHaveURL(/\/instalacja$/);
   });
+
+  // Sprint 186A — Store Readiness audit. The app is not in any store yet;
+  // /instalacja must keep saying so plainly rather than letting a future
+  // reader assume otherwise once store work actually starts.
+  test("honestly states the app is not yet in Google Play or the App Store", async ({ page }) => {
+    await page.goto("/instalacja");
+    await expect(
+      page.getByText(/Alertownika nie ma jeszcze w Google Play ani App Store/)
+    ).toBeVisible();
+  });
+
+  test("manifest.categories is a hint only — no store-availability claim in its values", async ({
+    request,
+  }) => {
+    const res = await request.get("/manifest.webmanifest");
+    const manifest = await res.json();
+    expect(Array.isArray(manifest.categories)).toBe(true);
+    expect(manifest.categories.length).toBeGreaterThan(0);
+  });
+
+  for (const width of [375, 390, 414]) {
+    test(`/instalacja has no horizontal scroll at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 812 });
+      await page.goto("/instalacja");
+      const overflows = await page.evaluate(
+        () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1
+      );
+      expect(overflows).toBe(false);
+    });
+  }
+
+  test("/instalacja links are reachable via keyboard (Tab) and focusable", async ({ page }) => {
+    await page.goto("/instalacja");
+    const backLink = page.getByRole("link", { name: /Wróć do listy alertów/ });
+    await backLink.focus();
+    await expect(backLink).toBeFocused();
+  });
 });
 
 test.describe("Network status (M7)", () => {

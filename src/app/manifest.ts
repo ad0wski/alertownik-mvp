@@ -26,6 +26,13 @@ export default function manifest(): MetadataRoute.Manifest {
     // oversight.
     background_color: "#f0f9ff",
     theme_color: "#2563eb",
+    // Sprint 186A — Store Readiness audit. Optional field, harmless to add
+    // now: browsers with a richer install UI (and, later, a TWA wrapper
+    // reading this same manifest for Play Console) use `categories` as a
+    // hint — closest real fit for a civic-alerts app, not a guess at
+    // official Play/App Store taxonomy (that's chosen later, in the actual
+    // store listing form, not here).
+    categories: ["news", "utilities"],
     icons: [
       // Sprint 128 — PNG icons rendered from the brand SVG via
       // scripts/generate-mobile-assets.mjs. PNGs listed before the SVG:
