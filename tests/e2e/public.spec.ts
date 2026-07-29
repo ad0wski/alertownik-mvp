@@ -410,6 +410,22 @@ test.describe("Partner page (/partnerzy)", () => {
     await page.goto("/");
     await expect(page.getByRole("link", { name: "Współpraca" })).toBeVisible();
   });
+
+  // Sprint 183B — Gate 3 (Partner Demo) audit found the page had no real
+  // screenshots and no explanation of sourcing/dedup safeguards; both added
+  // without removing anything, using the real Sprint 181B screenshot files.
+  test("real app screenshots are embedded, not placeholders", async ({ page }) => {
+    await page.goto("/partnerzy");
+    await expect(page.getByAltText(/dzisiejsze alerty/)).toBeVisible();
+    await expect(page.getByAltText(/Lista alertów/)).toBeVisible();
+    await expect(page.getByAltText(/na komputerze/)).toBeVisible();
+  });
+
+  test("explains official sourcing and deduplication safeguards", async ({ page }) => {
+    await page.goto("/partnerzy");
+    await expect(page.getByText(/oficjalnego źródła/).first()).toBeVisible();
+    await expect(page.getByText(/nie duplikuje już istniejącego alertu/)).toBeVisible();
+  });
 });
 
 // Sprint 110 — public PWA install instructions. Static content, honest by

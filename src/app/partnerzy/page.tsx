@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { FEEDBACK_EMAIL } from "@/lib/feedbackMailto";
 
@@ -82,6 +83,61 @@ export default function PartnersPage() {
             alarmowych; przy każdym alercie podajemy źródło do samodzielnego
             sprawdzenia.
           </p>
+        </section>
+
+        <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 sm:p-5">
+          <h2 className="text-base font-semibold text-slate-900 dark:text-white mb-2">
+            Jak zbieramy dane i dbamy o jakość
+          </h2>
+          <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+            Każdy alert pochodzi z konkretnego, oficjalnego źródła (strona gminy,
+            miasta, powiatu, WKD, PGE Dystrybucja) — nigdy z plotek czy postów w
+            mediach społecznościowych, które traktujemy co najwyżej jako trop do
+            sprawdzenia. Zanim komunikat trafi na listę, przechodzi automatyczne
+            sprawdzenie, czy nie duplikuje już istniejącego alertu lub innego
+            zgłoszonego kandydata z tego samego okresu i miejsca — dopiero potem
+            administrator ręcznie weryfikuje treść, daty i lokalizację przed
+            publikacją. Jeden, wąsko określony wyjątek automatycznej publikacji
+            istnieje dla pojedynczego zaufanego źródła i jest w każdej chwili
+            odwracalny jednym przełącznikiem — nigdy nie omija tej samej kontroli
+            deduplikacji.
+          </p>
+        </section>
+
+        <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 sm:p-5">
+          <h2 className="text-base font-semibold text-slate-900 dark:text-white mb-2">
+            Jak to wygląda w praktyce
+          </h2>
+          <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-4">
+            Mieszkaniec Komorowa sprawdza rano Alertownika przed wyjściem z domu i
+            widzi, że na jego trasie do stacji WKD trwa czasowe zamknięcie ulicy —
+            klika alert, widzi dokładny odcinek, daty i link do oficjalnego źródła,
+            i wybiera objazd, zanim wyjdzie z domu. Poniżej realne zrzuty
+            aktualnej wersji serwisu (bez retuszu, bez wymyślonych danych).
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <Image
+              src="/screenshots/home-narrow.png"
+              alt="Strona główna Alertownika — dzisiejsze alerty (widok telefonu)"
+              width={390}
+              height={844}
+              className="rounded-lg border border-slate-200 dark:border-slate-800 w-full h-auto"
+            />
+            <Image
+              src="/screenshots/alerty-narrow.png"
+              alt="Lista alertów z wyszukiwarką i filtrowaniem kategorii (widok telefonu)"
+              width={390}
+              height={844}
+              className="rounded-lg border border-slate-200 dark:border-slate-800 w-full h-auto"
+            />
+            <Image
+              src="/screenshots/home-wide.png"
+              alt="Strona główna Alertownika na komputerze"
+              width={1280}
+              height={800}
+              className="rounded-lg border border-slate-200 dark:border-slate-800 w-full h-auto col-span-2 sm:col-span-1"
+            />
+          </div>
         </section>
 
         <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 sm:p-5">
