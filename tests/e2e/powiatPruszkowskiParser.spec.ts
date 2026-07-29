@@ -6,6 +6,7 @@ import {
 } from "@/lib/sourceParsers/powiatPruszkowskiParser";
 import {
   buildPowiatWiadomosciParse,
+  needsArticleHydration,
   MAX_ARTICLE_BODY_FETCHES,
   type ArticleBodyFetcher,
 } from "@/lib/sourceParsers/powiatPruszkowskiFetch";
@@ -303,7 +304,7 @@ test.describe("buildPowiatWiadomosciParse — end-to-end orchestration", () => {
     const items = Array.from({ length: MAX_CHECK_PROPOSALS + 4 }, (_, i) => ({
       slug: `objazd-${i}`,
       title: `Objazd drogowy numer ${i}`,
-      intro: `Wprowadzony zostaje objazd drogowy z powodu remontu drogi powiatowej numer ${i}, prosimy o zachowanie ostrożności podczas przejazdu.`,
+      intro: `Od 1 do 10 sierpnia 2026 roku wprowadzony zostaje objazd drogowy numer ${i} z powodu remontu drogi powiatowej, prosimy o zachowanie ostrożności podczas przejazdu.`,
     }));
     const html = listingHtml(items);
     const parse = await buildPowiatWiadomosciParse(html, BASE_URL, async () => null);
@@ -339,5 +340,122 @@ test.describe("buildPowiatWiadomosciParse — end-to-end orchestration", () => {
   test("result title identifies this source distinctly", async () => {
     const parse = await buildPowiatWiadomosciParse(listingHtml([]), BASE_URL, async () => null);
     expect(parse.title).toBe("Powiat Pruszkowski — Wiadomości");
+  });
+});
+
+// ── Sprint 184A — article hydration triggers on missing date, not just length ──
+//
+// Day 16's live re-check found both real road candidates that day had bare
+// titles ≥60 chars (this listing has no structural date field anywhere), so
+// the length-only trigger never fetched the article body, and hasDate ended
+// up false with no date anywhere in the proposed text. These tests lock in
+// the fix: hydration now runs whenever no date is detected in the listing
+// text, regardless of length, and a candidate that still has no date after
+// hydration is dropped entirely — never proposed, so it can never reach
+// auto-publish (which requires complete date info anyway) with only a
+// generic title.
+
+test.describe("needsArticleHydration — trigger predicate", () => {
+  test("long text without a date still needs hydration", () => {
+    const longNoDate =
+      "Utrudnienia w ruchu na drodze powiatowej z powodu prowadzonych prac remontowych na wskazanym odcinku";
+    expect(longNoDate.length).toBeGreaterThanOrEqual(60);
+    expect(needsArticleHydration(longNoDate)).toBe(true);
+  });
+
+  test("long text with a detectable date does not need hydration", () => {
+    const longWithDate =
+      "Od 1 do 10 sierpnia 2026 roku utrudnienia w ruchu na drodze powiatowej z powodu prac remontowych.";
+    expect(needsArticleHydration(longWithDate)).toBe(false);
+  });
+
+  test("short text always needs hydration regardless of date content", () => {
+    expect(needsArticleHydration("12 sierpnia 2026")).toBe(true);
+  });
+});
+
+test.describe("buildPowiatWiadomosciParse — hydration triggered by missing date (Sprint 184A)", () => {
+  test("1. long dateless title + article body with a current/ongoing date → hydration runs, date detected", async () => {
+    const longTitle = "Utrudnienia w ruchu na drodze powiatowej numer 1234W w związku z pracami";
+    expect(longTitle.length).toBeGreaterThanOrEqual(60);
+    const html = listingHtml([{ slug: "dlugi-tytul-bez-daty", title: longTitle }]);
+    const article = articleHtml(longTitle, [
+      "Prace trwają od 20 lipca do 15 sierpnia 2026 roku, prosimy o ostrożność.",
+    ]);
+    let fetchCalls = 0;
+    const fetchBody: ArticleBodyFetcher = async () => {
+      fetchCalls++;
+      return article;
+    };
+    const parse = await buildPowiatWiadomosciParse(html, BASE_URL, fetchBody);
+    expect(fetchCalls).toBe(1);
+    expect(parse.candidates).toHaveLength(1);
+    expect(parse.candidates[0].hasDate).toBe(true);
+    expect(parse.candidates[0].text).toContain("15 sierpnia 2026");
+  });
+
+  test("2. long dateless title + article body with a future date → hydration runs, candidate proceeds", async () => {
+    const longTitle = "Zamknięcie odcinka drogi powiatowej na czas planowanych prac drogowych";
+    const html = listingHtml([{ slug: "zamkniecie-przyszla-data", title: longTitle }]);
+    const article = articleHtml(longTitle, [
+      "Zamknięcie nastąpi od 1 do 5 września 2026 roku na wskazanym odcinku drogi.",
+    ]);
+    const parse = await buildPowiatWiadomosciParse(html, BASE_URL, async () => article);
+    expect(parse.candidates).toHaveLength(1);
+    expect(parse.candidates[0].hasDate).toBe(true);
+    expect(parse.candidates[0].text).toContain("września 2026");
+  });
+
+  test("3. long dateless title + article body that STILL has no date → rejected, zero candidate, never reaches auto-publish", async () => {
+    const longTitle = "Utrudnienia w ruchu na drodze powiatowej w związku z prowadzonymi pracami";
+    const html = listingHtml([{ slug: "brak-daty-nawet-po-fetch", title: longTitle }]);
+    const article = articleHtml(longTitle, [
+      "Prace prowadzone są na wskazanym odcinku, prosimy kierowców o zachowanie szczególnej ostrożności.",
+    ]);
+    const parse = await buildPowiatWiadomosciParse(html, BASE_URL, async () => article);
+    expect(parse.candidates).toHaveLength(0);
+  });
+
+  test("4. long title that already contains a complete, unambiguous date → no article fetch at all", async () => {
+    const html = listingHtml([
+      {
+        slug: "data-w-tytule",
+        title: "Utrudnienia od 10 do 20 sierpnia 2026 roku na drodze powiatowej numer 5678W",
+      },
+    ]);
+    let fetchCalls = 0;
+    const parse = await buildPowiatWiadomosciParse(html, BASE_URL, async () => {
+      fetchCalls++;
+      return null;
+    });
+    expect(fetchCalls).toBe(0);
+    expect(parse.candidates).toHaveLength(1);
+    expect(parse.candidates[0].hasDate).toBe(true);
+  });
+
+  test("5. short title (pre-existing trigger) still works unchanged alongside the new date-based trigger", async () => {
+    const html = listingHtml([{ slug: "krotki-tytul", title: "Utrudnienia drogowe" }]);
+    const article = articleHtml("Utrudnienia drogowe", [
+      "Od 5 do 12 sierpnia 2026 roku na wskazanym odcinku drogi powiatowej wystąpią utrudnienia w ruchu.",
+    ]);
+    let fetchCalls = 0;
+    const parse = await buildPowiatWiadomosciParse(html, BASE_URL, async () => {
+      fetchCalls++;
+      return article;
+    });
+    expect(fetchCalls).toBe(1);
+    expect(parse.candidates).toHaveLength(1);
+  });
+
+  test("no double-fetch: exactly one fetchArticleBody call per item needing hydration", async () => {
+    const longTitle = "Utrudnienia w ruchu na drodze powiatowej w związku z remontem nawierzchni";
+    const html = listingHtml([{ slug: "jeden-fetch", title: longTitle }]);
+    let fetchCalls = 0;
+    const article = articleHtml(longTitle, ["Prace potrwają do 30 sierpnia 2026 roku."]);
+    await buildPowiatWiadomosciParse(html, BASE_URL, async () => {
+      fetchCalls++;
+      return article;
+    });
+    expect(fetchCalls).toBe(1);
   });
 });

@@ -58,6 +58,31 @@ export async function defaultFetchArticleBody(url: string): Promise<string | nul
 }
 
 /**
+ * Sprint 184A — the length-only trigger below (`length >= MIN_PROPOSAL_
+ * TEXT_LENGTH`) had a real gap, found via a live re-check on Day 16: both
+ * genuine road notices sampled that day had bare titles that happened to
+ * be ≥60 chars on their own (this listing carries no structural date
+ * field at all, on the item or the article page — see
+ * powiatPruszkowskiParser.ts's header), so the article-body fetch built
+ * specifically to enrich bare-title items never fired for either, and the
+ * resulting candidate would have carried title-only text with no date
+ * signal at all — exactly the shape auto-publish's own "complete required
+ * fields" condition must reject.
+ *
+ * Hydration is now needed whenever the listing text is too short OR no
+ * event date can be detected in it — a long title that still doesn't say
+ * *when* something happens is not more useful to a reviewer than a short
+ * one. Kept as its own named predicate (rather than inlined) since Part 2
+ * of Sprint 184A's brief also names three more triggers (locality,
+ * category, "co zrobić" completeness) meant to extend this same predicate
+ * once this source's parser tracks those signals structurally — today it
+ * doesn't, so only the two currently detectable triggers are wired in.
+ */
+export function needsArticleHydration(listText: string): boolean {
+  return listText.length < MIN_PROPOSAL_TEXT_LENGTH || !detectDateInText(listText);
+}
+
+/**
  * Takes the already-fetched Wiadomości listing HTML and produces the same
  * PageParseResult shape every other source's parser produces, so the
  * result flows through the exact same buildCheckProposals() safety
@@ -69,14 +94,18 @@ export async function defaultFetchArticleBody(url: string): Promise<string | nul
  *     — NO article fetch happens for anything that fails this check. This
  *     is what keeps PR/event/weather content out without ever touching the
  *     network for it.
- *  2. If the listing text alone already clears MIN_PROPOSAL_TEXT_LENGTH,
- *     use it as-is — no extra request needed.
- *  3. Otherwise (the real, observed shape for genuine road notices here:
- *     bare title, no intro) attempt exactly one article-body fetch, bounded
- *     by MAX_ARTICLE_BODY_FETCHES total per run. A fetch failure, a missing
- *     body container, or a still-too-short combined result after fetching
- *     always drops the item — this function never proposes a candidate
- *     backed by only a generic title.
+ *  2. If the listing text alone is long enough AND already contains a
+ *     detectable event date, use it as-is — no extra request needed.
+ *  3. Otherwise attempt exactly one article-body fetch, bounded by
+ *     MAX_ARTICLE_BODY_FETCHES total per run. A fetch failure, a missing
+ *     body container, a still-too-short combined result, or — new this
+ *     sprint — a combined result that STILL has no detectable date after
+ *     fetching, always drops the item. This function never proposes a
+ *     candidate backed by only a generic title, and never proposes one
+ *     with no date signal at all (Part 2/6: no date, no auto-publish
+ *     eligibility, ever — enforced here by not proposing the candidate in
+ *     the first place, one step earlier than the auto-publish gate would
+ *     have caught it anyway).
  */
 export async function buildPowiatWiadomosciParse(
   listingHtml: string,
@@ -95,11 +124,11 @@ export async function buildPowiatWiadomosciParse(
     const listText = [item.title, item.intro].filter(Boolean).join("\n").trim();
     if (!isPowiatNoticeRelevant(listText)) continue;
 
-    if (listText.length >= MIN_PROPOSAL_TEXT_LENGTH) {
+    if (!needsArticleHydration(listText)) {
       candidates.push({
         heading: item.title.slice(0, 120),
         text: listText,
-        hasDate: detectDateInText(listText),
+        hasDate: true,
         url: item.url,
       });
       continue;
@@ -116,11 +145,12 @@ export async function buildPowiatWiadomosciParse(
 
     const combined = [item.title, bodyText].filter(Boolean).join("\n").trim();
     if (combined.length < MIN_PROPOSAL_TEXT_LENGTH) continue;
+    if (!detectDateInText(combined)) continue;
 
     candidates.push({
       heading: item.title.slice(0, 120),
       text: combined,
-      hasDate: detectDateInText(combined),
+      hasDate: true,
       url: item.url,
     });
   }
