@@ -93,6 +93,15 @@ export const SAFE_CHECK_SOURCE_IDS = [
   "pwik-wyszkow",
   "pwik-pultusk",
   "zwik-nowy-dwor-mazowiecki",
+  // Etap F, Fala 3 (2026-07-30) — first Łódzkie sources, 6 more
+  // HTTP-verified (each checked twice), personally verified by the main
+  // agent — no subagent used anywhere in this block.
+  "zwik-pabianice",
+  "wodkan-zgierz",
+  "pwik-piotrkow",
+  "pgkim-aleksandrow-lodzki",
+  "komunalne-wielun",
+  "mzwik-glowno",
 ] as const;
 
 export type SafeCheckSourceId = (typeof SAFE_CHECK_SOURCE_IDS)[number];

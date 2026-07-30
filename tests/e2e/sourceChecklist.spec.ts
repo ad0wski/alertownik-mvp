@@ -42,6 +42,15 @@ const OFFICIAL_DOMAINS = [
   "pwikwyszkow.pl",
   "pwikpultusk.pl",
   "zwikndm.pl",
+  // Etap F, Fala 3 (2026-07-30) — first Łódzkie sources, 6 more
+  // HTTP-verified (each double-checked), personally verified by the main
+  // agent.
+  "zwik.pabianice.pl",
+  "wodkan.zgierz.pl",
+  "pwik.piotrkow.pl",
+  "pgkimal.pl",
+  "komunalne.wielun.pl",
+  "mzwikglowno.pl",
 ];
 
 // Sprint 129's original 9 sources are all scoped to the 6-locality pilot;
@@ -64,6 +73,12 @@ const EXPECTED_EMPTY_LOCALITIES_IDS = [
   "pwik-wyszkow",
   "pwik-pultusk",
   "zwik-nowy-dwor-mazowiecki",
+  "zwik-pabianice",
+  "wodkan-zgierz",
+  "pwik-piotrkow",
+  "pgkim-aleksandrow-lodzki",
+  "komunalne-wielun",
+  "mzwik-glowno",
 ];
 
 test.describe("OFFICIAL_SOURCE_CHECKS definitions", () => {

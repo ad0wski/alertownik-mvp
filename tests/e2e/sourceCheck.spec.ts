@@ -45,7 +45,7 @@ const FIXTURE_HTML = `
 `;
 
 test.describe("safe-source allowlist (getSafeCheckSource)", () => {
-  test("exactly nineteen safe sources after Etap F Fala 2 — growing the list stays a per-block decision", () => {
+  test("exactly twenty-five safe sources after Etap F Fala 3 — growing the list stays a per-block decision", () => {
     expect(SAFE_CHECK_SOURCE_IDS).toEqual([
       "michalowice-komunikaty",
       "wkd-aktualnosci",
@@ -66,6 +66,12 @@ test.describe("safe-source allowlist (getSafeCheckSource)", () => {
       "pwik-wyszkow",
       "pwik-pultusk",
       "zwik-nowy-dwor-mazowiecki",
+      "zwik-pabianice",
+      "wodkan-zgierz",
+      "pwik-piotrkow",
+      "pgkim-aleksandrow-lodzki",
+      "komunalne-wielun",
+      "mzwik-glowno",
     ]);
   });
 

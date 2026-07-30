@@ -61,7 +61,7 @@ test.describe("buildSourceHealthRows — coverage and API-support flags", () => 
     expect(rows.map((r) => r.checklistId)).toEqual(OFFICIAL_SOURCE_CHECKS.map((s) => s.id));
   });
 
-  test("exactly nineteen sources are API-supported after Etap F Fala 2: Fala 1's 15 plus 4 more", () => {
+  test("exactly twenty-five sources are API-supported after Etap F Fala 3: Fala 2's 19 plus 6 more (first Łódzkie)", () => {
     const rows = rowsFor();
     const supported = rows.filter((r) => r.apiSupported).map((r) => r.checklistId);
     // Checklist order matches officialSourceChecklist.ts's array order.
@@ -84,6 +84,12 @@ test.describe("buildSourceHealthRows — coverage and API-support flags", () => 
       "pwik-wyszkow",
       "pwik-pultusk",
       "zwik-nowy-dwor-mazowiecki",
+      "zwik-pabianice",
+      "wodkan-zgierz",
+      "pwik-piotrkow",
+      "pgkim-aleksandrow-lodzki",
+      "komunalne-wielun",
+      "mzwik-glowno",
       "powiat-pruszkowski-wiadomosci",
     ]);
   });
@@ -183,7 +189,7 @@ test.describe("summarizeSourceHealth", () => {
     });
     const summary = summarizeSourceHealth(rows);
     expect(summary.total).toBe(OFFICIAL_SOURCE_CHECKS.length);
-    expect(summary.apiSupported).toBe(19);
+    expect(summary.apiSupported).toBe(25);
     expect(summary.checkedRecently).toBe(1); // only reg-mich has a fresh check
     expect(summary.needsAttention).toBe(summary.total - summary.checkedRecently);
   });

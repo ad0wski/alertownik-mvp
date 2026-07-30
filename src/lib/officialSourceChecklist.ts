@@ -455,6 +455,117 @@ export const OFFICIAL_SOURCE_CHECKS: OfficialSourceCheck[] = [
       "też komunikaty administracyjne (połączenie spółek) — filtr operacyjności już to " +
       "obsługuje.",
   },
+  // Etap F, Fala 3 (2026-07-30) — first Łódzkie sources. 6 more HTTP-verified
+  // water utilities, personally verified by the main agent via direct fetch,
+  // each checked twice to rule out a fluke (no subagent involved anywhere in
+  // this block, per CLAUDE.md's post-incident subagent ban). Same
+  // wordpress_rest mechanics, same check-only-only/localities:[] pattern as
+  // Fala 1/2. This is the first wave to leave Mazowieckie voivodeship.
+  {
+    id: "zwik-pabianice",
+    name: "ZWiK Pabianice",
+    category: "water",
+    officialUrl: "https://zwik.pabianice.pl",
+    apiUrl: "https://zwik.pabianice.pl/wp-json/wp/v2/posts?per_page=6",
+    whatToCheck:
+      "Przerwy w dostawie wody, awarie sieci — Miasto Pabianice, województwo łódzkie " +
+      "(poza obecnym pilotażem, powiat pabianicki). Zweryfikowane dwukrotnie w Etapie F " +
+      "Fala 3 — realne komunikaty o awariach na skrzyżowaniu Warszawska/Batorego.",
+    localities: [],
+    frequency: "weekly",
+    risk: "low",
+    riskNote:
+      "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
+      "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów.",
+  },
+  {
+    id: "wodkan-zgierz",
+    name: "Wodociągi i Kanalizacja — Zgierz",
+    category: "water",
+    officialUrl: "https://www.wodkan.zgierz.pl",
+    apiUrl: "https://www.wodkan.zgierz.pl/wp-json/wp/v2/posts?per_page=6",
+    whatToCheck:
+      "Przerwy w dostawie wody, awarie sieci, ogłoszenia spółki — Miasto Zgierz, " +
+      "województwo łódzkie (poza obecnym pilotażem, powiat zgierski). Zweryfikowane " +
+      "dwukrotnie w Etapie F Fala 3.",
+    localities: [],
+    frequency: "weekly",
+    risk: "low",
+    riskNote:
+      "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
+      "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów.",
+  },
+  {
+    id: "pwik-piotrkow",
+    name: "Piotrkowskie Wodociągi i Kanalizacja",
+    category: "water",
+    officialUrl: "https://pwik.piotrkow.pl",
+    apiUrl: "https://pwik.piotrkow.pl/wp-json/wp/v2/posts?per_page=6",
+    whatToCheck:
+      "Przerwy w dostawie wody, awarie sieci — Miasto Piotrków Trybunalski, województwo " +
+      "łódzkie (poza obecnym pilotażem). Zweryfikowane dwukrotnie w Etapie F Fala 3 — " +
+      "realne komunikaty o awariach sieci (ul. Prosta, ul. Szmidta).",
+    localities: [],
+    frequency: "weekly",
+    risk: "low",
+    riskNote:
+      "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
+      "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów.",
+  },
+  {
+    id: "pgkim-aleksandrow-lodzki",
+    name: "PGKiM Aleksandrów Łódzki",
+    category: "water",
+    officialUrl: "https://pgkimal.pl",
+    apiUrl: "https://pgkimal.pl/wp-json/wp/v2/posts?per_page=6",
+    whatToCheck:
+      "Przerwy w dostawie wody, awarie sieci — Miasto Aleksandrów Łódzki, województwo " +
+      "łódzkie (poza obecnym pilotażem, powiat zgierski). Zweryfikowane dwukrotnie w " +
+      "Etapie F Fala 3 — wszystkie próbkowane wpisy w pełni operacyjne (\"Brak wody!\").",
+    localities: [],
+    frequency: "weekly",
+    risk: "low",
+    riskNote:
+      "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
+      "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów.",
+  },
+  {
+    id: "komunalne-wielun",
+    name: "Przedsiębiorstwo Komunalne Wieluń",
+    category: "water",
+    officialUrl: "https://komunalne.wielun.pl",
+    apiUrl: "https://komunalne.wielun.pl/wp-json/wp/v2/posts?per_page=6",
+    whatToCheck:
+      "Przerwy w dostawie wody, awarie sieci — Miasto Wieluń, województwo łódzkie (poza " +
+      "obecnym pilotażem, powiat wieluński). Zweryfikowane dwukrotnie w Etapie F Fala 3 — " +
+      "wszystkie próbkowane wpisy w pełni operacyjne, precyzyjne (ulice, daty).",
+    localities: [],
+    frequency: "weekly",
+    risk: "low",
+    riskNote:
+      "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
+      "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów.",
+  },
+  {
+    id: "mzwik-glowno",
+    name: "Miejski Zakład Wodociągów i Kanalizacji — Głowno",
+    category: "water",
+    officialUrl: "https://mzwikglowno.pl",
+    apiUrl: "https://mzwikglowno.pl/wp-json/wp/v2/posts?per_page=6",
+    whatToCheck:
+      "Przerwy w dostawie wody, apele o oszczędzanie wody w upały, awarie sieci — Miasto " +
+      "Głowno, województwo łódzkie (poza obecnym pilotażem, powiat zgierski). " +
+      "Zweryfikowane dwukrotnie w Etapie F Fala 3.",
+    localities: [],
+    frequency: "weekly",
+    risk: "low",
+    riskNote:
+      "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
+      "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów. Kanał miesza " +
+      "komunikaty operacyjne (apele, przerwy) z ogłoszeniami przetargowymi — filtr " +
+      "operacyjności (parseWordpressRestPosts) już to obsługuje, najsłabszy sygnał " +
+      "operacyjny z tej fali — obserwować przy pierwszych realnych checkach.",
+  },
   {
     id: "powiat-pruszkowski-wiadomosci",
     name: "Powiat Pruszkowski — Wiadomości (utrudnienia drogowe)",
