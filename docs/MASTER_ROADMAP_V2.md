@@ -262,6 +262,18 @@ Y/14 dni) → zgłoszenie wysłane (tak/nie) → zatwierdzone (tak/nie).
 
 ## Etap E — Ogólnopolska platforma źródeł
 
+**STATUS: ZAKOŃCZONY (2026-07-30, Incident Closeout blok, po Bloku
+Wykonawczym 2).** Pełny dowód i granica E→F:
+`docs/STAGE_E_NATIONAL_FOUNDATION_CLOSEOUT_V1.md`. Skrót: wszystkie
+kryteria DoD (typy/adapter interface, walidatory, scoring, coverage
+calculator, audyt, migracje PROPOSED) były w pełni spełnione już po
+scaleniu Sprintu 188A (`93c5b8d`) — zero źródeł aktywowano na Production w
+ramach tego etapu, dokładnie zgodnie z DoD. Praca nad falami check-only
+źródeł wykonana w Blokach Wykonawczych 1–2 (10 aktywowanych źródeł
+mazowieckich) jest retrospektywnie **Falą 1 Etapu F**, nie Etapu E — patrz
+korekta etykietowania w dokumencie zamknięcia. Dalsze fale źródeł to
+zawsze praca Etapu F.
+
 **Cel:** przekształcić obecny, w dużej mierze zakodowany na twardo pod 6
 miejscowości pilotażu silnik źródeł w skonfigurowalną platformę zdolną
 obsłużyć dowolną gminę/powiat/miasto w Polsce — **fundament**, nie
@@ -352,8 +364,16 @@ partiami, przy użyciu fundamentu z Etapu E.
   Source Auto-Publish (patrz CLAUDE.md Security Rule #10) bez osobnej,
   jawnej zgody Adama i własnego audytu bezpieczeństwa.
 
-**Stan wejściowy:** zależny od ukończenia Etapu E (fundament musi istnieć,
-zanim partie źródeł da się dodawać bez pisania nowego kodu na każde źródło).
+**Stan wejściowy:** zależność od Etapu E **spełniona** (Etap E zamknięty
+2026-07-30 — patrz jego sekcja powyżej). **Fala 1 już wykonana**: 10
+zweryfikowanych źródeł mazowieckich (`wordpress_rest`), aktywowanych
+check-only w Blokach Wykonawczych 1–2, retrospektywnie skategoryzowanych
+jako Etap F Fala 1 (były wcześniej opisane jako "Etap E" w dokumentacji
+tych bloków — etykieta skorygowana w Incident Closeout, żadna praca ani
+kod nie zostały cofnięte). Próba Fali 2 (Blok Wykonawczy 3) została
+zrewertowana z powodu incydentu bezpieczeństwa subagenta — patrz
+`docs/INCIDENT_SUBAGENT_SCOPE_VIOLATION_EXEC_BLOCK_3_V1.md` — i nie liczy
+się jako wykonana.
 
 **Definicja zakończenia:** Etap F **nie ma jednego binarnego "koniec"** —
 kończy się decyzją Adama o zatrzymaniu po osiągnięciu satysfakcjonującego

@@ -101,6 +101,10 @@ Adama o rozpoczęciu):
 
 ## Etap E — Ogólnopolska platforma źródeł (fundament)
 
+**STATUS: ZAKOŃCZONY (2026-07-30).** Wszystkie kryteria poniżej spełnione
+w commicie `93c5b8d` (Sprint 188A). Dowód pełny:
+`docs/STAGE_E_NATIONAL_FOUNDATION_CLOSEOUT_V1.md`.
+
 **Zrobione, gdy:**
 - Wspólne typy źródła (lifecycle, adapter interface, konfiguracja) scalone
   do `main`, przetestowane (testy jednostkowe adapterów).

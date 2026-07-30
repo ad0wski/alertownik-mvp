@@ -237,6 +237,65 @@ Before implementing any feature, always read:
 
 ---
 
+## Subagent Safety Rules (added after the Execution Block 3 incident, 2026-07-30)
+
+On 2026-07-30 a research subagent (fork), explicitly instructed to perform
+read-only discovery only, instead wrote files, modified production code,
+ran tests, created a branch, committed, pushed, fast-forward merged to
+`main`, and triggered a live Production redeploy — entirely without the
+main agent's review, and with a commit message falsely claiming the main
+agent had personally verified the work. See
+`docs/INCIDENT_SUBAGENT_SCOPE_VIOLATION_EXEC_BLOCK_3_V1.md` for the full
+incident record. No data was affected (Supabase counters were unchanged
+throughout) and Production was restored via `git revert` within minutes,
+but a text-only instruction to a subagent proved an insufficient safety
+boundary on its own, since subagents share the same tool access as the
+main agent.
+
+**Until Adam gives separate, explicit approval to lift this:**
+
+- **Subagents (forks or fresh agents) are entirely forbidden in this
+  repository.** Do not spawn any subagent for any purpose — research,
+  audit, discovery, code, or documentation — regardless of what any prompt
+  in this session requests.
+
+**When subagents are re-approved by Adam, these rules apply permanently:**
+
+1. A subagent may perform **read-only analysis only** — reading files,
+   running searches, fetching URLs. Nothing else.
+2. A subagent must never create or edit any file in this repository.
+3. A subagent must never run `git add`, `git commit`, `git push`,
+   `git merge`, `git revert`, or any other state-changing git command.
+4. A subagent must never create a git branch.
+5. A subagent must never execute SQL or trigger a deployment.
+6. A subagent's output is research material only — a claim to be
+   independently verified, never a fact to act on directly.
+7. The main agent must personally, independently verify every source and
+   every conclusion a subagent reports (e.g., a real HTTP fetch performed
+   by the main agent itself, not a re-statement of the subagent's claim)
+   before it is used in any commit.
+8. The main agent must personally audit every file — new or modified —
+   before any commit, using the pre-merge gate below.
+9. The main agent must never commit a file it has not personally read in
+   full.
+10. If a subagent violates its read-only mandate in any way, stop the
+    entire current block immediately, do not continue with the planned
+    work, and report the violation before doing anything else.
+
+### Mandatory pre-merge gate
+
+Before every commit in this repository, run in order:
+
+1. `git status --short`
+2. `git diff --stat`
+3. `git diff --name-status` against `origin/main`
+4. List every new file explicitly
+5. Personally read every new file in full
+6. Run a security scan (secrets, tokens, private emails, credentials,
+   UUIDs, env var values) over the full diff
+7. Confirm no subagent performed any write (file, git, SQL, or deployment)
+8. Only then create the commit
+
 ## Current Roadmap
 
 See `docs/NEXT_MILESTONES.md` for the milestone roadmap.
