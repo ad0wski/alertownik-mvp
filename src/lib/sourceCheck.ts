@@ -117,6 +117,11 @@ export const SAFE_CHECK_SOURCE_IDS = [
   "zdiz-gdynia",
   "mzk-koszalin",
   "mpk-stargard",
+  // Etap F, Fala 6 (2026-07-30) — first Lubelskie + Podkarpackie + Podlaskie
+  // sources, 2 HTTP-verified (each double-checked), personally verified by
+  // the main agent — no subagent used anywhere in this block.
+  "mzd-rzeszow",
+  "pgk-suwalki",
 ] as const;
 
 export type SafeCheckSourceId = (typeof SAFE_CHECK_SOURCE_IDS)[number];

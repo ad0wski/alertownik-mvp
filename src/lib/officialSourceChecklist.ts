@@ -826,6 +826,53 @@ export const OFFICIAL_SOURCE_CHECKS: OfficialSourceCheck[] = [
       "Jeśli portal gov.pl zmieni szablon, check bezpiecznie zwróci zero propozycji " +
       "zamiast błędu — wróć wtedy do ręcznego sprawdzania w przeglądarce.",
   },
+  // Etap F, Fala 6 (2026-07-30) — first Lubelskie + Podkarpackie + Podlaskie
+  // sources. Discovery for this wave spanned two sessions (a WebSearch-limit
+  // pause produced docs/EXEC_ETAP_F_FALA_6_CHECKPOINT_PAUSED_V1.md, folded
+  // into the final wave doc below) and personally HTTP-verified 51
+  // candidates across the three voivodeships — only 2 cleared the GO bar.
+  // Most municipal WordPress feeds tested were either non-WordPress CMSes
+  // (404 on wp-json), general PR/news portals, or dominated by
+  // tenders/administrative notices — consistent with prior waves' finding
+  // that clean operational signal is the exception, not the rule. No
+  // subagent used anywhere in this block (CLAUDE.md's post-incident ban).
+  {
+    id: "mzd-rzeszow",
+    name: "Miejski Zarząd Dróg w Rzeszowie",
+    category: "roads",
+    officialUrl: "https://mzd.erzeszow.pl",
+    apiUrl: "https://mzd.erzeszow.pl/wp-json/wp/v2/posts?per_page=6",
+    whatToCheck:
+      "Utrudnienia drogowe, zamknięcia ulic, budowy i rozbudowy dróg, zmiany organizacji " +
+      "ruchu — Miasto Rzeszów, województwo podkarpackie (poza obecnym pilotażem). " +
+      "Zweryfikowane dwukrotnie w Etapie F Fala 6 (raz w poprzedniej sesji, raz w tej) — " +
+      "wszystkie próbkowane wpisy w pełni operacyjne, zero przetargów/PR w próbce.",
+    localities: [],
+    frequency: "weekly",
+    risk: "low",
+    riskNote:
+      "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
+      "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów.",
+  },
+  {
+    id: "pgk-suwalki",
+    name: "Przedsiębiorstwo Gospodarki Komunalnej w Suwałkach",
+    category: "transport",
+    officialUrl: "https://www.pgk.suwalki.pl",
+    apiUrl: "https://www.pgk.suwalki.pl/wp-json/wp/v2/posts?per_page=6",
+    whatToCheck:
+      "Zmiany tras i rozkładów komunikacji miejskiej, zamknięcia ulic wpływające na " +
+      "kursowanie, zawieszenia linii, bezpłatne przejazdy specjalne — Miasto Suwałki, " +
+      "województwo podlaskie (poza obecnym pilotażem). Zweryfikowane dwukrotnie w Etapie F " +
+      "Fala 6 — wszystkie próbkowane wpisy (6 i 12) w pełni operacyjne, zero przetargów/PR " +
+      "w żadnej z dwóch próbek.",
+    localities: [],
+    frequency: "weekly",
+    risk: "low",
+    riskNote:
+      "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
+      "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów.",
+  },
   {
     id: "roboty-drogowe",
     name: "Remonty i utrudnienia drogowe — gmina + Pruszków",

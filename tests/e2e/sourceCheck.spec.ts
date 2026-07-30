@@ -45,7 +45,7 @@ const FIXTURE_HTML = `
 `;
 
 test.describe("safe-source allowlist (getSafeCheckSource)", () => {
-  test("exactly thirty-seven safe sources after Etap F Fala 5 — growing the list stays a per-block decision", () => {
+  test("exactly thirty-nine safe sources after Etap F Fala 6 — growing the list stays a per-block decision", () => {
     expect(SAFE_CHECK_SOURCE_IDS).toEqual([
       "michalowice-komunikaty",
       "wkd-aktualnosci",
@@ -84,6 +84,8 @@ test.describe("safe-source allowlist (getSafeCheckSource)", () => {
       "zdiz-gdynia",
       "mzk-koszalin",
       "mpk-stargard",
+      "mzd-rzeszow",
+      "pgk-suwalki",
     ]);
   });
 

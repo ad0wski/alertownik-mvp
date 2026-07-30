@@ -69,6 +69,11 @@ const OFFICIAL_DOMAINS = [
   "zdiz.gdynia.pl",
   "mzk.koszalin.pl",
   "mpkstargard.pl",
+  // Etap F, Fala 6 (2026-07-30) — first Lubelskie + Podkarpackie + Podlaskie
+  // sources, 2 HTTP-verified (each double-checked), personally verified by
+  // the main agent.
+  "mzd.erzeszow.pl",
+  "pgk.suwalki.pl",
 ];
 
 // Sprint 129's original 9 sources are all scoped to the 6-locality pilot;
@@ -109,6 +114,8 @@ const EXPECTED_EMPTY_LOCALITIES_IDS = [
   "zdiz-gdynia",
   "mzk-koszalin",
   "mpk-stargard",
+  "mzd-rzeszow",
+  "pgk-suwalki",
 ];
 
 test.describe("OFFICIAL_SOURCE_CHECKS definitions", () => {

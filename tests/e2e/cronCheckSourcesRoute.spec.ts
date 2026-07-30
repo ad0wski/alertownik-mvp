@@ -255,8 +255,8 @@ test.describe("GET /api/cron/check-sources — dry-run behavior (authorized)", (
         expect(body.savedCandidates).toBe(0);
         expect(body.savedSourceChecks).toBe(0);
         expect(body.published).toBe(false);
-        expect(body.checkedSources).toBe(37);
-        expect(body.results).toHaveLength(37);
+        expect(body.checkedSources).toBe(39);
+        expect(body.results).toHaveLength(39);
         for (const r of body.results) {
           expect([
             "michalowice-komunikaty",
@@ -296,6 +296,8 @@ test.describe("GET /api/cron/check-sources — dry-run behavior (authorized)", (
             "zdiz-gdynia",
             "mzk-koszalin",
             "mpk-stargard",
+            "mzd-rzeszow",
+            "pgk-suwalki",
           ]).toContain(r.sourceKey);
           expect(r.outcome).toBe("success");
           expect(r).not.toHaveProperty("title");
@@ -328,8 +330,8 @@ test.describe("GET /api/cron/check-sources — dry-run behavior (authorized)", (
         const res = await GET(authedRequest());
         expect(res.status).toBe(200);
         const body = await res.json();
-        expect(body.checkedSources).toBe(37);
-        expect(body.successfulSources).toBe(36);
+        expect(body.checkedSources).toBe(39);
+        expect(body.successfulSources).toBe(38);
         expect(body.failedSources).toBe(1);
         const wkdResult = body.results.find((r: { sourceKey: string }) => r.sourceKey === "wkd-aktualnosci");
         const michalowiceResult = body.results.find(
