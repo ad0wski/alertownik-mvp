@@ -676,6 +676,122 @@ export const OFFICIAL_SOURCE_CHECKS: OfficialSourceCheck[] = [
       "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
       "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów.",
   },
+  // Etap F, Fala 5 (2026-07-30) — first sources from Kujawsko-Pomorskie,
+  // Pomorskie and Zachodniopomorskie voivodeships, checked in one parallel
+  // batch of 41 personally HTTP-verified candidates (no subagent anywhere
+  // in this block, per CLAUDE.md's post-incident subagent ban). Discovery
+  // deliberately diversified beyond water utilities this wave — most
+  // water-company WordPress feeds tested were dominated by tenders/PR, so
+  // only 2 of these 6 GO sources are water; the other 4 are transport and
+  // roads authorities, whose feeds were consistently cleaner. Same
+  // wordpress_rest mechanics, same check-only-only/localities:[] pattern
+  // as every prior wave.
+  {
+    id: "mzk-grudziadz",
+    name: "MZK Grudziądz",
+    category: "transport",
+    officialUrl: "https://mzk.grudziadz.pl",
+    apiUrl: "https://mzk.grudziadz.pl/wp-json/wp/v2/posts?per_page=6",
+    whatToCheck:
+      "Zmiany rozkładów jazdy, linie sezonowe, objazdy, zmiany zasad sprzedaży biletów — " +
+      "Miasto Grudziądz, województwo kujawsko-pomorskie (poza obecnym pilotażem). " +
+      "Zweryfikowane dwukrotnie w Etapie F Fala 5 — pięć z sześciu próbkowanych wpisów w " +
+      "pełni operacyjne.",
+    localities: [],
+    frequency: "weekly",
+    risk: "low",
+    riskNote:
+      "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
+      "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów.",
+  },
+  {
+    id: "pewik-gdynia",
+    name: "PEWIK Gdynia",
+    category: "water",
+    officialUrl: "https://pewik.gdynia.pl",
+    apiUrl: "https://pewik.gdynia.pl/wp-json/wp/v2/posts?per_page=6",
+    whatToCheck:
+      "Przerwy w dostawie wody, awarie sieci, prace naprawcze — Miasto Gdynia, " +
+      "województwo pomorskie (poza obecnym pilotażem). Zweryfikowane dwukrotnie w " +
+      "Etapie F Fala 5.",
+    localities: [],
+    frequency: "weekly",
+    risk: "low",
+    riskNote:
+      "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
+      "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów.",
+  },
+  {
+    id: "pwik-kwidzyn",
+    name: "PWiK Kwidzyn",
+    category: "water",
+    officialUrl: "https://wodociagikwidzyn.pl",
+    apiUrl: "https://wodociagikwidzyn.pl/wp-json/wp/v2/posts?per_page=6",
+    whatToCheck:
+      "Przerwy w dostawie wody, awarie sieci — Miasto Kwidzyn, województwo pomorskie " +
+      "(poza obecnym pilotażem). Zweryfikowane dwukrotnie w Etapie F Fala 5 — wszystkie " +
+      "próbkowane wpisy w pełni operacyjne (komunikaty i awarie, zero przetargów w próbce).",
+    localities: [],
+    frequency: "weekly",
+    risk: "low",
+    riskNote:
+      "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
+      "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów.",
+  },
+  {
+    id: "zdiz-gdynia",
+    name: "ZDiZ Gdynia (utrudnienia drogowe)",
+    category: "roads",
+    officialUrl: "https://www.zdiz.gdynia.pl",
+    apiUrl: "https://www.zdiz.gdynia.pl/wp-json/wp/v2/posts?per_page=6",
+    whatToCheck:
+      "Zamknięcia ulic, naprawy nawierzchni i kanalizacji deszczowej, awarie infrastruktury " +
+      "podziemnej, zmiany organizacji ruchu — Miasto Gdynia, województwo pomorskie (poza " +
+      "obecnym pilotażem). Zweryfikowane dwukrotnie w Etapie F Fala 5 — pięć z sześciu " +
+      "próbkowanych wpisów bezpośrednio o utrudnieniach.",
+    localities: [],
+    frequency: "weekly",
+    risk: "low",
+    riskNote:
+      "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
+      "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów.",
+  },
+  {
+    id: "mzk-koszalin",
+    name: "MZK Koszalin",
+    category: "transport",
+    officialUrl: "https://mzk.koszalin.pl",
+    apiUrl: "https://mzk.koszalin.pl/wp-json/wp/v2/posts?per_page=6",
+    whatToCheck:
+      "Zmiany rozkładów jazdy, objazdy, linie sezonowe, zmiany w aplikacji biletowej — " +
+      "Miasto Koszalin, województwo zachodniopomorskie (poza obecnym pilotażem). " +
+      "Zweryfikowane dwukrotnie w Etapie F Fala 5 — wszystkie próbkowane wpisy w pełni " +
+      "operacyjne.",
+    localities: [],
+    frequency: "weekly",
+    risk: "low",
+    riskNote:
+      "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
+      "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów.",
+  },
+  {
+    id: "mpk-stargard",
+    name: "MPK Stargard",
+    category: "transport",
+    officialUrl: "https://mpkstargard.pl",
+    apiUrl: "https://mpkstargard.pl/wp-json/wp/v2/posts?per_page=6",
+    whatToCheck:
+      "Zmiany tras, zawieszenia kursowania, linie sezonowe, przywrócenie kursowania po " +
+      "remontach — Miasto Stargard, województwo zachodniopomorskie (poza obecnym " +
+      "pilotażem). Zweryfikowane dwukrotnie w Etapie F Fala 5 — wszystkie próbkowane wpisy " +
+      "w pełni operacyjne.",
+    localities: [],
+    frequency: "weekly",
+    risk: "low",
+    riskNote:
+      "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
+      "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów.",
+  },
   {
     id: "powiat-pruszkowski-wiadomosci",
     name: "Powiat Pruszkowski — Wiadomości (utrudnienia drogowe)",

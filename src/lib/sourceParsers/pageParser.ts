@@ -280,6 +280,17 @@ const OPERATIONAL_NOTICE_KEYWORDS_RX =
 const PRUSZKOW_NOTICE_KEYWORDS_RX =
   /przerw[a-złńóśźż]*|utrudni[a-złńóśźż]*|remont[a-złńóśźż]*|objazd[a-złńóśźż]*|zamkni[ęe][a-złńóśźż]*|wyłącz[a-złńóśźż]*|awari[a-złńóśźż]*|zmian[ay] organizacj[a-złńóśźż]* ruchu|odbi[oó]r[a-złńóśźż]* odpad[a-złńóśźż]*|harmonogram[a-złńóśźż]* odpad[a-złńóśźż]*|ciepł[a-złńóśźż]* wod[a-złńóśźż]*|energi[a-złńóśźż]* ciepln[a-złńóśźż]*|syren[a-złńóśźż]* alarmow[a-złńóśźż]*/i;
 
+// Etap F, Fala 5 (2026-07-30) — the water-biased OPERATIONAL_NOTICE_KEYWORDS_RX
+// above misses most real transport/roads vocabulary (objazd, zawieszenie
+// kursowania, zmiana rozkładu jazdy, naprawa nawierzchni) — confirmed live
+// against this wave's own verified samples (MZK Grudziądz, ZDiZ Gdynia, MZK
+// Koszalin, MPK Stargard). Rather than a per-site parser, this is one shared,
+// broader relevance filter for the whole transport/roads topic — same
+// pattern as PRUSZKOW_NOTICE_KEYWORDS_RX above, reused across all four of
+// this wave's non-water sources.
+const TRANSPORT_ROADS_NOTICE_KEYWORDS_RX =
+  /przerw[a-złńóśźż]*|utrudni[a-złńóśźż]*|remont[a-złńóśźż]*|przebudow[a-złńóśźż]*|objazd[a-złńóśźż]*|zamkni[ęe][a-złńóśźż]*|wyłącz[a-złńóśźż]*|awari[a-złńóśźż]*|napraw[a-złńóśźż]*|zawieszeni[ea] kursowani[ea]|wznowieni[ea] kursowani[ea]|przywr[oó]ceni[ea]|zmian[ay] (?:w )?(?:rozkład[a-złńóśźż]*|tras[a-złńóśźż]*|organizacj[a-złńóśźż]* ruchu)|linia? sezonow[a-złńóśźż]*|kursowani[ea]/i;
+
 export interface WordpressRestPost {
   title?: { rendered?: string };
   excerpt?: { rendered?: string };
@@ -387,6 +398,16 @@ export function parsePruszkowRestPosts(posts: WordpressRestPost[]): PageParseRes
   );
 }
 
+/** Same mechanics as parseWordpressRestPosts, using
+ *  TRANSPORT_ROADS_NOTICE_KEYWORDS_RX — shared by Etap F Fala 5's four
+ *  transport/roads sources (see REST_PARSERS_BY_SOURCE_ID below). */
+export function parseTransportRoadsRestPosts(posts: WordpressRestPost[]): PageParseResult {
+  return candidatesToPageParseResult(
+    "Transport / drogi — aktualności",
+    extractWordpressRestCandidates(posts, TRANSPORT_ROADS_NOTICE_KEYWORDS_RX)
+  );
+}
+
 // Sprint 173 — single source of truth for "which WordPress-REST relevance
 // filter applies to which apiUrl-backed source", shared by both the manual
 // check route (src/app/api/sources/check/route.ts) and the scheduled fetch
@@ -401,6 +422,10 @@ export function parsePruszkowRestPosts(posts: WordpressRestPost[]): PageParseRes
 export const REST_PARSERS_BY_SOURCE_ID: Record<string, (posts: WordpressRestPost[]) => PageParseResult> = {
   "wodociagi-michalowice": parseWordpressRestPosts,
   "pruszkow-aktualnosci": parsePruszkowRestPosts,
+  "mzk-grudziadz": parseTransportRoadsRestPosts,
+  "zdiz-gdynia": parseTransportRoadsRestPosts,
+  "mzk-koszalin": parseTransportRoadsRestPosts,
+  "mpk-stargard": parseTransportRoadsRestPosts,
 };
 
 // Lightweight RSS/Atom autodiscovery — only looks at the page's own <head>

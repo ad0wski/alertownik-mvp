@@ -111,6 +111,12 @@ export const SAFE_CHECK_SOURCE_IDS = [
   "mwik-ostrowiec",
   "mpgk-busko-zdroj",
   "wodociagi-pinczowskie",
+  "mzk-grudziadz",
+  "pewik-gdynia",
+  "pwik-kwidzyn",
+  "zdiz-gdynia",
+  "mzk-koszalin",
+  "mpk-stargard",
 ] as const;
 
 export type SafeCheckSourceId = (typeof SAFE_CHECK_SOURCE_IDS)[number];

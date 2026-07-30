@@ -61,7 +61,7 @@ test.describe("buildSourceHealthRows — coverage and API-support flags", () => 
     expect(rows.map((r) => r.checklistId)).toEqual(OFFICIAL_SOURCE_CHECKS.map((s) => s.id));
   });
 
-  test("exactly thirty-one sources are API-supported after Etap F Fala 4: Fala 3's 25 plus 6 more (first Wielkopolskie+Świętokrzyskie)", () => {
+  test("exactly thirty-seven sources are API-supported after Etap F Fala 5: Fala 4's 31 plus 6 more (first Kujawsko-Pomorskie+Pomorskie+Zachodniopomorskie)", () => {
     const rows = rowsFor();
     const supported = rows.filter((r) => r.apiSupported).map((r) => r.checklistId);
     // Checklist order matches officialSourceChecklist.ts's array order.
@@ -96,6 +96,12 @@ test.describe("buildSourceHealthRows — coverage and API-support flags", () => 
       "mwik-ostrowiec",
       "mpgk-busko-zdroj",
       "wodociagi-pinczowskie",
+      "mzk-grudziadz",
+      "pewik-gdynia",
+      "pwik-kwidzyn",
+      "zdiz-gdynia",
+      "mzk-koszalin",
+      "mpk-stargard",
       "powiat-pruszkowski-wiadomosci",
     ]);
   });
@@ -195,7 +201,7 @@ test.describe("summarizeSourceHealth", () => {
     });
     const summary = summarizeSourceHealth(rows);
     expect(summary.total).toBe(OFFICIAL_SOURCE_CHECKS.length);
-    expect(summary.apiSupported).toBe(31);
+    expect(summary.apiSupported).toBe(37);
     expect(summary.checkedRecently).toBe(1); // only reg-mich has a fresh check
     expect(summary.needsAttention).toBe(summary.total - summary.checkedRecently);
   });

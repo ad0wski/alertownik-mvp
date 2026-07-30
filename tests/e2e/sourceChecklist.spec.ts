@@ -60,6 +60,15 @@ const OFFICIAL_DOMAINS = [
   "mwikostrowiec.pl",
   "mpgkbusko.pl",
   "wodociagipinczowskie.net",
+  // Etap F, Fala 5 (2026-07-30) — first Kujawsko-Pomorskie + Pomorskie +
+  // Zachodniopomorskie sources, 6 more HTTP-verified (each double-checked),
+  // personally verified by the main agent.
+  "mzk.grudziadz.pl",
+  "pewik.gdynia.pl",
+  "wodociagikwidzyn.pl",
+  "zdiz.gdynia.pl",
+  "mzk.koszalin.pl",
+  "mpkstargard.pl",
 ];
 
 // Sprint 129's original 9 sources are all scoped to the 6-locality pilot;
@@ -94,6 +103,12 @@ const EXPECTED_EMPTY_LOCALITIES_IDS = [
   "mwik-ostrowiec",
   "mpgk-busko-zdroj",
   "wodociagi-pinczowskie",
+  "mzk-grudziadz",
+  "pewik-gdynia",
+  "pwik-kwidzyn",
+  "zdiz-gdynia",
+  "mzk-koszalin",
+  "mpk-stargard",
 ];
 
 test.describe("OFFICIAL_SOURCE_CHECKS definitions", () => {

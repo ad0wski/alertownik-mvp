@@ -244,7 +244,7 @@ function mixedFixtureFetch(): typeof fetch {
 }
 
 test.describe("GET /api/cron/check-sources — dry-run behavior (authorized)", () => {
-  test("correct fake token + fixture responses for all thirty-one allowlisted sources → safe dry-run summary, zero writes claimed", async () => {
+  test("correct fake token + fixture responses for all thirty-seven allowlisted sources → safe dry-run summary, zero writes claimed", async () => {
     await withEnv({ SCHEDULED_CHECKS_ENABLED: "true", CRON_SECRET: FAKE_TEST_SECRET }, async () => {
       const restore = mockFetch(mixedFixtureFetch());
       try {
@@ -255,8 +255,8 @@ test.describe("GET /api/cron/check-sources — dry-run behavior (authorized)", (
         expect(body.savedCandidates).toBe(0);
         expect(body.savedSourceChecks).toBe(0);
         expect(body.published).toBe(false);
-        expect(body.checkedSources).toBe(31);
-        expect(body.results).toHaveLength(31);
+        expect(body.checkedSources).toBe(37);
+        expect(body.results).toHaveLength(37);
         for (const r of body.results) {
           expect([
             "michalowice-komunikaty",
@@ -290,6 +290,12 @@ test.describe("GET /api/cron/check-sources — dry-run behavior (authorized)", (
             "mwik-ostrowiec",
             "mpgk-busko-zdroj",
             "wodociagi-pinczowskie",
+            "mzk-grudziadz",
+            "pewik-gdynia",
+            "pwik-kwidzyn",
+            "zdiz-gdynia",
+            "mzk-koszalin",
+            "mpk-stargard",
           ]).toContain(r.sourceKey);
           expect(r.outcome).toBe("success");
           expect(r).not.toHaveProperty("title");
@@ -322,8 +328,8 @@ test.describe("GET /api/cron/check-sources — dry-run behavior (authorized)", (
         const res = await GET(authedRequest());
         expect(res.status).toBe(200);
         const body = await res.json();
-        expect(body.checkedSources).toBe(31);
-        expect(body.successfulSources).toBe(30);
+        expect(body.checkedSources).toBe(37);
+        expect(body.successfulSources).toBe(36);
         expect(body.failedSources).toBe(1);
         const wkdResult = body.results.find((r: { sourceKey: string }) => r.sourceKey === "wkd-aktualnosci");
         const michalowiceResult = body.results.find(

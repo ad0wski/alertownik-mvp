@@ -45,7 +45,7 @@ const FIXTURE_HTML = `
 `;
 
 test.describe("safe-source allowlist (getSafeCheckSource)", () => {
-  test("exactly thirty-one safe sources after Etap F Fala 4 — growing the list stays a per-block decision", () => {
+  test("exactly thirty-seven safe sources after Etap F Fala 5 — growing the list stays a per-block decision", () => {
     expect(SAFE_CHECK_SOURCE_IDS).toEqual([
       "michalowice-komunikaty",
       "wkd-aktualnosci",
@@ -78,6 +78,12 @@ test.describe("safe-source allowlist (getSafeCheckSource)", () => {
       "mwik-ostrowiec",
       "mpgk-busko-zdroj",
       "wodociagi-pinczowskie",
+      "mzk-grudziadz",
+      "pewik-gdynia",
+      "pwik-kwidzyn",
+      "zdiz-gdynia",
+      "mzk-koszalin",
+      "mpk-stargard",
     ]);
   });
 
