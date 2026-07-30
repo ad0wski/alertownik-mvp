@@ -45,7 +45,7 @@ const FIXTURE_HTML = `
 `;
 
 test.describe("safe-source allowlist (getSafeCheckSource)", () => {
-  test("exactly fifteen safe sources after Blok Wykonawczy 2 — growing the list stays a per-block decision", () => {
+  test("exactly twenty-two safe sources after Blok Wykonawczy 3 — growing the list stays a per-block decision", () => {
     expect(SAFE_CHECK_SOURCE_IDS).toEqual([
       "michalowice-komunikaty",
       "wkd-aktualnosci",
@@ -62,6 +62,13 @@ test.describe("safe-source allowlist (getSafeCheckSource)", () => {
       "pwik-zabki",
       "hydrosfera-jozefow",
       "pwik-zielonka",
+      "pwik-minsk-mazowiecki",
+      "pwik-wyszkow",
+      "pwik-pultusk",
+      "wodkan-zgierz",
+      "zwik-pabianice",
+      "pgkim-aleksandrow-lodzki",
+      "rawik-rawa-mazowiecka",
     ]);
   });
 

@@ -61,7 +61,7 @@ test.describe("buildSourceHealthRows — coverage and API-support flags", () => 
     expect(rows.map((r) => r.checklistId)).toEqual(OFFICIAL_SOURCE_CHECKS.map((s) => s.id));
   });
 
-  test("exactly fifteen sources are API-supported after Blok Wykonawczy 2: the original five plus the 10-source Mazowsze water-utility wave", () => {
+  test("exactly twenty-two sources are API-supported after Blok Wykonawczy 3: the original five plus the 10-source wave 1 plus the 7-source wave 2 (Mazowieckie + Łódzkie)", () => {
     const rows = rowsFor();
     const supported = rows.filter((r) => r.apiSupported).map((r) => r.checklistId);
     // Checklist order matches officialSourceChecklist.ts's array order.
@@ -80,6 +80,13 @@ test.describe("buildSourceHealthRows — coverage and API-support flags", () => 
       "pwik-zabki",
       "hydrosfera-jozefow",
       "pwik-zielonka",
+      "pwik-minsk-mazowiecki",
+      "pwik-wyszkow",
+      "pwik-pultusk",
+      "wodkan-zgierz",
+      "zwik-pabianice",
+      "pgkim-aleksandrow-lodzki",
+      "rawik-rawa-mazowiecka",
       "powiat-pruszkowski-wiadomosci",
     ]);
   });
@@ -179,7 +186,7 @@ test.describe("summarizeSourceHealth", () => {
     });
     const summary = summarizeSourceHealth(rows);
     expect(summary.total).toBe(OFFICIAL_SOURCE_CHECKS.length);
-    expect(summary.apiSupported).toBe(15);
+    expect(summary.apiSupported).toBe(22);
     expect(summary.checkedRecently).toBe(1); // only reg-mich has a fresh check
     expect(summary.needsAttention).toBe(summary.total - summary.checkedRecently);
   });

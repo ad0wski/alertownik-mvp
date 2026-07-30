@@ -67,8 +67,10 @@ import { trimAtWord } from "@/lib/candidateWarnings";
 // identical to every pre-existing safe-check source; today's
 // DEFAULT_ALLOWED_WRITE_SOURCE_IDS / DEFAULT_AUTO_PUBLISH_SOURCE_IDS are
 // unchanged and do not include any of them.
-// Sub-batch 2 of 2: the remaining 5 of this wave's 10 HTTP-verified
-// sources — same rules as sub-batch 1's comment above.
+// Blok Wykonawczy 3 — 7 more HTTP-verified sources, extending Mazowieckie
+// and adding the first Łódzkie sources — same wordpress_rest mechanics,
+// same fail-closed writer/auto-publish exclusion guarantee as every prior
+// safe-check source.
 export const SAFE_CHECK_SOURCE_IDS = [
   "michalowice-komunikaty",
   "wkd-aktualnosci",
@@ -85,6 +87,13 @@ export const SAFE_CHECK_SOURCE_IDS = [
   "pwik-zabki",
   "hydrosfera-jozefow",
   "pwik-zielonka",
+  "pwik-minsk-mazowiecki",
+  "pwik-wyszkow",
+  "pwik-pultusk",
+  "wodkan-zgierz",
+  "zwik-pabianice",
+  "pgkim-aleksandrow-lodzki",
+  "rawik-rawa-mazowiecka",
 ] as const;
 
 export type SafeCheckSourceId = (typeof SAFE_CHECK_SOURCE_IDS)[number];

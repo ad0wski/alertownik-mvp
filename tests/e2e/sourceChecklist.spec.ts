@@ -36,6 +36,15 @@ const OFFICIAL_DOMAINS = [
   "pwikzabki.pl",
   "hydrosfera-jozefow.pl",
   "pwikzielonka.com.pl",
+  // Blok Wykonawczy 3 — wave 2 (Mazowieckie extended + first Łódzkie
+  // sources), see docs/EXEC_BLOCK_3_SOURCE_DISCOVERY_V1.md.
+  "pwikminsk.pl",
+  "pwikwyszkow.pl",
+  "pwikpultusk.pl",
+  "wodkan.zgierz.pl",
+  "zwik.pabianice.pl",
+  "pgkimal.pl",
+  "rawik.pl",
 ];
 
 // Sprint 129's original 9 sources are all scoped to the 6-locality pilot;
@@ -54,6 +63,13 @@ const EXPECTED_EMPTY_LOCALITIES_IDS = [
   "pwik-zabki",
   "hydrosfera-jozefow",
   "pwik-zielonka",
+  "pwik-minsk-mazowiecki",
+  "pwik-wyszkow",
+  "pwik-pultusk",
+  "wodkan-zgierz",
+  "zwik-pabianice",
+  "pgkim-aleksandrow-lodzki",
+  "rawik-rawa-mazowiecka",
 ];
 
 test.describe("OFFICIAL_SOURCE_CHECKS definitions", () => {
