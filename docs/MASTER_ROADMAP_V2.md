@@ -118,9 +118,16 @@ lokalna organizacja) — Gate 3.
   czeka na decyzję.
 - Nowe funkcje produktowe pod konkretnego partnera, zanim padnie realna prośba.
 
-**Stan wejściowy:** `/demo` i `/partnerzy` gotowe i wdrożone (Sprint 185A),
-wiadomość outreachowa i scenariusz demo gotowe, ale niewysłane. Zero sygnałów
-partnerskich.
+**Stan wejściowy:** `/demo` i `/partnerzy` gotowe i wdrożone (Sprint 185A).
+
+**Korekta stanu (Etap F Fala 8, audyt):** wiadomość outreachowa **została
+wysłana** 2026-07-30 przez Adama do `sekretariat@michalowice.pl` — patrz
+`docs/EXEC_BLOCK_2_OUTREACH_MICHALOWICE_FINAL_V1.md` §8 (tabela śledzenia).
+Odpowiedź adresata nie została jeszcze udokumentowana (brak — jeszcze).
+Zgodnie z `DEFINITION_OF_DONE_V1.md` (wymaga wysyłki ORAZ udokumentowanej
+odpowiedzi), Etap B pozostaje **w toku**, nie zakończony — wysyłka spełnia
+połowę kryterium zamknięcia, oczekiwanie na odpowiedź nie blokuje żadnej
+dalszej pracy.
 
 **Definicja zakończenia:** wiadomość wysłana do ≥1 realnego adresata +
 udokumentowana odpowiedź (jakakolwiek) LUB udokumentowana, świadoma decyzja
@@ -421,10 +428,12 @@ jeden zbiorczy procent. Osiem niezależnych wymiarów:
    dobry (patrz Sprint 187A §13, 95%).
 2. **Uproszczenie UX** — Etap A. Obecnie: 1/3–5 realnych testów.
 3. **Walidacja użytkowników** — część Etapu A / Gate 2. Obecnie: 20% (1/3–5).
-4. **Partner Demo** — Etap B / Gate 3. Obecnie: materiały 100%, outreach 0%
-   wysłany.
-5. **Outreach** — pod-wymiar Etapu B, śledzony osobno od materiałów: 0
-   wiadomości wysłanych.
+4. **Partner Demo** — Etap B / Gate 3. Obecnie: materiały 100%, outreach
+   wysłany 2026-07-30, odpowiedź jeszcze nieudokumentowana (korekta Etap F
+   Fala 8 — patrz sekcja Etap B powyżej).
+5. **Outreach** — pod-wymiar Etapu B, śledzony osobno od materiałów: 1
+   wiadomość wysłana (`sekretariat@michalowice.pl`, 2026-07-30), 0
+   udokumentowanych odpowiedzi.
 6. **Monetyzacja** — Etap C / Gate 4. Obecnie: 0%, nierozpoczęte.
 7. **Store Readiness** — Etap D / Gate 5. Obecnie: 35% wg formuły Sprintu
    187A (technika+plan zrobione, konta/zgłoszenia nie).

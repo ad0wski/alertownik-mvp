@@ -52,7 +52,10 @@ którekolwiek z:
   udokumentowana w `docs/`.
 
 **Nie liczy się jako zrobione:**
-- Materiały gotowe, ale nic nie wysłane (to obecny stan, Sprint 185A/187A).
+- Materiały gotowe, ale nic nie wysłane (stan do Sprintu 185A/187A —
+  **skorygowane w Etap F Fala 8**: wiadomość wysłana 2026-07-30, patrz
+  `EXEC_BLOCK_2_OUTREACH_MICHALOWICE_FINAL_V1.md`; aktualny brakujący
+  element to wyłącznie udokumentowana odpowiedź adresata).
 - Wysłanie przez Claude bez wyraźnej zgody Adama w danej sesji — to
   naruszenie zasady "explicit permission required" dla wysyłania wiadomości
   w imieniu użytkownika.
