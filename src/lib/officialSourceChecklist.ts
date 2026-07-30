@@ -566,6 +566,116 @@ export const OFFICIAL_SOURCE_CHECKS: OfficialSourceCheck[] = [
       "operacyjności (parseWordpressRestPosts) już to obsługuje, najsłabszy sygnał " +
       "operacyjny z tej fali — obserwować przy pierwszych realnych checkach.",
   },
+  // Etap F, Fala 4 (2026-07-30) — first sources from Wielkopolskie and
+  // Świętokrzyskie voivodeships, checked in one parallel batch. 6 more
+  // HTTP-verified water utilities (3 per voivodeship), personally verified
+  // by the main agent via direct fetch, each checked twice (no subagent
+  // anywhere in this block, per CLAUDE.md's post-incident subagent ban).
+  // Same wordpress_rest mechanics, same check-only-only/localities:[]
+  // pattern as every prior wave.
+  {
+    id: "pwik-konin",
+    name: "PWiK Konin",
+    category: "water",
+    officialUrl: "https://pwik-konin.com.pl",
+    apiUrl: "https://pwik-konin.com.pl/wp-json/wp/v2/posts?per_page=6",
+    whatToCheck:
+      "Przerwy w dostawie wody, awarie sieci — Miasto Konin, województwo wielkopolskie " +
+      "(poza obecnym pilotażem). Zweryfikowane dwukrotnie w Etapie F Fala 4 — realne " +
+      "komunikaty o awariach przyłączy i modernizacji sieci.",
+    localities: [],
+    frequency: "weekly",
+    risk: "low",
+    riskNote:
+      "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
+      "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów.",
+  },
+  {
+    id: "pwik-wrzesnia",
+    name: "PWiK Września",
+    category: "water",
+    officialUrl: "https://pwikwrzesnia.pl",
+    apiUrl: "https://pwikwrzesnia.pl/wp-json/wp/v2/posts?per_page=6",
+    whatToCheck:
+      "Przerwy w dostawie wody, apele o oszczędzanie wody, spadki ciśnienia — Gmina " +
+      "Września, województwo wielkopolskie (poza obecnym pilotażem). Zweryfikowane " +
+      "dwukrotnie w Etapie F Fala 4.",
+    localities: [],
+    frequency: "weekly",
+    risk: "low",
+    riskNote:
+      "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
+      "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów.",
+  },
+  {
+    id: "sremskie-wodociagi",
+    name: "Śremskie Wodociągi",
+    category: "water",
+    officialUrl: "https://www.sremskiewodociagi.pl",
+    apiUrl: "https://www.sremskiewodociagi.pl/wp-json/wp/v2/posts?per_page=6",
+    whatToCheck:
+      "Przerwy w dostawie wody, wymiana wodomierzy, jakość wody — Gmina Śrem, " +
+      "województwo wielkopolskie (poza obecnym pilotażem). Zweryfikowane dwukrotnie w " +
+      "Etapie F Fala 4 — wszystkie próbkowane wpisy w pełni operacyjne.",
+    localities: [],
+    frequency: "weekly",
+    risk: "low",
+    riskNote:
+      "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
+      "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów.",
+  },
+  {
+    id: "mwik-ostrowiec",
+    name: "MWiK Ostrowiec Świętokrzyski",
+    category: "water",
+    officialUrl: "https://mwikostrowiec.pl",
+    apiUrl: "https://mwikostrowiec.pl/wp-json/wp/v2/posts?per_page=6",
+    whatToCheck:
+      "Przerwy w dostawie wody, modernizacja sieci — Miasto Ostrowiec Świętokrzyski, " +
+      "województwo świętokrzyskie (poza obecnym pilotażem). Zweryfikowane dwukrotnie w " +
+      "Etapie F Fala 4 — realny komunikat o przerwie w dostawie wody (ul. Żeromskiego).",
+    localities: [],
+    frequency: "weekly",
+    risk: "low",
+    riskNote:
+      "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
+      "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów.",
+  },
+  {
+    id: "mpgk-busko-zdroj",
+    name: "MPGK Busko-Zdrój",
+    category: "water",
+    officialUrl: "https://mpgkbusko.pl",
+    apiUrl: "https://mpgkbusko.pl/wp-json/wp/v2/posts?per_page=6",
+    whatToCheck:
+      "Przerwy w dostawie wody, awarie sieci — Miasto Busko-Zdrój, województwo " +
+      "świętokrzyskie (poza obecnym pilotażem). Zweryfikowane dwukrotnie w Etapie F Fala 4.",
+    localities: [],
+    frequency: "weekly",
+    risk: "low",
+    riskNote:
+      "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
+      "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów. Kanał miesza " +
+      "komunikaty operacyjne z ogłoszeniami przetargowymi — filtr operacyjności już to " +
+      "obsługuje, najsłabszy sygnał operacyjny z tej fali.",
+  },
+  {
+    id: "wodociagi-pinczowskie",
+    name: "Wodociągi Pińczowskie",
+    category: "water",
+    officialUrl: "https://wodociagipinczowskie.net",
+    apiUrl: "https://wodociagipinczowskie.net/wp-json/wp/v2/posts?per_page=6",
+    whatToCheck:
+      "Przerwy w dostawie wody, awarie sieci — Miasto Pińczów, województwo świętokrzyskie " +
+      "(poza obecnym pilotażem). Zweryfikowane dwukrotnie w Etapie F Fala 4 — realne " +
+      "komunikaty o przerwach z konkretnymi ulicami i datami.",
+    localities: [],
+    frequency: "weekly",
+    risk: "low",
+    riskNote:
+      "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
+      "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów.",
+  },
   {
     id: "powiat-pruszkowski-wiadomosci",
     name: "Powiat Pruszkowski — Wiadomości (utrudnienia drogowe)",

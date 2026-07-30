@@ -102,6 +102,15 @@ export const SAFE_CHECK_SOURCE_IDS = [
   "pgkim-aleksandrow-lodzki",
   "komunalne-wielun",
   "mzwik-glowno",
+  // Etap F, Fala 4 (2026-07-30) — first Wielkopolskie + Świętokrzyskie
+  // sources, 6 more HTTP-verified (each double-checked), personally
+  // verified by the main agent — no subagent used anywhere in this block.
+  "pwik-konin",
+  "pwik-wrzesnia",
+  "sremskie-wodociagi",
+  "mwik-ostrowiec",
+  "mpgk-busko-zdroj",
+  "wodociagi-pinczowskie",
 ] as const;
 
 export type SafeCheckSourceId = (typeof SAFE_CHECK_SOURCE_IDS)[number];

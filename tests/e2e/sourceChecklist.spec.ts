@@ -51,6 +51,15 @@ const OFFICIAL_DOMAINS = [
   "pgkimal.pl",
   "komunalne.wielun.pl",
   "mzwikglowno.pl",
+  // Etap F, Fala 4 (2026-07-30) — first Wielkopolskie + Świętokrzyskie
+  // sources, 6 more HTTP-verified (each double-checked), personally
+  // verified by the main agent.
+  "pwik-konin.com.pl",
+  "pwikwrzesnia.pl",
+  "sremskiewodociagi.pl",
+  "mwikostrowiec.pl",
+  "mpgkbusko.pl",
+  "wodociagipinczowskie.net",
 ];
 
 // Sprint 129's original 9 sources are all scoped to the 6-locality pilot;
@@ -79,6 +88,12 @@ const EXPECTED_EMPTY_LOCALITIES_IDS = [
   "pgkim-aleksandrow-lodzki",
   "komunalne-wielun",
   "mzwik-glowno",
+  "pwik-konin",
+  "pwik-wrzesnia",
+  "sremskie-wodociagi",
+  "mwik-ostrowiec",
+  "mpgk-busko-zdroj",
+  "wodociagi-pinczowskie",
 ];
 
 test.describe("OFFICIAL_SOURCE_CHECKS definitions", () => {
