@@ -103,13 +103,17 @@ powód do ponawiania w nieskończoność.
 
 ## 8. Tabela śledzenia (bez zmian względem Bloku 1, przeniesiona tutaj)
 
-| Data wysyłki | Adresat | Wariant | Follow-up wysłany (data) | Odpowiedź | Data odpowiedzi | Notatka |
-|---|---|---|---|---|---|---|
-| _(puste do wypełnienia)_ | sekretariat@michalowice.pl | | | ⬜ brak / ✅ tak / ❌ odmowa | | |
+| Data wysyłki | Adresat | Temat | Wariant | Follow-up wysłany (data) | Odpowiedź | Data odpowiedzi | Notatka |
+|---|---|---|---|---|---|---|---|
+| 2026-07-30 | sekretariat@michalowice.pl | Prośba o krótką opinię – Alertownik dla mieszkańców gminy Michałowice | wysłane ręcznie przez Adama | _(brak — zasada: dokładnie jeden follow-up po 5–7 dniach bez odpowiedzi, nie wysyłany automatycznie)_ | ⬜ brak (jeszcze) | | Wysłane ręcznie przez Adama poza tą sesją; potwierdzone Claude'owi 2026-07-30. Temat użyty przez Adama różni się nieznacznie od zaproponowanego w §3 (własna redakcja) — treść wiadomości i sens zachowane. |
 
-## 9. Jedyny krok pozostający po stronie Adama
+**Status Etapu B:** wiadomość **wysłana**. Oczekiwanie na odpowiedź nie
+blokuje dalszej pracy (Etap E/F). Ewentualny follow-up (§7) pozostaje
+decyzją Adama po 5–7 dniach bez odpowiedzi — Claude nie wysyła go
+samodzielnie.
 
-**Sprawdzić treść wiadomości (§4 lub §5) i podjąć decyzję o wysłaniu** —
-wysłać osobiście z własnej skrzynki na `sekretariat@michalowice.pl`, wybrać
-wariant, i zapisać datę w tabeli z §8. Żaden inny krok nie jest wymagany —
-adres zweryfikowany, wiadomość gotowa, temat gotowy, follow-up gotowy.
+## 9. Krok po stronie Adama — zrealizowany
+
+~~Sprawdzić treść wiadomości i podjąć decyzję o wysłaniu~~ — **wykonane
+2026-07-30.** Jedyny pozostający opcjonalny krok: decyzja o follow-upie
+(§7) po 5–7 dniach bez odpowiedzi, jeśli dotąd cisza.

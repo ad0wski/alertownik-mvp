@@ -85,6 +85,14 @@ export const SAFE_CHECK_SOURCE_IDS = [
   "pwik-zabki",
   "hydrosfera-jozefow",
   "pwik-zielonka",
+  // Etap F, Fala 2 (2026-07-30) — 4 more HTTP-verified sources, personally
+  // verified by the main agent (no subagent — see CLAUDE.md's post-incident
+  // subagent ban). Same fail-closed writer/auto-publish exclusion
+  // guarantee as every prior safe-check source.
+  "pwik-minsk-mazowiecki",
+  "pwik-wyszkow",
+  "pwik-pultusk",
+  "zwik-nowy-dwor-mazowiecki",
 ] as const;
 
 export type SafeCheckSourceId = (typeof SAFE_CHECK_SOURCE_IDS)[number];

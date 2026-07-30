@@ -36,6 +36,12 @@ const OFFICIAL_DOMAINS = [
   "pwikzabki.pl",
   "hydrosfera-jozefow.pl",
   "pwikzielonka.com.pl",
+  // Etap F, Fala 2 (2026-07-30) — 4 more HTTP-verified sources, personally
+  // verified by the main agent.
+  "pwikminsk.pl",
+  "pwikwyszkow.pl",
+  "pwikpultusk.pl",
+  "zwikndm.pl",
 ];
 
 // Sprint 129's original 9 sources are all scoped to the 6-locality pilot;
@@ -54,6 +60,10 @@ const EXPECTED_EMPTY_LOCALITIES_IDS = [
   "pwik-zabki",
   "hydrosfera-jozefow",
   "pwik-zielonka",
+  "pwik-minsk-mazowiecki",
+  "pwik-wyszkow",
+  "pwik-pultusk",
+  "zwik-nowy-dwor-mazowiecki",
 ];
 
 test.describe("OFFICIAL_SOURCE_CHECKS definitions", () => {

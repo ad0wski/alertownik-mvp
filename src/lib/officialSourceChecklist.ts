@@ -376,6 +376,85 @@ export const OFFICIAL_SOURCE_CHECKS: OfficialSourceCheck[] = [
       "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
       "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów.",
   },
+  // Etap F, Fala 2 (2026-07-30) — 4 more HTTP-verified Mazowieckie water
+  // utilities, personally verified by the main agent via direct fetch
+  // (no subagent involved, per the post-incident subagent ban in
+  // CLAUDE.md). Same wordpress_rest mechanics, same
+  // check-only-only/localities:[] pattern as Fala 1
+  // (docs/EXEC_BLOCK_2_SOURCE_ACTIVATION_V1.md).
+  {
+    id: "pwik-minsk-mazowiecki",
+    name: "PWiK Mińsk Mazowiecki",
+    category: "water",
+    officialUrl: "https://www.pwikminsk.pl",
+    apiUrl: "https://www.pwikminsk.pl/wp-json/wp/v2/posts?per_page=6",
+    whatToCheck:
+      "Przerwy w dostawie wody, awarie sieci — Miasto Mińsk Mazowiecki (poza obecnym " +
+      "pilotażem, powiat miński). Zweryfikowane w Etapie F Fala 2 (realne komunikaty: " +
+      "awaria sieci wodociągowej, przerwa w dostawie wody).",
+    localities: [],
+    frequency: "weekly",
+    risk: "low",
+    riskNote:
+      "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
+      "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów. Kanał miesza " +
+      "komunikaty operacyjne z ogłoszeniami przetargowymi — filtr operacyjności " +
+      "(parseWordpressRestPosts) już to obsługuje, ten sam wzorzec co wodociagi-michalowice.",
+  },
+  {
+    id: "pwik-wyszkow",
+    name: "Przedsiębiorstwo Wodociągów i Kanalizacji w Wyszkowie",
+    category: "water",
+    officialUrl: "https://pwikwyszkow.pl",
+    apiUrl: "https://pwikwyszkow.pl/wp-json/wp/v2/posts?per_page=6",
+    whatToCheck:
+      "Przerwy w dostawie wody, awarie sieci — Miasto Wyszków (poza obecnym pilotażem, " +
+      "powiat wyszkowski). Zweryfikowane w Etapie F Fala 2 (realny komunikat operacyjny " +
+      "obok treści PR/finansowania).",
+    localities: [],
+    frequency: "weekly",
+    risk: "low",
+    riskNote:
+      "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
+      "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów. Kanał skłania się " +
+      "ku treściom PR/finansowaniu — filtr operacyjności już to obsługuje.",
+  },
+  {
+    id: "pwik-pultusk",
+    name: "Przedsiębiorstwo Wodociągów i Kanalizacji w Pułtusku",
+    category: "water",
+    officialUrl: "https://pwikpultusk.pl",
+    apiUrl: "https://pwikpultusk.pl/wp-json/wp/v2/posts?per_page=6",
+    whatToCheck:
+      "Przerwy w dostawie wody, awarie sieci, apele do mieszkańców — Miasto Pułtusk (poza " +
+      "obecnym pilotażem, powiat pułtuski). Zweryfikowane w Etapie F Fala 2 — wszystkie 3 " +
+      "próbkowane wpisy w pełni operacyjne.",
+    localities: [],
+    frequency: "weekly",
+    risk: "low",
+    riskNote:
+      "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
+      "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów.",
+  },
+  {
+    id: "zwik-nowy-dwor-mazowiecki",
+    name: "ZWiK Nowy Dwór Mazowiecki",
+    category: "water",
+    officialUrl: "https://zwikndm.pl",
+    apiUrl: "https://zwikndm.pl/wp-json/wp/v2/posts?per_page=6",
+    whatToCheck:
+      "Przerwy w dostawie wody, awarie sieci, komunikaty spółki — Miasto Nowy Dwór " +
+      "Mazowiecki (poza obecnym pilotażem, powiat nowodworski). Zweryfikowane w Etapie F " +
+      "Fala 2.",
+    localities: [],
+    frequency: "weekly",
+    risk: "low",
+    riskNote:
+      "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
+      "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów. Kanał zawiera " +
+      "też komunikaty administracyjne (połączenie spółek) — filtr operacyjności już to " +
+      "obsługuje.",
+  },
   {
     id: "powiat-pruszkowski-wiadomosci",
     name: "Powiat Pruszkowski — Wiadomości (utrudnienia drogowe)",
