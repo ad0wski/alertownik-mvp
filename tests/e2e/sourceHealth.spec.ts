@@ -61,7 +61,7 @@ test.describe("buildSourceHealthRows — coverage and API-support flags", () => 
     expect(rows.map((r) => r.checklistId)).toEqual(OFFICIAL_SOURCE_CHECKS.map((s) => s.id));
   });
 
-  test("exactly forty-two sources are API-supported after Etap F Fala 7: Fala 6's 39 plus 3 more (first Małopolskie+Śląskie)", () => {
+  test("exactly forty-four sources are API-supported after Etap F Fala 8: Fala 7's 42 plus 2 more (first Dolnośląskie+Opolskie+Lubuskie+Warmińsko-Mazurskie)", () => {
     const rows = rowsFor();
     const supported = rows.filter((r) => r.apiSupported).map((r) => r.checklistId);
     // Checklist order matches officialSourceChecklist.ts's array order.
@@ -108,6 +108,8 @@ test.describe("buildSourceHealthRows — coverage and API-support flags", () => 
       "tarnowska-komunikacja",
       "zdw-krakow",
       "zdw-katowice",
+      "mzd-opole",
+      "ostroda-komunikaty",
     ]);
   });
 
@@ -206,7 +208,7 @@ test.describe("summarizeSourceHealth", () => {
     });
     const summary = summarizeSourceHealth(rows);
     expect(summary.total).toBe(OFFICIAL_SOURCE_CHECKS.length);
-    expect(summary.apiSupported).toBe(42);
+    expect(summary.apiSupported).toBe(44);
     expect(summary.checkedRecently).toBe(1); // only reg-mich has a fresh check
     expect(summary.needsAttention).toBe(summary.total - summary.checkedRecently);
   });

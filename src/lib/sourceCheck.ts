@@ -128,6 +128,12 @@ export const SAFE_CHECK_SOURCE_IDS = [
   "tarnowska-komunikacja",
   "zdw-krakow",
   "zdw-katowice",
+  // Etap F, Fala 8 (2026-07-30) — first Dolnośląskie + Opolskie + Lubuskie +
+  // Warmińsko-Mazurskie sources, 2 HTTP-verified (each double-checked),
+  // personally verified by the main agent — no subagent used anywhere in
+  // this block.
+  "mzd-opole",
+  "ostroda-komunikaty",
 ] as const;
 
 export type SafeCheckSourceId = (typeof SAFE_CHECK_SOURCE_IDS)[number];

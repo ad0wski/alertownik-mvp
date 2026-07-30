@@ -939,6 +939,55 @@ export const OFFICIAL_SOURCE_CHECKS: OfficialSourceCheck[] = [
       "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów. Kanał ma niską " +
       "częstotliwość publikacji (raz na kilka tygodni) — normalne dla tego źródła, nie błąd.",
   },
+  // Etap F, Fala 8 (2026-07-30) — first Dolnośląskie + Opolskie + Lubuskie +
+  // Warmińsko-Mazurskie sources, the last four previously untouched
+  // voivodeships. 73 candidates personally HTTP-verified — only 2 cleared
+  // the GO bar (1 Opolskie, 1 Warmińsko-Mazurskie). Dolnośląskie (25
+  // checked) and Lubuskie (16 checked) honestly found zero GO — most
+  // municipal WordPress feeds were non-WordPress CMSes, general PR/culture
+  // portals, or mixed below the operational-dominance bar (several close
+  // calls rejected for consistency with prior waves' standard — see the
+  // wave document for the full table). No subagent used anywhere in this
+  // block (CLAUDE.md's post-incident ban).
+  {
+    id: "mzd-opole",
+    name: "Miejski Zarząd Dróg w Opolu",
+    category: "roads",
+    officialUrl: "https://mzd.opole.pl",
+    apiUrl: "https://mzd.opole.pl/wp-json/wp/v2/posts?per_page=6",
+    whatToCheck:
+      "Remonty ulic i chodników, budowy dróg pieszo-rowerowych, utrudnienia drogowe — " +
+      "Miasto Opole (poza obecnym pilotażem). Zweryfikowane dwukrotnie w Etapie F Fala 8 — " +
+      "11 z 12 próbkowanych wpisów w pełni operacyjne, zero przetargów administracyjnych " +
+      "niezwiązanych z drogami w próbce.",
+    localities: [],
+    frequency: "weekly",
+    risk: "low",
+    riskNote:
+      "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
+      "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów.",
+  },
+  {
+    id: "ostroda-komunikaty",
+    name: "Urząd Miasta Ostróda — komunikaty",
+    category: "municipal",
+    officialUrl: "https://www.ostroda.pl",
+    apiUrl: "https://www.ostroda.pl/wp-json/wp/v2/posts?per_page=6",
+    whatToCheck:
+      "Zamknięcia ulic, przerwy w dostawie ciepłej wody, treningi syren alarmowych, zmiany " +
+      "godzin pracy urzędu/straży miejskiej — Miasto Ostróda, województwo warmińsko-mazurskie " +
+      "(poza obecnym pilotażem). Zweryfikowane dwukrotnie w Etapie F Fala 8 — 8 z 12 " +
+      "próbkowanych wpisów w pełni operacyjne (mieszany kanał: drogi + woda + " +
+      "bezpieczeństwo), reszta to wydarzenia lokalne (festiwal, Dni Ostródy).",
+    localities: [],
+    frequency: "weekly",
+    risk: "low",
+    riskNote:
+      "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
+      "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów. Kanał mieszany " +
+      "(nie jeden temat) — użyto szerszego filtru transport/drogi zamiast domyślnego " +
+      "wodociągowego, bo lepiej łapie realny słownik tego źródła (zamknięcie, przerwa).",
+  },
   {
     id: "roboty-drogowe",
     name: "Remonty i utrudnienia drogowe — gmina + Pruszków",

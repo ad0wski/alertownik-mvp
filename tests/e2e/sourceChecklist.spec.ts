@@ -80,6 +80,11 @@ const OFFICIAL_DOMAINS = [
   "tarnowska-komunikacja.pl",
   "zdw.krakow.pl",
   "zdw.katowice.pl",
+  // Etap F, Fala 8 (2026-07-30) — first Dolnośląskie + Opolskie + Lubuskie +
+  // Warmińsko-Mazurskie sources, 2 HTTP-verified (each double-checked),
+  // personally verified by the main agent.
+  "mzd.opole.pl",
+  "ostroda.pl",
 ];
 
 // Sprint 129's original 9 sources are all scoped to the 6-locality pilot;
@@ -125,6 +130,8 @@ const EXPECTED_EMPTY_LOCALITIES_IDS = [
   "tarnowska-komunikacja",
   "zdw-krakow",
   "zdw-katowice",
+  "mzd-opole",
+  "ostroda-komunikaty",
 ];
 
 test.describe("OFFICIAL_SOURCE_CHECKS definitions", () => {

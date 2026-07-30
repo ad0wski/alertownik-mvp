@@ -431,6 +431,8 @@ export const REST_PARSERS_BY_SOURCE_ID: Record<string, (posts: WordpressRestPost
   "tarnowska-komunikacja": parseTransportRoadsRestPosts,
   "zdw-krakow": parseTransportRoadsRestPosts,
   "zdw-katowice": parseTransportRoadsRestPosts,
+  "mzd-opole": parseTransportRoadsRestPosts,
+  "ostroda-komunikaty": parseTransportRoadsRestPosts,
 };
 
 // Lightweight RSS/Atom autodiscovery — only looks at the page's own <head>
