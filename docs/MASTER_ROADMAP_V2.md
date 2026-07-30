@@ -36,12 +36,27 @@ opisują skalowanie źródeł i lokalizacji, czego gate system nie mierzył wcal
 ma być prosty, uczciwy i przetestowany przez realnych mieszkańców, zanim
 rozmowa przejdzie do partnerów czy skalowania.
 
+**Status (korekta priorytetów, Blok Wykonawczy 1, 2026-08-03) — Etap A ma dwa
+niezależnie mierzone wymiary, świadomie rozdzielone:**
+- **Etap A techniczny: 100%** — UX/mobile/PWA/testy, w pełni w rękach Claude'a,
+  realizowane od razu, niezależnie od odpowiedzi testerów.
+- **Walidacja użytkowników (część Gate 2): 20% (1/3–5)** — **zewnętrzny
+  strumień równoległy**, nie bramka blokująca. Status zmieniony z „blokuje
+  wszystkie dalsze prace" na „zewnętrzny strumień równoległy prowadzony przez
+  Adama": dalsza rekrutacja pozostaje wymagana do pełnego domknięcia Local
+  Bety i przyszłego Google Play (ten sam wymóg 12 testerów/14 dni), ale **brak
+  odpowiedzi testerów nie blokuje realizacji Etapu B ani budowy fundamentu
+  Etapu E** — obie te prace ruszają teraz równolegle w tym samym bloku
+  wykonawczym, bez czekania na testerów.
+
 **Zakres obowiązkowy:**
-- Realna rekrutacja i domknięcie testerów Local Beta (3–5 odpowiedzi; obecnie 1/3–5).
 - Wdrażanie dalszych, konkretnych poprawek UX wynikających z realnego feedbacku
   (na wzór uproszczenia `/alerty` po feedbacku mamy Adama, Sprint 182A/Dzień 14).
 - Utrzymanie zera regresji technicznych (`npm run check`, `npm run test:e2e`,
   `npm run test:pwa` zielone po każdej zmianie).
+- Rekrutacja testerów Local Beta pozostaje aktywnym zadaniem Adama (zewnętrzny
+  strumień równoległy — patrz status powyżej), ale nie jest warunkiem
+  koniecznym do realizacji pozostałych bullet'ów tego etapu ani Etapów B/E.
 
 **Poza zakresem:**
 - Nowe źródła danych (to Etap E/F).

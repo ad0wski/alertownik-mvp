@@ -44,9 +44,15 @@ export default function AlertyPage() {
         </details>
       </div>
 
-      <BetaStatusCard />
-
       <AlertList />
+
+      {/* Sprint EXEC-1 (Etap A) — moved from above AlertList to below it,
+          mirroring the placement already used on "/" (TodayView.tsx): the
+          pilot/independence disclosure stays fully intact and equally easy
+          to find, it just no longer sits between the intro and the actual
+          search/filters/alerts, which real feedback flagged as too much
+          text before the content people came for. Nothing removed. */}
+      <BetaStatusCard />
     </main>
   );
 }

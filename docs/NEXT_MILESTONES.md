@@ -23,16 +23,21 @@ ready to send, and a documented — but not yet started — store-launch path.**
 - Two real user signals so far: the original "jest git" (Gate 1, n=1) and Adam's mom's
   concrete Sprint 182A feedback (positive on look/usability, one real UX note already
   addressed). Neither is a *partner/institution* signal — that outreach hasn't been sent.
-- The main blockers are **Local Beta tester recruitment** (stuck since Sprint 182A —
-  invited testers didn't respond, deferred not abandoned) and, downstream of it,
-  **actually sending the prepared Partner Demo outreach**.
+- **Local Beta tester recruitment** (stuck since Sprint 182A — invited testers
+  didn't respond, deferred not abandoned) continues as an **external parallel
+  stream owned by Adam** (Execution Block 1, 2026-08-03) — it no longer gates
+  Etap B or Etap E work, though it's still required to fully close Local Beta
+  and, later, Google Play's identical 12-tester/14-day requirement.
+- **Actually sending the prepared Partner Demo outreach** is a separate,
+  Adam-only decision (a ready-to-send package now exists — see Execution
+  Block 1 — Claude never sends it without explicit approval).
 
 ## Gate system (canonical statuses live in Obsidian)
 
 | Gate | Meaning | Status (2026-08-03) |
 |---|---|---|
 | 1. Utility MVP | real alerts + waste data + visible sourcing + ≥1 positive signal | ✅ passed (still thin — 2 informal signals) |
-| 2. Local Beta | technical readiness + 3–5 tester responses | 🔶 technical side 100% done (real iPhone test); user-validation side stuck at 1/3–5 responses — **current blocker** |
+| 2. Local Beta | technical readiness + 3–5 tester responses | 🔶 technical side 100% done (real iPhone test); user-validation side at 1/3–5 responses — **external parallel stream (Adam), not a blocker for Etap B/E work** (Execution Block 1, 2026-08-03) |
 | 3. Partner Demo | clean screenshots, demo page, 3–5 fresh examples, 2–3 user signals | 🔶 screenshots + demo page (`/demo`, `/partnerzy`) done; outreach message drafted but **not sent**; zero partner signals yet |
 | 4. Monetization Test | offer + target list + outreach + pricing hypothesis (no payments code) | ⬜ not started |
 | 5. Store Launch | verified PWA install, icons/screenshots, packaging decision, accounts/submission | 🔶 all technical/planning prep done (Sprint 186A); zero accounts, payments, or submissions started |
