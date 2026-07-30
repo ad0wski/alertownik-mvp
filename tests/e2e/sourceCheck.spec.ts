@@ -45,13 +45,23 @@ const FIXTURE_HTML = `
 `;
 
 test.describe("safe-source allowlist (getSafeCheckSource)", () => {
-  test("exactly five safe sources after Sprint 183A — growing the list stays a per-sprint decision", () => {
+  test("exactly fifteen safe sources after Blok Wykonawczy 2 — growing the list stays a per-block decision", () => {
     expect(SAFE_CHECK_SOURCE_IDS).toEqual([
       "michalowice-komunikaty",
       "wkd-aktualnosci",
       "wodociagi-michalowice",
       "pruszkow-aktualnosci",
       "powiat-pruszkowski-wiadomosci",
+      "eko-raszyn",
+      "bpwik-brwinow",
+      "pkn-nadarzyn",
+      "zwik-ozarow-mazowiecki",
+      "pwik-radzymin",
+      "pwk-legionowo",
+      "opwik-otwock",
+      "pwik-zabki",
+      "hydrosfera-jozefow",
+      "pwik-zielonka",
     ]);
   });
 

@@ -56,12 +56,35 @@ import { trimAtWord } from "@/lib/candidateWarnings";
 // whole Powiat Pruszkowski, not just Alertownik's 6-locality pilot area, so
 // most of its feed is off-topic PR/event content that must never reach the
 // review queue).
+// Blok Wykonawczy 2 — sub-batch 1 of 2 (Etap E first national-scale wave):
+// 5 HTTP-verified Mazowieckie water utilities added as check-only, same
+// wordpress_rest mechanics as wodociagi-michalowice (default
+// parseWordpressRestPosts filter via REST_PARSERS_BY_SOURCE_ID's fallback —
+// no new parser code). Deliberately NOT added anywhere in scheduledWriter.ts
+// or trustedSourceAutoPublish.ts — both of those allowlists already filter
+// through this exact array, so being here only makes a source *eligible*
+// for a future, separately-approved write/auto-publish allowlist change,
+// identical to every pre-existing safe-check source; today's
+// DEFAULT_ALLOWED_WRITE_SOURCE_IDS / DEFAULT_AUTO_PUBLISH_SOURCE_IDS are
+// unchanged and do not include any of them.
+// Sub-batch 2 of 2: the remaining 5 of this wave's 10 HTTP-verified
+// sources — same rules as sub-batch 1's comment above.
 export const SAFE_CHECK_SOURCE_IDS = [
   "michalowice-komunikaty",
   "wkd-aktualnosci",
   "wodociagi-michalowice",
   "pruszkow-aktualnosci",
   "powiat-pruszkowski-wiadomosci",
+  "eko-raszyn",
+  "bpwik-brwinow",
+  "pkn-nadarzyn",
+  "zwik-ozarow-mazowiecki",
+  "pwik-radzymin",
+  "pwk-legionowo",
+  "opwik-otwock",
+  "pwik-zabki",
+  "hydrosfera-jozefow",
+  "pwik-zielonka",
 ] as const;
 
 export type SafeCheckSourceId = (typeof SAFE_CHECK_SOURCE_IDS)[number];

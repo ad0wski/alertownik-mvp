@@ -82,7 +82,9 @@ function ChecklistCard({
 
       <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
         <span className="font-medium">Miejscowości: </span>
-        {source.localities.join(", ")}
+        {source.localities.length > 0
+          ? source.localities.join(", ")
+          : "poza obecnym pilotażem (Blok Wykonawczy 2, Etap E) — check-only"}
       </p>
 
       {source.riskNote && (

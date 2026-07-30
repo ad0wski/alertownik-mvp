@@ -61,17 +61,25 @@ test.describe("buildSourceHealthRows — coverage and API-support flags", () => 
     expect(rows.map((r) => r.checklistId)).toEqual(OFFICIAL_SOURCE_CHECKS.map((s) => s.id));
   });
 
-  test("exactly five sources are API-supported after Sprint 183A: WKD + Michałowice + Pruszków + Wodociągi + Powiat Pruszkowski", () => {
+  test("exactly fifteen sources are API-supported after Blok Wykonawczy 2: the original five plus the 10-source Mazowsze water-utility wave", () => {
     const rows = rowsFor();
     const supported = rows.filter((r) => r.apiSupported).map((r) => r.checklistId);
-    // Checklist order: WKD, Michałowice komunikaty, Pruszków aktualności,
-    // Wodociągi Michałowice, then Powiat Pruszkowski Wiadomości, matching
-    // officialSourceChecklist.ts.
+    // Checklist order matches officialSourceChecklist.ts's array order.
     expect(supported).toEqual([
       "wkd-aktualnosci",
       "michalowice-komunikaty",
       "pruszkow-aktualnosci",
       "wodociagi-michalowice",
+      "eko-raszyn",
+      "bpwik-brwinow",
+      "pkn-nadarzyn",
+      "zwik-ozarow-mazowiecki",
+      "pwik-radzymin",
+      "pwk-legionowo",
+      "opwik-otwock",
+      "pwik-zabki",
+      "hydrosfera-jozefow",
+      "pwik-zielonka",
       "powiat-pruszkowski-wiadomosci",
     ]);
   });
@@ -171,7 +179,7 @@ test.describe("summarizeSourceHealth", () => {
     });
     const summary = summarizeSourceHealth(rows);
     expect(summary.total).toBe(OFFICIAL_SOURCE_CHECKS.length);
-    expect(summary.apiSupported).toBe(5);
+    expect(summary.apiSupported).toBe(15);
     expect(summary.checkedRecently).toBe(1); // only reg-mich has a fresh check
     expect(summary.needsAttention).toBe(summary.total - summary.checkedRecently);
   });

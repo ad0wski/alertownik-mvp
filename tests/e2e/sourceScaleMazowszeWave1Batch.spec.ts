@@ -1,28 +1,43 @@
 import { test, expect } from "@playwright/test";
+import { readFileSync } from "fs";
+import path from "path";
 import { validateSourceBatch } from "@/lib/sourceScale/batchOnboardingConfig";
 import { MAZOWSZE_WODOCIAGI_WAVE_1 } from "@/lib/sourceScale/batches/mazowszeWodociagiWave1";
 import { OFFICIAL_SOURCE_CHECKS, PILOT_LOCALITIES } from "@/lib/officialSourceChecklist";
-import { SAFE_CHECK_SOURCE_IDS } from "@/lib/sourceCheck";
+import { SAFE_CHECK_SOURCE_IDS, getSafeCheckSource } from "@/lib/sourceCheck";
+import { DEFAULT_ALLOWED_WRITE_SOURCE_IDS } from "@/lib/scheduledWriter";
+import { DEFAULT_AUTO_PUBLISH_SOURCE_IDS } from "@/lib/trustedSourceAutoPublish";
 import { parseWordpressRestPosts, type WordpressRestPost } from "@/lib/sourceParsers/pageParser";
 import { buildCheckProposals } from "@/lib/sourceCheck";
 
-// Blok Wykonawczy 1 (Etap E) — the first real discovered SourceBatch
-// (docs/EXEC_BLOCK_1_SOURCE_DISCOVERY_MAZOWIECKIE_V1.md). Two concerns:
-// 1) the batch itself is well-formed (shared type, valid configs);
-// 2) — most important — it is genuinely NOT wired into anything that would
-// fetch, check, or publish on Production. No network calls in this file.
+// Blok Wykonawczy 1+2 (Etap E) — the Mazowsze water-utility wave, extended
+// from 7 to 10 real, HTTP-verified sources and ACTIVATED check-only in
+// Blok Wykonawczy 2 (docs/EXEC_BLOCK_2_SOURCE_ACTIVATION_V1.md). This file
+// covers: batch shape, the fact that all 10 are now correctly registered
+// as check-only (a change from Block 1's "not activated anywhere" state —
+// that assumption is now intentionally false), and — the part that must
+// never become false — that none of them reach the writer or auto-publish
+// allowlist, and that the check-only code path performs no writes. No
+// network calls in this file.
+
+const WAVE_1_IDS = [
+  "eko-raszyn",
+  "bpwik-brwinow",
+  "pkn-nadarzyn",
+  "zwik-ozarow-mazowiecki",
+  "pwik-radzymin",
+  "pwk-legionowo",
+  "opwik-otwock",
+  "pwik-zabki",
+  "hydrosfera-jozefow",
+  "pwik-zielonka",
+];
 
 test.describe("MAZOWSZE_WODOCIAGI_WAVE_1 — batch shape", () => {
-  test("validates cleanly as a single wordpress_rest batch", () => {
+  test("validates cleanly as a single wordpress_rest batch of 10", () => {
     const result = validateSourceBatch(MAZOWSZE_WODOCIAGI_WAVE_1);
     expect(result).toEqual({ valid: true, issues: [] });
-  });
-
-  test("has exactly 7 instances, all category water", () => {
-    expect(MAZOWSZE_WODOCIAGI_WAVE_1.instances).toHaveLength(7);
-    for (const instance of MAZOWSZE_WODOCIAGI_WAVE_1.instances) {
-      expect(instance.category).toBe("water");
-    }
+    expect(MAZOWSZE_WODOCIAGI_WAVE_1.instances).toHaveLength(10);
   });
 
   test("every instance's apiUrl is a real wp-json posts endpoint on the instance's own official domain", () => {
@@ -35,7 +50,7 @@ test.describe("MAZOWSZE_WODOCIAGI_WAVE_1 — batch shape", () => {
     }
   });
 
-  test("every instance id is unique and kebab-case, matching the existing OfficialSourceCheck.id convention", () => {
+  test("every instance id is unique and kebab-case", () => {
     const ids = MAZOWSZE_WODOCIAGI_WAVE_1.instances.map((i) => i.id);
     expect(new Set(ids).size).toBe(ids.length);
     for (const id of ids) {
@@ -44,34 +59,79 @@ test.describe("MAZOWSZE_WODOCIAGI_WAVE_1 — batch shape", () => {
   });
 });
 
-test.describe("MAZOWSZE_WODOCIAGI_WAVE_1 — not activated anywhere (safety)", () => {
-  test("no instance id appears in OFFICIAL_SOURCE_CHECKS", () => {
-    const officialIds = new Set(OFFICIAL_SOURCE_CHECKS.map((s) => s.id));
-    for (const instance of MAZOWSZE_WODOCIAGI_WAVE_1.instances) {
-      expect(officialIds.has(instance.id)).toBe(false);
-    }
+// Parameterized test — one case per source, per Blok Wykonawczy 2 §9
+// requirement #2 ("test każdego źródła lub wspólny test parametryzowany").
+for (const id of WAVE_1_IDS) {
+  test.describe(`Source "${id}" — check-only activation`, () => {
+    test(`${id}: registered in OFFICIAL_SOURCE_CHECKS with a valid wordpress_rest config`, () => {
+      const entry = OFFICIAL_SOURCE_CHECKS.find((s) => s.id === id);
+      expect(entry).toBeDefined();
+      expect(entry!.category).toBe("water");
+      expect(entry!.apiUrl).toContain("/wp-json/wp/v2/posts");
+      expect(entry!.officialUrl).toMatch(/^https:\/\//);
+    });
+
+    test(`${id}: is on SAFE_CHECK_SOURCE_IDS and resolvable via getSafeCheckSource`, () => {
+      expect((SAFE_CHECK_SOURCE_IDS as readonly string[]).includes(id)).toBe(true);
+      expect(getSafeCheckSource(id)).not.toBeNull();
+    });
+
+    test(`${id}: localities is empty — outside PILOT_LOCALITIES, honestly, not force-widened`, () => {
+      const entry = OFFICIAL_SOURCE_CHECKS.find((s) => s.id === id)!;
+      expect(entry.localities).toEqual([]);
+      for (const locality of entry.localities) {
+        expect((PILOT_LOCALITIES as readonly string[]).includes(locality)).toBe(false);
+      }
+    });
+
+    test(`${id}: is NOT on the writer allowlist default`, () => {
+      expect(DEFAULT_ALLOWED_WRITE_SOURCE_IDS.includes(id)).toBe(false);
+    });
+
+    test(`${id}: is NOT on the auto-publish allowlist default`, () => {
+      expect(DEFAULT_AUTO_PUBLISH_SOURCE_IDS.includes(id)).toBe(false);
+    });
+  });
+}
+
+test.describe("Writer / auto-publish allowlists — unchanged defaults", () => {
+  test("DEFAULT_ALLOWED_WRITE_SOURCE_IDS is still exactly the pre-existing single entry", () => {
+    expect(DEFAULT_ALLOWED_WRITE_SOURCE_IDS).toEqual(["michalowice-komunikaty"]);
   });
 
-  test("no instance id appears in SAFE_CHECK_SOURCE_IDS (the manual-check allowlist)", () => {
-    for (const instance of MAZOWSZE_WODOCIAGI_WAVE_1.instances) {
-      expect((SAFE_CHECK_SOURCE_IDS as readonly string[]).includes(instance.id)).toBe(false);
-    }
+  test("DEFAULT_AUTO_PUBLISH_SOURCE_IDS is still exactly the pre-existing single entry", () => {
+    expect(DEFAULT_AUTO_PUBLISH_SOURCE_IDS).toEqual(["pruszkow-aktualnosci"]);
+  });
+});
+
+// Anti-drift, static source checks (same convention as
+// writerIdentityAuditPlan.spec.ts) — proves the check-only code path this
+// wave uses genuinely performs no write, without needing a live, authed
+// request against Production.
+function readSource(relativePath: string): string {
+  return readFileSync(path.join(process.cwd(), relativePath), "utf8");
+}
+
+test.describe("Check-only path performs no writes (static proof)", () => {
+  test("/api/sources/check route contains no Supabase write call, no candidate/alert creation", () => {
+    const routeSrc = readSource("src/app/api/sources/check/route.ts");
+    expect(routeSrc).not.toMatch(/\.insert\(/);
+    expect(routeSrc).not.toMatch(/\.update\(/);
+    expect(routeSrc).not.toMatch(/createSourceCheck\(|createCandidate\(|createAlert\(/);
   });
 
-  test("no batch gmina is one of the 6 existing PILOT_LOCALITIES (this is a new-territory wave, not a duplicate of the pilot)", () => {
-    for (const instance of MAZOWSZE_WODOCIAGI_WAVE_1.instances) {
-      expect((PILOT_LOCALITIES as readonly string[]).includes(instance.gmina ?? "")).toBe(false);
-    }
+  test("manualSourceCheckFetch.ts contains no Supabase import and no write call", () => {
+    const moduleSrc = readSource("src/lib/manualSourceCheckFetch.ts");
+    expect(moduleSrc).not.toMatch(/supabase/i);
+    expect(moduleSrc).not.toMatch(/\.insert\(|\.update\(/);
   });
 });
 
 // Sprint 168's fixture convention, reused verbatim: fixtures are invented,
-// modeled on the real, HTTP-verified response shape of this wave's sources
-// (docs/EXEC_BLOCK_1_SOURCE_DISCOVERY_MAZOWIECKIE_V1.md — e.g. bpwik.pl's
-// real "zakaz podlewania" notice, opwik.com's real network-works notice),
-// but the specific text below is fictional — proving the existing,
-// unmodified parseWordpressRestPosts already handles this wave's shape
-// with zero new parser code, without reproducing any real site's content.
+// modeled on this wave's real, HTTP-verified response shape (Blok
+// Wykonawczy 1+2 discovery docs), but the specific text below is
+// fictional — proving the existing, unmodified parseWordpressRestPosts
+// already handles this wave's shape with zero new parser code.
 function post(overrides: Partial<WordpressRestPost>): WordpressRestPost {
   return {
     title: { rendered: "Tytuł testowy" },

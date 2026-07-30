@@ -1,10 +1,17 @@
-// Blok Wykonawczy 1 (Etap E) — first real candidate SourceBatch, prepared
-// only. NOT wired into officialSourceChecklist.ts, NOT added to
-// SAFE_CHECK_SOURCE_IDS, NOT fetched by anything at runtime — see
-// docs/EXEC_BLOCK_1_SOURCE_DISCOVERY_MAZOWIECKIE_V1.md for the discovery
-// methodology (real HTTP verification, not guessed) behind every URL below.
+// Blok Wykonawczy 1 (Etap E) — first real candidate SourceBatch, extended
+// in Blok Wykonawczy 2 from 7 to 10 instances (3 more HTTP-verified
+// sources: Ząbki, Józefów, Zielonka). All 10 are now ALSO activated
+// check-only in officialSourceChecklist.ts + SAFE_CHECK_SOURCE_IDS
+// (sourceCheck.ts) as of Blok Wykonawczy 2 — this file stays the
+// sourceScale/Etap E discovery-and-certification record, while
+// officialSourceChecklist.ts is the actual live check-only registry the
+// app reads from. Keep both in sync if this batch changes again. Still NOT
+// added to any writer or auto-publish allowlist, and nothing here performs
+// a fetch — see docs/EXEC_BLOCK_1_SOURCE_DISCOVERY_MAZOWIECKIE_V1.md and
+// docs/EXEC_BLOCK_2_SOURCE_ACTIVATION_V1.md for full discovery methodology
+// (real HTTP verification, not guessed) behind every URL below.
 //
-// All 7 instances share the exact adapter type already implemented and
+// All 10 instances share the exact adapter type already implemented and
 // proven in production (wordpress_rest, same mechanics as the existing
 // wodociagimichalowice.pl source) — batch onboarding needs zero new parser
 // code, only this configuration data.
@@ -96,6 +103,42 @@ export const MAZOWSZE_WODOCIAGI_WAVE_1: SourceBatch = {
         type: "wordpress_rest",
         officialUrl: "https://opwik.com",
         apiUrl: "https://opwik.com/wp-json/wp/v2/posts?per_page=6",
+        keywordSetId: "water-interruptions",
+      },
+    },
+    {
+      id: "pwik-zabki",
+      name: "PWiK w Ząbkach Sp. z o.o.",
+      category: "water",
+      gmina: "Ząbki",
+      config: {
+        type: "wordpress_rest",
+        officialUrl: "https://pwikzabki.pl",
+        apiUrl: "https://pwikzabki.pl/wp-json/wp/v2/posts?per_page=6",
+        keywordSetId: "water-interruptions",
+      },
+    },
+    {
+      id: "hydrosfera-jozefow",
+      name: "Hydrosfera Józefów Sp. z o.o.",
+      category: "water",
+      gmina: "Józefów",
+      config: {
+        type: "wordpress_rest",
+        officialUrl: "https://hydrosfera-jozefow.pl",
+        apiUrl: "https://hydrosfera-jozefow.pl/wp-json/wp/v2/posts?per_page=6",
+        keywordSetId: "water-interruptions",
+      },
+    },
+    {
+      id: "pwik-zielonka",
+      name: "PWiK w Zielonce Sp. z o.o.",
+      category: "water",
+      gmina: "Zielonka",
+      config: {
+        type: "wordpress_rest",
+        officialUrl: "https://pwikzielonka.com.pl",
+        apiUrl: "https://pwikzielonka.com.pl/wp-json/wp/v2/posts?per_page=6",
         keywordSetId: "water-interruptions",
       },
     },

@@ -199,6 +199,183 @@ export const OFFICIAL_SOURCE_CHECKS: OfficialSourceCheck[] = [
     frequency: "weekly",
     risk: "low",
   },
+  // Blok Wykonawczy 2 (Etap E) — first real, HTTP-verified national-scale
+  // wave: 7 Mazowieckie municipal water utilities near the existing pilot
+  // (docs/EXEC_BLOCK_1_SOURCE_DISCOVERY_MAZOWIECKIE_V1.md), all sharing the
+  // exact wordpress_rest adapter already proven on wodociagi-michalowice —
+  // zero new parser code, only this configuration. `localities: []` is
+  // deliberate and honest: these towns are outside Alertownik's own
+  // 6-locality PILOT_LOCALITIES union (a real, load-bearing TypeScript
+  // constraint, not an oversight — see riskNote), so they never appear in
+  // "Moja okolica" personalization and are check-only, never counted toward
+  // pilot coverage. Widening PILOT_LOCALITIES itself is explicitly out of
+  // scope for this block (would change public-facing personalization UX,
+  // not requested).
+  {
+    id: "eko-raszyn",
+    name: "EKO-RASZYN Sp. z o.o.",
+    category: "water",
+    officialUrl: "https://www.ekoraszyn.pl",
+    apiUrl: "https://www.ekoraszyn.pl/wp-json/wp/v2/posts?per_page=6",
+    whatToCheck:
+      "Przerwy w dostawie wody, awarie sieci, prace techniczne — Gmina Raszyn (poza obecnym " +
+      "pilotażem, powiat pruszkowski, sąsiedni do obszaru pilotażu).",
+    localities: [],
+    frequency: "weekly",
+    risk: "low",
+    riskNote:
+      "Poza 6 miejscowościami pilotażu — check-only (SAFE_CHECK_SOURCE_IDS), nigdy nie trafi " +
+      "do writera ani auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów.",
+  },
+  {
+    id: "bpwik-brwinow",
+    name: "Brwinowskie Przedsiębiorstwo Wodociągów i Kanalizacji",
+    category: "water",
+    officialUrl: "https://bpwik.pl",
+    apiUrl: "https://bpwik.pl/wp-json/wp/v2/posts?per_page=6",
+    whatToCheck:
+      "Przerwy w dostawie wody, zakazy podlewania, awarie sieci — Gmina Brwinów (poza obecnym " +
+      "pilotażem, powiat pruszkowski).",
+    localities: [],
+    frequency: "weekly",
+    risk: "low",
+    riskNote:
+      "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
+      "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów.",
+  },
+  {
+    id: "pkn-nadarzyn",
+    name: "Przedsiębiorstwo Komunalne Nadarzyn",
+    category: "water",
+    officialUrl: "https://pkn.net.pl",
+    apiUrl: "https://pkn.net.pl/wp-json/wp/v2/posts?per_page=6",
+    whatToCheck:
+      "Przerwy w dostawie wody, awarie sieci — Gmina Nadarzyn (poza obecnym pilotażem, powiat " +
+      "pruszkowski).",
+    localities: [],
+    frequency: "weekly",
+    risk: "low",
+    riskNote:
+      "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
+      "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów.",
+  },
+  {
+    id: "zwik-ozarow-mazowiecki",
+    name: "ZWiK Ożarów Mazowiecki",
+    category: "water",
+    officialUrl: "https://zwik.ozarow-mazowiecki.pl",
+    apiUrl: "https://zwik.ozarow-mazowiecki.pl/wp-json/wp/v2/posts?per_page=6",
+    whatToCheck:
+      "Przerwy w dostawie wody, komunikaty sanepidu o jakości wody, awarie sieci — Gmina " +
+      "Ożarów Mazowiecki (poza obecnym pilotażem, powiat warszawski zachodni).",
+    localities: [],
+    frequency: "weekly",
+    risk: "low",
+    riskNote:
+      "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
+      "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów.",
+  },
+  {
+    id: "pwik-radzymin",
+    name: "PWiK Radzymin",
+    category: "water",
+    officialUrl: "https://www.pwikradzymin.pl",
+    apiUrl: "https://www.pwikradzymin.pl/wp-json/wp/v2/posts?per_page=6",
+    whatToCheck:
+      "Przerwy w dostawie wody, awarie sieci — Gmina Radzymin (poza obecnym pilotażem, powiat " +
+      "wołomiński).",
+    localities: [],
+    frequency: "weekly",
+    risk: "low",
+    riskNote:
+      "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
+      "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów.",
+  },
+  {
+    id: "pwk-legionowo",
+    name: "PWK „Legionowo”",
+    category: "water",
+    officialUrl: "https://pwklegionowo.com",
+    apiUrl: "https://pwklegionowo.com/wp-json/wp/v2/posts?per_page=6",
+    whatToCheck:
+      "Przerwy w dostawie wody, awarie sieci — Miasto Legionowo (poza obecnym pilotażem, " +
+      "powiat legionowski).",
+    localities: [],
+    frequency: "weekly",
+    risk: "low",
+    riskNote:
+      "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
+      "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów. Treść bywa " +
+      "edukacyjna/PR — filtr słów kluczowych (parseWordpressRestPosts) już to obsługuje, " +
+      "ten sam wzorzec co wodociagi-michalowice.",
+  },
+  {
+    id: "opwik-otwock",
+    name: "OPWiK Otwock",
+    category: "water",
+    officialUrl: "https://opwik.com",
+    apiUrl: "https://opwik.com/wp-json/wp/v2/posts?per_page=6",
+    whatToCheck:
+      "Przerwy w dostawie wody, awarie sieci, prace na sieci wodociągowej — Miasto Otwock " +
+      "(poza obecnym pilotażem, powiat otwocki).",
+    localities: [],
+    frequency: "weekly",
+    risk: "low",
+    riskNote:
+      "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
+      "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów.",
+  },
+  {
+    id: "pwik-zabki",
+    name: "PWiK w Ząbkach Sp. z o.o.",
+    category: "water",
+    officialUrl: "https://pwikzabki.pl",
+    apiUrl: "https://pwikzabki.pl/wp-json/wp/v2/posts?per_page=6",
+    whatToCheck:
+      "Przerwy w dostawie wody, wymiana wodomierzy, awarie sieci — Miasto Ząbki (poza obecnym " +
+      "pilotażem, powiat wołomiński). Zweryfikowane w Bloku Wykonawczym 2 (realny komunikat: " +
+      "wymiana wodomierzy lipiec–listopad 2026).",
+    localities: [],
+    frequency: "weekly",
+    risk: "low",
+    riskNote:
+      "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
+      "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów.",
+  },
+  {
+    id: "hydrosfera-jozefow",
+    name: "Hydrosfera Józefów Sp. z o.o.",
+    category: "water",
+    officialUrl: "https://hydrosfera-jozefow.pl",
+    apiUrl: "https://hydrosfera-jozefow.pl/wp-json/wp/v2/posts?per_page=6",
+    whatToCheck:
+      "Przerwy w dostawie wody, awarie sieci — Miasto Józefów (poza obecnym pilotażem, powiat " +
+      "otwocki). Zweryfikowane w Bloku Wykonawczym 2 (realne zawiadomienie o przerwie w " +
+      "dostawie wody, ul. Wawerska).",
+    localities: [],
+    frequency: "weekly",
+    risk: "low",
+    riskNote:
+      "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
+      "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów.",
+  },
+  {
+    id: "pwik-zielonka",
+    name: "PWiK w Zielonce Sp. z o.o.",
+    category: "water",
+    officialUrl: "https://pwikzielonka.com.pl",
+    apiUrl: "https://pwikzielonka.com.pl/wp-json/wp/v2/posts?per_page=6",
+    whatToCheck:
+      "Przerwy w dostawie wody, awarie sieci — Miasto Zielonka (poza obecnym pilotażem, " +
+      "powiat wołomiński). Zweryfikowane w Bloku Wykonawczym 2 (realny komunikat o przerwie " +
+      "w dostawie wody, ulice Ossowska/Korczaka/Bartnika).",
+    localities: [],
+    frequency: "weekly",
+    risk: "low",
+    riskNote:
+      "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
+      "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów.",
+  },
   {
     id: "powiat-pruszkowski-wiadomosci",
     name: "Powiat Pruszkowski — Wiadomości (utrudnienia drogowe)",

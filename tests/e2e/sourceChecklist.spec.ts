@@ -23,13 +23,53 @@ const OFFICIAL_DOMAINS = [
   "pgedystrybucja.pl",
   "wodociagimichalowice.pl",
   "samorzad.gov.pl",
+  // Blok Wykonawczy 2 (Etap E) — 10 HTTP-verified Mazowieckie water
+  // utilities, check-only, deliberately outside PILOT_LOCALITIES (see
+  // docs/EXEC_BLOCK_2_SOURCE_ACTIVATION_V1.md).
+  "ekoraszyn.pl",
+  "bpwik.pl",
+  "pkn.net.pl",
+  "zwik.ozarow-mazowiecki.pl",
+  "pwikradzymin.pl",
+  "pwklegionowo.com",
+  "opwik.com",
+  "pwikzabki.pl",
+  "hydrosfera-jozefow.pl",
+  "pwikzielonka.com.pl",
+];
+
+// Sprint 129's original 9 sources are all scoped to the 6-locality pilot;
+// Blok Wykonawczy 2 added 10 deliberately out-of-pilot, check-only sources
+// (localities: [], see officialSourceChecklist.ts's own header comment on
+// those entries) — an empty list there is a documented, honest fact, not a
+// missing value, so it's tracked separately from the pilot-scoped sources.
+const EXPECTED_EMPTY_LOCALITIES_IDS = [
+  "eko-raszyn",
+  "bpwik-brwinow",
+  "pkn-nadarzyn",
+  "zwik-ozarow-mazowiecki",
+  "pwik-radzymin",
+  "pwk-legionowo",
+  "opwik-otwock",
+  "pwik-zabki",
+  "hydrosfera-jozefow",
+  "pwik-zielonka",
 ];
 
 test.describe("OFFICIAL_SOURCE_CHECKS definitions", () => {
-  test("every source has a name, what-to-check text, and at least one pilot locality", () => {
+  test("every source has a name and what-to-check text", () => {
     for (const source of OFFICIAL_SOURCE_CHECKS) {
       expect(source.name.trim().length, source.id).toBeGreaterThan(0);
       expect(source.whatToCheck.trim().length, source.id).toBeGreaterThan(20);
+    }
+  });
+
+  test("pilot-scoped sources have at least one real pilot locality; Blok Wykonawczy 2's wave is honestly empty, not a missing value", () => {
+    for (const source of OFFICIAL_SOURCE_CHECKS) {
+      if (EXPECTED_EMPTY_LOCALITIES_IDS.includes(source.id)) {
+        expect(source.localities, source.id).toEqual([]);
+        continue;
+      }
       expect(source.localities.length, source.id).toBeGreaterThan(0);
       for (const locality of source.localities) {
         expect(PILOT_LOCALITIES).toContain(locality);
