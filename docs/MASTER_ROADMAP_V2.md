@@ -382,6 +382,30 @@ zrewertowana z powodu incydentu bezpieczeństwa subagenta — patrz
 `docs/INCIDENT_SUBAGENT_SCOPE_VIOLATION_EXEC_BLOCK_3_V1.md` — i nie liczy
 się jako wykonana.
 
+**Checkpoint (2026-07-30, po Fali 8 — blok przyspieszający A–D):** 8
+prawdziwych fal wykonanych łącznie (numeracja Fali 1 wyżej pozostaje
+historyczna/retrospektywna; realne fale check-only tego dokumentu to Fale
+2–8, patrz `docs/EXEC_BLOCK_2_SOURCE_ACTIVATION_V1.md` (Fala 2) i
+`docs/EXEC_ETAP_F_FALA_3_LODZKIE_V1.md` przez `EXEC_ETAP_F_FALA_8_V1.md`
+(Fale 3–8)). Pierwsze ogólnopolskie discovery osiągnęło **16/16
+województw** przebadanych realnym HTTP. **13/16 województw** ma co
+najmniej jedno aktywne źródło check-only (Mazowieckie, Łódzkie,
+Wielkopolskie, Świętokrzyskie, Kujawsko-Pomorskie, Pomorskie,
+Zachodniopomorskie, Podkarpackie, Podlaskie, Małopolskie, Śląskie,
+Opolskie, Warmińsko-Mazurskie). **Lubelskie, Dolnośląskie i Lubuskie**
+pozostają z 0 źródeł GO mimo przebadania (odpowiednio 16, 25 i 16
+kandydatów sprawdzonych realnym HTTP — uczciwy wynik, nie luka w
+discovery). `SAFE_CHECK_SOURCE_IDS` = 44, `OFFICIAL_SOURCE_CHECKS` = 49.
+
+**Etap F nie jest porzucony ani zastąpiony.** Kolejne, głębsze fale
+(więcej miast/instytucji w już pokrytych województwach, ponowna próba
+Lubelskiego/Dolnośląskiego/Lubuskiego innymi kategoriami źródeł) pozostają
+częścią tego samego, istniejącego Etapu F — nie nowym etapem, nie Etapem
+G. Są **świadomie odłożone** od tego bloku, aby skoncentrować pracę na
+przyspieszeniu Etapów A–D i realnym zbliżeniu się do wydania aplikacji.
+**W tym bloku nie ma Fali 9** — decyzja o jej rozpoczęciu wymaga osobnej,
+jawnej zgody Adama.
+
 **Definicja zakończenia:** Etap F **nie ma jednego binarnego "koniec"** —
 kończy się decyzją Adama o zatrzymaniu po osiągnięciu satysfakcjonującego
 pokrycia (np. całe województwo mazowieckie, albo X gmin partnerskich z Etapu
