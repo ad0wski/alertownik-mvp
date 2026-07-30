@@ -61,7 +61,7 @@ test.describe("buildSourceHealthRows — coverage and API-support flags", () => 
     expect(rows.map((r) => r.checklistId)).toEqual(OFFICIAL_SOURCE_CHECKS.map((s) => s.id));
   });
 
-  test("exactly thirty-nine sources are API-supported after Etap F Fala 6: Fala 5's 37 plus 2 more (first Lubelskie+Podkarpackie+Podlaskie)", () => {
+  test("exactly forty-two sources are API-supported after Etap F Fala 7: Fala 6's 39 plus 3 more (first Małopolskie+Śląskie)", () => {
     const rows = rowsFor();
     const supported = rows.filter((r) => r.apiSupported).map((r) => r.checklistId);
     // Checklist order matches officialSourceChecklist.ts's array order.
@@ -105,6 +105,9 @@ test.describe("buildSourceHealthRows — coverage and API-support flags", () => 
       "powiat-pruszkowski-wiadomosci",
       "mzd-rzeszow",
       "pgk-suwalki",
+      "tarnowska-komunikacja",
+      "zdw-krakow",
+      "zdw-katowice",
     ]);
   });
 
@@ -203,7 +206,7 @@ test.describe("summarizeSourceHealth", () => {
     });
     const summary = summarizeSourceHealth(rows);
     expect(summary.total).toBe(OFFICIAL_SOURCE_CHECKS.length);
-    expect(summary.apiSupported).toBe(39);
+    expect(summary.apiSupported).toBe(42);
     expect(summary.checkedRecently).toBe(1); // only reg-mich has a fresh check
     expect(summary.needsAttention).toBe(summary.total - summary.checkedRecently);
   });

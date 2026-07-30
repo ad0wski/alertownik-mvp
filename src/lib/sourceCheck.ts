@@ -122,6 +122,12 @@ export const SAFE_CHECK_SOURCE_IDS = [
   // the main agent — no subagent used anywhere in this block.
   "mzd-rzeszow",
   "pgk-suwalki",
+  // Etap F, Fala 7 (2026-07-30) — first Małopolskie + Śląskie sources, 3
+  // HTTP-verified (each double-checked), personally verified by the main
+  // agent — no subagent used anywhere in this block.
+  "tarnowska-komunikacja",
+  "zdw-krakow",
+  "zdw-katowice",
 ] as const;
 
 export type SafeCheckSourceId = (typeof SAFE_CHECK_SOURCE_IDS)[number];

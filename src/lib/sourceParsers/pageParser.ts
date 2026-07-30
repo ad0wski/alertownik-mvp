@@ -428,6 +428,9 @@ export const REST_PARSERS_BY_SOURCE_ID: Record<string, (posts: WordpressRestPost
   "mpk-stargard": parseTransportRoadsRestPosts,
   "mzd-rzeszow": parseTransportRoadsRestPosts,
   "pgk-suwalki": parseTransportRoadsRestPosts,
+  "tarnowska-komunikacja": parseTransportRoadsRestPosts,
+  "zdw-krakow": parseTransportRoadsRestPosts,
+  "zdw-katowice": parseTransportRoadsRestPosts,
 };
 
 // Lightweight RSS/Atom autodiscovery — only looks at the page's own <head>

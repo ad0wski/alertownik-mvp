@@ -873,6 +873,72 @@ export const OFFICIAL_SOURCE_CHECKS: OfficialSourceCheck[] = [
       "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
       "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów.",
   },
+  // Etap F, Fala 7 (2026-07-30) — first Małopolskie + Śląskie sources. 69
+  // candidates personally HTTP-verified across the two voivodeships — only
+  // 3 cleared the GO bar (2 Małopolskie, 1 Śląskie), all roads/transport.
+  // Every municipal water-utility and city-hall WordPress feed tested was
+  // either non-WordPress, a general PR/culture/event news portal, or mixed
+  // below the operational-dominance bar — consistent with Fala 5/6's
+  // finding that regional roads/transport authorities give cleaner signal
+  // than city halls or water utilities. No subagent used anywhere in this
+  // block (CLAUDE.md's post-incident ban).
+  {
+    id: "tarnowska-komunikacja",
+    name: "Tarnowska Komunikacja (MPK Tarnów + linie regionalne)",
+    category: "transport",
+    officialUrl: "https://tarnowska-komunikacja.pl",
+    apiUrl: "https://tarnowska-komunikacja.pl/wp-json/wp/v2/posts?per_page=6",
+    whatToCheck:
+      "Zmiany rozkładów jazdy, skrócone/objazdowe trasy, zmiany linii miejskich i " +
+      "regionalnych (A2x/A3x) — Miasto Tarnów, województwo małopolskie (poza obecnym " +
+      "pilotażem). Zweryfikowane dwukrotnie w Etapie F Fala 7 — 11 z 12 próbkowanych wpisów " +
+      "w pełni operacyjne, zero przetargów/PR.",
+    localities: [],
+    frequency: "weekly",
+    risk: "low",
+    riskNote:
+      "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
+      "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów.",
+  },
+  {
+    id: "zdw-krakow",
+    name: "Zarząd Dróg Wojewódzkich w Krakowie",
+    category: "roads",
+    officialUrl: "https://zdw.krakow.pl",
+    apiUrl: "https://zdw.krakow.pl/wp-json/wp/v2/posts?per_page=6",
+    whatToCheck:
+      "Budowy, przebudowy i remonty dróg wojewódzkich, nowe ronda/mosty/obwodnice — " +
+      "województwo małopolskie (poza obecnym pilotażem). Zweryfikowane dwukrotnie w Etapie F " +
+      "Fala 7 — wszystkie próbkowane wpisy (6 i 12) w pełni na temat inwestycji drogowych, " +
+      "zero PR niezwiązanego z drogami.",
+    localities: [],
+    frequency: "weekly",
+    risk: "low",
+    riskNote:
+      "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
+      "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów. Treść to głównie " +
+      "postęp inwestycji drogowych, nie tylko nagłe utrudnienia — filtr operacyjności " +
+      "(parseTransportRoadsRestPosts) już to obsługuje.",
+  },
+  {
+    id: "zdw-katowice",
+    name: "Zarząd Dróg Wojewódzkich w Katowicach",
+    category: "roads",
+    officialUrl: "https://www.zdw.katowice.pl",
+    apiUrl: "https://www.zdw.katowice.pl/wp-json/wp/v2/posts?per_page=6",
+    whatToCheck:
+      "Budowy, przebudowy i remonty dróg wojewódzkich, nowe wiadukty/przejścia, standardy " +
+      "zimowego utrzymania — województwo śląskie (poza obecnym pilotażem). Zweryfikowane " +
+      "dwukrotnie w Etapie F Fala 7 — większość próbkowanych wpisów o inwestycjach drogowych, " +
+      "nieliczne administracyjne/PR (życzenia świąteczne, konferencja).",
+    localities: [],
+    frequency: "weekly",
+    risk: "low",
+    riskNote:
+      "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
+      "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów. Kanał ma niską " +
+      "częstotliwość publikacji (raz na kilka tygodni) — normalne dla tego źródła, nie błąd.",
+  },
   {
     id: "roboty-drogowe",
     name: "Remonty i utrudnienia drogowe — gmina + Pruszków",

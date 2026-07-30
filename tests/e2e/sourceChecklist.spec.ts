@@ -74,6 +74,12 @@ const OFFICIAL_DOMAINS = [
   // the main agent.
   "mzd.erzeszow.pl",
   "pgk.suwalki.pl",
+  // Etap F, Fala 7 (2026-07-30) — first Małopolskie + Śląskie sources, 3
+  // HTTP-verified (each double-checked), personally verified by the main
+  // agent.
+  "tarnowska-komunikacja.pl",
+  "zdw.krakow.pl",
+  "zdw.katowice.pl",
 ];
 
 // Sprint 129's original 9 sources are all scoped to the 6-locality pilot;
@@ -116,6 +122,9 @@ const EXPECTED_EMPTY_LOCALITIES_IDS = [
   "mpk-stargard",
   "mzd-rzeszow",
   "pgk-suwalki",
+  "tarnowska-komunikacja",
+  "zdw-krakow",
+  "zdw-katowice",
 ];
 
 test.describe("OFFICIAL_SOURCE_CHECKS definitions", () => {
