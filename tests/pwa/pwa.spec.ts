@@ -293,6 +293,32 @@ test.describe("Install UX (M6)", () => {
     await backLink.focus();
     await expect(backLink).toBeFocused();
   });
+
+  // Sprint 189 — Blok A+D tester rescue. A tester following a link Adam
+  // sends must see, without scrolling past a wall of text, that this is a
+  // short test and how to reply — checked directly rather than assumed.
+  test("states this is an early-version test up front", async ({ page }) => {
+    await page.goto("/instalacja");
+    await expect(page.getByText(/Test wczesnej wersji/)).toBeVisible();
+  });
+
+  test("shows a short (max 4 item) checklist of what to check", async ({ page }) => {
+    await page.goto("/instalacja");
+    await expect(page.getByRole("heading", { name: "Co sprawdzić (5 minut)" })).toBeVisible();
+    const section = page.locator("section", { has: page.getByRole("heading", { name: "Co sprawdzić (5 minut)" }) });
+    const count = await section.locator("li").count();
+    expect(count).toBeGreaterThan(0);
+    expect(count).toBeLessThanOrEqual(4);
+  });
+
+  test("has a one-click feedback mailto link asking for one or two sentences", async ({ page }) => {
+    await page.goto("/instalacja");
+    const link = page.getByRole("link", { name: "Wyślij opinię" });
+    await expect(link).toBeVisible();
+    const href = await link.getAttribute("href");
+    expect(href).toContain("mailto:alertownik.kontakt@gmail.com");
+    expect(href).toContain(encodeURIComponent("Alertownik — opinia testera"));
+  });
 });
 
 test.describe("Network status (M7)", () => {

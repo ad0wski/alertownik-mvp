@@ -1,5 +1,10 @@
 import { test, expect } from "@playwright/test";
-import { buildFeedbackMailto, buildAlertReportMailto, FEEDBACK_QUESTIONS } from "@/lib/feedbackMailto";
+import {
+  buildFeedbackMailto,
+  buildAlertReportMailto,
+  buildTesterFeedbackMailto,
+  FEEDBACK_QUESTIONS,
+} from "@/lib/feedbackMailto";
 
 /**
  * Unit-style tests for the Sprint 93 feedback-mailto helpers — pure
@@ -28,6 +33,20 @@ test.describe("buildFeedbackMailto", () => {
     for (const q of FEEDBACK_QUESTIONS) {
       expect(bodyParam).toContain(q);
     }
+  });
+});
+
+test.describe("buildTesterFeedbackMailto", () => {
+  test("targets the feedback email with the tester-opinion subject", () => {
+    const href = buildTesterFeedbackMailto();
+    expect(href).toContain("mailto:alertownik.kontakt@gmail.com");
+    expect(href).toContain(encodeURIComponent("Alertownik — opinia testera"));
+  });
+
+  test("asks for one or two sentences, not a full survey", () => {
+    const href = buildTesterFeedbackMailto();
+    const bodyParam = new URL(href.replace("mailto:", "http://x/")).searchParams.get("body") ?? "";
+    expect(bodyParam).toContain("jedno lub dwa zdania");
   });
 });
 

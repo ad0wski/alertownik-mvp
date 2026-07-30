@@ -71,6 +71,22 @@ export function buildPilotInterestMailto(): string {
   return `mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 
+// Local Beta tester rescue block — /instalacja's "Wyślij opinię" button.
+// Same reused mailto pattern as every other feedback link (no form, no new
+// Supabase table). Deliberately asks for "one or two sentences" as the
+// whole bar for a valid reply — a low-friction ask matters more here than
+// a structured checklist, since the goal is closing the 3-5 Local Beta
+// test count, not collecting a survey.
+export function buildTesterFeedbackMailto(): string {
+  const subject = "Alertownik — opinia testera";
+  const body =
+    "Dzięki za przetestowanie Alertownika! Wystarczy jedno lub dwa zdania:\n\n" +
+    "1. Czy udało się otworzyć i dodać aplikację do ekranu?\n" +
+    "2. Czy coś było niejasne albo nie działało?\n" +
+    "3. Czy format alertów ma dla Ciebie sens?\n\n";
+  return `mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
 export function buildFeedbackQuickReasons(): FeedbackQuickReason[] {
   return [
     {
