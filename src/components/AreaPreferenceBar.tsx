@@ -55,11 +55,11 @@ export function AreaPreferenceBar({ value, onChange }: Props) {
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder="Np. Komorów, Pruszków, ul. Raszyńska"
-            className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 transition-colors"
+            className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 transition-colors"
             autoFocus
           />
         </div>
-        <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed">
+        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
           Nie podawaj dokładnego adresu — wystarczy miejscowość lub grupa ulic.
           Preferencje zapisują się tylko w tej przeglądarce i są też używane
           w „Moja okolica” na stronie głównej.
@@ -110,7 +110,7 @@ export function AreaPreferenceBar({ value, onChange }: Props) {
 
   return (
     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-blue-100 shadow-sm p-4 sm:p-5 flex flex-col gap-2">
-      <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide">Moja okolica</p>
+      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Moja okolica</p>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm font-medium text-slate-800 dark:text-slate-100">{value}</p>
         <div className="flex gap-2">
@@ -128,7 +128,7 @@ export function AreaPreferenceBar({ value, onChange }: Props) {
           </button>
         </div>
       </div>
-      <p className="text-xs text-slate-400 dark:text-slate-500">
+      <p className="text-xs text-slate-500 dark:text-slate-400">
         Ta sama okolica jest też używana w „Moja okolica” na stronie głównej.
       </p>
     </div>

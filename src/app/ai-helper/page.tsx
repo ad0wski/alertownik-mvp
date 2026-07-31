@@ -370,7 +370,7 @@ export default function AiHelperPage() {
           <div className="flex flex-col gap-2">
             <label className={labelClass}>
               Nazwa źródła{" "}
-              <span className="font-normal text-slate-400 dark:text-slate-500">(opcjonalnie)</span>
+              <span className="font-normal text-slate-500 dark:text-slate-400">(opcjonalnie)</span>
             </label>
             <input
               type="text"
@@ -383,7 +383,7 @@ export default function AiHelperPage() {
           <div className="flex flex-col gap-2">
             <label className={labelClass}>
               Link do źródła{" "}
-              <span className="font-normal text-slate-400 dark:text-slate-500">(opcjonalnie)</span>
+              <span className="font-normal text-slate-500 dark:text-slate-400">(opcjonalnie)</span>
             </label>
             <input
               type="url"
@@ -399,7 +399,7 @@ export default function AiHelperPage() {
         <div className="flex flex-col gap-2">
           <label className={labelClass}>
             Sugerowana kategoria{" "}
-            <span className="font-normal text-slate-400 dark:text-slate-500">(opcjonalnie)</span>
+            <span className="font-normal text-slate-500 dark:text-slate-400">(opcjonalnie)</span>
           </label>
           <select
             value={suggestedCategory}
@@ -484,7 +484,7 @@ export default function AiHelperPage() {
             {/* Human preview card */}
             {aiDraftParsed && (
               <div className="bg-white dark:bg-slate-900 rounded-xl border border-blue-100 p-4">
-                <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-3">
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">
                   Podgląd alertu
                 </p>
                 <dl className="grid grid-cols-[7rem_1fr] gap-x-3 gap-y-2 text-sm">
@@ -503,7 +503,7 @@ export default function AiHelperPage() {
                         {SEVERITY_META[aiDraftParsed.severity].label}
                       </span>
                     ) : (
-                      <span className="text-slate-400 dark:text-slate-500">—</span>
+                      <span className="text-slate-500 dark:text-slate-400">—</span>
                     )}
                   </dd>
 

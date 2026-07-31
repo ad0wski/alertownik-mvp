@@ -12,7 +12,7 @@ const timeStatusConfig: Record<
 > = {
   active:    { dot: "bg-emerald-500", text: "text-emerald-700 dark:text-emerald-300", label: "Trwa" },
   upcoming:  { dot: "bg-blue-400",    text: "text-blue-600 dark:text-blue-400",    label: "Nadchodzące" },
-  ended:     { dot: "bg-slate-300",   text: "text-slate-400 dark:text-slate-500",   label: "Zakończone" },
+  ended:     { dot: "bg-slate-300",   text: "text-slate-500 dark:text-slate-400",   label: "Zakończone" },
 };
 
 const categoryLabels: Record<Alert["category"], string> = {
@@ -107,7 +107,7 @@ export function AlertCard({ alert, isPreview }: { alert: Alert; isPreview?: bool
         {alert.place ? (
           <span className="font-medium text-slate-600 dark:text-slate-400">{alert.place}</span>
         ) : (
-          <span className="italic text-slate-400 dark:text-slate-500">Brak informacji o lokalizacji</span>
+          <span className="italic text-slate-500 dark:text-slate-400">Brak informacji o lokalizacji</span>
         )}
         {" · "}
         {formatAlertRange(alert.startsAt, alert.endsAt)}
@@ -130,7 +130,7 @@ export function AlertCard({ alert, isPreview }: { alert: Alert; isPreview?: bool
           {expanded ? "Ukryj szczegóły ▲" : "Szczegóły ▼"}
         </button>
         {isPreview ? (
-          <span className="text-xs text-slate-400 dark:text-slate-500 italic">
+          <span className="text-xs text-slate-500 dark:text-slate-400 italic">
             Podgląd — alert nie jest jeszcze opublikowany w bazie.
           </span>
         ) : (
@@ -147,7 +147,7 @@ export function AlertCard({ alert, isPreview }: { alert: Alert; isPreview?: bool
       {expanded && (
         <dl className="border-t border-slate-100 dark:border-slate-800 pt-3 mt-1 flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
           <div className="flex flex-col py-3 gap-1">
-            <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500 pt-0.5">
+            <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 pt-0.5">
               Kiedy
             </dt>
             <dd className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
@@ -156,34 +156,34 @@ export function AlertCard({ alert, isPreview }: { alert: Alert; isPreview?: bool
           </div>
 
           <div className="flex flex-col py-3 gap-1">
-            <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500 pt-0.5">
+            <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 pt-0.5">
               Gdzie
             </dt>
             <dd className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-              {alert.place || <span className="italic text-slate-400 dark:text-slate-500">Brak informacji o lokalizacji</span>}
+              {alert.place || <span className="italic text-slate-500 dark:text-slate-400">Brak informacji o lokalizacji</span>}
             </dd>
           </div>
 
           <div className="flex flex-col py-3 gap-1">
-            <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500 pt-0.5">
+            <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 pt-0.5">
               Co się zmienia
             </dt>
             <dd className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-              {alert.change || <span className="italic text-slate-400 dark:text-slate-500">Brak szczegółów.</span>}
+              {alert.change || <span className="italic text-slate-500 dark:text-slate-400">Brak szczegółów.</span>}
             </dd>
           </div>
 
           <div className="flex flex-col py-3 gap-1">
-            <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500 pt-0.5">
+            <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 pt-0.5">
               Co zrobić
             </dt>
             <dd className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-              {alert.action || <span className="italic text-slate-400 dark:text-slate-500">Brak zalecanego działania.</span>}
+              {alert.action || <span className="italic text-slate-500 dark:text-slate-400">Brak zalecanego działania.</span>}
             </dd>
           </div>
 
           <div className="flex flex-col py-3 gap-1">
-            <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500 pt-0.5">
+            <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 pt-0.5">
               Źródło
             </dt>
             <dd className="text-sm text-slate-700 dark:text-slate-300 flex flex-wrap items-center gap-3 mt-0.5">
@@ -198,7 +198,7 @@ export function AlertCard({ alert, isPreview }: { alert: Alert; isPreview?: bool
                   Zobacz źródło →
                 </a>
               ) : !alert.sourceName ? (
-                <span className="text-xs text-slate-400 dark:text-slate-500">Brak informacji o źródle</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">Brak informacji o źródle</span>
               ) : null}
             </dd>
           </div>

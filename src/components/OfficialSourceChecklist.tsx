@@ -168,7 +168,7 @@ export function OfficialSourceChecklist({
           <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-1">
             {CHECKLIST_PUBLISH_POLICY.map((rule) => (
               <li key={rule} className="flex items-start gap-2">
-                <span className="text-slate-400 dark:text-slate-500 mt-0.5">•</span>
+                <span className="text-slate-500 dark:text-slate-400 mt-0.5">•</span>
                 <span>{rule}</span>
               </li>
             ))}

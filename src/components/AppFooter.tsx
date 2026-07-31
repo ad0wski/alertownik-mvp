@@ -99,7 +99,7 @@ export function AppFooter() {
         </div>
 
         {!session && (
-          <p className="text-xs text-slate-400 dark:text-slate-500">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             Niezależny projekt — nie jest oficjalną aplikacją żadnej gminy, WKD ani PGE.
           </p>
         )}

@@ -49,10 +49,10 @@ export default function InstalacjaPage() {
           jedno lub dwa zdania w zupełności wystarczą.
         </p>
         <details className="mt-2">
-          <summary className="text-xs text-slate-400 dark:text-slate-500 cursor-pointer select-none hover:text-slate-600 dark:hover:text-slate-300">
+          <summary className="text-xs text-slate-500 dark:text-slate-400 cursor-pointer select-none hover:text-slate-600 dark:hover:text-slate-300">
             Szczegóły techniczne
           </summary>
-          <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed mt-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mt-1">
             Alertownik działa w przeglądarce i po dodaniu do ekranu głównego
             otwiera się jak osobna aplikacja — bez pobierania niczego ze
             sklepu.
@@ -128,7 +128,7 @@ export default function InstalacjaPage() {
         </section>
 
         <section className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5">
-          <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed">
+          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
             Nazwy opcji mogą się nieznacznie różnić w zależności od wersji
             telefonu i przeglądarki. Zainstalowana ikona otwiera zwykłą
             stronę Alertownika — nie instaluje niczego dodatkowego poza tym,

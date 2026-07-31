@@ -84,7 +84,7 @@ export function PwaController() {
         type="button"
         onClick={() => setDismissed(true)}
         aria-label="Zamknij"
-        className="text-slate-400 hover:text-slate-600 text-sm leading-none px-1 dark:text-slate-500 dark:hover:text-slate-300"
+        className="text-slate-500 hover:text-slate-600 text-sm leading-none px-1 dark:text-slate-400 dark:hover:text-slate-300"
       >
         ✕
       </button>

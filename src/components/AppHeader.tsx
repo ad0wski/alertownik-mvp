@@ -82,7 +82,7 @@ export function AppHeader() {
               >
                 Alertownik
               </Link>
-              <p className="hidden sm:block text-xs text-slate-400 mt-0.5 leading-none dark:text-slate-500">
+              <p className="hidden sm:block text-xs text-slate-500 mt-0.5 leading-none dark:text-slate-400">
                 Lokalne alerty w jednym miejscu
               </p>
             </div>
@@ -110,7 +110,7 @@ export function AppHeader() {
               <>
                 <span className="w-px h-4 bg-slate-200 mx-2 dark:bg-slate-700" aria-hidden="true" />
                 <span
-                  className="text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5 select-none cursor-default dark:text-amber-300 dark:bg-amber-500/10 dark:border-amber-500/30"
+                  className="text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5 select-none cursor-default dark:text-amber-300 dark:bg-amber-500/10 dark:border-amber-500/30"
                   aria-label="Tryb admina"
                 >
                   Admin
@@ -196,7 +196,7 @@ export function AppHeader() {
       {session && menuOpen && (
         <div className="sm:hidden border-t border-slate-100 bg-white px-4 pt-3 pb-4 flex flex-col gap-1 shadow-md dark:border-slate-800 dark:bg-slate-900">
           <div className="flex items-center gap-2 px-1 mb-2">
-            <span className="text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-0.5 dark:text-amber-300 dark:bg-amber-500/10 dark:border-amber-500/30">
+            <span className="text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-0.5 dark:text-amber-300 dark:bg-amber-500/10 dark:border-amber-500/30">
               Admin
             </span>
             <EnvironmentBadge />

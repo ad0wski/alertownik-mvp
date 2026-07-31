@@ -118,7 +118,7 @@ export function SourceHealthDashboard({
         <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-1.5">
           {HEALTH_API_SUPPORT_NOTE}
         </p>
-        <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed mb-3">
+        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-3">
           {HEALTH_ERROR_FALLBACK_NOTE}
         </p>
 
@@ -167,7 +167,7 @@ export function SourceHealthDashboard({
                 </span>
                 <span className="text-xs text-slate-500 dark:text-slate-400">
                   Kandydaci ({RECENT_CANDIDATE_DAYS} dni):{" "}
-                  <span className={row.recentCandidateCount > 0 ? "font-semibold text-purple-700 dark:text-purple-300" : "text-slate-400 dark:text-slate-500"}>
+                  <span className={row.recentCandidateCount > 0 ? "font-semibold text-purple-700 dark:text-purple-300" : "text-slate-500 dark:text-slate-400"}>
                     {row.recentCandidateCount}
                   </span>
                 </span>

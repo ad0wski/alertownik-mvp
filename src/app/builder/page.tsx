@@ -993,7 +993,7 @@ export default function BuilderPage() {
             placeholder="np. zmiana-ruchu-wkd-komorow"
             className={inputClass + " font-mono text-xs"}
           />
-          <p className="text-xs text-slate-400 dark:text-slate-500">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             Unikalny adres alertu, np. zmiana-ruchu-wkd-komorow. Wypełnia się automatycznie z tytułu.
           </p>
         </div>
@@ -1026,7 +1026,7 @@ export default function BuilderPage() {
           <div className="flex flex-col gap-2">
             <label className={labelClass}>
               Data do{" "}
-              <span className="font-normal text-slate-400 dark:text-slate-500">(opcjonalnie)</span>
+              <span className="font-normal text-slate-500 dark:text-slate-400">(opcjonalnie)</span>
             </label>
             <input
               type="date"
@@ -1288,7 +1288,7 @@ export default function BuilderPage() {
               >
                 Otwórz alert → /alerts/{supabaseSavedSlug}
               </a>
-              <p className="text-xs text-slate-400 dark:text-slate-500">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 Sprawdź publiczny widok wylogowany/incognito i na telefonie —
                 upewnij się, że alert nie wygląda jak placeholder.
               </p>
@@ -1336,7 +1336,7 @@ export default function BuilderPage() {
         <h2 className={sectionTitleClass + " mb-4"}>Zapisane drafty</h2>
 
         {drafts.length === 0 ? (
-          <p className="text-sm text-slate-400 dark:text-slate-500">Brak zapisanych draftów.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Brak zapisanych draftów.</p>
         ) : (
           <div className="flex flex-col gap-3">
             {drafts.map((draft) => (
@@ -1381,7 +1381,7 @@ export default function BuilderPage() {
         <h2 className={sectionTitleClass + " mb-4"}>Lokalnie opublikowane alerty</h2>
 
         {publishedAlerts.length === 0 ? (
-          <p className="text-sm text-slate-400 dark:text-slate-500">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             Brak lokalnie opublikowanych alertów.
           </p>
         ) : (
@@ -1453,12 +1453,12 @@ export default function BuilderPage() {
                 value={adminSearchQuery}
                 onChange={(e) => setAdminSearchQuery(e.target.value)}
                 placeholder="Szukaj po tytule, slugu, lokalizacji..."
-                className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2.5 pr-20 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500"
+                className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2.5 pr-20 text-sm text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500"
               />
               {adminSearchQuery && (
                 <button
                   onClick={() => setAdminSearchQuery("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded px-2 py-1 text-xs font-medium text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded px-2 py-1 text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                 >
                   Wyczyść
                 </button>
@@ -1555,7 +1555,7 @@ export default function BuilderPage() {
         )}
 
         {supabaseAlertsLoading && supabaseAlerts.length === 0 ? (
-          <p className="text-sm text-slate-400 dark:text-slate-500">Pobieranie alertów z bazy danych…</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Pobieranie alertów z bazy danych…</p>
         ) : supabaseAlertsError ? (
           <div className="rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3">
             <p className="text-sm font-medium text-red-700 dark:text-red-400">
@@ -1567,11 +1567,11 @@ export default function BuilderPage() {
             </p>
           </div>
         ) : supabaseAlerts.length === 0 ? (
-          <p className="text-sm text-slate-400 dark:text-slate-500">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             Brak alertów w Supabase albo nie udało się ich pobrać.
           </p>
         ) : filteredSupabaseAlerts.length === 0 ? (
-          <p className="text-sm text-slate-400 dark:text-slate-500">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             Brak alertów pasujących do filtrów.
           </p>
         ) : (
@@ -1586,21 +1586,21 @@ export default function BuilderPage() {
                     <span className={statusBadgeClass(a.status)}>
                       {statusLabel(a.status)}
                     </span>
-                    <span className="text-xs text-slate-400 dark:text-slate-500">
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
                       {categoryOptions.find((o) => o.value === a.category)?.label}
                     </span>
-                    <span className="text-xs text-slate-400 dark:text-slate-500">·</span>
-                    <span className="text-xs text-slate-400 dark:text-slate-500">
+                    <span className="text-xs text-slate-500 dark:text-slate-400">·</span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
                       {severityOptions.find((o) => o.value === a.severity)?.label}
                     </span>
                   </div>
                   <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
                     {a.title || "Bez tytułu"}
                   </p>
-                  <p className="text-xs text-slate-400 dark:text-slate-500 font-mono mt-0.5 truncate">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5 truncate">
                     {a.slug}
                   </p>
-                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                     zmieniono {formatItemDate(a.updatedAt)}
                   </p>
                 </div>
@@ -1653,7 +1653,7 @@ export default function BuilderPage() {
                       >
                         {statusActionSlug === a.slug ? "…" : "Przywróć jako draft"}
                       </button>
-                      <span className="text-xs text-slate-400 dark:text-slate-500 italic">
+                      <span className="text-xs text-slate-500 dark:text-slate-400 italic">
                         Niewidoczny publicznie
                       </span>
                     </>

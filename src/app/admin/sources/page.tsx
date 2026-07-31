@@ -225,7 +225,7 @@ const monitoringConfig: Record<
   do_sprawdzenia:      { label: "Do sprawdzenia",    badge: "bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 ring-1 ring-amber-200" },
   sprawdzone_dzis:     { label: "Sprawdzone dziś",   badge: "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-200" },
   ostatnio_sprawdzone: { label: "Ostatnio sprawdzone", badge: "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 ring-1 ring-slate-200" },
-  nieaktywne:          { label: "Nieaktywne",        badge: "bg-slate-50 dark:bg-slate-800/60 text-slate-400 dark:text-slate-500 ring-1 ring-slate-200" },
+  nieaktywne:          { label: "Nieaktywne",        badge: "bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 ring-1 ring-slate-200" },
 };
 
 function todayString(): string {
@@ -273,7 +273,7 @@ function needsChecking(source: AlertSource): boolean {
 // ── Shared styles ─────────────────────────────────────────────────────────────
 
 const inputClass =
-  "w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500";
+  "w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500";
 const labelClass = "block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -390,7 +390,7 @@ function PilotSourceSuggestions({ existingUrls, onFillForm }: PilotSourceSuggest
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">{s.name}</p>
-                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                     {categoryLabels[s.category]} · {sourceTypeLabels[s.sourceType]}
                   </p>
                 </div>
@@ -436,7 +436,7 @@ function SourceForm({
       {/* Sprint 104 — admin helper text: the one hard rule from Real Data
           Admin Checklist / Admin Source Seeding Checklist, restated where
           the mistake would actually happen. */}
-      <p className="text-xs text-slate-400 dark:text-slate-500">
+      <p className="text-xs text-slate-500 dark:text-slate-400">
         Zanim dodasz: otwórz link w przeglądarce i potwierdź, że strona
         faktycznie istnieje i pochodzi z oficjalnego źródła. Nie dodawaj
         źródła, którego nie da się zweryfikować.
@@ -486,7 +486,7 @@ function SourceForm({
               <option key={t} value={t}>{sourceTypeLabels[t]}</option>
             ))}
           </select>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Jeśli źródło ma kanał RSS, oznacz „RSS/Feed" — ułatwi to przyszłą automatyzację.
             Jeśli strona blokuje automatyczne pobieranie (np. błąd 403 przy „Sprawdź stronę"),
             oznacz „Inne" — podgląd nadal spróbuje pobrać stronę, ale traktuj ją jako źródło manualne.
@@ -764,10 +764,10 @@ function SourceCard({
             <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${monCfg.badge}`}>
               {monCfg.label}
             </span>
-            <span className="text-xs text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 px-2 py-0.5 rounded-full">
+            <span className="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 px-2 py-0.5 rounded-full">
               {categoryLabels[source.category]}
             </span>
-            <span className="text-xs text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 px-2 py-0.5 rounded-full">
+            <span className="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 px-2 py-0.5 rounded-full">
               {sourceTypeLabels[source.sourceType]}
             </span>
             <span className="text-xs text-indigo-500 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/15 border border-indigo-100 dark:border-indigo-500/20 px-2 py-0.5 rounded-full">
@@ -794,7 +794,7 @@ function SourceCard({
           )}
 
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1.5">
-            <p className="text-xs text-slate-400 dark:text-slate-500">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               {source.lastCheckedAt
                 ? `Ostatnio sprawdzono: ${formatCheckedAt(source.lastCheckedAt)}`
                 : "Jeszcze nie sprawdzano"}
@@ -827,7 +827,7 @@ function SourceCard({
           </button>
           <button
             onClick={onDelete}
-            className="px-3 py-1.5 text-xs font-medium text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors"
+            className="px-3 py-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors"
           >
             Usuń
           </button>
@@ -893,11 +893,11 @@ function SourceCard({
           </button>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <span className="text-xs text-slate-400 dark:text-slate-500">Alerty: {alertCount}</span>
+          <span className="text-xs text-slate-500 dark:text-slate-400">Alerty: {alertCount}</span>
           <Link
             href={`/admin/queue?source=${source.id}`}
             className={`text-xs font-medium ${
-              pendingCandidateCount > 0 ? "text-purple-600 dark:text-purple-400 hover:text-purple-800" : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400"
+              pendingCandidateCount > 0 ? "text-purple-600 dark:text-purple-400 hover:text-purple-800" : "text-slate-500 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-400"
             } hover:underline`}
           >
             Kandydaci: {pendingCandidateCount} →
@@ -949,7 +949,7 @@ function SourceCard({
               <span className="flex-1">{getPdfManualInstructions(source.url).instructions}</span>
               <button
                 onClick={() => setPreviewStatus("idle")}
-                className="shrink-0 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400 font-bold leading-none"
+                className="shrink-0 text-slate-500 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-400 font-bold leading-none"
                 aria-label="Zamknij"
               >
                 ×
@@ -970,7 +970,7 @@ function SourceCard({
                     setInlineDraft({ status: "idle" });
                     setInlineDraftSent(false);
                   }}
-                  className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400 px-1 py-0.5"
+                  className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-400 px-1 py-0.5"
                   aria-label="Zamknij podgląd"
                 >
                   Zamknij ×
@@ -1002,12 +1002,12 @@ function SourceCard({
               )}
 
               {previewData.candidates.length === 0 ? (
-                <p className="text-xs text-slate-400 dark:text-slate-500 mb-2">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
                   Nie znaleziono czytelnych fragmentów tekstu. Otwórz stronę i skopiuj treść ręcznie do AI Helpera.
                 </p>
               ) : (
                 <div className="space-y-2 mb-3">
-                  <p className="text-xs text-slate-400 dark:text-slate-500 mb-1">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">
                     Znalezione fragmenty ({previewData.candidates.length}) — wybierz fragment do przetworzenia:
                   </p>
                   {previewData.candidates.map((c, i) => {
@@ -1079,7 +1079,7 @@ function SourceCard({
                       const text = previewData?.rawText;
                       if (text) handlePrepareAlertFromCheck(text.slice(0, 3000));
                     }}
-                    className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400 hover:underline"
+                    className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-400 hover:underline"
                   >
                     Wyślij do AI Helpera →
                   </button>
@@ -1145,7 +1145,7 @@ function SourceCard({
                       )}
                       <button
                         onClick={() => { setInlineDraft({ status: "idle" }); setInlineDraftSent(false); }}
-                        className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400 font-bold leading-none"
+                        className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-400 font-bold leading-none"
                         aria-label="Usuń draft"
                       >
                         ×
@@ -1294,7 +1294,7 @@ function SourceCard({
 
           {/* History list */}
           {checks.length === 0 ? (
-            <p className="text-xs text-slate-400 dark:text-slate-500">Brak historii sprawdzeń.</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Brak historii sprawdzeń.</p>
           ) : (
             <div className="space-y-3">
               {checks.map((check) => (
@@ -1303,7 +1303,7 @@ function SourceCard({
                     <span className={`font-medium shrink-0 ${resultConfig[check.result].color}`}>
                       {resultConfig[check.result].label}
                     </span>
-                    <span className="text-slate-400 dark:text-slate-500 shrink-0">{formatCheckedAt(check.checkedAt)}</span>
+                    <span className="text-slate-500 dark:text-slate-400 shrink-0">{formatCheckedAt(check.checkedAt)}</span>
                   </div>
                   {check.notes && (
                     <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 whitespace-pre-wrap leading-relaxed">{check.notes}</p>
@@ -1783,12 +1783,12 @@ export default function SourcesPage() {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Szukaj po nazwie, linku albo notatkach..."
-          className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 pr-20 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 transition-colors"
+          className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 pr-20 text-sm text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 transition-colors"
         />
         {searchQuery && (
           <button
             onClick={() => setSearchQuery("")}
-            className="absolute right-3 top-1/2 -translate-y-1/2 rounded px-2 py-1 text-xs font-medium text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="absolute right-3 top-1/2 -translate-y-1/2 rounded px-2 py-1 text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             aria-label="Wyczyść wyszukiwanie"
           >
             Wyczyść
@@ -1826,7 +1826,7 @@ export default function SourcesPage() {
 
       {/* ── Result counter ───────────────────────────────────────────── */}
       {loadState === "ready" && sources.length > 0 && (
-        <p className="text-xs text-slate-400 dark:text-slate-500 mb-4">
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
           Wyświetlane źródła:{" "}
           <span className="font-semibold text-slate-600 dark:text-slate-400">{filtered.length}</span>{" "}
           z {sources.length}
@@ -1871,7 +1871,7 @@ export default function SourcesPage() {
       {loadState === "ready" && sources.length === 0 && (
         <div className="py-12">
           <p className="text-slate-600 dark:text-slate-400 text-sm font-medium mb-1">Nie dodano jeszcze żadnych źródeł.</p>
-          <p className="text-slate-400 dark:text-slate-500 text-sm mb-6">
+          <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">
             Kliknij „+ Dodaj źródło" powyżej, aby dodać własne źródło, albo otwórz{" "}
             <button
               onClick={() => setShowPilotSuggestions(true)}
@@ -1881,7 +1881,7 @@ export default function SourcesPage() {
             </button>{" "}
             i wypełnij formularz jednym z gotowych, sprawdzonych adresów dla WKD / Komorowa / Pruszkowa.
           </p>
-          <p className="text-xs text-slate-400 dark:text-slate-500 max-w-lg border-t border-slate-200 dark:border-slate-800 pt-4">
+          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-lg border-t border-slate-200 dark:border-slate-800 pt-4">
             Po dodaniu źródła użyj „Sprawdź stronę", aby pobrać treść i wygenerować draft alertu.
             Wynik sprawdzenia możesz zapisać w historii — zostanie powiązany ze źródłem.
           </p>
@@ -1890,7 +1890,7 @@ export default function SourcesPage() {
 
       {/* ── No results after filter ───────────────────────────────────── */}
       {loadState === "ready" && sources.length > 0 && filtered.length === 0 && (
-        <div className="text-center py-12 text-slate-400 dark:text-slate-500 text-sm">
+        <div className="text-center py-12 text-slate-500 dark:text-slate-400 text-sm">
           Brak źródeł pasujących do wybranych filtrów.
         </div>
       )}
@@ -1942,7 +1942,7 @@ export default function SourcesPage() {
 
       {/* Source count summary */}
       {loadState === "ready" && sources.length > 0 && (
-        <p className="text-xs text-slate-400 dark:text-slate-500 text-right mt-5">
+        <p className="text-xs text-slate-500 dark:text-slate-400 text-right mt-5">
           {sources.length === 1 ? "1 źródło łącznie" : `${sources.length} źródeł łącznie`}
           {filtered.length !== sources.length && ` · ${filtered.length} po filtrowaniu`}
         </p>

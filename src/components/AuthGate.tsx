@@ -41,7 +41,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
           <p className="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-2">
             To narzędzie robocze MVP.
           </p>
-          <p className="text-sm text-slate-400 dark:text-slate-500 mb-8">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">
             Zaloguj się, aby kontynuować.
           </p>
           <Link

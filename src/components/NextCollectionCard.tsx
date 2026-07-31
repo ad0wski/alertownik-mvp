@@ -72,7 +72,7 @@ export function NextCollectionCard({ areaKeywords }: Props) {
   if (state === "table_missing" || state === "error") {
     return (
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 sm:p-5">
-        <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-1.5">
+        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1.5">
           Najbliższy odbiór
         </p>
         <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
@@ -88,7 +88,7 @@ export function NextCollectionCard({ areaKeywords }: Props) {
   if (group.length === 0) {
     return (
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 sm:p-5">
-        <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-1.5">
+        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1.5">
           Najbliższy odbiór
         </p>
         <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
@@ -131,12 +131,12 @@ export function NextCollectionCard({ areaKeywords }: Props) {
         </a>
       )}
       {hasAreaPreference && !isMyAreaMatch && (
-        <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 leading-relaxed">
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
           Brak terminów dla Twojej okolicy — pokazujemy najbliższy ogólny termin.
         </p>
       )}
       {!hasAreaPreference && (
-        <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 leading-relaxed">
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
           Ustaw swoją okolicę powyżej, aby spersonalizować to przypomnienie.
         </p>
       )}

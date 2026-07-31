@@ -22,7 +22,7 @@ export function BetaStatusCard() {
   return (
     <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-1 mb-1.5">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
-        <span className="font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+        <span className="font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
           Status pilotażu
         </span>
         <span className="text-slate-300" aria-hidden="true">•</span>

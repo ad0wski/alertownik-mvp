@@ -385,8 +385,8 @@ function QueueContent() {
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-snug">Oczekujące</p>
           </div>
           <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 p-4">
-            <p className="text-sm font-semibold text-slate-400 dark:text-slate-500">wkrótce</p>
-            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 leading-snug">Do przeglądu (AI verifier)</p>
+            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">wkrótce</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-snug">Do przeglądu (AI verifier)</p>
           </div>
           {/* Live since Sprint 136 — the manual "Zatwierdź" action sets it. */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4">
@@ -633,7 +633,7 @@ function QueueContent() {
         <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100 mb-1">
           Starsze (z historii sprawdzeń źródeł)
         </h2>
-        <p className="text-xs text-slate-400 dark:text-slate-500 mb-4">
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
           Wykryte automatycznie z wyników sprawdzenia źródła — bez statusu ignoruj/archiwizuj
           (patrz wyjaśnienie powyżej).
         </p>
@@ -678,7 +678,7 @@ function QueueContent() {
                     <span className={`text-xs font-medium rounded-full px-2.5 py-1 border ${cfg.color}`}>
                       {cfg.label}
                     </span>
-                    <span className="text-xs text-slate-400 dark:text-slate-500">{formatCheckedAt(c.checkedAt)}</span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">{formatCheckedAt(c.checkedAt)}</span>
                   </div>
 
                   <p className="text-sm font-semibold text-slate-900 dark:text-white">{c.sourceName}</p>
@@ -686,7 +686,7 @@ function QueueContent() {
                   {c.notes ? (
                     <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed whitespace-pre-wrap">{c.notes}</p>
                   ) : (
-                    <p className="text-sm text-slate-400 dark:text-slate-500 italic">Brak zapisanej notatki z tego sprawdzenia.</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 italic">Brak zapisanej notatki z tego sprawdzenia.</p>
                   )}
 
                   {warnings.length > 0 && (
@@ -730,7 +730,7 @@ function QueueContent() {
               );
             })}
 
-            <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed mt-1">
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mt-1">
               Ten widok nie obsługuje ignorowania/archiwizacji (brak statusu w
               <span className="font-mono"> source_checks</span>) — zapisz fragment jako
               trwałego kandydata w Źródłach, aby zarządzać nim w sekcji „Kandydaci (trwali)” powyżej.
@@ -751,7 +751,7 @@ function QueueContent() {
                   <div key={c.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 flex flex-wrap items-center justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-slate-700 dark:text-slate-300 truncate">{c.sourceName}</p>
-                      <p className="text-xs text-slate-400 dark:text-slate-500">{formatCheckedAt(c.checkedAt)}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{formatCheckedAt(c.checkedAt)}</p>
                     </div>
                     {alert ? (
                       <Link
@@ -761,7 +761,7 @@ function QueueContent() {
                         {alert.title || "Bez tytułu"} →
                       </Link>
                     ) : (
-                      <span className="shrink-0 text-xs text-slate-400 dark:text-slate-500 italic">Alert niedostępny</span>
+                      <span className="shrink-0 text-xs text-slate-500 dark:text-slate-400 italic">Alert niedostępny</span>
                     )}
                   </div>
                 );

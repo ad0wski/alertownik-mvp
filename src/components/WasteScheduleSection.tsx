@@ -170,7 +170,7 @@ export function WasteScheduleSection({ areaKeywords }: Props) {
           <div key={group.date} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 sm:p-5">
             <p className="text-sm font-semibold text-slate-900 dark:text-white mb-2.5 flex flex-wrap items-center gap-2">
               {relativeDayLabel(group.date)}{" "}
-              <span className="text-slate-400 dark:text-slate-500 font-normal">— {formatScheduleDate(group.date)}</span>
+              <span className="text-slate-500 dark:text-slate-400 font-normal">— {formatScheduleDate(group.date)}</span>
               {isWithinDays(group.date, 7) && (
                 <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 rounded-full px-2 py-0.5">
                   Ten tydzień

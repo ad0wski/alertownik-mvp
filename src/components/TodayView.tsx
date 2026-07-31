@@ -93,7 +93,7 @@ export function TodayView() {
       {/* 4. Short summary of other active alerts */}
       {!loading && summaryAlerts.length > 0 && (
         <div className="flex flex-col gap-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
             Inne aktualne alerty
           </p>
           {summaryAlerts.map((a) => (

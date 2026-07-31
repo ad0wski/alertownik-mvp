@@ -306,7 +306,7 @@ export function SourceApiCheckPanel({
                 )}
               </div>
             ) : (
-              <p className="text-xs text-slate-400 dark:text-slate-500">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 Historia checków niedostępna: to źródło nie ma jeszcze wpisu w rejestrze
                 poniżej (dopasowanie po URL). Dodaj je do rejestru, aby logować checki.
               </p>

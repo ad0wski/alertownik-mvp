@@ -1045,3 +1045,118 @@ test.describe("Accessibility — skip link and live-region confirmations", () =>
     await expect(confirmation).toHaveAttribute("aria-live", "polite");
   });
 });
+
+// Contrast Hardening block (2026-07-31) — Sprint 188A's follow-up audit
+// found ~33 files using a "muted text" gray pair with light/dark polarity
+// swapped (text-slate-400 in light mode, text-slate-500 in dark mode),
+// which measures ~2.7:1 on white and ~3.75:1 on the dark surface — both
+// below the WCAG AA 4.5:1 text threshold. This block corrected the
+// polarity everywhere (text-slate-500 light / text-slate-400 dark) to
+// match the pattern already used correctly elsewhere in the app. These
+// tests compute the *real* rendered contrast ratio (WCAG relative
+// luminance formula, not just a class-name check) against actual
+// background colors, so a future regression back to the wrong pair would
+// fail here even if someone "fixed" it by editing a different token.
+function relativeLuminance(r: number, g: number, b: number): number {
+  const toLinear = (c: number) => {
+    const s = c / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  };
+  const [rl, gl, bl] = [toLinear(r), toLinear(g), toLinear(b)];
+  return 0.2126 * rl + 0.7152 * gl + 0.0722 * bl;
+}
+
+function contrastRatio(rgb1: number[], rgb2: number[]): number {
+  const l1 = relativeLuminance(rgb1[0], rgb1[1], rgb1[2]);
+  const l2 = relativeLuminance(rgb2[0], rgb2[1], rgb2[2]);
+  const [lighter, darker] = l1 > l2 ? [l1, l2] : [l2, l1];
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+// Modern Chromium serializes getComputedStyle colors from this app's
+// oklch()-based Tailwind v4 tokens as lab(...)/oklch(...) strings, not
+// rgb(...) — a plain canvas fillStyle round-trip normalizes any CSS color
+// function back to sRGB 0-255 regardless of the color space it came from.
+async function getFgBgRgb(
+  el: HTMLElement
+): Promise<{ fg: number[]; bg: number[] }> {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1;
+  canvas.height = 1;
+  const ctx = canvas.getContext("2d")!;
+  const normalize = (css: string): number[] => {
+    // clearRect is required: painting a fully-transparent color with
+    // fillRect uses source-over compositing, which leaves any
+    // previously-drawn pixel untouched — without this, a transparent
+    // background sample would silently read back as whatever color was
+    // drawn by the *previous* normalize() call (the foreground color),
+    // making fg and bg compare as identical.
+    ctx.clearRect(0, 0, 1, 1);
+    ctx.fillStyle = css;
+    ctx.fillRect(0, 0, 1, 1);
+    const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data;
+    return a === 0 ? [-1, -1, -1] : [r, g, b];
+  };
+  const style = getComputedStyle(el);
+  let bgEl: Element | null = el;
+  let bgColor = "rgba(0, 0, 0, 0)";
+  while (bgEl) {
+    const c = getComputedStyle(bgEl).backgroundColor;
+    if (c && c !== "rgba(0, 0, 0, 0)" && c !== "transparent") {
+      bgColor = c;
+      break;
+    }
+    bgEl = bgEl.parentElement;
+  }
+  const bg = normalize(bgColor);
+  // No ancestor up to <html> had a solid background-color — this app
+  // paints its page background as a CSS gradient on <body> (globals.css),
+  // which background-color walking can never see. Fall back to the
+  // actual light-mode gradient's top stop (--au-background: #f8fafc) —
+  // the real color a user sees behind ordinary page content.
+  const resolvedBg = bg[0] === -1 ? normalize("#f8fafc") : bg;
+  return { fg: normalize(style.color), bg: resolvedBg };
+}
+
+test.describe("Contrast Hardening — muted text meets WCAG AA against its real background", () => {
+  test("alert card place/date line passes 4.5:1 in light mode", async ({ page }) => {
+    await page.goto("/alerty");
+    const dateLine = page.locator("main article p", { hasText: /\d{2}\.\d{2}\.\d{4}/ }).first();
+    if (!(await dateLine.isVisible().catch(() => false))) {
+      test.skip(true, "No published alert card in this environment");
+      return;
+    }
+    const { fg, bg } = await dateLine.evaluate(getFgBgRgb);
+    const ratio = contrastRatio(fg, bg);
+    expect(ratio).toBeGreaterThanOrEqual(4.5);
+  });
+
+  test("footer 'wersja pilotażowa' text passes 4.5:1 in light mode", async ({ page }) => {
+    await page.goto("/alerty");
+    const footerText = page.getByText("Alertownik — wersja pilotażowa");
+    const { fg, bg } = await footerText.evaluate(getFgBgRgb);
+    const ratio = contrastRatio(fg, bg);
+    expect(ratio).toBeGreaterThanOrEqual(4.5);
+  });
+
+  test("category-select label passes 4.5:1 in light mode", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/alerty");
+    const label = page.locator('label[for="category-select"]');
+    const { fg, bg } = await label.evaluate(getFgBgRgb);
+    const ratio = contrastRatio(fg, bg);
+    expect(ratio).toBeGreaterThanOrEqual(4.5);
+  });
+
+  test("visible focus ring remains on interactive elements (no regression from contrast changes)", async ({ page }) => {
+    await page.goto("/alerty");
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Tab");
+    const outline = await page.evaluate(() => {
+      const el = document.activeElement;
+      if (!el) return null;
+      return getComputedStyle(el).outlineStyle;
+    });
+    expect(outline).not.toBe("none");
+  });
+});

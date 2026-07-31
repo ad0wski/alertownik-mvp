@@ -461,21 +461,21 @@ export function AlertList() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Szukaj po tytule lub treści alertu…"
-                className={`w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 transition-colors ${
+                className={`w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 transition-colors ${
                   hasQuery ? "pr-20" : ""
                 }`}
               />
               {hasQuery && (
                 <button
                   onClick={() => setQuery("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded px-2 py-1 text-xs font-medium text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded px-2 py-1 text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                   aria-label="Wyczyść wyszukiwanie"
                 >
                   Wyczyść
                 </button>
               )}
             </div>
-            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
               Przeszukuje tylko alerty pokazane obecnie na liście — nie zmienia zapisanej okolicy.
             </p>
           </div>
@@ -583,7 +583,7 @@ export function AlertList() {
                     <p className="text-base font-semibold text-slate-600 dark:text-slate-400">
                       Nie obsługujemy jeszcze tej okolicy.
                     </p>
-                    <p className="text-sm text-slate-400 dark:text-slate-500 mt-2">
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
                       Obecny pilotaż obejmuje: {pilotLocalitiesLabel()}.
                     </p>
                     <button
@@ -603,7 +603,7 @@ export function AlertList() {
                       {localitySet ? prefs.locationKeywords : "wybranych kategorii"}.
                     </p>
                     {localityUnclear && (
-                      <p className="text-sm text-slate-400 dark:text-slate-500 mt-2">
+                      <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
                         Nie znaleźliśmy obecnie alertów dla tego ustawienia. Sprawdź, czy
                         wybrana okolica znajduje się w obszarze pilotażu ({pilotLocalitiesLabel()}).
                       </p>
@@ -688,7 +688,7 @@ export function AlertList() {
                         </li>
                       )}
                     </ul>
-                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-4">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-4">
                       To nie błąd — liczba alertów i okolic w pilotażu jest jeszcze ograniczona.
                       {addAreaReason && (
                         <>
@@ -708,7 +708,7 @@ export function AlertList() {
                     <p className="text-base font-semibold text-slate-600 dark:text-slate-400">
                       Brak aktualnych alertów.
                     </p>
-                    <p className="text-sm text-slate-400 dark:text-slate-500 mt-2">
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
                       Gdy pojawią się nowe komunikaty, zobaczysz je tutaj.
                     </p>
                   </div>
@@ -737,7 +737,7 @@ export function AlertList() {
                   <div className="flex flex-col gap-4">
                     {liveFiltered.length > 0 && (
                       <div className="flex flex-wrap items-center gap-2 pt-2">
-                        <span className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                           Zakończone
                         </span>
                         <button
@@ -749,7 +749,7 @@ export function AlertList() {
                             ? "Ukryj zakończone"
                             : `Pokaż zakończone (${endedFiltered.length})`}
                         </button>
-                        <span className="text-xs text-slate-400 dark:text-slate-500">— pokazane pomocniczo</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">— pokazane pomocniczo</span>
                       </div>
                     )}
                     {(showEnded || liveFiltered.length === 0) &&

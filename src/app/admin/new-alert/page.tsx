@@ -77,13 +77,13 @@ function ChecklistRow({ ok, manual, label, note }: {
   ok?: boolean; manual?: boolean; label: string; note?: string;
 }) {
   const icon = manual ? "○" : ok ? "✓" : "✗";
-  const iconColor = manual ? "text-slate-400 dark:text-slate-500" : ok ? "text-emerald-600" : "text-red-500";
+  const iconColor = manual ? "text-slate-500 dark:text-slate-400" : ok ? "text-emerald-600" : "text-red-500";
   return (
     <li className="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300">
       <span className={`font-semibold ${iconColor} shrink-0`} aria-hidden="true">{icon}</span>
       <span>
         {label}
-        {note && <span className="text-xs text-slate-400 dark:text-slate-500"> — {note}</span>}
+        {note && <span className="text-xs text-slate-500 dark:text-slate-400"> — {note}</span>}
       </span>
     </li>
   );
@@ -302,9 +302,9 @@ function NewAlertPageInner() {
               value={sourceUrl}
               onChange={(e) => setSourceUrl(e.target.value)}
               placeholder="https://wkd.com.pl/aktualnosci/..."
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500"
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500"
             />
-            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
               Link do konkretnego komunikatu, nie do strony głównej. Bez linku
               do źródła alert nie nadaje się do publikacji.
             </p>
@@ -320,7 +320,7 @@ function NewAlertPageInner() {
               onChange={(e) => setSourceText(e.target.value)}
               rows={7}
               placeholder="Skopiuj i wklej treść komunikatu ze strony źródła..."
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 leading-relaxed"
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 leading-relaxed"
             />
           </div>
 
@@ -335,7 +335,7 @@ function NewAlertPageInner() {
                 value={area}
                 onChange={(e) => setArea(e.target.value)}
                 placeholder="np. Komorów, linia WKD"
-                className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500"
+                className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500"
               />
             </div>
             <div>
@@ -355,7 +355,7 @@ function NewAlertPageInner() {
             </div>
             <div>
               <label htmlFor="published-date" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Data komunikatu <span className="text-slate-400 dark:text-slate-500 font-normal">(opcjonalnie)</span>
+                Data komunikatu <span className="text-slate-500 dark:text-slate-400 font-normal">(opcjonalnie)</span>
               </label>
               <input
                 id="published-date"
@@ -364,7 +364,7 @@ function NewAlertPageInner() {
                 onChange={(e) => setPublishedDate(e.target.value)}
                 className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm text-slate-800 dark:text-slate-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500"
               />
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                 Kiedy źródło opublikowało komunikat — terminy robót/utrudnień
                 AI odczyta z treści.
               </p>
@@ -396,7 +396,7 @@ function NewAlertPageInner() {
             <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100 mb-1">
               2. Tak zobaczy to mieszkaniec
             </h2>
-            <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
               Szkic przygotował: {result.mode === "anthropic" ? "AI (Claude)" : "tryb lokalny bez AI"}
               {" · "}kategoria: {CATEGORY_LABELS[result.draft.category]}
               {" · "}ważność: {SEVERITY_LABELS[result.draft.severity]}
@@ -461,7 +461,7 @@ function NewAlertPageInner() {
             <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-1">
               3. Co dalej?
             </h3>
-            <p className="text-xs text-slate-400 dark:text-slate-500 mb-4">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
               Draft nie jest widoczny publicznie. Publikacja jest możliwa
               wyłącznie z Kreatora, po ręcznym sprawdzeniu źródła.
             </p>

@@ -25,7 +25,7 @@ export default function AlertyPage() {
             Nothing removed, just moved behind a closed-by-default <details>
             so the first paint is one sentence + search/filters/list. */}
         <details className="mt-1">
-          <summary className="text-xs font-medium text-slate-400 dark:text-slate-500 underline underline-offset-2 cursor-pointer w-fit">
+          <summary className="text-xs font-medium text-slate-500 dark:text-slate-400 underline underline-offset-2 cursor-pointer w-fit">
             Jak działa Alertownik?
           </summary>
           <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 leading-snug sm:leading-relaxed mt-1.5">
@@ -34,7 +34,7 @@ export default function AlertyPage() {
             drogach i odpadach dla{" "}
             <span className="font-medium text-slate-600 dark:text-slate-400">Komorowa, Pruszkowa i okolic</span>.
           </p>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
             Wczesny pilotaż —{" "}
             <Link href="/about#chce-testowac" className="font-medium text-emerald-600 hover:text-emerald-800 underline">
               zgłoś się jako tester

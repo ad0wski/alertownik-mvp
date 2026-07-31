@@ -271,7 +271,7 @@ export function AutomationStatusPanel({ activityRows }: { activityRows: Schedule
                 )
               )}
 
-              <p className="text-[11px] text-slate-400 dark:text-slate-500 leading-relaxed">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
                 {status.runHistory.retryInfoNote}
               </p>
             </div>
@@ -369,7 +369,7 @@ export function AutomationStatusPanel({ activityRows }: { activityRows: Schedule
                   brak danych, ponieważ trwała historia nie istnieje
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 dark:text-slate-500 leading-relaxed">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
                 {!status.emailAlertConfig.enabled
                   ? EMAIL_ALERT_DISABLED_NOTE
                   : !status.emailAlertConfig.configComplete
@@ -399,7 +399,7 @@ export function AutomationStatusPanel({ activityRows }: { activityRows: Schedule
                     {testState === "loading" ? "Wysyłanie…" : "Wyślij jeden testowy e-mail"}
                   </button>
                   {!status.emailAlertConfig.enabled && (
-                    <p className="text-[11px] text-slate-400 dark:text-slate-500">{OPERATIONAL_EMAIL_TEST_DISABLED_LABEL}</p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">{OPERATIONAL_EMAIL_TEST_DISABLED_LABEL}</p>
                   )}
                   {testResultLabel && (
                     <p className="text-[11px] text-slate-500 dark:text-slate-400">{testResultLabel}</p>

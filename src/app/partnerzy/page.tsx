@@ -119,7 +119,7 @@ export default function PartnersPage() {
               Zobacz aplikację →
             </Link>
           </p>
-          <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed mb-3">
+          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-3">
             Poniżej realne zrzuty aktualnej wersji serwisu (bez retuszu, bez wymyślonych danych).
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -194,7 +194,7 @@ export default function PartnersPage() {
             <li>Alertownik jest niezależnym projektem prywatnym — nie jest oficjalną aplikacją żadnej gminy, WKD, PGE ani innych operatorów.</li>
             <li>Współpraca nigdy nie wpłynie na treść ani kolejność alertów — zaufanie mieszkańców jest nienegocjowalne.</li>
           </ul>
-          <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed mt-3">
+          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mt-3">
             Zobacz też:{" "}
             <Link href="/prywatnosc" className="underline hover:text-slate-600 dark:hover:text-slate-400">
               Polityka prywatności

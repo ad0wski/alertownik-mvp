@@ -238,7 +238,7 @@ export default function AdminPage() {
           <p className="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-2">
             Panel admina jest dostępny po zalogowaniu.
           </p>
-          <p className="text-sm text-slate-400 dark:text-slate-500 mb-8">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">
             Zaloguj się, aby zobaczyć statystyki i zarządzać alertami.
           </p>
           <Link
@@ -334,7 +334,7 @@ export default function AdminPage() {
       {/* ── "Co teraz?" — task cards (Sprint 117) ──────────────────────── */}
       <section className="mb-8">
         <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100 mb-1">Co teraz?</h2>
-        <p className="text-xs text-slate-400 dark:text-slate-500 mb-4">
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
           Zadania w kolejności — liczby pochodzą z bazy, nie z pamięci.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -417,7 +417,7 @@ export default function AdminPage() {
                 <span>Każdy opublikowany alert ma link do źródła</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-slate-400 dark:text-slate-500">○</span>
+                <span className="text-slate-500 dark:text-slate-400">○</span>
                 <span>Widok na telefonie sprawdzony ręcznie</span>
               </li>
             </ul>
@@ -617,7 +617,7 @@ export default function AdminPage() {
           <details className="border-t border-slate-100 dark:border-slate-800 mt-4 pt-4 group">
             <summary className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide cursor-pointer select-none hover:text-slate-700 dark:hover:text-slate-300 mb-2.5">
               Pełna checklista przed wysłaniem do szerszej grupy
-              <span className="ml-1 font-normal normal-case text-slate-400 dark:text-slate-500">(rozwiń)</span>
+              <span className="ml-1 font-normal normal-case text-slate-500 dark:text-slate-400">(rozwiń)</span>
             </summary>
             <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-1.5">
               <li className="flex items-start gap-2">
@@ -649,7 +649,7 @@ export default function AdminPage() {
                 </span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-slate-400 dark:text-slate-500">○</span>
+                <span className="text-slate-500 dark:text-slate-400">○</span>
                 <span>
                   Harmonogram odpadów:{" "}
                   {!wasteScheduleEnabled
@@ -660,7 +660,7 @@ export default function AdminPage() {
                 </span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-slate-400 dark:text-slate-500">○</span>
+                <span className="text-slate-500 dark:text-slate-400">○</span>
                 <span>
                   Sprawdź ręcznie, że link feedbackowy (mailto) otwiera się poprawnie na telefonie —{" "}
                   <Link href="/about#feedback" className="font-medium text-blue-600 dark:text-blue-400 hover:underline">
@@ -669,7 +669,7 @@ export default function AdminPage() {
                 </span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-slate-400 dark:text-slate-500">○</span>
+                <span className="text-slate-500 dark:text-slate-400">○</span>
                 <span>Sprawdź wygląd na telefonie (np. w trybie incognito) — homepage, /odpady, /about.</span>
               </li>
             </ul>
@@ -677,29 +677,29 @@ export default function AdminPage() {
             {/* Sprint 99 — items the dashboard genuinely can't check from
                 data (deployment health, login, secrets, the test suite) —
                 explicit manual reminders instead of silently omitting them. */}
-            <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mt-4 mb-2.5">
+            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mt-4 mb-2.5">
               Dodatkowo przed wysłaniem (Sprint 99)
             </p>
             <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-1.5">
               <li className="flex items-start gap-2">
-                <span className="text-slate-400 dark:text-slate-500">○</span>
+                <span className="text-slate-500 dark:text-slate-400">○</span>
                 <span>
                   Otwórz żywy adres na Vercelu (nie tylko localhost) i sprawdź, że strona się ładuje.
                 </span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-slate-400 dark:text-slate-500">○</span>
+                <span className="text-slate-500 dark:text-slate-400">○</span>
                 <span>Zaloguj się ponownie na koncie admina — sprawdź, że logowanie wciąż działa.</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-slate-400 dark:text-slate-500">○</span>
+                <span className="text-slate-500 dark:text-slate-400">○</span>
                 <span>
                   Sprawdź, że żaden klucz/sekret (Supabase service_role, ANTHROPIC_API_KEY) nie trafił do
                   kodu albo commita — tylko zmienne środowiskowe na Vercelu.
                 </span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-slate-400 dark:text-slate-500">○</span>
+                <span className="text-slate-500 dark:text-slate-400">○</span>
                 <span>
                   Uruchom <span className="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">npm run check</span>{" "}
                   i <span className="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">npm run test:e2e</span> — oba muszą przejść.
@@ -732,7 +732,7 @@ export default function AdminPage() {
           <details>
             <summary className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide cursor-pointer select-none hover:text-slate-700 dark:hover:text-slate-300 mb-3">
               Pełna lista kroków
-              <span className="ml-1 font-normal normal-case text-slate-400 dark:text-slate-500">(rozwiń)</span>
+              <span className="ml-1 font-normal normal-case text-slate-500 dark:text-slate-400">(rozwiń)</span>
             </summary>
           <ol className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {DAILY_WORKFLOW_STEPS.map((step, i) => (
@@ -748,7 +748,7 @@ export default function AdminPage() {
                   ) : (
                     <span className="text-sm font-medium text-slate-800 dark:text-slate-100">{step.label}</span>
                   )}
-                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 leading-relaxed">{step.note}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">{step.note}</p>
                 </div>
               </li>
             ))}
@@ -817,7 +817,7 @@ export default function AdminPage() {
                     <p className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">
                       {a.title || "Bez tytułu"}
                     </p>
-                    <p className="text-xs text-slate-400 dark:text-slate-500">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
                       {categoryLabels[a.category] ?? a.category} · zmieniono {formatDate(a.updatedAt)}
                     </p>
                   </div>
@@ -880,7 +880,7 @@ export default function AdminPage() {
             {recentChecks.length > 0 && (
               <>
                 <div className="border-t border-slate-100 dark:border-slate-800 my-4" />
-                <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-2.5">
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2.5">
                   Ostatnie sprawdzenia
                 </p>
                 <div className="flex flex-col gap-2">
@@ -890,7 +890,7 @@ export default function AdminPage() {
                       <div key={check.id} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-sm">
                         <span className="font-medium text-slate-800 dark:text-slate-100 shrink-0">{check.sourceName}</span>
                         <span className={`text-xs font-medium shrink-0 ${cfg.color}`}>{cfg.label}</span>
-                        <span className="text-xs text-slate-400 dark:text-slate-500 shrink-0">
+                        <span className="text-xs text-slate-500 dark:text-slate-400 shrink-0">
                           {new Date(check.checkedAt).toLocaleString("pl-PL", {
                             day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
                           })}
@@ -911,7 +911,7 @@ export default function AdminPage() {
       {/* ── Candidate queue (Sprint 131) ───────────────────────────────── */}
       <section className="mb-8">
         <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100 mb-1">Kolejka kandydatów</h2>
-        <p className="text-xs text-slate-400 dark:text-slate-500 mb-4 leading-relaxed">
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 leading-relaxed">
           Tu będą trafiały komunikaty znalezione przez automatyzację. Najpierw
           sprawdzimy je ręcznie, potem dodamy AI verifier.
         </p>
@@ -1004,7 +1004,7 @@ export default function AdminPage() {
                 .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
                 .slice(0, 2);
               if (recent.length === 0) {
-                return <p className="text-sm text-slate-400 dark:text-slate-500">Brak zapisanych kandydatów jeszcze.</p>;
+                return <p className="text-sm text-slate-500 dark:text-slate-400">Brak zapisanych kandydatów jeszcze.</p>;
               }
               return (
                 <div className="space-y-1.5">
@@ -1013,7 +1013,7 @@ export default function AdminPage() {
                       <span className="font-medium text-slate-800 dark:text-slate-100">{n.title}</span>
                       {" — "}{n.sourceName}
                       {" · "}
-                      <span className="text-slate-400 dark:text-slate-500">{CANDIDATE_STATUS_LABELS_PL[n.status]}</span>
+                      <span className="text-slate-500 dark:text-slate-400">{CANDIDATE_STATUS_LABELS_PL[n.status]}</span>
                     </p>
                   ))}
                   {recentlyConverted.length > 0 && (
@@ -1031,7 +1031,7 @@ export default function AdminPage() {
       {/* ── Per-source operational status (Sprint 96) ─────────────────── */}
       <section className="mb-8">
         <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100 mb-1">Status workflow źródeł</h2>
-        <p className="text-xs text-slate-400 dark:text-slate-500 mb-4 leading-relaxed">
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 leading-relaxed">
           Cały pipeline w jednym miejscu: źródło → sprawdzenie → kandydaci → alerty.
           Liczby pochodzą z danych już wczytanych powyżej — bez nowych zapytań.
         </p>
@@ -1068,11 +1068,11 @@ export default function AdminPage() {
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-sm font-semibold text-slate-900 dark:text-white truncate">{s.name}</span>
-                        <span className="text-xs text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 px-2 py-0.5 rounded-full">
+                        <span className="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 px-2 py-0.5 rounded-full">
                           {categoryLabels[s.category] ?? s.category}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                         {lastCheckedLabel(s.lastCheckedAt)}
                         {" · "}
                         {candidateCount > 0 ? (
@@ -1185,7 +1185,7 @@ export default function AdminPage() {
             ))}
           </div>
         ) : recent.length === 0 ? (
-          <p className="text-sm text-slate-400 dark:text-slate-500">Brak alertów w Supabase.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Brak alertów w Supabase.</p>
         ) : (
           <div className="flex flex-col gap-3">
             {recent.map((a) => (
@@ -1196,15 +1196,15 @@ export default function AdminPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2 mb-1">
                     <span className={statusBadgeClass(a.status)}>{statusLabel(a.status)}</span>
-                    <span className="text-xs text-slate-400 dark:text-slate-500">{categoryLabels[a.category] ?? a.category}</span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">{categoryLabels[a.category] ?? a.category}</span>
                     {a.sourceName && (
-                      <span className="text-xs text-slate-400 dark:text-slate-500">· {a.sourceName}</span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400">· {a.sourceName}</span>
                     )}
                   </div>
                   <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
                     {a.title || "Bez tytułu"}
                   </p>
-                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                     zmieniono {formatDate(a.updatedAt)}
                   </p>
                 </div>

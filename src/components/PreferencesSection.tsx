@@ -81,7 +81,7 @@ export function PreferencesSection({ savedPrefs, onSave, onClear, onClose }: Pro
         <button
           onClick={onClose}
           aria-label="Zamknij ustawienia okolicy"
-          className="shrink-0 rounded-lg px-2 py-1 text-sm font-medium text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors"
+          className="shrink-0 rounded-lg px-2 py-1 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors"
         >
           Zamknij
         </button>
@@ -126,9 +126,9 @@ export function PreferencesSection({ savedPrefs, onSave, onClear, onClose }: Pro
             setForm((p) => ({ ...p, locationKeywords: e.target.value }));
           }}
           placeholder="Np. Komorów, Pruszków, ul. Raszyńska"
-          className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 transition-colors"
+          className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 transition-colors"
         />
-        <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed">
+        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
           Nie podawaj dokładnego adresu — wystarczy miejscowość lub grupa
           ulic. Alertownik pokaże alerty i terminy odbioru odpadów (strona{" "}
           <span className="font-medium text-slate-500 dark:text-slate-400">Odpady</span>), które
@@ -172,7 +172,7 @@ export function PreferencesSection({ savedPrefs, onSave, onClear, onClose }: Pro
             );
           })}
         </div>
-        <p className="text-xs text-slate-400 dark:text-slate-500">
+        <p className="text-xs text-slate-500 dark:text-slate-400">
           Brak zaznaczenia oznacza wszystkie kategorie.
         </p>
       </div>
@@ -198,7 +198,7 @@ export function PreferencesSection({ savedPrefs, onSave, onClear, onClose }: Pro
         )}
       </div>
 
-      <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed border-t border-slate-100 dark:border-slate-800 pt-3">
+      <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed border-t border-slate-100 dark:border-slate-800 pt-3">
         Nie podawaj dokładnego adresu. Preferencje zapisujemy tylko w tej
         przeglądarce.
       </p>

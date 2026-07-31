@@ -103,7 +103,7 @@ export function LinkHealthPanel({ targets }: { targets: LinkHealthTarget[] }) {
           >
             {status === "loading" ? "Sprawdzanie…" : "Sprawdź dostępność linków"}
           </button>
-          <span className="text-xs text-slate-400 dark:text-slate-500">
+          <span className="text-xs text-slate-500 dark:text-slate-400">
             {truncatedTargets.length} aktywnych źródeł
             {targets.length > truncatedTargets.length
               ? ` (pokazano pierwsze ${MAX_LINK_HEALTH_TARGETS_PER_REQUEST})`
@@ -133,13 +133,13 @@ export function LinkHealthPanel({ targets }: { targets: LinkHealthTarget[] }) {
                 Zablokowane: <span className="font-semibold">{summary.blocked}</span>
               </span>
               {checkedAt && (
-                <span className="inline-flex items-center text-xs text-slate-400 dark:text-slate-500 px-1 py-1">
+                <span className="inline-flex items-center text-xs text-slate-500 dark:text-slate-400 px-1 py-1">
                   ostatnia kontrola: {formatCheckedAt(checkedAt)}
                 </span>
               )}
             </div>
 
-            <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed mb-3">
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-3">
               {LINK_HEALTH_BLOCKED_NOTE}
             </p>
 

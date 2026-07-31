@@ -16,7 +16,7 @@ const timeStatusConfig: Record<
 > = {
   active:    { dot: "bg-emerald-500", text: "text-emerald-700 dark:text-emerald-300", label: "Trwa" },
   upcoming:  { dot: "bg-blue-400",    text: "text-blue-600 dark:text-blue-400",    label: "Nadchodzące" },
-  ended:     { dot: "bg-slate-300",   text: "text-slate-400 dark:text-slate-500",   label: "Zakończone" },
+  ended:     { dot: "bg-slate-300",   text: "text-slate-500 dark:text-slate-400",   label: "Zakończone" },
 };
 
 const PUBLISHED_KEY = "alertownik-published-alerts";
@@ -101,7 +101,7 @@ export function AlertDetailClient({ slug }: { slug: string }) {
           <p className="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-2">
             Nie znaleziono alertu
           </p>
-          <p className="text-sm text-slate-400 dark:text-slate-500 mb-8">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">
             Alert mógł zostać usunięty lub link jest nieprawidłowy.
           </p>
           <Link
@@ -171,7 +171,7 @@ export function AlertDetailClient({ slug }: { slug: string }) {
           {alert.place ? (
             <span className="font-medium text-slate-600 dark:text-slate-400">{alert.place}</span>
           ) : (
-            <span className="italic text-slate-400 dark:text-slate-500">Brak informacji o lokalizacji</span>
+            <span className="italic text-slate-500 dark:text-slate-400">Brak informacji o lokalizacji</span>
           )}
           {" · "}
           {formatAlertRange(alert.startsAt, alert.endsAt)}
@@ -185,7 +185,7 @@ export function AlertDetailClient({ slug }: { slug: string }) {
         {/* Detail rows — always stacked vertically for clean mobile reading */}
         <dl className="border-t border-slate-100 dark:border-slate-800 pt-4 flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
           <div className="flex flex-col py-3 gap-1">
-            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Kiedy
             </dt>
             <dd className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
@@ -194,35 +194,35 @@ export function AlertDetailClient({ slug }: { slug: string }) {
           </div>
 
           <div className="flex flex-col py-3 gap-1">
-            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Gdzie
             </dt>
             <dd className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-              {alert.place || <span className="italic text-slate-400 dark:text-slate-500">Brak informacji o lokalizacji</span>}
+              {alert.place || <span className="italic text-slate-500 dark:text-slate-400">Brak informacji o lokalizacji</span>}
             </dd>
           </div>
 
           <div className="flex flex-col py-3 gap-1">
-            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Co się zmienia
             </dt>
             <dd className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-              {alert.change || <span className="italic text-slate-400 dark:text-slate-500">Brak szczegółów.</span>}
+              {alert.change || <span className="italic text-slate-500 dark:text-slate-400">Brak szczegółów.</span>}
             </dd>
           </div>
 
           <div className="flex flex-col py-3 gap-1">
-            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Co zrobić
             </dt>
             <dd className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-              {alert.action || <span className="italic text-slate-400 dark:text-slate-500">Brak zalecanego działania.</span>}
+              {alert.action || <span className="italic text-slate-500 dark:text-slate-400">Brak zalecanego działania.</span>}
             </dd>
           </div>
 
           {(alert.publishedAt || alert.updatedAt) && (
             <div className="flex flex-col py-3 gap-1">
-              <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+              <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Ostatnia weryfikacja przez admina
               </dt>
               <dd className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
@@ -260,12 +260,12 @@ export function AlertDetailClient({ slug }: { slug: string }) {
           )}
         </div>
 
-        <div className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed border-t border-slate-100 dark:border-slate-800 pt-3 mt-1">
+        <div className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed border-t border-slate-100 dark:border-slate-800 pt-3 mt-1">
           <p className="flex flex-wrap items-center gap-1.5 mb-1.5">
             <span className="inline-flex items-center gap-1 font-medium text-emerald-700 dark:text-emerald-300">
               ✓ Zatwierdzone ręcznie przez administratora
             </span>
-            <span className="text-slate-300">·</span>
+            <span className="text-slate-300" aria-hidden="true">·</span>
             <span>Wczesny pilotaż — szczegóły na stronie O projekcie</span>
           </p>
           <p>

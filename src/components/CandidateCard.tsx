@@ -155,7 +155,7 @@ export function CandidateCard({
             {VERIFICATION_LABELS[c.verificationStatus]}
           </span>
         )}
-        <span className="text-xs text-slate-400 dark:text-slate-500">{formatDetectedAt(c.detectedAt)}</span>
+        <span className="text-xs text-slate-500 dark:text-slate-400">{formatDetectedAt(c.detectedAt)}</span>
       </div>
 
       <p className="text-sm font-semibold text-slate-900 dark:text-white">{c.title}</p>
@@ -210,7 +210,7 @@ export function CandidateCard({
       {canVerify(status) &&
         !verification &&
         (!c.verificationStatus || c.verificationStatus === "unverified") && (
-          <p className="text-xs text-slate-400 dark:text-slate-500 italic">
+          <p className="text-xs text-slate-500 dark:text-slate-400 italic">
             Weryfikacja: ręczna (admin). Możesz użyć pomocnika „Zweryfikuj” — deterministyczny
             raport reguł (źródło, data, duplikaty), nie AI. Decyzje zawsze należą do Ciebie.
           </p>
@@ -248,7 +248,7 @@ export function CandidateCard({
           <p className="text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
             {suggestedActionFor(verification.recommendation).hint}
           </p>
-          <p className="text-[11px] text-slate-400 dark:text-slate-500 leading-relaxed">{VERIFIER_DISCLAIMER}</p>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">{VERIFIER_DISCLAIMER}</p>
         </div>
       )}
 

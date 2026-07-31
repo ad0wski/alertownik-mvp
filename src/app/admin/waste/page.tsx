@@ -66,7 +66,7 @@ const IMPORT_PLACEHOLDER = `[
 ]`;
 
 const inputClass =
-  "w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500";
+  "w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500";
 const labelClass = "block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1";
 
 // Parses + validates a pasted JSON array against the documented row
@@ -434,7 +434,7 @@ function WasteAdminContent() {
                 </div>
                 <div>
                   <label className={labelClass}>
-                    Strefa / okolica <span className="font-normal text-slate-400 dark:text-slate-500">(opcjonalnie)</span>
+                    Strefa / okolica <span className="font-normal text-slate-500 dark:text-slate-400">(opcjonalnie)</span>
                   </label>
                   <input
                     name="areaName"
@@ -446,7 +446,7 @@ function WasteAdminContent() {
                 </div>
                 <div>
                   <label className={labelClass}>
-                    Grupa ulic <span className="font-normal text-slate-400 dark:text-slate-500">(opcjonalnie, nie dokładny adres)</span>
+                    Grupa ulic <span className="font-normal text-slate-500 dark:text-slate-400">(opcjonalnie, nie dokładny adres)</span>
                   </label>
                   <input
                     name="streetGroup"
@@ -468,7 +468,7 @@ function WasteAdminContent() {
                 </div>
                 <div>
                   <label className={labelClass}>
-                    Link do źródła <span className="font-normal text-slate-400 dark:text-slate-500">(zalecane)</span>
+                    Link do źródła <span className="font-normal text-slate-500 dark:text-slate-400">(zalecane)</span>
                   </label>
                   <input
                     type="url"
@@ -492,7 +492,7 @@ function WasteAdminContent() {
               </div>
 
               <div>
-                <label className={labelClass}>Notatki <span className="font-normal text-slate-400 dark:text-slate-500">(opcjonalnie)</span></label>
+                <label className={labelClass}>Notatki <span className="font-normal text-slate-500 dark:text-slate-400">(opcjonalnie)</span></label>
                 <textarea
                   name="notes"
                   rows={2}
@@ -587,7 +587,7 @@ function WasteAdminContent() {
                       <tbody>
                         {importParsed.map((row, i) => (
                           <tr key={i} className="border-t border-slate-100 dark:border-slate-800">
-                            <td className="px-2.5 py-1.5 text-slate-400 dark:text-slate-500">{i + 1}</td>
+                            <td className="px-2.5 py-1.5 text-slate-500 dark:text-slate-400">{i + 1}</td>
                             <td className="px-2.5 py-1.5 text-slate-700 dark:text-slate-300">
                               {[row.locality, row.areaName, row.streetGroup].filter(Boolean).join(" — ")}
                             </td>
@@ -656,7 +656,7 @@ function WasteAdminContent() {
               ))}
             </div>
           ) : filtered.length === 0 ? (
-            <div className="text-center py-12 text-slate-400 dark:text-slate-500 text-sm">
+            <div className="text-center py-12 text-slate-500 dark:text-slate-400 text-sm">
               {items.length === 0
                 ? "Brak terminów. Dodaj pierwszy termin albo zaimportuj kilka naraz z JSON."
                 : "Brak terminów pasujących do filtrów."}
@@ -668,7 +668,7 @@ function WasteAdminContent() {
                   Nadchodzące ({upcoming.length})
                 </h2>
                 {upcoming.length === 0 ? (
-                  <p className="text-sm text-slate-400 dark:text-slate-500">Brak nadchodzących terminów.</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Brak nadchodzących terminów.</p>
                 ) : (
                   <div className="space-y-2">
                     {upcoming.map((item) => (
@@ -686,7 +686,7 @@ function WasteAdminContent() {
 
               {past.length > 0 && (
                 <div>
-                  <h2 className="text-sm font-semibold text-slate-400 dark:text-slate-500 mb-3">
+                  <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-3">
                     Przeszłe ({past.length})
                   </h2>
                   <div className="space-y-2 opacity-60">
@@ -743,9 +743,9 @@ function WasteItemRow({
           ) : (
             <span className="text-xs text-amber-600 dark:text-amber-300">Brak linku źródła</span>
           )}
-          <span className="text-xs text-slate-400 dark:text-slate-500">zmieniono {formatUpdatedAt(item.updatedAt)}</span>
+          <span className="text-xs text-slate-500 dark:text-slate-400">zmieniono {formatUpdatedAt(item.updatedAt)}</span>
         </div>
-        {item.notes && <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{item.notes}</p>}
+        {item.notes && <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{item.notes}</p>}
       </div>
       <div className="flex items-center gap-2 shrink-0">
         <button

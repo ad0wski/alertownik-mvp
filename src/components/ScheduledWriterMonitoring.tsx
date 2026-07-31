@@ -48,7 +48,7 @@ export function ScheduledWriterMonitoring({ rows }: { rows: ScheduledWriterSourc
         <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-1.5">
           {WRITER_MONITORING_KILL_SWITCH_NOTE}
         </p>
-        <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed mb-3">
+        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-3">
           {WRITER_MONITORING_UNTRACKED_NOTE}
         </p>
 

@@ -158,7 +158,7 @@ export default function AboutPage() {
               </ol>
             </div>
           </div>
-          <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed mt-3">
+          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mt-3">
             Nazwy opcji mogą się nieznacznie różnić w zależności od wersji
             telefonu i przeglądarki. Ikona na ekranie głównym otwiera zwykłą
             stronę Alertownika — nie instaluje niczego dodatkowego.
