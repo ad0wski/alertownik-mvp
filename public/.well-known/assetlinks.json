@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "pl.alertownik.app",
+      "sha256_cert_fingerprints": [
+        "B4:F7:32:FC:92:A0:F8:9A:F2:42:1B:D7:BE:BC:D8:C5:B6:9F:B0:DA:C2:7D:46:11:E9:4D:E9:7B:11:CB:6A:A8"
+      ]
+    }
+  }
+]
