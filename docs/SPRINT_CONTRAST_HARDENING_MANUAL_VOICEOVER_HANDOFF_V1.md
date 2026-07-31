@@ -10,6 +10,38 @@ Adres testowy: `https://alertownik-mvp.vercel.app`
 
 ---
 
+## Wynik wstępny (Adam, 2026-07-31)
+
+Adam rozpoczął ręczne prowadzenie przez tę instrukcję na swoim
+fizycznym iPhonie i zatrzymał je po czterech krokach, ponieważ nie jest
+doświadczonym użytkownikiem czytnika ekranu i nie jest w stanie
+wiarygodnie ocenić pełnej jakości kolejności odczytu, komunikatów ani
+ergonomii nawigacji — słusznie odmówił zgadywania wyniku PASS/FAIL dla
+elementów, których oceny nie da się wykonać bez doświadczenia z
+VoiceOver.
+
+**Wstępny ręczny smoke test VoiceOver wykonany przez osobę bez
+doświadczenia z czytnikiem ekranu. Potwierdzono możliwość uruchomienia
+aplikacji, odnalezienie linku »Przejdź do treści«, przejście do głównej
+zawartości oraz rozpoznawalne nazwy i stan aktywnej zakładki dolnej
+nawigacji. Nie znaleziono oczywistego blockera. Wynik nie jest
+formalnym audytem ani testem wykonanym przez osobę niewidomą.**
+
+Konkretnie sprawdzone (kroki 1–4 sekcji A poniżej): włączenie
+VoiceOver, uruchomienie aplikacji z ikony na ekranie głównym (ikona
+odczytana poprawnie jako „Alertownik"), obecność i działanie linku
+„Przejdź do treści" na stronie głównej, oraz nazwy i stan aktywnej
+zakładki dolnej nawigacji.
+
+**Pozostałe punkty sekcji A (karta alertu, rozwijanie szczegółów,
+zakładka „Alerty", wyszukiwarka i filtry, panel „Moja okolica",
+`/instalacja` i przycisk opinii, komunikat offline/błędu), oraz całe
+sekcje B–D — pozostają: PENDING — końcowa walidacja przez
+doświadczonego użytkownika technologii asystującej przed publikacją
+sklepową.**
+
+---
+
 ## A. VoiceOver
 
 ### Gdzie włączyć
