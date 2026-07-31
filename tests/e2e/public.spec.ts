@@ -1160,3 +1160,20 @@ test.describe("Contrast Hardening — muted text meets WCAG AA against its real 
     expect(outline).not.toBe("none");
   });
 });
+
+// Manual VoiceOver Handoff block (2026-07-31) — Adam's real-device walkthrough
+// covered launch, skip link, homepage, and bottom-nav labeling before being
+// stopped (not a substitute for a full assistive-tech user's review). This
+// automated pass covers the rest of the code-level audit: the login error
+// message was found to be purely visual, with no live region announcing a
+// failed sign-in attempt to screen reader users.
+test.describe("Accessibility — login error announcement", () => {
+  test("a failed login attempt announces its error message via role=alert", async ({ page }) => {
+    await page.goto("/login");
+    await page.getByLabel("Email").fill("nieistniejacy-test-uzytkownik@example.com");
+    await page.getByLabel("Hasło").fill("z-pewnoscia-bledne-haslo-123");
+    await page.getByRole("button", { name: "Zaloguj" }).click();
+    const errorMessage = page.locator('[role="alert"]');
+    await expect(errorMessage).toBeVisible({ timeout: 15_000 });
+  });
+});
