@@ -35,6 +35,17 @@ directly from the live manifest above, so Bubblewrap's own prompts should
 mostly just confirm these same values rather than ask from scratch. The one
 field intentionally left as a placeholder is `packageId` — see below.
 
+**Re-verified field-by-field against `src/app/manifest.ts` and Production,
+2026-07-31** (Blok D — Android TWA scaffold completion): `name`,
+`launcherName`/`short_name`, `display`, `orientation`, `themeColor`/
+`theme_color`, `backgroundColor`/`background_color`, `startUrl`/`start_url`,
+`host` (matches `alertownik-mvp.vercel.app`), `iconUrl`/`maskableIconUrl`
+(both existing, correct sizes), `webManifestUrl` — all confirmed matching,
+zero drift. `orientation: "any"` was added this session — the live manifest
+already declared it, the template previously omitted it (no functional bug,
+since Bubblewrap defaults to `any` too, but this closes the gap so the
+template is a complete, exact mirror rather than a partial one).
+
 ## The one decision Adam must make before anything else here can proceed
 
 **`packageId`** (Android application ID, reverse-domain style, e.g.
@@ -75,3 +86,24 @@ the app is deleted. Not guessed in this template.
    `docs/EXEC_BLOCK_ACCELERATE_ABCD_V1.md`), 12 testers/14 days, submission.
 
 None of steps 3–6 were performed in this session.
+
+## Checklist — co jest potrzebne dopiero później (po decyzji o `packageId`)
+
+Nic poniżej nie istnieje jeszcze w tym środowisku ani w tej sesji:
+
+- [ ] **JDK 17+** — środowisko wykonawcze ma obecnie JDK 16 (`java -version`
+      potwierdzone ponownie 2026-07-31); Bubblewrap może pobrać właściwy JDK
+      automatycznie przy pierwszym uruchomieniu, jeśli się na to zgodzi.
+- [ ] **Android SDK** — `ANDROID_HOME`/`ANDROID_SDK_ROOT` nadal puste
+      (potwierdzone ponownie); Bubblewrap może też pobrać go automatycznie.
+- [ ] **Bubblewrap CLI** (`@bubblewrap/cli`) — nie zainstalowany, nie
+      uruchomiony w tej sesji.
+- [ ] **Klucz podpisujący (keystore)** — nie istnieje; zostanie wygenerowany
+      dopiero przez `bubblewrap init`, dopiero po wyborze `packageId`. Realny,
+      trwały sekret od momentu powstania — wymaga natychmiastowego backupu
+      przez Adama, nigdy nie trafia do repozytorium.
+- [ ] **`assetlinks.json`** — nie może powstać przed realnym odciskiem
+      SHA-256 z wygenerowanego klucza; celowo nieprzygotowany wcześniej.
+- [ ] **Konto Google Play Console** (jednorazowa opłata) — niezałożone.
+- [ ] **Test zamknięty: 12 testerów × 14 dni ciągle** — ten sam wymóg co
+      Local Beta (Etap A), niespełniony.

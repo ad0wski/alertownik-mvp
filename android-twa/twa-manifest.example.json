@@ -5,6 +5,7 @@
   "name": "Alertownik",
   "launcherName": "Alertownik",
   "display": "standalone",
+  "orientation": "any",
   "themeColor": "#2563eb",
   "backgroundColor": "#f0f9ff",
   "startUrl": "/",
