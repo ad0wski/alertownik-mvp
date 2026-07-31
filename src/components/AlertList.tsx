@@ -160,7 +160,12 @@ export function AlertList() {
     if (hasPreferences(newPrefs)) {
       handleSetMode("my");
     }
-    setShowSettingsPanel(false);
+    // Accessibility & Legal Readiness block — closing the panel in the same
+    // tick as PreferencesSection's own setSaved(true) meant its "Preferencje
+    // zapisane" confirmation (visual and aria-live) never actually got a
+    // chance to render before the panel unmounted. A short delay lets it
+    // appear first, for sighted and screen-reader users alike.
+    setTimeout(() => setShowSettingsPanel(false), 1200);
   }
 
   function handleClearPrefs() {
@@ -523,7 +528,7 @@ export function AlertList() {
 
           {/* Fetch error notice */}
           {fetchError && (
-            <p className="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/15 border border-amber-100 rounded-lg px-3 py-2 mb-4">
+            <p role="alert" className="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/15 border border-amber-100 rounded-lg px-3 py-2 mb-4">
               Nie udało się połączyć z serwerem. Spróbuj odświeżyć stronę za chwilę.
             </p>
           )}

@@ -192,7 +192,7 @@ export function PreferencesSection({ savedPrefs, onSave, onClear, onClose }: Pro
           Wyczyść preferencje
         </button>
         {saved && (
-          <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
+          <span role="status" aria-live="polite" className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
             Preferencje zapisane — tylko w tej przeglądarce.
           </span>
         )}

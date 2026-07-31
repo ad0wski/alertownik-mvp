@@ -1020,3 +1020,28 @@ test.describe("Sprint 158A-2 — mobile category control and first viewport", ()
     expect(box!.y).toBeLessThanOrEqual(795);
   });
 });
+
+// Accessibility & Legal Readiness block (2026-07-31) — a skip link letting
+// keyboard/screen-reader users bypass the repeated header/nav on every
+// page, and an aria-live confirmation for the "Moja okolica" save action
+// (previously a purely visual confirmation, silent to screen readers).
+test.describe("Accessibility — skip link and live-region confirmations", () => {
+  test("skip-to-content link is the first focusable element and moves focus into main content", async ({ page }) => {
+    await page.goto("/alerty");
+    await page.keyboard.press("Tab");
+    const skipLink = page.getByRole("link", { name: "Przejdź do treści" });
+    await expect(skipLink).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page.locator("#main-content")).toBeFocused();
+  });
+
+  test("saving 'Moja okolica' preferences announces confirmation via a live region", async ({ page }) => {
+    await page.goto("/alerty");
+    const settingsButton = page.getByRole("button", { name: /Ustaw moją okolicę|Zmień ustawienia/ }).first();
+    await settingsButton.click();
+    await page.getByRole("button", { name: "Zapisz preferencje" }).click();
+    const confirmation = page.locator('[role="status"]', { hasText: "Preferencje zapisane" });
+    await expect(confirmation).toBeVisible();
+    await expect(confirmation).toHaveAttribute("aria-live", "polite");
+  });
+});
