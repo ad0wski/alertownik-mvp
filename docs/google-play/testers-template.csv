@@ -1,0 +1,2 @@
+name,email,google_account_confirmed,opt_in_date,android_model,android_version,app_version,test_status,feedback_received,notes
+Jan Kowalski,jan.kowalski@example.com,yes,2026-08-01,Pixel 7,Android 14,1.0.0,invited,no,fikcyjny przykładowy wiersz — nie prawdziwy tester
