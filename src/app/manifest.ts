@@ -34,10 +34,8 @@ export default function manifest(): MetadataRoute.Manifest {
     // store listing form, not here).
     categories: ["news", "utilities"],
     icons: [
-      // Sprint 128 — PNG icons rendered from the brand SVG via
-      // scripts/generate-mobile-assets.mjs. PNGs listed before the SVG:
-      // some Android launchers and older WebViews ignore SVG manifest
-      // icons, and fixed-size PNGs are what Play/TWA packaging expects.
+      // Sprint 128 — PNG icons rendered from the brand master via
+      // scripts/generate-mobile-assets.mjs.
       {
         src: "/icon-192.png",
         sizes: "192x192",
@@ -51,21 +49,12 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose: "any",
       },
       // The maskable entry must be FULL-BLEED (no transparent corners) —
-      // the OS applies its own mask shape over the whole canvas. The
-      // previous maskable entry reused the rounded icon.svg, whose
-      // transparent corners would show through a square or squircle mask;
-      // this dedicated full-bleed PNG fixes that.
+      // the OS applies its own mask shape over the whole canvas.
       {
         src: "/icon-maskable-512.png",
         sizes: "512x512",
         type: "image/png",
         purpose: "maskable",
-      },
-      {
-        src: "/icon.svg",
-        sizes: "any",
-        type: "image/svg+xml",
-        purpose: "any",
       },
       {
         src: "/favicon.ico",

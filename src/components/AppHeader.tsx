@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
@@ -69,12 +70,14 @@ export function AppHeader() {
 
           {/* Logo */}
           <div className="flex items-center gap-2.5 shrink-0">
-            <span
-              className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center shrink-0 shadow-sm"
+            <Image
+              src="/icon-192.png"
+              alt=""
               aria-hidden="true"
-            >
-              <span className="w-2 h-2 rounded-full bg-white opacity-90" />
-            </span>
+              width={32}
+              height={32}
+              className="w-8 h-8 rounded-xl shrink-0 shadow-sm"
+            />
             <div>
               <Link
                 href="/"
