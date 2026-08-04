@@ -59,17 +59,6 @@ export default function WiecejPage() {
           </span>
           <span className="text-slate-300 dark:text-slate-600 shrink-0" aria-hidden="true">→</span>
         </a>
-
-        <Link
-          href="/login"
-          className="flex items-center justify-between gap-3 min-h-[44px] rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors"
-        >
-          <span className="flex flex-col">
-            <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">Panel admina</span>
-            <span className="text-xs text-slate-500 dark:text-slate-400">Logowanie dla administratorów.</span>
-          </span>
-          <span className="text-slate-300 dark:text-slate-600 shrink-0" aria-hidden="true">→</span>
-        </Link>
       </div>
     </main>
   );

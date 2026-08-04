@@ -69,12 +69,6 @@ export function AppFooter() {
                 Kontakt
               </a>
               <Link
-                href="/login"
-                className="text-xs text-slate-500 hover:text-slate-800 transition-colors dark:text-slate-400 dark:hover:text-slate-200"
-              >
-                Panel admina
-              </Link>
-              <Link
                 href="/instalacja"
                 className="text-xs text-slate-500 hover:text-slate-800 transition-colors dark:text-slate-400 dark:hover:text-slate-200"
               >
