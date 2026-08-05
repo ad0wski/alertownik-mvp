@@ -100,6 +100,24 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
     const outcome = await runTrustedSourceAutoPublish(writer);
 
+    // Sprint 191 — same "stays visible in run history, not just this
+    // response's JSON body" reasoning as write-candidates/route.ts. No
+    // dedicated scheduled_writer_runs column exists for this count (and
+    // none is added here — no schema change), so it's folded into the
+    // existing free-text errorSummary field alongside the pre-existing
+    // insert/mark-converted failure summary, count only, never the
+    // blocked candidate's title/text.
+    const blockedSyntheticContentCount = outcome.skipped.filter(
+      (s) => s.reason === "blocked_synthetic_content"
+    ).length;
+    const errorSummaryParts: string[] = [];
+    if (outcome.status === "insert_failed" || outcome.status === "mark_converted_failed") {
+      errorSummaryParts.push(outcome.status);
+    }
+    if (blockedSyntheticContentCount > 0) {
+      errorSummaryParts.push(`${blockedSyntheticContentCount} blocked (test/placeholder content)`);
+    }
+
     await history
       .closeRun(
         runId,
@@ -113,10 +131,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
           ambiguousCandidates: outcome.skipped.filter((s) => s.reason === "ambiguous").length,
           cappedSkipped: 0,
           duplicatesPreventedByDatabase: 0,
-          errorSummary:
-            outcome.status === "insert_failed" || outcome.status === "mark_converted_failed"
-              ? outcome.status
-              : null,
+          errorSummary: errorSummaryParts.length > 0 ? errorSummaryParts.join("; ") : null,
         })
       )
       .catch(() => ({ ok: false }));

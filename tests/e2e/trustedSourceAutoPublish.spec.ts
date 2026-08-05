@@ -229,6 +229,33 @@ test.describe("evaluateAutoPublishEligibility — fail-closed cases", () => {
     expect(result).toEqual({ eligible: false, reason: "missing_or_unsafe_candidate_url" });
   });
 
+  test("lorem ipsum placeholder title → ineligible, blocked_synthetic_content", () => {
+    const result = evaluateAutoPublishEligibility(
+      makeCandidate({ title: "Lorem ipsum dolor sit amet" }),
+      [],
+      FIXED_NOW
+    );
+    expect(result).toEqual({ eligible: false, reason: "blocked_synthetic_content" });
+  });
+
+  test("explicit 'komunikat testowy' marker in text → ineligible, blocked_synthetic_content", () => {
+    const result = evaluateAutoPublishEligibility(
+      makeCandidate({ text: "To jest KOMUNIKAT TESTOWY — proszę zignorować." }),
+      [],
+      FIXED_NOW
+    );
+    expect(result).toEqual({ eligible: false, reason: "blocked_synthetic_content" });
+  });
+
+  test("real DW 719 notice merely containing the word 'test' is NOT blocked", () => {
+    const result = evaluateAutoPublishEligibility(
+      makeCandidate({ text: REAL_DW719_TEXT + " Trwa też test syren alarmowych w gminie." }),
+      [],
+      FIXED_NOW
+    );
+    expect(result.eligible).toBe(true);
+  });
+
   test("exact URL duplicate against an existing alert → ineligible, never published", () => {
     const existing: DedupComparisonItem[] = [
       { text: "Zupełnie inny tekst", url: makeCandidate().candidateUrl! },
@@ -364,6 +391,18 @@ test.describe("runTrustedSourceAutoPublish — end to end", () => {
       { candidateId: staleCandidate.id, reason: "not_pending_or_already_converted" },
     ]);
     expect(insertedAlerts).toHaveLength(0);
+  });
+
+  test("a placeholder candidate is never published end to end — skipped as blocked_synthetic_content", async () => {
+    const placeholderCandidate = makeCandidate({ title: "Przykładowy komunikat testowy" });
+    const { writer, insertedAlerts, markedConverted } = makeFakeWriter({ candidates: [placeholderCandidate] });
+    const outcome = await runTrustedSourceAutoPublish(writer, FIXED_NOW);
+    expect(outcome.status).toBe("no_eligible_candidate");
+    expect(outcome.skipped).toEqual([
+      { candidateId: placeholderCandidate.id, reason: "blocked_synthetic_content" },
+    ]);
+    expect(insertedAlerts).toHaveLength(0);
+    expect(markedConverted).toHaveLength(0);
   });
 
   test("exact URL duplicate against a pre-existing alert → zero publications", async () => {

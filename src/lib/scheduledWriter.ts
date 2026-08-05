@@ -3,6 +3,7 @@ import { createHash } from "crypto";
 import { textSimilarity, normalizeForCompare, stripConfirmedDedupBoilerplate } from "@/lib/candidateWarnings";
 import type { CheckProposal } from "@/lib/sourceCheck";
 import { SAFE_CHECK_SOURCE_IDS } from "@/lib/sourceCheck";
+import { isSyntheticAutomationContent } from "@/lib/testContentGuard";
 
 // Sprint 147 — Scheduled Writer Foundation v1.
 //
@@ -752,6 +753,13 @@ export interface WriteCandidatesForSourceResult {
    *  insert). Always 0 today, since the migration has not been applied
    *  and the flag defaults off. */
   duplicatesPreventedByDatabase: number;
+  /** Sprint 191: count of otherwise-new proposals withheld because
+   *  title/text matched testContentGuard.ts's strong synthetic-content
+   *  markers (lorem ipsum, placeholder, "komunikat testowy", "do not
+   *  publish", etc.) — never silently dropped, counted and reported
+   *  distinctly, same "never silently resolve an uncertain/blocked case"
+   *  convention as ambiguousCandidates/cappedSkipped above. */
+  blockedSyntheticContent: number;
 }
 
 /** Given already-fetched-and-parsed proposals for one source, decides what
@@ -792,6 +800,7 @@ export async function writeCandidatesForSource(
       cappedSkipped: 0,
       sourceChecksInserted,
       duplicatesPreventedByDatabase: 0,
+      blockedSyntheticContent: 0,
     };
   }
 
@@ -819,6 +828,7 @@ export async function writeCandidatesForSource(
   let ambiguousCandidates = 0;
   let cappedSkipped = 0;
   let duplicatesPreventedByDatabase = 0;
+  let blockedSyntheticContent = 0;
   for (const proposal of input.proposals) {
     const text = proposal.rawText || proposal.excerpt || proposal.title;
     const classification = classifyProposalAgainstExisting({ text, url: proposal.url }, existingItems);
@@ -835,7 +845,14 @@ export async function writeCandidatesForSource(
       continue;
     }
 
-    // classification === "new" from here on.
+    // classification === "new" from here on. Sprint 191 — checked BEFORE
+    // the per-invocation cap, so a blocked item never consumes cap budget
+    // that a genuine new notice could otherwise use this run.
+    if (isSyntheticAutomationContent({ title: proposal.title, text })) {
+      blockedSyntheticContent++;
+      continue;
+    }
+
     if (candidatesInserted >= maxCandidatesToInsert) {
       // Genuinely new, but withheld purely by the per-invocation cap —
       // not silently dropped: counted and reported distinctly, the same
@@ -894,5 +911,6 @@ export async function writeCandidatesForSource(
     cappedSkipped,
     sourceChecksInserted,
     duplicatesPreventedByDatabase,
+    blockedSyntheticContent,
   };
 }

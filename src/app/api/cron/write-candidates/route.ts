@@ -219,6 +219,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
               cappedSkipped: 0,
               sourceChecksInserted: 0,
               duplicatesPreventedByDatabase: 0,
+              blockedSyntheticContent: 0,
             };
           }
 
@@ -255,6 +256,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
             cappedSkipped: 0,
             sourceChecksInserted: 0,
             duplicatesPreventedByDatabase: 0,
+            blockedSyntheticContent: 0,
           };
         }
       })
@@ -271,6 +273,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       (sum, r) => sum + r.duplicatesPreventedByDatabase,
       0
     );
+    const totalBlockedSyntheticContent = results.reduce((sum, r) => sum + r.blockedSyntheticContent, 0);
 
     const outcome =
       sourcesFailed === 0
@@ -278,6 +281,19 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         : sourcesFailed === sourcesChecked
           ? ("total_failure" as const)
           : ("partial_failure" as const);
+
+    // Sprint 191 — a testContentGuard.ts block is never itself a source
+    // failure (the source fetch/write both succeeded; a proposal was just
+    // withheld), so it never changes `outcome` above. It still must stay
+    // visible in run history (existing scheduled_writer_runs.error_summary
+    // field, ≤200 chars, count only — never the blocked title/text itself)
+    // rather than only ever appearing in this response's JSON body, which
+    // an operator would have to have captured at request time to see.
+    const errorSummaryParts: string[] = [];
+    if (outcome !== "success") errorSummaryParts.push(`${sourcesFailed}/${sourcesChecked} sources failed`);
+    if (totalBlockedSyntheticContent > 0) {
+      errorSummaryParts.push(`${totalBlockedSyntheticContent} blocked (test/placeholder content)`);
+    }
 
     await history
       .closeRun(
@@ -295,7 +311,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
           // Counts only — never a raw source URL, error message, or
           // stack trace, matching this route's existing "generic
           // diagnostic only" convention throughout.
-          errorSummary: outcome === "success" ? null : `${sourcesFailed}/${sourcesChecked} sources failed`,
+          errorSummary: errorSummaryParts.length > 0 ? errorSummaryParts.join("; ") : null,
         })
       )
       .catch(() => ({ ok: false }));
@@ -323,6 +339,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       cappedSkipped: totalCappedSkipped,
       sourceChecksInserted: results.reduce((sum, r) => sum + r.sourceChecksInserted, 0),
       duplicatesPreventedByDatabase: totalDuplicatesPreventedByDatabase,
+      blockedSyntheticContent: totalBlockedSyntheticContent,
       published: false,
       message:
         "Zapisano wyłącznie kandydatów ze statusem 'pending' i wpisy historii sprawdzeń — " +

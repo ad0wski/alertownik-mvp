@@ -10,6 +10,7 @@ import {
   type ScheduledSourceWriter,
 } from "@/lib/scheduledWriter";
 import { SAFE_CHECK_SOURCE_IDS } from "@/lib/sourceCheck";
+import { isSyntheticAutomationContent } from "@/lib/testContentGuard";
 
 // Sprint 180C — Trusted Source Auto-Publish v1.
 //
@@ -235,6 +236,7 @@ export type AutoPublishIneligibleReason =
   | "not_pending_or_already_converted"
   | "source_not_on_auto_publish_allowlist"
   | "missing_or_unsafe_candidate_url"
+  | "blocked_synthetic_content"
   | "duplicate"
   | "ambiguous"
   | "category_not_detected"
@@ -266,6 +268,15 @@ export function evaluateAutoPublishEligibility(
   }
   if (!isDirectSafePermalink(candidate.candidateUrl)) {
     return { eligible: false, reason: "missing_or_unsafe_candidate_url" };
+  }
+
+  // Sprint 191 — checked before dedup/category/date extraction so a
+  // synthetic candidate never reaches (and never risks matching) any
+  // later step; fail-closed by construction, same as every other check in
+  // this function (see testContentGuard.ts for why this is a separate,
+  // narrower list than the human-facing testContentDetection.ts warning).
+  if (isSyntheticAutomationContent({ title: candidate.title ?? "", text: candidate.text })) {
+    return { eligible: false, reason: "blocked_synthetic_content" };
   }
 
   const classification = classifyProposalAgainstExisting(

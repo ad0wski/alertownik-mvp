@@ -443,6 +443,86 @@ test.describe("writeCandidatesForSource — ambiguous duplicates are never silen
   });
 });
 
+test.describe("writeCandidatesForSource — synthetic/placeholder content is never silently inserted (Sprint 191)", () => {
+  test("a lorem-ipsum proposal is blocked, counted separately, never inserted", async () => {
+    const { writer, insertedCandidates } = makeFakeWriter();
+    const result = await writeCandidatesForSource(
+      writer,
+      {
+        ...baseSourceInfo,
+        proposals: [
+          { title: "Lorem ipsum dolor sit amet", excerpt: "e", rawText: "Lorem ipsum dolor sit amet consectetur", hasDate: false },
+        ],
+        registrySourceId: "fake-source-uuid",
+      },
+      10
+    );
+    expect(result.blockedSyntheticContent).toBe(1);
+    expect(result.candidatesInserted).toBe(0);
+    expect(insertedCandidates).toHaveLength(0);
+  });
+
+  test("an explicit 'komunikat testowy' proposal is blocked", async () => {
+    const { writer, insertedCandidates } = makeFakeWriter();
+    const result = await writeCandidatesForSource(
+      writer,
+      {
+        ...baseSourceInfo,
+        proposals: [
+          { title: "Uwaga", excerpt: "e", rawText: "To jest komunikat testowy, proszę zignorować.", hasDate: false },
+        ],
+        registrySourceId: "fake-source-uuid",
+      },
+      10
+    );
+    expect(result.blockedSyntheticContent).toBe(1);
+    expect(result.candidatesInserted).toBe(0);
+  });
+
+  test("a real notice merely containing the word 'test' (siren test) is inserted normally, not blocked", async () => {
+    const { writer, insertedCandidates } = makeFakeWriter();
+    const result = await writeCandidatesForSource(
+      writer,
+      {
+        ...baseSourceInfo,
+        proposals: [
+          {
+            title: "Test syren alarmowych w gminie",
+            excerpt: "e",
+            rawText: "W najbliższą środę o godz. 12:00 odbędzie się test syren alarmowych na terenie gminy.",
+            hasDate: true,
+          },
+        ],
+        registrySourceId: "fake-source-uuid",
+      },
+      10
+    );
+    expect(result.blockedSyntheticContent).toBe(0);
+    expect(result.candidatesInserted).toBe(1);
+    expect(insertedCandidates).toHaveLength(1);
+  });
+
+  test("a blocked proposal does not consume the per-invocation cap — a genuine second proposal is still inserted", async () => {
+    const { writer, insertedCandidates } = makeFakeWriter();
+    const result = await writeCandidatesForSource(
+      writer,
+      {
+        ...baseSourceInfo,
+        proposals: [
+          { title: "DO NOT PUBLISH", excerpt: "e", rawText: "do not publish — placeholder", hasDate: false },
+          { title: "Przerwa w dostawie wody", excerpt: "e", rawText: "Planowana przerwa w dostawie wody w gminie od jutra.", hasDate: true },
+        ],
+        registrySourceId: "fake-source-uuid",
+      },
+      1 // cap of 1 — only reachable if the blocked item didn't consume it
+    );
+    expect(result.blockedSyntheticContent).toBe(1);
+    expect(result.candidatesInserted).toBe(1);
+    expect(result.cappedSkipped).toBe(0);
+    expect(insertedCandidates).toHaveLength(1);
+  });
+});
+
 // ── First-live-write safety cap (Sprint 148) — server-side, never
 // caller-controlled ─────────────────────────────────────────────────────────
 
