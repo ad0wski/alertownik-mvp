@@ -341,6 +341,31 @@ test.describe("evaluateAutoPublishEligibility — fail-closed cases", () => {
     const result = evaluateAutoPublishEligibility(makeCandidate({ sourceUrl: "" }), [], FIXED_NOW);
     expect(result).toEqual({ eligible: false, reason: "missing_source_url" });
   });
+
+  // Sprint 180D — sourceName was previously passed straight through to
+  // buildAutoPublishAlertInsert with no check of its own, unlike every
+  // other required text field above.
+  test("empty source_name → ineligible, missing_source_name", () => {
+    const result = evaluateAutoPublishEligibility(makeCandidate({ sourceName: "" }), [], FIXED_NOW);
+    expect(result).toEqual({ eligible: false, reason: "missing_source_name" });
+  });
+
+  test("whitespace-only source_name → ineligible, missing_source_name", () => {
+    const result = evaluateAutoPublishEligibility(makeCandidate({ sourceName: "   " }), [], FIXED_NOW);
+    expect(result).toEqual({ eligible: false, reason: "missing_source_name" });
+  });
+
+  test("a valid source_name still passes eligibility, trimmed into fields.sourceName", () => {
+    const result = evaluateAutoPublishEligibility(
+      makeCandidate({ sourceName: "  Miasto Pruszków — aktualności  " }),
+      [],
+      FIXED_NOW
+    );
+    expect(result.eligible).toBe(true);
+    if (result.eligible) {
+      expect(result.fields.sourceName).toBe("Miasto Pruszków — aktualności");
+    }
+  });
 });
 
 // ── buildAutoPublishAlertInsert — payload shape ───────────────────────────────
@@ -450,6 +475,84 @@ test.describe("runTrustedSourceAutoPublish — end to end", () => {
     expect(outcome.status).toBe("mark_converted_failed");
     expect(insertedAlerts).toHaveLength(1);
     expect(outcome.alertId).toBe("alert-1");
+  });
+
+  // Sprint 180D — the actual re-run scenario the "mark-converted failure"
+  // test above only asserts the FIRST call's outcome for: does a SECOND
+  // call against the same still-pending candidate ever publish a second
+  // alert? This reproduces findExistingAlertComparisons's real mapping
+  // (title + " " + change as text, source_url as url — see
+  // createSupabaseScheduledWriter in scheduledWriter.ts) rather than
+  // hand-waving a match, so the dedup path exercised here is the same one
+  // production actually runs through on a real re-run.
+  test("re-run after mark_converted_failed: dedup prevents a second alert from ever being published", async () => {
+    const candidate = makeCandidate();
+    const insertedAlerts: AutoPublishAlertInsertPayload[] = [];
+    const existingAlerts: DedupComparisonItem[] = [];
+    let idCounter = 0;
+
+    const writer: ScheduledSourceWriter = {
+      async findExistingCandidateTexts() {
+        return [];
+      },
+      async findExistingAlertComparisons() {
+        return existingAlerts;
+      },
+      async insertPendingCandidate() {
+        return { ok: true };
+      },
+      async insertSourceCheck() {
+        return { ok: true };
+      },
+      // The candidate row itself is never mutated by this fake — exactly
+      // like the real writer, markCandidateAutoPublished failing leaves
+      // status/converted_alert_id untouched in the underlying table, so
+      // the next findPendingAutoPublishCandidates read still returns it
+      // as pending, unconverted.
+      async findPendingAutoPublishCandidates() {
+        return [candidate];
+      },
+      async insertPublishedAlert(payload) {
+        insertedAlerts.push(payload);
+        idCounter += 1;
+        // Mirrors createSupabaseScheduledWriter's own
+        // findExistingAlertComparisons mapping exactly (scheduledWriter.ts):
+        // text = title + " " + change, url = source_url.
+        existingAlerts.push({
+          text: [payload.title, payload.change].filter(Boolean).join(" ").trim(),
+          url: payload.source_url || null,
+        });
+        return { ok: true, id: `alert-${idCounter}` };
+      },
+      // Always fails — simulates the mark-converted step never succeeding
+      // for this candidate (e.g. a persistent RLS/network issue), which is
+      // the worst case for a re-run, not just a one-off blip.
+      async markCandidateAutoPublished() {
+        return { ok: false };
+      },
+    };
+
+    const firstOutcome = await runTrustedSourceAutoPublish(writer, FIXED_NOW);
+    expect(firstOutcome.status).toBe("mark_converted_failed");
+    expect(insertedAlerts).toHaveLength(1);
+    expect(firstOutcome.alertId).toBe("alert-1");
+    // Candidate itself is untouched — still pending, still unconverted.
+    expect(candidate.status).toBe("pending");
+    expect(candidate.convertedAlertId).toBeNull();
+
+    const secondOutcome = await runTrustedSourceAutoPublish(writer, FIXED_NOW);
+    expect(secondOutcome.status).not.toBe("published");
+    expect(secondOutcome.status).toBe("no_eligible_candidate");
+    expect(secondOutcome.skipped).toHaveLength(1);
+    expect(secondOutcome.skipped[0].candidateId).toBe(candidate.id);
+    // Confirmed (Sprint 180D): the real classifier resolves this via the
+    // text-overlap fallback as a confident "duplicate" (no URL match,
+    // since the published alert's own source_url is the source's general
+    // homepage, not the candidate's specific article permalink).
+    expect(secondOutcome.skipped[0].reason).toBe("duplicate");
+    // The real assertion: insertPublishedAlert was never called a second
+    // time, so exactly one alert exists after both runs combined.
+    expect(insertedAlerts).toHaveLength(1);
   });
 
   test("a writer missing the Sprint 180C methods (older/test fake) degrades safely to no_eligible_candidate", async () => {

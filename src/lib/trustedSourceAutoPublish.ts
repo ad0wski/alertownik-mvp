@@ -245,7 +245,8 @@ export type AutoPublishIneligibleReason =
   | "notice_expired"
   | "title_missing_or_too_short"
   | "text_too_short"
-  | "missing_source_url";
+  | "missing_source_url"
+  | "missing_source_name";
 
 /** The single fail-closed gate every auto-publish decision goes through.
  *  Every check is independent and short-circuits on first failure — no
@@ -312,6 +313,19 @@ export function evaluateAutoPublishEligibility(
     return { eligible: false, reason: "missing_source_url" };
   }
 
+  // Sprint 180D — same "no blank required field, ever" guarantee as the
+  // title/text/source_url checks just above, closing the one field that
+  // was previously passed through unchecked: an empty/whitespace-only
+  // sourceName would otherwise reach buildAutoPublishAlertInsert and only
+  // then be rejected by the RLS WITH CHECK clause (source_name is not
+  // null and length(trim(source_name)) > 0) — this makes the same
+  // guarantee explicit and fail-closed at the application layer too,
+  // instead of relying solely on the database as the backstop.
+  const sourceName = candidate.sourceName?.trim() ?? "";
+  if (!sourceName) {
+    return { eligible: false, reason: "missing_source_name" };
+  }
+
   return {
     eligible: true,
     fields: {
@@ -323,7 +337,7 @@ export function evaluateAutoPublishEligibility(
       startsAt,
       change,
       action: STANDARD_ACTION_BY_CATEGORY[category],
-      sourceName: candidate.sourceName,
+      sourceName,
       sourceUrl: candidate.sourceUrl,
     },
   };
