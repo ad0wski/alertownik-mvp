@@ -5,19 +5,32 @@ import path from "path";
 // Sprint 189 — Blok A+D Android TWA scaffold. This is a hand-written
 // config template, never a real Bubblewrap project (Bubblewrap generates a
 // real signing keystore during `init` itself, which this scaffold
-// deliberately stops before running — see android-twa/README.md). These
-// tests pin that the scaffold stays inert: no real package ID, no key
-// material, and nothing in the app wires it in.
+// deliberately stops before running — see android-twa/README.md). Adam
+// decided the real, final packageId (pl.alertownik.app) in a later block
+// (2026-07-31) — these tests pin that exact decision and confirm the
+// scaffold otherwise stays inert: no key material, no account data, and
+// nothing in the app wires it in.
 
 function readRepoFile(relativePath: string): string {
   return readFileSync(path.join(process.cwd(), relativePath), "utf8");
 }
 
 test.describe("android-twa scaffold stays inert", () => {
-  test("twa-manifest.example.json has a placeholder packageId, never a real one", () => {
+  // Adam's explicit, final packageId decision (2026-07-31) — permanent
+  // once ever uploaded to Google Play. This pins the exact, canonical
+  // value so a future edit can't silently drift to something else
+  // (including either of the two options Adam explicitly rejected:
+  // io.github.ad0wski.alertownik and com.alertownik.mvp), and confirms
+  // it's syntactically a valid Android application ID (lowercase
+  // dot-separated segments only — reused later verbatim by `bubblewrap
+  // init`, which this scaffold still stops short of running).
+  test("twa-manifest.example.json has Adam's decided, canonical packageId", () => {
     const raw = readRepoFile("android-twa/twa-manifest.example.json");
     const parsed = JSON.parse(raw);
-    expect(parsed.packageId).toContain("REPLACE_ME");
+    expect(parsed.packageId).toBe("pl.alertownik.app");
+    expect(parsed.packageId).not.toBe("io.github.ad0wski.alertownik");
+    expect(parsed.packageId).not.toBe("com.alertownik.mvp");
+    expect(parsed.packageId).toMatch(/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/);
   });
 
   test("twa-manifest.example.json values match the live manifest.ts (no drift)", () => {

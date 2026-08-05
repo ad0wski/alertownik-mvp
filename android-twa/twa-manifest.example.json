@@ -1,6 +1,6 @@
 {
-  "_comment": "TEMPLATE ONLY — not a real Bubblewrap output, never used to build anything. Values below are copied directly from src/app/manifest.ts (verified live, 2026-07-30). packageId is intentionally a placeholder — see README.md for why it cannot be guessed.",
-  "packageId": "REPLACE_ME.decision-required.see-README",
+  "_comment": "TEMPLATE ONLY — not a real Bubblewrap output, never used to build anything. Values below are copied directly from src/app/manifest.ts (verified live, 2026-07-30, re-verified 2026-07-31). packageId is Adam's explicit, final decision (2026-07-31) — see README.md for why it is permanent once uploaded to Google Play, and why this file still stops short of running `bubblewrap init` (which generates a real signing keystore).",
+  "packageId": "pl.alertownik.app",
   "host": "alertownik-mvp.vercel.app",
   "name": "Alertownik",
   "launcherName": "Alertownik",

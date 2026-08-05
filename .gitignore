@@ -44,3 +44,17 @@ yarn-error.log*
 next-env.d.ts
 
 .vercel
+
+# Android TWA — signing keys, local Bubblewrap config, and build artifacts
+# must never enter the repo. The real keystore is generated outside this
+# directory entirely (see android-twa/README.md); these rules are
+# defense-in-depth in case a future session or manual step ever points a
+# tool at a path inside the repo by mistake.
+*.jks
+*.keystore
+*.p12
+*.apk
+*.aab
+android-twa/twa-manifest.json
+android-twa/*.jks
+android-twa/*.keystore
