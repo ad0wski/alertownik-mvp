@@ -108,27 +108,103 @@ const MONTH_INDEX: Record<string, number> = {
   grudnia: 11,
 };
 
+// Sprint 192 (F3B-S2RF) — `(?!\d)` added directly after the year group: a
+// review found the un-anchored `(\d{4})` could partially match the first
+// four digits of a longer digit run (e.g. a typo'd 5-digit year, or a
+// reference number sharing this shape) instead of requiring the year to
+// end exactly where the text says it does. Purely additive — inserted
+// immediately after the existing capture, nothing else in this line
+// changed, so every previously-valid named-month case still matches
+// exactly as before.
 const START_DATE_RE = new RegExp(
-  `\\b(\\d{1,2})\\s+(${MONTHS_PL})\\b[^\\d]{0,10}(\\d{4})(?:[^\\d]{0,20}godz\\.?\\s*(\\d{1,2})(?:[:.](\\d{2}))?)?`,
+  `\\b(\\d{1,2})\\s+(${MONTHS_PL})\\b[^\\d]{0,10}(\\d{4})(?!\\d)(?:[^\\d]{0,20}godz\\.?\\s*(\\d{1,2})(?:[:.](\\d{2}))?)?`,
   "i"
 );
 
-/** Returns an ISO datetime for the first "D miesiąca RRRR[, od godz. H:MM]"
- *  pattern found, or null when no such pattern is present — never a
- *  guessed/partial date. Time defaults to 00:00 UTC when no "godz." clause
- *  is present (matches this project's existing convention of a
- *  date-only ISO string being valid, e.g. the DW 719 alert's own
- *  `starts_at: "2026-07-09 00:00:00+00"`). */
-export function extractStartDateIso(text: string): string | null {
-  const match = START_DATE_RE.exec(text);
-  if (!match) return null;
-  const day = Number(match[1]);
-  const monthWord = normalizeForCompare(match[2]).replace(/\s+/g, "");
-  const year = Number(match[3]);
-  const monthIndex = MONTH_INDEX[monthWord];
-  if (monthIndex === undefined) return null;
-  const hour = match[4] ? Number(match[4]) : 0;
-  const minute = match[5] ? Number(match[5]) : 0;
+// Sprint 192 (F3B-S2R/F3B-S2RF) — numeric Polish date format, the second
+// real form official municipal notices actually use alongside the
+// named-month one above (e.g. pruszkow.pl: "10.08.2026 r., godz. 7:00").
+// D.M.RRRR or DD.MM.RRRR (either half may be one or two digits — a real
+// notice is not guaranteed to zero-pad). Deliberately dot-separated only —
+// a slash-separated M/D/YYYY (US-style) string never matches this pattern
+// at all, so no format this function accepts is ever ambiguous between
+// D/M and M/D.
+//
+// This regex matches ONLY the date itself plus its literal Polish suffix
+// (optional "r"/"r." and/or a comma, in any of the combinations real
+// notices use, with any amount of surrounding whitespace) — deliberately
+// NOT the time clause. `(?!\d)` after the year rejects a longer digit run
+// (e.g. "10.08.20260", "10.08.20261234") for the same reason as the
+// named-month regex above. `[\s,]*` (not `[^\d]{0,N}`) is intentionally
+// narrow: it accepts only whitespace and commas around "r."/"r", never an
+// arbitrary word or stray separator, so the suffix can't accidentally
+// swallow unrelated text on its way to a "godz." clause that isn't really
+// there.
+const NUMERIC_DATE_PREFIX_RE = /\b(\d{1,2})\.(\d{1,2})\.(\d{4})(?!\d)[\s,]*r?\.?[\s,]*/i;
+
+// Matches the literal "godz."/"od godz." keyword, anchored (via `^`) to
+// the exact position immediately following NUMERIC_DATE_PREFIX_RE's own
+// match — never scans forward into unrelated prose. Its ABSENCE at that
+// exact position means "no time clause was written at all" (case 1 below,
+// valid — defaults to midnight); its PRESENCE commits the remainder of
+// the text to being a complete, well-formed time value or the whole
+// candidate must be rejected (cases 2/3 below) — never a silent fallback
+// to midnight just because what follows didn't parse.
+const NUMERIC_TIME_KEYWORD_RE = /^(?:od\s+)?godz\.?\s*/i;
+
+/** Parses a numeric H[:MM] time value from the text immediately following
+ *  a matched "godz."/"od godz." keyword. Returns null for anything that
+ *  isn't a complete, well-formed time token — this is what distinguishes
+ *  case 2 (present + valid) from case 3 (present + invalid) once
+ *  NUMERIC_TIME_KEYWORD_RE has already confirmed the clause exists at
+ *  all. Never truncates a multi-digit hour/minute to its first two digits
+ *  (`(?!\d)` after each numeric group rejects "123:00" and "07:000"
+ *  outright) and never silently drops a malformed minute clause to fall
+ *  back to hour-only (a ":"/"." separator, once seen, makes a valid
+ *  two-digit minute mandatory — "7:5" is rejected, not reinterpreted as
+ *  "7:00"). Range validity (0–23 / 0–59) is intentionally NOT checked
+ *  here — that stays the single responsibility of
+ *  buildValidatedStartDateIso below, so there is exactly one place in
+ *  this module that decides whether an hour/minute value is in range. */
+function parseNumericTimeValue(text: string): { hour: number; minute: number } | null {
+  const hourMatch = /^(\d{1,2})(?!\d)/.exec(text);
+  if (!hourMatch) return null;
+  const hour = Number(hourMatch[1]);
+  const afterHour = text.slice(hourMatch[0].length);
+  if (!/^[:.]/.test(afterHour)) {
+    // No minute separator at all — a bare hour is a complete, valid
+    // clause (preserves the pre-existing "godz. 7" → 7:00 convention).
+    return { hour, minute: 0 };
+  }
+  // A ":"/"." separator IS present, so a minute value is now REQUIRED —
+  // exactly two digits, with no further digit trailing. If it doesn't
+  // parse, the whole clause is malformed (case 3), never silently
+  // downgraded to "no minute" (case 1's behavior) just because the
+  // separator was seen.
+  const minuteMatch = /^[:.](\d{2})(?!\d)/.exec(afterHour);
+  if (!minuteMatch) return null;
+  return { hour, minute: Number(minuteMatch[1]) };
+}
+
+/** Shared construction + validation for both date formats above — never
+ *  called with a guessed/defaulted day, month, or year, only with values a
+ *  regex has already extracted from the text. Returns null for anything
+ *  that isn't a real calendar date/time, never a best-effort guess. */
+function buildValidatedStartDateIso(
+  year: number,
+  monthIndex: number,
+  day: number,
+  hour: number,
+  minute: number
+): string | null {
+  // Explicit range check — Date.UTC silently normalizes an out-of-range
+  // hour/minute into the next hour/day (e.g. minute=60 becomes +1 hour,
+  // same day) rather than failing, which the day/month/year round-trip
+  // check below would then miss entirely. Checked before construction, not
+  // inferred from a round-trip, so "godz. 24:00" and "godz. 7:60" are
+  // rejected outright rather than silently reinterpreted as valid times.
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+
   const date = new Date(Date.UTC(year, monthIndex, day, hour, minute));
   if (Number.isNaN(date.getTime())) return null;
   // Sanity check: the constructed date must round-trip to the same
@@ -143,6 +219,58 @@ export function extractStartDateIso(text: string): string | null {
     return null;
   }
   return date.toISOString();
+}
+
+/** Returns an ISO datetime for the first recognized Polish date pattern
+ *  found — either "D miesiąca RRRR[, od godz. H:MM]" (named month) or
+ *  "D.M.RRRR r.[, ][od ]godz. H[:MM]" (numeric) — or null when neither is
+ *  present, never a guessed/partial date. Time defaults to 00:00 UTC when
+ *  no "godz." clause is present at all (matches this project's existing
+ *  convention of a date-only ISO string being valid, e.g. the DW 719
+ *  alert's own `starts_at: "2026-07-09 00:00:00+00"`); when a "godz."
+ *  clause IS present, it must parse completely and validly or this
+ *  function returns null for the whole candidate — never a silent
+ *  fallback to midnight for a clause that was written but malformed. The
+ *  named-month pattern is tried first and, when it matches, behaves
+ *  exactly as before this function gained numeric-date support. */
+export function extractStartDateIso(text: string): string | null {
+  const wordMatch = START_DATE_RE.exec(text);
+  if (wordMatch) {
+    const day = Number(wordMatch[1]);
+    const monthWord = normalizeForCompare(wordMatch[2]).replace(/\s+/g, "");
+    const year = Number(wordMatch[3]);
+    const monthIndex = MONTH_INDEX[monthWord];
+    if (monthIndex === undefined) return null;
+    const hour = wordMatch[4] ? Number(wordMatch[4]) : 0;
+    const minute = wordMatch[5] ? Number(wordMatch[5]) : 0;
+    return buildValidatedStartDateIso(year, monthIndex, day, hour, minute);
+  }
+
+  const dateMatch = NUMERIC_DATE_PREFIX_RE.exec(text);
+  if (dateMatch) {
+    const day = Number(dateMatch[1]);
+    const monthIndex = Number(dateMatch[2]) - 1;
+    const year = Number(dateMatch[3]);
+    const remainder = text.slice(dateMatch.index + dateMatch[0].length);
+
+    const keywordMatch = NUMERIC_TIME_KEYWORD_RE.exec(remainder);
+    if (!keywordMatch) {
+      // Case 1: no "godz."/"od godz." clause at all — date-only, valid,
+      // defaults to midnight UTC.
+      return buildValidatedStartDateIso(year, monthIndex, day, 0, 0);
+    }
+
+    const timeValue = parseNumericTimeValue(remainder.slice(keywordMatch[0].length));
+    if (!timeValue) {
+      // Case 3: the clause is present but malformed — fail the whole
+      // candidate closed, never fall back to case 1's midnight default.
+      return null;
+    }
+    // Case 2: a complete, well-formed time clause.
+    return buildValidatedStartDateIso(year, monthIndex, day, timeValue.hour, timeValue.minute);
+  }
+
+  return null;
 }
 
 // ── Place extraction — exact match against the known pilot locality list,

@@ -162,6 +162,121 @@ test.describe("extractStartDateIso", () => {
   test("returns null for an impossible calendar date (31 lutego)", () => {
     expect(extractStartDateIso("Od 31 lutego 2026 r. coś się zmieni.")).toBeNull();
   });
+  test("regression: the pre-existing named-month + comma + godz. shape still works unchanged", () => {
+    expect(extractStartDateIso("Od 10 sierpnia 2026, godz. 7:00 obowiązuje zmiana organizacji ruchu.")).toBe(
+      "2026-08-10T07:00:00.000Z"
+    );
+  });
+});
+
+// ── Sprint 192 (F3B-S2R) — numeric Polish date format, the second real
+// form official notices use (pruszkow.pl: "10.08.2026 r., godz. 7:00"),
+// alongside the pre-existing named-month format above. ─────────────────────
+
+test.describe("extractStartDateIso — numeric format (Sprint 192)", () => {
+  test("real official format: '10.08.2026 r., godz. 7:00'", () => {
+    expect(extractStartDateIso("Od 10.08.2026 r., godz. 7:00 obowiązuje zmiana organizacji ruchu.")).toBe(
+      "2026-08-10T07:00:00.000Z"
+    );
+  });
+
+  test("'od godz.' variant: '10.08.2026 r. od godz. 7:00'", () => {
+    expect(extractStartDateIso("Od 10.08.2026 r. od godz. 7:00 obowiązuje zmiana organizacji ruchu.")).toBe(
+      "2026-08-10T07:00:00.000Z"
+    );
+  });
+
+  test("variant without 'r.': '10.08.2026, godz. 07:00'", () => {
+    expect(extractStartDateIso("Od 10.08.2026, godz. 07:00 obowiązuje zmiana organizacji ruchu.")).toBe(
+      "2026-08-10T07:00:00.000Z"
+    );
+  });
+
+  test("variant with single-digit day and month: '1.8.2026 godz. 7:00'", () => {
+    expect(extractStartDateIso("Od 1.8.2026 godz. 7:00 obowiązuje zmiana organizacji ruchu.")).toBe(
+      "2026-08-01T07:00:00.000Z"
+    );
+  });
+
+  test("numeric date without any time clause defaults to midnight UTC, same as the named-month format", () => {
+    expect(extractStartDateIso("Od 10.08.2026 r. obowiązuje zmiana organizacji ruchu.")).toBe(
+      "2026-08-10T00:00:00.000Z"
+    );
+  });
+
+  // Sprint 192 (F3B-S2RF) — the exact whitespace-heavy shape review found
+  // was previously silently misparsed as midnight instead of 7:00.
+  test("real official format with extra whitespace around 'r.' and the comma still extracts the actual time", () => {
+    expect(
+      extractStartDateIso("Od 10.08.2026    r.  ,   godz.    7:00 obowiązuje zmiana organizacji ruchu.")
+    ).toBe("2026-08-10T07:00:00.000Z");
+  });
+
+  test("leap-year date is accepted: '29.02.2028, godz. 7:00'", () => {
+    expect(extractStartDateIso("Od 29.02.2028, godz. 7:00 coś się zmieni.")).toBe("2028-02-29T07:00:00.000Z");
+  });
+
+  test("invalid: month 13", () => {
+    expect(extractStartDateIso("Od 10.13.2026 r., godz. 7:00 coś się zmieni.")).toBeNull();
+  });
+
+  test("invalid: day 0", () => {
+    expect(extractStartDateIso("Od 0.08.2026 r., godz. 7:00 coś się zmieni.")).toBeNull();
+  });
+
+  test("invalid: impossible calendar date 31.02.2026", () => {
+    expect(extractStartDateIso("Od 31.02.2026 r., godz. 7:00 coś się zmieni.")).toBeNull();
+  });
+
+  test("invalid: 29.02.2025 — not a leap year", () => {
+    expect(extractStartDateIso("Od 29.02.2025 r., godz. 7:00 coś się zmieni.")).toBeNull();
+  });
+
+  test("invalid: hour 24:00 is never a valid time", () => {
+    expect(extractStartDateIso("Od 10.08.2026 r., godz. 24:00 coś się zmieni.")).toBeNull();
+  });
+
+  test("invalid: minute 60 is never a valid time (Date.UTC would otherwise silently roll it into the next hour)", () => {
+    expect(extractStartDateIso("Od 10.08.2026 r., godz. 7:60 coś się zmieni.")).toBeNull();
+  });
+
+  // Sprint 192 (F3B-S2RF) — review found these were previously silently
+  // MISPARSED (never rejected): a 3-digit hour was truncated to its first
+  // two digits, and a 1-digit minute was silently dropped, both defaulting
+  // the rest of the (malformed) clause away instead of failing closed.
+  test("invalid: three-digit hour is rejected outright, never truncated to a plausible 2-digit hour", () => {
+    expect(extractStartDateIso("Od 10.08.2026 r., godz. 123:00 coś się zmieni.")).toBeNull();
+  });
+
+  test("invalid: single-digit minute is rejected outright, never silently dropped to hour-only", () => {
+    expect(extractStartDateIso("Od 10.08.2026 r., godz. 7:5 coś się zmieni.")).toBeNull();
+  });
+
+  test("invalid: three-digit minute is rejected outright", () => {
+    expect(extractStartDateIso("Od 10.08.2026 r., godz. 07:000 coś się zmieni.")).toBeNull();
+  });
+
+  test("invalid: negative-looking hour never parses as a valid time (no digit before ':' to match)", () => {
+    expect(extractStartDateIso("Od 10.08.2026 r., godz. -1:00 coś się zmieni.")).toBeNull();
+  });
+
+  test("invalid: US-style slash-separated M/D/YYYY never matches (this parser is dot-separated only)", () => {
+    expect(extractStartDateIso("Od 08/10/2026, godz. 7:00 coś się zmieni.")).toBeNull();
+  });
+
+  test("invalid: incomplete/random digit noise never matches", () => {
+    expect(extractStartDateIso("Numer referencyjny 99.99.9999, brak daty.")).toBeNull();
+    expect(extractStartDateIso("Kod 2026 bez żadnej pełnej daty.")).toBeNull();
+  });
+
+  // Sprint 192 (F3B-S2RF) — review found the un-anchored 4-digit year
+  // group could partially match the first four digits of a longer digit
+  // run instead of requiring an exact boundary.
+  test("invalid: a longer digit run after the year is never truncated to a plausible 4-digit year", () => {
+    expect(extractStartDateIso("Numer 10.08.20260 w dokumencie.")).toBeNull();
+    expect(extractStartDateIso("Kod referencyjny 10.08.20261234 w systemie.")).toBeNull();
+    expect(extractStartDateIso("abc10.08.20261234xyz")).toBeNull();
+  });
 });
 
 test.describe("extractPlace", () => {
@@ -187,6 +302,32 @@ test.describe("evaluateAutoPublishEligibility — safe candidate", () => {
       expect(result.fields.sourceUrl).toBe("https://www.pruszkow.pl/mieszkancy/aktualnosci-mieszkaniec/");
       expect(result.fields.severity).toBe("info");
       expect(result.fields.slug).toContain("758819cc".slice(0, 8));
+    }
+  });
+
+  // Sprint 192 (F3B-S2R) — the real pruszkow.pl notice found during the
+  // F3B-S2L live preflight ("Komunikat o czasowej zmianie organizacji
+  // ruchu na ul. Ks. Romana Indrzejczyka", published 2026-08-05, numeric
+  // date format). A short, true summary of its structure — no article
+  // full text, no personal data — anchoring this suite to a second real
+  // case that specifically exercises the numeric date parser this sprint
+  // added, not just the pre-existing named-month one.
+  test("a real candidate using the numeric date format is not rejected for a missing start date", () => {
+    const candidate = makeCandidate({
+      title: "Komunikat o czasowej zmianie organizacji ruchu na ul. Ks. Romana Indrzejczyka",
+      candidateUrl:
+        "https://www.pruszkow.pl/mieszkancy/komunikat-o-czasowej-zmianie-organizacji-ruchu-na-ul-ks-romana-indrzejczyka/",
+      text:
+        "Miasto Pruszków informuje: od 10.08.2026 r., godz. 7:00 do 13.08.2026 r., godz. 15:00 na ul. Ks. " +
+        "Romana Indrzejczyka nastąpi awaria sieci cieplnej i zajęcie pasa drogowego związane z czasową " +
+        "zmianą organizacji ruchu.",
+    });
+    const result = evaluateAutoPublishEligibility(candidate, [], new Date("2026-08-05T00:00:00Z"));
+    expect(result.eligible).toBe(true);
+    if (result.eligible) {
+      expect(result.fields.startsAt).toBe("2026-08-10T07:00:00.000Z");
+      expect(result.fields.place).toBe("Pruszków");
+      expect(result.fields.category).toBe("roads");
     }
   });
 });
