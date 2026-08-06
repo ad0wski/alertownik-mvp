@@ -11,6 +11,12 @@ import {
   type AutoPublishCandidateInput,
 } from "@/lib/trustedSourceAutoPublish";
 import type { ScheduledSourceWriter, DedupComparisonItem, AutoPublishAlertInsertPayload } from "@/lib/scheduledWriter";
+// Sprint 192 (F3B-S2TZR), section 9 — read-only import of the existing,
+// UNMODIFIED public formatter (formatAlertDate.ts is not touched by this
+// sprint) purely to confirm the Warsaw-converted starts_at value this
+// module now produces round-trips back to the real stated hour through
+// the same function every page (home/list/detail) already uses.
+import { formatAlertDateTime } from "@/lib/formatAlertDate";
 
 /**
  * Sprint 180C — Trusted Source Auto-Publish v1. CLAUDE.md Security Rule
@@ -147,9 +153,15 @@ test.describe("isDirectSafePermalink", () => {
 // ── Date extraction ────────────────────────────────────────────────────────
 
 test.describe("extractStartDateIso", () => {
-  test("extracts the real DW 719 date+time correctly", () => {
+  // Sprint 192 (F3B-S2TZR) — "godz. 9:00" in the real notice means
+  // Europe/Warsaw local time, not literal UTC (product decision,
+  // F3B-S2TZP audit). July 29 is CEST (UTC+2), so 9:00 Warsaw local is
+  // 07:00 UTC. Was "2026-07-29T09:00:00.000Z" before this sprint's fix —
+  // intentionally updated, not a regression: the old value was the
+  // documented, confirmed bug this sprint closes.
+  test("extracts the real DW 719 date+time correctly, converted from Europe/Warsaw local to UTC", () => {
     const iso = extractStartDateIso(REAL_DW719_TEXT);
-    expect(iso).toBe("2026-07-29T09:00:00.000Z");
+    expect(iso).toBe("2026-07-29T07:00:00.000Z");
   });
   test("extracts a date without a time clause, defaulting to midnight UTC", () => {
     expect(extractStartDateIso("Od 9 lipca 2026 r. obowiązuje nowa organizacja ruchu.")).toBe(
@@ -162,9 +174,344 @@ test.describe("extractStartDateIso", () => {
   test("returns null for an impossible calendar date (31 lutego)", () => {
     expect(extractStartDateIso("Od 31 lutego 2026 r. coś się zmieni.")).toBeNull();
   });
-  test("regression: the pre-existing named-month + comma + godz. shape still works unchanged", () => {
+  test("regression: the pre-existing named-month + comma + godz. shape still works, now Warsaw-converted", () => {
     expect(extractStartDateIso("Od 10 sierpnia 2026, godz. 7:00 obowiązuje zmiana organizacji ruchu.")).toBe(
-      "2026-08-10T07:00:00.000Z"
+      "2026-08-10T05:00:00.000Z"
+    );
+  });
+
+  // Sprint 192 (F3B-S2TZR) — winter (CET, UTC+1) named-month case, to
+  // confirm the DST-aware conversion applies identically to both date
+  // formats, not just the numeric one.
+  test("named-month format in winter (CET, UTC+1) converts correctly", () => {
+    expect(extractStartDateIso("Od 10 stycznia 2026 r. od godz. 7:00 coś się zmieni.")).toBe(
+      "2026-01-10T06:00:00.000Z"
+    );
+  });
+
+  test("named-month format without an explicit time clause keeps literal UTC midnight, never Warsaw-converted", () => {
+    expect(extractStartDateIso("Od 10 sierpnia 2026 r. obowiązuje zmiana organizacji ruchu.")).toBe(
+      "2026-08-10T00:00:00.000Z"
+    );
+  });
+
+  // ── Sprint 192 (F3B-S2TZF) — named-month format now shares the exact
+  // same fail-closed explicit-time parsing as the numeric format (review
+  // finding: the old inline time group could silently match only a
+  // plausible-looking PREFIX of a malformed clause and ignore the rest,
+  // e.g. "godz. 123:00" → "12:00"). Every case below is a regression test
+  // pinning that this can no longer happen. ──────────────────────────────
+
+  test("named-month required positive: '10 sierpnia 2026, godz. 7:00' → Warsaw-converted", () => {
+    expect(extractStartDateIso("10 sierpnia 2026, godz. 7:00 obowiązuje zmiana organizacji ruchu.")).toBe(
+      "2026-08-10T05:00:00.000Z"
+    );
+  });
+
+  test("named-month required positive: '10 sierpnia 2026 r., godz. 7:00'", () => {
+    expect(extractStartDateIso("10 sierpnia 2026 r., godz. 7:00 obowiązuje zmiana organizacji ruchu.")).toBe(
+      "2026-08-10T05:00:00.000Z"
+    );
+  });
+
+  test("named-month required positive: '10 sierpnia 2026 r. od godz. 7:00'", () => {
+    expect(extractStartDateIso("10 sierpnia 2026 r. od godz. 7:00 obowiązuje zmiana organizacji ruchu.")).toBe(
+      "2026-08-10T05:00:00.000Z"
+    );
+  });
+
+  test("named-month required positive: '10 sierpnia 2026 godz. 7' (bare hour, no minute)", () => {
+    expect(extractStartDateIso("10 sierpnia 2026 godz. 7 obowiązuje zmiana organizacji ruchu.")).toBe(
+      "2026-08-10T05:00:00.000Z"
+    );
+  });
+
+  test("named-month required positive: '10 sierpnia 2026' bez godziny → UTC midnight", () => {
+    expect(extractStartDateIso("10 sierpnia 2026 obowiązuje zmiana organizacji ruchu.")).toBe(
+      "2026-08-10T00:00:00.000Z"
+    );
+  });
+
+  test("named-month required negative: 'godz. 123:00' → null, never truncated to 12:00", () => {
+    expect(extractStartDateIso("10 sierpnia 2026, godz. 123:00 coś się zmieni.")).toBeNull();
+  });
+
+  test("named-month required negative: 'godz. 7:5' → null, never silently dropped to hour-only", () => {
+    expect(extractStartDateIso("10 sierpnia 2026, godz. 7:5 coś się zmieni.")).toBeNull();
+  });
+
+  test("named-month required negative: 'godz. 24:00' → null", () => {
+    expect(extractStartDateIso("10 sierpnia 2026, godz. 24:00 coś się zmieni.")).toBeNull();
+  });
+
+  test("named-month required negative: 'godz. 7:60' → null", () => {
+    expect(extractStartDateIso("10 sierpnia 2026, godz. 7:60 coś się zmieni.")).toBeNull();
+  });
+
+  test("named-month required negative: 'godz. 07:000' → null", () => {
+    expect(extractStartDateIso("10 sierpnia 2026, godz. 07:000 coś się zmieni.")).toBeNull();
+  });
+
+  test("named-month required negative: 'godz. -1:00' → null", () => {
+    expect(extractStartDateIso("10 sierpnia 2026, godz. -1:00 coś się zmieni.")).toBeNull();
+  });
+
+  // ── Sprint 192 (F3B-S2TZB) — keyword-boundary regression: "godz" is a
+  // substring of several ordinary Polish words ("godzina", "godziny",
+  // "godzinach", "pogodzenie") — none of them may be misdetected as a
+  // time-clause keyword. A false-positive detection here previously
+  // caused the WHOLE date extraction to fail (null) instead of correctly
+  // falling back to date-only/midnight semantics. ────────────────────────
+
+  test("keyword boundary: 'bez godziny' is NOT a time clause — date-only, midnight UTC", () => {
+    expect(extractStartDateIso("10 sierpnia 2026 bez godziny obowiązuje zmiana.")).toBe(
+      "2026-08-10T00:00:00.000Z"
+    );
+  });
+
+  test("keyword boundary: 'w godzinach porannych' is NOT a time clause — date-only, midnight UTC", () => {
+    expect(extractStartDateIso("10 sierpnia 2026 w godzinach porannych będą prowadzone prace.")).toBe(
+      "2026-08-10T00:00:00.000Z"
+    );
+  });
+
+  test("keyword boundary: 'pogodzenie prac' is NOT a time clause — date-only, midnight UTC", () => {
+    expect(extractStartDateIso("10 sierpnia 2026 pogodzenie prac nie jest możliwe.")).toBe(
+      "2026-08-10T00:00:00.000Z"
+    );
+  });
+
+  test("keyword boundary: 'przez kilka godzin' is NOT a time clause — date-only, midnight UTC", () => {
+    expect(extractStartDateIso("10 sierpnia 2026 przez kilka godzin trwać będą prace.")).toBe(
+      "2026-08-10T00:00:00.000Z"
+    );
+  });
+
+  test("keyword boundary: 'uzgodzenie terminu' is NOT a time clause — date-only, midnight UTC", () => {
+    expect(extractStartDateIso("10 sierpnia 2026 uzgodzenie terminu jest w toku.")).toBe(
+      "2026-08-10T00:00:00.000Z"
+    );
+  });
+
+  test("keyword boundary: 'godz.' with a dot IS still recognized as the time clause", () => {
+    expect(extractStartDateIso("10 sierpnia 2026, godz. 7:00 obowiązuje zmiana organizacji ruchu.")).toBe(
+      "2026-08-10T05:00:00.000Z"
+    );
+  });
+
+  test("keyword boundary: 'od godz' without a dot IS still recognized as the time clause", () => {
+    expect(extractStartDateIso("10 sierpnia 2026 od godz 7:00 obowiązuje zmiana organizacji ruchu.")).toBe(
+      "2026-08-10T05:00:00.000Z"
+    );
+  });
+
+  // Optional support for the exact, standalone word "godzina" (never its
+  // inflected forms "godziny"/"godzinach"/"godzinami" — those are the
+  // NOT-a-keyword cases above).
+  test("keyword boundary: the exact standalone word 'godzina' IS recognized as the time clause", () => {
+    expect(extractStartDateIso("10 sierpnia 2026, godzina 7:00 obowiązuje zmiana organizacji ruchu.")).toBe(
+      "2026-08-10T05:00:00.000Z"
+    );
+  });
+
+  // ── Sprint 192 (F3B-S2TZC) — LEFT keyword boundary: "godz"/"godzina" is
+  // a literal substring of "xgodz.", "pogodz.", "uzgodz.", "abcgodzina" —
+  // none of these may be misdetected as the keyword just because it
+  // appears glued to the end of a preceding, unrelated word/prefix with
+  // no space. A review found the RIGHT-boundary lookahead alone was not
+  // enough — the `[^\d]{0,20}` gap had no LEFT-boundary check, so it
+  // could backtrack past letters of a preceding word right up to the
+  // "godz" substring embedded inside it. Every case below must resolve
+  // to plain date-only midnight, never an extracted hour and never null. ──
+
+  test("left keyword boundary: 'xgodz.' is NOT the time clause — date-only, midnight UTC", () => {
+    expect(extractStartDateIso("10 sierpnia 2026 xgodz. 7:00")).toBe("2026-08-10T00:00:00.000Z");
+  });
+
+  test("left keyword boundary: 'pogodz.' is NOT the time clause — date-only, midnight UTC", () => {
+    expect(extractStartDateIso("10 sierpnia 2026 pogodz. 7:00")).toBe("2026-08-10T00:00:00.000Z");
+  });
+
+  test("left keyword boundary: 'uzgodz.' is NOT the time clause — date-only, midnight UTC", () => {
+    expect(extractStartDateIso("10 sierpnia 2026 uzgodz. 7:00")).toBe("2026-08-10T00:00:00.000Z");
+  });
+
+  test("left keyword boundary: 'abcgodzina' is NOT the time clause — date-only, midnight UTC", () => {
+    expect(extractStartDateIso("10 sierpnia 2026 abcgodzina 7:00")).toBe("2026-08-10T00:00:00.000Z");
+  });
+
+  // ── Sprint 192 (F3B-S2TZC) — full set of standalone-keyword positives,
+  // gathered together per this sprint's own requirement (section 5). ──────
+
+  test("standalone keyword: 'godz. 7:00' is recognized and Warsaw-converted", () => {
+    expect(extractStartDateIso("10 sierpnia 2026, godz. 7:00")).toBe("2026-08-10T05:00:00.000Z");
+  });
+
+  test("standalone keyword: 'godz 7:00' (no dot) is recognized", () => {
+    expect(extractStartDateIso("10 sierpnia 2026, godz 7:00")).toBe("2026-08-10T05:00:00.000Z");
+  });
+
+  test("standalone keyword: 'godzina 7:00' is recognized", () => {
+    expect(extractStartDateIso("10 sierpnia 2026, godzina 7:00")).toBe("2026-08-10T05:00:00.000Z");
+  });
+
+  test("standalone keyword: 'r. od godz. 7:00' is recognized", () => {
+    expect(extractStartDateIso("10 sierpnia 2026 r. od godz. 7:00")).toBe("2026-08-10T05:00:00.000Z");
+  });
+
+  // ── Sprint 192 (F3B-S2TZC) — Polish-letter glue, in addition to the
+  // pre-existing ASCII-letter cases. ───────────────────────────────────────
+
+  test("token boundary: 'godz. 7ąbc' → null (Polish letter glued directly)", () => {
+    expect(extractStartDateIso("10 sierpnia 2026, godz. 7ąbc coś się zmieni.")).toBeNull();
+  });
+
+  test("token boundary: 'godz. 7:00ąbc' → null (Polish letter glued directly)", () => {
+    expect(extractStartDateIso("10 sierpnia 2026, godz. 7:00ąbc coś się zmieni.")).toBeNull();
+  });
+
+  // ── Sprint 192 (F3B-S2TZC) — punctuation immediately continued by a
+  // digit must be rejected; the same punctuation NOT continued by a digit
+  // must remain accepted. ─────────────────────────────────────────────────
+
+  test("punctuation + digit: 'godz. 7:00.30' → null", () => {
+    expect(extractStartDateIso("10 sierpnia 2026, godz. 7:00.30 coś się zmieni.")).toBeNull();
+  });
+
+  test("punctuation + digit: 'godz. 7:00,30' → null", () => {
+    expect(extractStartDateIso("10 sierpnia 2026, godz. 7:00,30 coś się zmieni.")).toBeNull();
+  });
+
+  test("punctuation + digit: 'godz. 7:00;30' → null", () => {
+    expect(extractStartDateIso("10 sierpnia 2026, godz. 7:00;30 coś się zmieni.")).toBeNull();
+  });
+
+  test("punctuation + digit: 'godz. 7:00!30' → null", () => {
+    expect(extractStartDateIso("10 sierpnia 2026, godz. 7:00!30 coś się zmieni.")).toBeNull();
+  });
+
+  test("punctuation + digit: 'godz. 7:00?30' → null", () => {
+    expect(extractStartDateIso("10 sierpnia 2026, godz. 7:00?30 coś się zmieni.")).toBeNull();
+  });
+
+  test("punctuation + digit: 'godz. 7:00)30' → null", () => {
+    expect(extractStartDateIso("10 sierpnia 2026, godz. 7:00)30 coś się zmieni.")).toBeNull();
+  });
+
+  test("punctuation without a following digit: '!' '?' remain accepted", () => {
+    expect(extractStartDateIso("10 sierpnia 2026, godz. 7:00! coś się zmieni.")).toBe(
+      "2026-08-10T05:00:00.000Z"
+    );
+    expect(extractStartDateIso("10 sierpnia 2026, godz. 7:00? coś się zmieni.")).toBe(
+      "2026-08-10T05:00:00.000Z"
+    );
+  });
+
+  test("punctuation then a full sentence: '.' and ',' remain accepted", () => {
+    expect(extractStartDateIso("10 sierpnia 2026, godz. 7:00. Nastąpi zmiana organizacji ruchu.")).toBe(
+      "2026-08-10T05:00:00.000Z"
+    );
+    expect(extractStartDateIso("10 sierpnia 2026, godz. 7:00, nastąpi zmiana organizacji ruchu.")).toBe(
+      "2026-08-10T05:00:00.000Z"
+    );
+  });
+
+  // ── Sprint 192 (F3B-S2TZC) — dash/en-dash: a genuine range (complete
+  // second H:MM token) stays accepted; a malformed digit tail is rejected. ─
+
+  test("dash range: 'godz. 7:00-30' (incomplete digit tail) → null", () => {
+    expect(extractStartDateIso("10 sierpnia 2026, godz. 7:00-30 coś się zmieni.")).toBeNull();
+  });
+
+  test("dash range: 'godz. 7:00–30' (en dash, incomplete digit tail) → null", () => {
+    expect(extractStartDateIso("10 sierpnia 2026, godz. 7:00–30 coś się zmieni.")).toBeNull();
+  });
+
+  test("dash range: 'godz. 7:00-15:00' (complete second token) stays accepted", () => {
+    expect(extractStartDateIso("10 sierpnia 2026, godz. 7:00-15:00 coś się zmieni.")).toBe(
+      "2026-08-10T05:00:00.000Z"
+    );
+  });
+
+  // ── Sprint 192 (F3B-S2TZB) — full time-token boundary: a parsed
+  // hour[:minute] must never be accepted when glued directly to a letter,
+  // another digit run, or a spurious extra separator. ────────────────────
+
+  test("token boundary: 'godz. 7abc' → null, never accepted as hour 7", () => {
+    expect(extractStartDateIso("10 sierpnia 2026, godz. 7abc coś się zmieni.")).toBeNull();
+  });
+
+  test("token boundary: 'godz. 7:00abc' → null, never accepted as 7:00", () => {
+    expect(extractStartDateIso("10 sierpnia 2026, godz. 7:00abc coś się zmieni.")).toBeNull();
+  });
+
+  test("token boundary: 'godz. 7:00:30' → null, a glued seconds segment is not accepted", () => {
+    expect(extractStartDateIso("10 sierpnia 2026, godz. 7:00:30 coś się zmieni.")).toBeNull();
+  });
+
+  test("token boundary: 'godz. 7::00' → null, a doubled colon is not accepted", () => {
+    expect(extractStartDateIso("10 sierpnia 2026, godz. 7::00 coś się zmieni.")).toBeNull();
+  });
+
+  // ── Sprint 192 (F3B-S2TZB) — the dot separator's dual role: minute
+  // separator when followed by exactly two digits, ordinary
+  // sentence-ending punctuation otherwise — never silently reinterpreted
+  // either way when what follows is ambiguous/malformed. ─────────────────
+
+  test("dot separator: 'godz. 7.' (dot, nothing else) is a bare hour 7:00 — the dot is punctuation", () => {
+    expect(extractStartDateIso("10 sierpnia 2026, godz. 7.")).toBe("2026-08-10T05:00:00.000Z");
+  });
+
+  test("dot separator: 'godz. 7.30' (dot + two digits) is minute 7:30", () => {
+    expect(extractStartDateIso("10 sierpnia 2026, godz. 7.30 coś się zmieni.")).toBe(
+      "2026-08-10T05:30:00.000Z"
+    );
+  });
+
+  test("dot separator: 'godz. 7.3' (dot + one digit) → null, never treated as 7:00", () => {
+    expect(extractStartDateIso("10 sierpnia 2026, godz. 7.3 coś się zmieni.")).toBeNull();
+  });
+
+  test("dot separator: 'godz. 7.300' (dot + three digits) → null", () => {
+    expect(extractStartDateIso("10 sierpnia 2026, godz. 7.300 coś się zmieni.")).toBeNull();
+  });
+
+  // ── Sprint 192 (F3B-S2TZB) — allowed token boundaries: end of text,
+  // whitespace + more sentence, and ordinary trailing punctuation must
+  // all still work — the boundary fix must never require the whole
+  // message to end right after the time. ─────────────────────────────────
+
+  test("allowed boundary: comma immediately after the minute", () => {
+    expect(extractStartDateIso("10 sierpnia 2026, godz. 7:00, coś się zmieni.")).toBe(
+      "2026-08-10T05:00:00.000Z"
+    );
+  });
+
+  test("allowed boundary: period immediately after the minute", () => {
+    expect(extractStartDateIso("10 sierpnia 2026, godz. 7:00.")).toBe("2026-08-10T05:00:00.000Z");
+  });
+
+  test("allowed boundary: semicolon immediately after the minute", () => {
+    expect(extractStartDateIso("10 sierpnia 2026, godz. 7:00; coś się zmieni.")).toBe(
+      "2026-08-10T05:00:00.000Z"
+    );
+  });
+
+  test("allowed boundary: closing parenthesis immediately after the minute", () => {
+    expect(extractStartDateIso("10 sierpnia 2026, godz. 7:00) coś się zmieni.")).toBe(
+      "2026-08-10T05:00:00.000Z"
+    );
+  });
+
+  test("allowed boundary: en dash introducing a range immediately after the minute", () => {
+    expect(extractStartDateIso("10 sierpnia 2026, godz. 7:00–15:00 coś się zmieni.")).toBe(
+      "2026-08-10T05:00:00.000Z"
+    );
+  });
+
+  test("allowed boundary: whitespace then a whole further sentence", () => {
+    expect(extractStartDateIso("10 sierpnia 2026, godz. 7:00 nastąpi zmiana organizacji ruchu.")).toBe(
+      "2026-08-10T05:00:00.000Z"
     );
   });
 });
@@ -174,46 +521,86 @@ test.describe("extractStartDateIso", () => {
 // alongside the pre-existing named-month format above. ─────────────────────
 
 test.describe("extractStartDateIso — numeric format (Sprint 192)", () => {
-  test("real official format: '10.08.2026 r., godz. 7:00'", () => {
+  // Sprint 192 (F3B-S2TZR) — all four ISO expectations below were updated
+  // from their pre-F3B-S2TZR values (literal "digits as UTC", e.g.
+  // "2026-08-10T07:00:00.000Z") to the Warsaw-converted UTC instant — the
+  // product decision confirmed after F3B-S2TZP's audit found the old
+  // values displayed a 2-hour-wrong clock time to residents. Intentional,
+  // not a regression.
+  test("real official format: '10.08.2026 r., godz. 7:00' (summer, CEST UTC+2)", () => {
     expect(extractStartDateIso("Od 10.08.2026 r., godz. 7:00 obowiązuje zmiana organizacji ruchu.")).toBe(
-      "2026-08-10T07:00:00.000Z"
+      "2026-08-10T05:00:00.000Z"
     );
   });
 
   test("'od godz.' variant: '10.08.2026 r. od godz. 7:00'", () => {
     expect(extractStartDateIso("Od 10.08.2026 r. od godz. 7:00 obowiązuje zmiana organizacji ruchu.")).toBe(
-      "2026-08-10T07:00:00.000Z"
+      "2026-08-10T05:00:00.000Z"
     );
   });
 
   test("variant without 'r.': '10.08.2026, godz. 07:00'", () => {
     expect(extractStartDateIso("Od 10.08.2026, godz. 07:00 obowiązuje zmiana organizacji ruchu.")).toBe(
-      "2026-08-10T07:00:00.000Z"
+      "2026-08-10T05:00:00.000Z"
     );
   });
 
   test("variant with single-digit day and month: '1.8.2026 godz. 7:00'", () => {
     expect(extractStartDateIso("Od 1.8.2026 godz. 7:00 obowiązuje zmiana organizacji ruchu.")).toBe(
-      "2026-08-01T07:00:00.000Z"
+      "2026-08-01T05:00:00.000Z"
     );
   });
 
-  test("numeric date without any time clause defaults to midnight UTC, same as the named-month format", () => {
+  // Winter (CET, UTC+1) — matches this sprint's required example exactly.
+  test("winter numeric format: '10.01.2026 r., godz. 7:00' (CET, UTC+1)", () => {
+    expect(extractStartDateIso("Od 10.01.2026 r., godz. 7:00 obowiązuje zmiana organizacji ruchu.")).toBe(
+      "2026-01-10T06:00:00.000Z"
+    );
+  });
+
+  test("numeric date without any time clause defaults to midnight UTC, never Warsaw-converted", () => {
     expect(extractStartDateIso("Od 10.08.2026 r. obowiązuje zmiana organizacji ruchu.")).toBe(
       "2026-08-10T00:00:00.000Z"
     );
   });
 
   // Sprint 192 (F3B-S2RF) — the exact whitespace-heavy shape review found
-  // was previously silently misparsed as midnight instead of 7:00.
+  // was previously silently misparsed as midnight instead of the real
+  // time; expected value now also reflects the Warsaw conversion.
   test("real official format with extra whitespace around 'r.' and the comma still extracts the actual time", () => {
     expect(
       extractStartDateIso("Od 10.08.2026    r.  ,   godz.    7:00 obowiązuje zmiana organizacji ruchu.")
-    ).toBe("2026-08-10T07:00:00.000Z");
+    ).toBe("2026-08-10T05:00:00.000Z");
   });
 
-  test("leap-year date is accepted: '29.02.2028, godz. 7:00'", () => {
-    expect(extractStartDateIso("Od 29.02.2028, godz. 7:00 coś się zmieni.")).toBe("2028-02-29T07:00:00.000Z");
+  test("leap-year date is accepted: '29.02.2028, godz. 7:00' (winter, CET UTC+1)", () => {
+    expect(extractStartDateIso("Od 29.02.2028, godz. 7:00 coś się zmieni.")).toBe("2028-02-29T06:00:00.000Z");
+  });
+
+  // ── DST — fail closed, never guess (Sprint 192 / F3B-S2TZR) ────────────
+
+  test("DST spring-forward gap: '29.03.2026, godz. 2:30' does not exist as a real Warsaw local time → null", () => {
+    expect(extractStartDateIso("Od 29.03.2026, godz. 2:30 coś się zmieni.")).toBeNull();
+  });
+
+  test("DST autumn-back overlap: '25.10.2026, godz. 2:30' occurs twice as a real Warsaw local time → null", () => {
+    expect(extractStartDateIso("Od 25.10.2026, godz. 2:30 coś się zmieni.")).toBeNull();
+  });
+
+  test("valid hour immediately before the spring gap (CET) converts correctly", () => {
+    expect(extractStartDateIso("Od 29.03.2026, godz. 1:30 coś się zmieni.")).toBe("2026-03-29T00:30:00.000Z");
+  });
+
+  test("valid hour immediately after the spring gap (CEST) converts correctly", () => {
+    expect(extractStartDateIso("Od 29.03.2026, godz. 3:30 coś się zmieni.")).toBe("2026-03-29T01:30:00.000Z");
+  });
+
+  test("valid hour immediately before the autumn clock-back (CEST, unambiguous) converts correctly", () => {
+    expect(extractStartDateIso("Od 25.10.2026, godz. 1:30 coś się zmieni.")).toBe("2026-10-24T23:30:00.000Z");
+  });
+
+  test("valid hour immediately after the autumn clock-back (CET, unambiguous) converts correctly", () => {
+    expect(extractStartDateIso("Od 25.10.2026, godz. 3:30 coś się zmieni.")).toBe("2026-10-25T02:30:00.000Z");
   });
 
   test("invalid: month 13", () => {
@@ -277,6 +664,140 @@ test.describe("extractStartDateIso — numeric format (Sprint 192)", () => {
     expect(extractStartDateIso("Kod referencyjny 10.08.20261234 w systemie.")).toBeNull();
     expect(extractStartDateIso("abc10.08.20261234xyz")).toBeNull();
   });
+
+  // ── Sprint 192 (F3B-S2TZB) — same keyword-boundary and token-boundary
+  // fixes, exercised on the numeric format too (section 6's own
+  // requirement: both formats share the underlying rules). ───────────────
+
+  test("keyword boundary: 'godzina' following a numeric date is NOT mistaken for a substring like 'godziny'", () => {
+    expect(extractStartDateIso("Od 10.08.2026, godzina 7:00 obowiązuje zmiana organizacji ruchu.")).toBe(
+      "2026-08-10T05:00:00.000Z"
+    );
+    expect(extractStartDateIso("Od 10.08.2026, godziny 7:00 obowiązuje zmiana organizacji ruchu.")).toBe(
+      "2026-08-10T00:00:00.000Z"
+    );
+  });
+
+  test("token boundary: 'godz. 7abc' (numeric date) → null", () => {
+    expect(extractStartDateIso("Od 10.08.2026 r., godz. 7abc coś się zmieni.")).toBeNull();
+  });
+
+  test("token boundary: 'godz. 7:00abc' (numeric date) → null", () => {
+    expect(extractStartDateIso("Od 10.08.2026 r., godz. 7:00abc coś się zmieni.")).toBeNull();
+  });
+
+  test("token boundary: 'godz. 7:00:30' (numeric date) → null", () => {
+    expect(extractStartDateIso("Od 10.08.2026 r., godz. 7:00:30 coś się zmieni.")).toBeNull();
+  });
+
+  test("dot separator: 'godz. 7.3' (numeric date, dot + one digit) → null", () => {
+    expect(extractStartDateIso("Od 10.08.2026 r., godz. 7.3 coś się zmieni.")).toBeNull();
+  });
+
+  test("dot separator: 'godz. 7.' (numeric date, dot as punctuation) → bare hour 7:00", () => {
+    expect(extractStartDateIso("Od 10.08.2026 r., godz. 7.")).toBe("2026-08-10T05:00:00.000Z");
+  });
+
+  test("allowed boundary: 'godz. 7:00–15:00' (numeric date, en dash range) still parses the first time", () => {
+    expect(extractStartDateIso("Od 10.08.2026 r., godz. 7:00–15:00 coś się zmieni.")).toBe(
+      "2026-08-10T05:00:00.000Z"
+    );
+  });
+
+  // ── Sprint 192 (F3B-S2TZC) — same left-keyword-boundary and full
+  // punctuation/dash token-boundary fixes, exercised on the numeric
+  // format too. ────────────────────────────────────────────────────────
+
+  test("left keyword boundary: 'xgodz.' (numeric date) is NOT the time clause — date-only, midnight UTC", () => {
+    expect(extractStartDateIso("Od 10.08.2026 xgodz. 7:00")).toBe("2026-08-10T00:00:00.000Z");
+  });
+
+  test("left keyword boundary: 'abcgodzina' (numeric date) is NOT the time clause — date-only, midnight UTC", () => {
+    expect(extractStartDateIso("Od 10.08.2026 abcgodzina 7:00")).toBe("2026-08-10T00:00:00.000Z");
+  });
+
+  test("token boundary: 'godz. 7ąbc' (numeric date) → null", () => {
+    expect(extractStartDateIso("Od 10.08.2026 r., godz. 7ąbc coś się zmieni.")).toBeNull();
+  });
+
+  test("token boundary: 'godz. 7:00ąbc' (numeric date) → null", () => {
+    expect(extractStartDateIso("Od 10.08.2026 r., godz. 7:00ąbc coś się zmieni.")).toBeNull();
+  });
+
+  test("punctuation + digit: 'godz. 7:00.30' (numeric date) → null", () => {
+    expect(extractStartDateIso("Od 10.08.2026 r., godz. 7:00.30 coś się zmieni.")).toBeNull();
+  });
+
+  test("punctuation + digit: 'godz. 7:00,30' (numeric date) → null", () => {
+    expect(extractStartDateIso("Od 10.08.2026 r., godz. 7:00,30 coś się zmieni.")).toBeNull();
+  });
+
+  test("dash range: 'godz. 7:00-30' (numeric date, incomplete digit tail) → null", () => {
+    expect(extractStartDateIso("Od 10.08.2026 r., godz. 7:00-30 coś się zmieni.")).toBeNull();
+  });
+
+  test("dash range: 'godz. 7:00-15:00' (numeric date, complete second token) stays accepted", () => {
+    expect(extractStartDateIso("Od 10.08.2026 r., godz. 7:00-15:00 coś się zmieni.")).toBe(
+      "2026-08-10T05:00:00.000Z"
+    );
+  });
+
+  test("punctuation without a following digit: 'godz. 7:00,' (numeric date) remains accepted", () => {
+    expect(extractStartDateIso("Od 10.08.2026 r., godz. 7:00, nastąpi zmiana organizacji ruchu.")).toBe(
+      "2026-08-10T05:00:00.000Z"
+    );
+  });
+});
+
+// ── Sprint 192 (F3B-S2TZF) — operational-year boundary (MIN_SUPPORTED_
+// ALERT_YEAR / MAX_SUPPORTED_ALERT_YEAR = 2000–2100 inclusive), covering
+// both date formats. Boundary-accepted cases use a date deep in summer
+// (15 June), far from any DST transition, so the expected UTC instant
+// only depends on the ordinary CEST offset — independently confirmed via
+// the actual warsawLocalToUtcIso algorithm before being written here, not
+// assumed. ──────────────────────────────────────────────────────────────
+
+test.describe("extractStartDateIso — operational year range (Sprint 192 / F3B-S2TZF)", () => {
+  test("rejected: numeric year 0050 (Date.UTC's 0–99 special-case would otherwise silently mean 1950)", () => {
+    expect(extractStartDateIso("Od 10.08.0050, godz. 7:00 coś się zmieni.")).toBeNull();
+  });
+
+  test("rejected: named-month year 0050", () => {
+    expect(extractStartDateIso("Od 10 sierpnia 0050, godz. 7:00 coś się zmieni.")).toBeNull();
+  });
+
+  test("rejected: year 1999 (one below the supported minimum)", () => {
+    expect(extractStartDateIso("Od 10.08.1999, godz. 7:00 coś się zmieni.")).toBeNull();
+    expect(extractStartDateIso("Od 10 sierpnia 1999, godz. 7:00 coś się zmieni.")).toBeNull();
+  });
+
+  test("rejected: year 2101 (one above the supported maximum)", () => {
+    expect(extractStartDateIso("Od 10.08.2101, godz. 7:00 coś się zmieni.")).toBeNull();
+    expect(extractStartDateIso("Od 10 sierpnia 2101, godz. 7:00 coś się zmieni.")).toBeNull();
+  });
+
+  test("accepted boundary: year 2000 (numeric format)", () => {
+    expect(extractStartDateIso("Od 15.06.2000, godz. 10:00 coś się zmieni.")).toBe("2000-06-15T08:00:00.000Z");
+  });
+
+  test("accepted boundary: year 2100 (named-month format)", () => {
+    expect(extractStartDateIso("Od 15 czerwca 2100, godz. 10:00 coś się zmieni.")).toBe(
+      "2100-06-15T08:00:00.000Z"
+    );
+  });
+});
+
+// ── Sprint 192 (F3B-S2TZR), section 9 — one integration sanity check
+// confirming the stored UTC instant round-trips back to the real
+// Europe/Warsaw wall-clock hour the source notice actually stated,
+// through the SAME public formatting function every page already uses.
+// Read-only import — formatAlertDate.ts itself is untouched by this
+// sprint. ──────────────────────────────────────────────────────────────
+
+test.describe("UI round-trip sanity check (formatAlertDate.ts, read-only import)", () => {
+  test("the Warsaw-converted starts_at value displays back as the real notice's own stated hour", () => {
+    expect(formatAlertDateTime("2026-08-10T05:00:00.000Z")).toBe("10.08.2026, 07:00");
+  });
 });
 
 test.describe("extractPlace", () => {
@@ -297,7 +818,9 @@ test.describe("evaluateAutoPublishEligibility — safe candidate", () => {
     if (result.eligible) {
       expect(result.fields.category).toBe("roads");
       expect(result.fields.place).toBe("Nowa Wieś");
-      expect(result.fields.startsAt).toBe("2026-07-29T09:00:00.000Z");
+      // Sprint 192 (F3B-S2TZR) — Warsaw-converted; was
+      // "2026-07-29T09:00:00.000Z" before this sprint's fix.
+      expect(result.fields.startsAt).toBe("2026-07-29T07:00:00.000Z");
       expect(result.fields.title).toBe("Zmiana organizacji ruchu na drodze wojewódzkiej nr 719");
       expect(result.fields.sourceUrl).toBe("https://www.pruszkow.pl/mieszkancy/aktualnosci-mieszkaniec/");
       expect(result.fields.severity).toBe("info");
@@ -325,7 +848,9 @@ test.describe("evaluateAutoPublishEligibility — safe candidate", () => {
     const result = evaluateAutoPublishEligibility(candidate, [], new Date("2026-08-05T00:00:00Z"));
     expect(result.eligible).toBe(true);
     if (result.eligible) {
-      expect(result.fields.startsAt).toBe("2026-08-10T07:00:00.000Z");
+      // Sprint 192 (F3B-S2TZR) — Warsaw-converted; the exact required
+      // example from the F3B-S2TZP audit and F3B-S2TZR product decision.
+      expect(result.fields.startsAt).toBe("2026-08-10T05:00:00.000Z");
       expect(result.fields.place).toBe("Pruszków");
       expect(result.fields.category).toBe("roads");
     }

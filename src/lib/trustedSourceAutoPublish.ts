@@ -116,8 +116,69 @@ const MONTH_INDEX: Record<string, number> = {
 // immediately after the existing capture, nothing else in this line
 // changed, so every previously-valid named-month case still matches
 // exactly as before.
-const START_DATE_RE = new RegExp(
-  `\\b(\\d{1,2})\\s+(${MONTHS_PL})\\b[^\\d]{0,10}(\\d{4})(?!\\d)(?:[^\\d]{0,20}godz\\.?\\s*(\\d{1,2})(?:[:.](\\d{2}))?)?`,
+//
+// Sprint 192 (F3B-S2TZF) — this regex now matches ONLY the date itself
+// (day + named month + year), never the time clause — mirrors
+// NUMERIC_DATE_PREFIX_RE's own split below exactly, for the same reason:
+// a review found the old single-regex "date + optional time" shape let a
+// malformed time clause (e.g. "godz. 123:00", "godz. 7:5") silently match
+// only its first, plausible-looking digits and leave the rest
+// unconsumed, instead of failing the whole candidate closed. Splitting
+// date-matching from time-matching lets both formats share ONE explicit
+// time-clause parser (parseExplicitTimeValue below) with the same
+// fail-closed guarantee, rather than the time clause living inside an
+// easily-partially-matchable optional regex group.
+const START_DATE_PREFIX_RE = new RegExp(
+  `\\b(\\d{1,2})\\s+(${MONTHS_PL})\\b[^\\d]{0,10}(\\d{4})(?!\\d)`,
+  "i"
+);
+
+// Matches the literal "godz." keyword for the NAMED-MONTH format,
+// anchored (via `^`) to the exact position immediately following
+// START_DATE_PREFIX_RE's own match — mirrors NUMERIC_TIME_KEYWORD_RE's
+// role exactly (its absence means "no time clause at all"; its presence
+// commits the remainder to parseExplicitTimeValue below). The `[^\d]{0,20}`
+// gap (rather than numeric's narrower `[\s,]*r?\.?[\s,]*`) preserves this
+// format's own, pre-existing tolerance for the punctuation/words real
+// named-month notices use between the year and "godz." (e.g. "r.", "r.,",
+// "r. od ") — unchanged from the original single-regex version, just now
+// factored out as an independently testable step.
+//
+// Sprint 192 (F3B-S2TZB) — `(?:godz\.?|godzina)(?!POLISH_LETTER)` added: a
+// review found the bare `godz\.?` alternative, with no boundary after it,
+// could match as a mere PREFIX of a longer, unrelated word — "godzina",
+// "godziny", "godzinach", "pogodzenie", "uzgodzenie" all contain the
+// literal substring "godz" and would otherwise be misdetected as the
+// start of a time clause. The negative lookahead
+// `POLISH_LETTER_LOOKAHEAD` (a-z/A-Z plus Polish diacritics) requires
+// that nothing letter-like immediately follows either alternative:
+//   - "godz\.?" alone fails the lookahead against "godzina" (next char
+//     "i" is a letter) — falls through to the second alternative.
+//   - "godzina" (the exact, standalone word — optional support per this
+//     sprint's brief) matches "godzina" but fails the lookahead against
+//     "godziny"/"godzinach"/"godzinami" (all share the same first 7
+//     letters "godzina" but continue with more letters: "y", "ch", "mi")
+//     — so only the bare, standalone word "godzina" is ever recognized,
+//     never its inflected forms.
+// This never changes what happens once a genuine keyword IS recognized —
+// only whether one is recognized at all.
+//
+// Sprint 192 (F3B-S2TZC) — `POLISH_LETTER_LOOKBEHIND` added directly
+// before the alternation: a review found the RIGHT-boundary lookahead
+// alone was not enough — the `[^\d]{0,20}` gap has no LEFT-boundary
+// check, so it could backtrack past letters of an unrelated preceding
+// word right up to a "godz"/"godzina" substring embedded inside it (e.g.
+// "xgodz.", "pogodz.", "uzgodz.", "abcgodzina" all contain the literal
+// substring and were previously misdetected as genuine keywords, not
+// safely rejected). The lookbehind requires that nothing letter-like
+// immediately PRECEDES the keyword either — so it can now only ever
+// match when preceded by a true word boundary (start of string,
+// whitespace, digit, or punctuation), never mid-word.
+const POLISH_LETTER_CLASS = "a-ząćęłńóśźżA-ZĄĆĘŁŃÓŚŹŻ";
+const POLISH_LETTER_LOOKAHEAD = `(?![${POLISH_LETTER_CLASS}])`;
+const POLISH_LETTER_LOOKBEHIND = `(?<![${POLISH_LETTER_CLASS}])`;
+const WORD_TIME_KEYWORD_RE = new RegExp(
+  `^[^\\d]{0,20}${POLISH_LETTER_LOOKBEHIND}(?:godz\\.?|godzina)${POLISH_LETTER_LOOKAHEAD}\\s*`,
   "i"
 );
 
@@ -150,75 +211,373 @@ const NUMERIC_DATE_PREFIX_RE = /\b(\d{1,2})\.(\d{1,2})\.(\d{4})(?!\d)[\s,]*r?\.?
 // the text to being a complete, well-formed time value or the whole
 // candidate must be rejected (cases 2/3 below) — never a silent fallback
 // to midnight just because what follows didn't parse.
-const NUMERIC_TIME_KEYWORD_RE = /^(?:od\s+)?godz\.?\s*/i;
+//
+// Sprint 192 (F3B-S2TZB/F3B-S2TZC) — same `(?:godz\.?|godzina)` +
+// POLISH_LETTER_LOOKAHEAD/LOOKBEHIND boundary as WORD_TIME_KEYWORD_RE
+// above, for the identical reason (both formats must apply the same
+// keyword-boundary rule — see that regex's own comment for the full
+// explanation). The lookbehind is a no-op here in practice (this regex
+// is `^`-anchored with no gap-skipping ahead of it, so "godz"/"godzina"
+// can only ever start at position 0 or right after `od\s+`, both of
+// which already guarantee a non-letter precedes) — added anyway for
+// structural symmetry between the two formats' keyword regexes, not
+// because a left-boundary bug was ever found here.
+const NUMERIC_TIME_KEYWORD_RE = new RegExp(
+  `^(?:od\\s+)?${POLISH_LETTER_LOOKBEHIND}(?:godz\\.?|godzina)${POLISH_LETTER_LOOKAHEAD}\\s*`,
+  "i"
+);
 
 /** Parses a numeric H[:MM] time value from the text immediately following
- *  a matched "godz."/"od godz." keyword. Returns null for anything that
- *  isn't a complete, well-formed time token — this is what distinguishes
- *  case 2 (present + valid) from case 3 (present + invalid) once
- *  NUMERIC_TIME_KEYWORD_RE has already confirmed the clause exists at
- *  all. Never truncates a multi-digit hour/minute to its first two digits
- *  (`(?!\d)` after each numeric group rejects "123:00" and "07:000"
- *  outright) and never silently drops a malformed minute clause to fall
- *  back to hour-only (a ":"/"." separator, once seen, makes a valid
- *  two-digit minute mandatory — "7:5" is rejected, not reinterpreted as
- *  "7:00"). Range validity (0–23 / 0–59) is intentionally NOT checked
- *  here — that stays the single responsibility of
- *  buildValidatedStartDateIso below, so there is exactly one place in
- *  this module that decides whether an hour/minute value is in range. */
-function parseNumericTimeValue(text: string): { hour: number; minute: number } | null {
+ *  a matched "godz."/"od godz." keyword — SHARED by both the numeric and
+ *  named-month date formats (Sprint 192 / F3B-S2TZF: was
+ *  parseNumericTimeValue, numeric-only, until a review found the
+ *  named-month regex's own inline time group had the identical
+ *  partial-match gap this function was already written to close).
+ *  Returns null for anything that isn't a complete, well-formed time
+ *  token — this is what distinguishes case 2 (present + valid) from case
+ *  3 (present + invalid) once a caller's own keyword regex
+ *  (NUMERIC_TIME_KEYWORD_RE or WORD_TIME_KEYWORD_RE) has already
+ *  confirmed the clause exists at all. Never truncates a multi-digit
+ *  hour/minute to its first two digits (`(?!\d)` after each numeric group
+ *  rejects "123:00" and "07:000" outright) and never silently drops a
+ *  malformed minute clause to fall back to hour-only (a ":"/"."
+ *  separator, once seen, makes a valid two-digit minute mandatory —
+ *  "7:5" is rejected, not reinterpreted as "7:00"). Range validity
+ *  (0–23 / 0–59) is intentionally NOT checked here — that stays the
+ *  single responsibility of buildValidatedStartDateIso below, so there is
+ *  exactly one place in this module that decides whether an hour/minute
+ *  value is in range. */
+// Sprint 192 (F3B-S2TZB) — characters allowed to immediately follow a
+// fully-parsed hour[:minute] token: end of string, whitespace, or
+// ordinary punctuation that separates/ends a clause (comma, period,
+// semicolon, exclamation/question mark, closing parenthesis, hyphen or
+// en dash for a range like "7:00–15:00"). A review found the token
+// parser accepted a plausible-looking hour/minute and then silently
+// ignored whatever came directly after it — this is the single place
+// that closes that gap for both the bare-hour and hour:minute paths
+// below. Digits and letters are deliberately absent from this set —
+// those are exactly what "7abc" and "7:00abc" glue on.
+//
+// Sprint 192 (F3B-S2TZC) — checking only THIS first character was not
+// enough: a review found "7:00.30", "7:00,30", "7:00;30", "7:00!30",
+// "7:00?30", "7:00)30" all slipped through, because `.`/`,`/`;`/`!`/`?`/`)`
+// were unconditionally accepted as a boundary without checking whether a
+// digit immediately followed THEM too — i.e. the punctuation was real,
+// but it was itself glued to a further digit run rather than genuinely
+// ending the clause. `PLAIN_ENDING_PUNCTUATION` below is exactly that
+// six-character set, checked separately from whitespace and from the
+// dash/en-dash case (which has its own, different rule — see
+// looksLikeCompleteSecondTimeToken).
+const PLAIN_ENDING_PUNCTUATION_RE = /^[,.;!?)]/;
+// A hyphen/en-dash right after the token is only ever a genuine range
+// introducer ("7:00-15:00") — never a legitimate way to continue with
+// unrelated prose starting in a digit. When NOT followed by a digit at
+// all (space, letter, end of string), the dash is ordinary punctuation
+// and always accepted, same as the plain set above.
+const RANGE_DASH_RE = /^[\-–]/;
+
+/** True when `text` begins with a COMPLETE second `H[:MM]` time token —
+ *  used only to decide whether a dash immediately followed by a digit is
+ *  a genuine range ("7:00-15:00") or a malformed digit tail
+ *  ("7:00-30"). Deliberately requires the separator + two-digit minute
+ *  (a bare second hour, e.g. "-15" alone, does NOT count as "complete"
+ *  here — that's indistinguishable from the malformed "-30" case this
+ *  function exists to reject) and does not parse or return the second
+ *  hour/minute value itself — this module never needs `ends_at` from
+ *  auto-publish, only confirms the FIRST token isn't part of a
+ *  zniekształcony ciąg. */
+function looksLikeCompleteSecondTimeToken(text: string): boolean {
+  const hourMatch = /^(\d{1,2})(?!\d)/.exec(text);
+  if (!hourMatch) return false;
+  const afterHour = text.slice(hourMatch[0].length);
+  if (!/^[:.]/.test(afterHour)) return false;
+  const minuteMatch = /^(\d{2})(?!\d)/.exec(afterHour.slice(1));
+  if (!minuteMatch) return false;
+  const afterMinute = afterHour.slice(1 + minuteMatch[0].length);
+  return afterMinute.length === 0 || !new RegExp(`^[${POLISH_LETTER_CLASS}\\d]`).test(afterMinute);
+}
+
+function hasValidTimeTokenBoundary(remainder: string): boolean {
+  if (remainder.length === 0) return true;
+  if (/^\s/.test(remainder)) return true;
+  if (PLAIN_ENDING_PUNCTUATION_RE.test(remainder)) {
+    // Real boundary punctuation, but only genuinely a boundary when it
+    // isn't itself immediately followed by a digit — "7:00." is fine,
+    // "7:00.30" is not.
+    return !/^\d/.test(remainder.slice(1));
+  }
+  if (RANGE_DASH_RE.test(remainder)) {
+    const afterDash = remainder.slice(1);
+    if (!/^\d/.test(afterDash)) return true;
+    return looksLikeCompleteSecondTimeToken(afterDash);
+  }
+  return false;
+}
+
+function parseExplicitTimeValue(text: string): { hour: number; minute: number } | null {
   const hourMatch = /^(\d{1,2})(?!\d)/.exec(text);
   if (!hourMatch) return null;
   const hour = Number(hourMatch[1]);
   const afterHour = text.slice(hourMatch[0].length);
+
   if (!/^[:.]/.test(afterHour)) {
     // No minute separator at all — a bare hour is a complete, valid
-    // clause (preserves the pre-existing "godz. 7" → 7:00 convention).
+    // clause (preserves the pre-existing "godz. 7" → 7:00 convention),
+    // but only when it's immediately followed by a genuine token
+    // boundary — never glued directly to a letter ("7abc").
+    if (!hasValidTimeTokenBoundary(afterHour)) return null;
     return { hour, minute: 0 };
   }
-  // A ":"/"." separator IS present, so a minute value is now REQUIRED —
-  // exactly two digits, with no further digit trailing. If it doesn't
-  // parse, the whole clause is malformed (case 3), never silently
-  // downgraded to "no minute" (case 1's behavior) just because the
-  // separator was seen.
-  const minuteMatch = /^[:.](\d{2})(?!\d)/.exec(afterHour);
+
+  const separator = afterHour[0];
+  const rest = afterHour.slice(1);
+
+  if (separator === ".") {
+    // Sprint 192 (F3B-S2TZB) — the dot is genuinely ambiguous in Polish
+    // notice text: it can be a minute separator ("godz. 7.30" → 7:30) OR
+    // ordinary sentence-ending punctuation after a bare hour
+    // ("godz. 7." → 7:00, full stop). Resolved by what follows the dot:
+    //   - exactly two digits with a valid boundary after them → minute.
+    //   - anything else that LOOKS like an attempted minute (starts with
+    //     a digit, or with another "." or ":") → malformed, null. This
+    //     is what rejects "7.3", "7.300", and "7..30" — never silently
+    //     reinterpreted as "7:00".
+    //   - a genuine non-digit, non-separator boundary (whitespace, other
+    //     punctuation, or end of string) → the dot was just punctuation;
+    //     bare hour.
+    const minuteMatch = /^(\d{2})(?!\d)/.exec(rest);
+    if (minuteMatch) {
+      const afterMinute = rest.slice(minuteMatch[0].length);
+      if (!hasValidTimeTokenBoundary(afterMinute)) return null;
+      return { hour, minute: Number(minuteMatch[1]) };
+    }
+    if (/^[\d:.]/.test(rest)) return null;
+    if (!hasValidTimeTokenBoundary(rest)) return null;
+    return { hour, minute: 0 };
+  }
+
+  // separator === ":" — always a minute separator, never punctuation (a
+  // bare colon is never how a real notice ends a sentence); a valid
+  // two-digit minute is mandatory, and — same as the bare-hour and dot
+  // paths above — must be followed by a genuine token boundary, never
+  // glued directly to more digits/letters/separators ("7:00abc",
+  // "7:00:30"). If it doesn't parse, the whole clause is malformed (case
+  // 3), never silently downgraded to "no minute" (case 1's behavior)
+  // just because the separator was seen.
+  const minuteMatch = /^(\d{2})(?!\d)/.exec(rest);
   if (!minuteMatch) return null;
+  const afterMinute = rest.slice(minuteMatch[0].length);
+  if (!hasValidTimeTokenBoundary(afterMinute)) return null;
   return { hour, minute: Number(minuteMatch[1]) };
+}
+
+// Sprint 192 (F3B-S2TZR) — Warsaw local time → UTC conversion for an
+// EXPLICIT "godz." clause. Product decision (F3B-S2TZP audit, confirmed by
+// Adam): an official Polish notice's stated hour means Europe/Warsaw local
+// time, not literal UTC — the public UI (formatAlertDate.ts, untouched by
+// this change) already converts a stored `starts_at` to Europe/Warsaw for
+// display, so storing anything other than the true UTC instant of that
+// local hour would show residents the wrong clock time (confirmed
+// 2-hour-wrong for the real 10.08.2026 r., godz. 7:00 pruszkow.pl notice
+// before this fix). A date WITHOUT an explicit "godz." clause keeps its
+// pre-existing, separate semantics unchanged — see buildValidatedStartDateIso
+// below, which is the only place this distinction is actually made.
+const WARSAW_TZ = "Europe/Warsaw";
+
+// Sprint 192 (F3B-S2TZF) — a deliberate, product-level operational-year
+// boundary, not a technical workaround grafted on after the fact.
+// Alertownik parses dates for CURRENT and NEAR-FUTURE operational alerts
+// only — it is not, and is never meant to become, a historical-date
+// parser. This single bound closes two real gaps a review found:
+//   1. `Date.UTC(year, ...)` for `year` 0–99 is specially remapped by the
+//      JS spec to 1900–1999 (e.g. `Date.UTC(50, ...)` means 1950, never
+//      year 50) — a 4-digit year string like "0050" would otherwise
+//      silently produce a semantically wrong, non-null result instead of
+//      being rejected.
+//   2. Europe/Warsaw used non-integer-hour and otherwise-irregular UTC
+//      offsets before it settled into the modern CET/CEST pattern this
+//      module's WARSAW_OFFSET_HOURS_CANDIDATES assumes — this bound never
+//      lets a request reach warsawLocalToUtcIso for a year where that
+//      assumption might not hold.
+// Both bounds are inclusive and are literal constants — never derived
+// from `new Date().getFullYear()` or any other runtime clock, so this
+// check's behavior never silently drifts as real time passes.
+const MIN_SUPPORTED_ALERT_YEAR = 2000;
+const MAX_SUPPORTED_ALERT_YEAR = 2100;
+
+// Poland's Europe/Warsaw timezone has used exactly two standard offsets
+// under the current (post-1996, still-in-force) EU DST rule: UTC+1 (CET,
+// winter) and UTC+2 (CEST, summer) — never any other value, and never a
+// half-hour offset. This is therefore a bounded, exhaustive 2-element
+// candidate set, not a search: warsawLocalToUtcIso below tests both and
+// only both, never loops over minutes/hours/days. Every real notice this
+// module will ever see falls inside this regime.
+const WARSAW_OFFSET_HOURS_CANDIDATES = [1, 2] as const;
+
+interface WarsawLocalParts {
+  year: number;
+  monthIndex: number;
+  day: number;
+  hour: number;
+  minute: number;
+}
+
+/** Reads the Europe/Warsaw wall-clock parts of a UTC instant. Pure and
+ *  deterministic — `Intl.DateTimeFormat`'s `timeZone` option is always
+ *  honored regardless of the host runtime's own default timezone, so this
+ *  never depends on the system/server's configured timezone. Never uses
+ *  `Date.parse` — reads structured parts via `formatToParts`, not a
+ *  re-parsed string.
+ *
+ *  Sprint 192 (F3B-S2TZF) — `calendar`/`numberingSystem` made EXPLICIT
+ *  (were previously implicit via the `"en-US"` locale's own defaults,
+ *  which already resolve to exactly these values — this is defense in
+ *  depth, not a behavior change): `calendar: "gregory"` guarantees the
+ *  year/month/day fields this function reads are never silently
+ *  interpreted against a different calendar system, and
+ *  `numberingSystem: "latn"` guarantees ASCII digits, since `get()` below
+ *  feeds the formatted value straight into `Number()`, which cannot
+ *  parse non-ASCII digit forms. `hourCycle: "h23"` (unchanged) guarantees
+ *  midnight is read back as `00`, never `24`. */
+function getWarsawParts(utcInstant: Date): WarsawLocalParts {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: WARSAW_TZ,
+    calendar: "gregory",
+    numberingSystem: "latn",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
+  const parts = formatter.formatToParts(utcInstant);
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+  return {
+    year: get("year"),
+    monthIndex: get("month") - 1,
+    day: get("day"),
+    hour: get("hour"),
+    minute: get("minute"),
+  };
+}
+
+/** Converts Europe/Warsaw local wall-clock parts to the single UTC instant
+ *  that displays back as exactly those parts — or null when zero or more
+ *  than one such instant exists (the two DST-transition edge cases this
+ *  function must fail closed on, never guess):
+ *
+ *   - Spring-forward gap (e.g. Poland 2026-03-29: clocks jump from 02:00
+ *     CET straight to 03:00 CEST) — a local time inside 02:00–02:59 on
+ *     that date names NO real instant. Neither of the two candidate
+ *     offsets round-trips back to the input → zero matches → null.
+ *   - Autumn-back overlap (e.g. Poland 2026-10-25: clocks fall from 03:00
+ *     CEST back to 02:00 CET) — a local time inside 02:00–02:59 on that
+ *     date names TWO real, genuinely different instants (one CEST, one an
+ *     hour later CET). BOTH candidate offsets round-trip back to the
+ *     input, as two distinct UTC instants → null, never silently picking
+ *     the earlier or later one.
+ *   - Any ordinary hour: EXACTLY ONE of the two candidate offsets
+ *     round-trips → that single instant is returned. */
+function warsawLocalToUtcIso(parts: WarsawLocalParts): string | null {
+  const matchedInstants: number[] = [];
+  for (const offsetHours of WARSAW_OFFSET_HOURS_CANDIDATES) {
+    const candidateMs =
+      Date.UTC(parts.year, parts.monthIndex, parts.day, parts.hour, parts.minute) - offsetHours * 60 * 60 * 1000;
+    if (Number.isNaN(candidateMs)) continue;
+    const roundTrip = getWarsawParts(new Date(candidateMs));
+    const matches =
+      roundTrip.year === parts.year &&
+      roundTrip.monthIndex === parts.monthIndex &&
+      roundTrip.day === parts.day &&
+      roundTrip.hour === parts.hour &&
+      roundTrip.minute === parts.minute;
+    // De-duplicate by instant, not by offset — two 1h-apart offsets can
+    // never legitimately produce the same instant, but this keeps the
+    // "exactly one real instant" count correct by construction rather
+    // than by assuming the two candidate offsets are always distinct.
+    if (matches && !matchedInstants.includes(candidateMs)) {
+      matchedInstants.push(candidateMs);
+    }
+  }
+  if (matchedInstants.length !== 1) return null;
+  return new Date(matchedInstants[0]).toISOString();
 }
 
 /** Shared construction + validation for both date formats above — never
  *  called with a guessed/defaulted day, month, or year, only with values a
  *  regex has already extracted from the text. Returns null for anything
- *  that isn't a real calendar date/time, never a best-effort guess. */
+ *  that isn't a real calendar date/time, never a best-effort guess.
+ *
+ *  `hasExplicitTime` distinguishes the two genuinely different semantics
+ *  this module needs (Sprint 192 / F3B-S2TZR):
+ *   - false (no "godz." clause was written at all): `hour`/`minute` are
+ *     always 0 here, and the result is literal UTC midnight — UNCHANGED
+ *     from this function's pre-existing behavior, never Warsaw-converted.
+ *     This is the project's existing, separate "all-day alert" semantics
+ *     (matches the Builder's own date-only convention) — a date with no
+ *     stated hour has no real moment to convert in the first place.
+ *   - true (a "godz."/"od godz." clause WAS written and parsed validly):
+ *     `hour`/`minute` are Europe/Warsaw local wall-clock time, per the
+ *     product decision confirmed in F3B-S2TZP/F3B-S2TZR — converted to
+ *     the true matching UTC instant via warsawLocalToUtcIso, including
+ *     failing closed (null) for a DST-nonexistent or DST-ambiguous local
+ *     time. */
 function buildValidatedStartDateIso(
   year: number,
   monthIndex: number,
   day: number,
   hour: number,
-  minute: number
+  minute: number,
+  hasExplicitTime: boolean
 ): string | null {
+  // Sprint 192 (F3B-S2TZF) — operational-year boundary, checked first
+  // (cheapest, and independent of hour/minute/hasExplicitTime) and for
+  // BOTH formats via this single shared function — see
+  // MIN_SUPPORTED_ALERT_YEAR's own doc comment above for why.
+  if (year < MIN_SUPPORTED_ALERT_YEAR || year > MAX_SUPPORTED_ALERT_YEAR) return null;
+
   // Explicit range check — Date.UTC silently normalizes an out-of-range
   // hour/minute into the next hour/day (e.g. minute=60 becomes +1 hour,
-  // same day) rather than failing, which the day/month/year round-trip
-  // check below would then miss entirely. Checked before construction, not
-  // inferred from a round-trip, so "godz. 24:00" and "godz. 7:60" are
-  // rejected outright rather than silently reinterpreted as valid times.
+  // same day) rather than failing, which a round-trip check would then
+  // miss entirely. Checked before any construction, not inferred from a
+  // round-trip, so "godz. 24:00" and "godz. 7:60" are rejected outright
+  // rather than silently reinterpreted as valid times.
   if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
 
-  const date = new Date(Date.UTC(year, monthIndex, day, hour, minute));
-  if (Number.isNaN(date.getTime())) return null;
-  // Sanity check: the constructed date must round-trip to the same
-  // day/month/year — Date.UTC silently rolls over an invalid day (e.g.
-  // "31 lutego") into the next month instead of failing, so this catches
-  // that rather than publishing a nonsensical date.
+  if (!hasExplicitTime) {
+    const date = new Date(Date.UTC(year, monthIndex, day, hour, minute));
+    if (Number.isNaN(date.getTime())) return null;
+    // Sanity check: the constructed date must round-trip to the same
+    // day/month/year — Date.UTC silently rolls over an invalid day (e.g.
+    // "31 lutego") into the next month instead of failing, so this
+    // catches that rather than publishing a nonsensical date.
+    if (
+      date.getUTCFullYear() !== year ||
+      date.getUTCMonth() !== monthIndex ||
+      date.getUTCDate() !== day
+    ) {
+      return null;
+    }
+    return date.toISOString();
+  }
+
+  // Explicit time: first confirm the CALENDAR date itself is real,
+  // independent of any clock time or timezone ("31 lutego" is invalid no
+  // matter what hour is attached to it) — same literal round-trip check
+  // as the no-explicit-time path above, evaluated at local midnight so a
+  // DST transition can never influence whether the DATE itself is valid.
+  const calendarCheck = new Date(Date.UTC(year, monthIndex, day, 0, 0));
   if (
-    date.getUTCFullYear() !== year ||
-    date.getUTCMonth() !== monthIndex ||
-    date.getUTCDate() !== day
+    Number.isNaN(calendarCheck.getTime()) ||
+    calendarCheck.getUTCFullYear() !== year ||
+    calendarCheck.getUTCMonth() !== monthIndex ||
+    calendarCheck.getUTCDate() !== day
   ) {
     return null;
   }
-  return date.toISOString();
+
+  return warsawLocalToUtcIso({ year, monthIndex, day, hour, minute });
 }
 
 /** Returns an ISO datetime for the first recognized Polish date pattern
@@ -234,16 +593,34 @@ function buildValidatedStartDateIso(
  *  named-month pattern is tried first and, when it matches, behaves
  *  exactly as before this function gained numeric-date support. */
 export function extractStartDateIso(text: string): string | null {
-  const wordMatch = START_DATE_RE.exec(text);
-  if (wordMatch) {
-    const day = Number(wordMatch[1]);
-    const monthWord = normalizeForCompare(wordMatch[2]).replace(/\s+/g, "");
-    const year = Number(wordMatch[3]);
+  const wordDateMatch = START_DATE_PREFIX_RE.exec(text);
+  if (wordDateMatch) {
+    const day = Number(wordDateMatch[1]);
+    const monthWord = normalizeForCompare(wordDateMatch[2]).replace(/\s+/g, "");
+    const year = Number(wordDateMatch[3]);
     const monthIndex = MONTH_INDEX[monthWord];
     if (monthIndex === undefined) return null;
-    const hour = wordMatch[4] ? Number(wordMatch[4]) : 0;
-    const minute = wordMatch[5] ? Number(wordMatch[5]) : 0;
-    return buildValidatedStartDateIso(year, monthIndex, day, hour, minute);
+    const wordRemainder = text.slice(wordDateMatch.index + wordDateMatch[0].length);
+
+    const wordKeywordMatch = WORD_TIME_KEYWORD_RE.exec(wordRemainder);
+    if (!wordKeywordMatch) {
+      // Case 1: no "godz." clause at all — date-only, valid, defaults to
+      // midnight UTC (never Warsaw-converted).
+      return buildValidatedStartDateIso(year, monthIndex, day, 0, 0, false);
+    }
+
+    const wordTimeValue = parseExplicitTimeValue(wordRemainder.slice(wordKeywordMatch[0].length));
+    if (!wordTimeValue) {
+      // Case 3: the clause is present but malformed — fail the whole
+      // candidate closed, never fall back to case 1's midnight default,
+      // never truncated to a plausible-looking prefix (Sprint 192 /
+      // F3B-S2TZF: this is the exact gap a review found in the old
+      // single-regex named-month time group).
+      return null;
+    }
+    // Case 2: a complete, well-formed time clause — Europe/Warsaw local,
+    // converted to UTC by buildValidatedStartDateIso.
+    return buildValidatedStartDateIso(year, monthIndex, day, wordTimeValue.hour, wordTimeValue.minute, true);
   }
 
   const dateMatch = NUMERIC_DATE_PREFIX_RE.exec(text);
@@ -256,18 +633,20 @@ export function extractStartDateIso(text: string): string | null {
     const keywordMatch = NUMERIC_TIME_KEYWORD_RE.exec(remainder);
     if (!keywordMatch) {
       // Case 1: no "godz."/"od godz." clause at all — date-only, valid,
-      // defaults to midnight UTC.
-      return buildValidatedStartDateIso(year, monthIndex, day, 0, 0);
+      // defaults to midnight UTC (never Warsaw-converted — there is no
+      // real moment to convert without a stated hour).
+      return buildValidatedStartDateIso(year, monthIndex, day, 0, 0, false);
     }
 
-    const timeValue = parseNumericTimeValue(remainder.slice(keywordMatch[0].length));
+    const timeValue = parseExplicitTimeValue(remainder.slice(keywordMatch[0].length));
     if (!timeValue) {
       // Case 3: the clause is present but malformed — fail the whole
       // candidate closed, never fall back to case 1's midnight default.
       return null;
     }
-    // Case 2: a complete, well-formed time clause.
-    return buildValidatedStartDateIso(year, monthIndex, day, timeValue.hour, timeValue.minute);
+    // Case 2: a complete, well-formed time clause — Europe/Warsaw local,
+    // converted to UTC by buildValidatedStartDateIso.
+    return buildValidatedStartDateIso(year, monthIndex, day, timeValue.hour, timeValue.minute, true);
   }
 
   return null;
