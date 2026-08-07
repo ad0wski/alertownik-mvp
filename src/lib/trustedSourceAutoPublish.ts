@@ -655,8 +655,47 @@ export function extractStartDateIso(text: string): string | null {
 // ── Place extraction — exact match against the known pilot locality list,
 // never a fuzzy/invented location. ──────────────────────────────────────────
 
+// Sprint 192 (F3B-S2PL) — a real official notice may name a pilot
+// locality in its ordinary Polish inflected form ("w Pruszkowie",
+// locative) rather than the exact nominative form stored in
+// PILOT_LOCALITIES ("Pruszków") — Polish's o→ó alternation means the
+// literal substring check below never matches that spelling (confirmed
+// against the real 10.08.2026 pruszkow.pl road-closure notice, F3B-S2XG
+// audit). Fixed with a small, explicit, per-locality alias list — not a
+// stemmer, not a general Polish declension table — covering only the one
+// locality/form pair a real audited notice has actually needed so far.
+// PILOT_LOCALITIES itself stays the canonical/nominative list, completely
+// unchanged; a locality found via any of its aliased forms below always
+// resolves back to that exact canonical string, never the inflected form
+// that matched. Every OTHER locality keeps its pre-existing, unmodified
+// `text.includes(locality)` behavior — this alias list is opt-in per
+// locality, never a blanket declension expansion.
+const LOCALITY_TEXT_ALIASES: Readonly<Record<string, readonly string[]>> = {
+  Pruszków: ["Pruszków", "Pruszkowie"],
+};
+
+// Word-boundary guard for the aliased forms above — reuses the SAME
+// Polish-letter class already defined for this file's date/time keyword
+// regexes (POLISH_LETTER_CLASS), so an aliased form can never
+// accidentally match as a prefix/substring of a longer, unrelated word
+// (e.g. "Pruszkowie" inside a hypothetical "Pruszkowieckiego", or
+// "Pruszków" inside a hypothetical "Pruszkówka") the way a plain
+// `includes()` check would. Scoped only to the aliased forms actually
+// added above — plain (non-aliased) localities are unaffected and keep
+// matching via `includes()` exactly as before.
+function matchesLocalityForm(text: string, form: string): boolean {
+  const escaped = form.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const boundary = `(?<![${POLISH_LETTER_CLASS}])${escaped}(?![${POLISH_LETTER_CLASS}])`;
+  return new RegExp(boundary, "u").test(text);
+}
+
 export function extractPlace(text: string): string | null {
   for (const locality of PILOT_LOCALITIES) {
+    const aliasForms = LOCALITY_TEXT_ALIASES[locality];
+    if (aliasForms) {
+      if (aliasForms.some((form) => matchesLocalityForm(text, form))) return locality;
+      continue;
+    }
     if (text.includes(locality)) return locality;
   }
   return null;

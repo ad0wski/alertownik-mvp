@@ -800,12 +800,46 @@ test.describe("UI round-trip sanity check (formatAlertDate.ts, read-only import)
   });
 });
 
+// Sprint 192 (F3B-S2PL) — the real, live pruszkow.pl road-closure notice
+// (F3B-S2XG audit) that surfaced the "Pruszkowie" inflected-form gap,
+// reused verbatim for both extractPlace and the full eligibility check
+// below, same convention as REAL_DW719_TEXT above.
+const REAL_PRUSZKOW_ROAD_CLOSURE_TEXT =
+  "zgodnie z komunikatem Orlen Termika S.A. przekazujemy informacje, że w związku z awarią sieci " +
+  "cieplnej 2xDN250 w ul. Ks. Romana Indrzejczyka w Pruszkowie, nastąpi zajęcie pasa drogowego i " +
+  "zmiana organizacji ruchu w dniach 10.08.2026 r. od godz. 7:00 do 13.08.2026 r. do godz. 15:00.";
+
 test.describe("extractPlace", () => {
   test("finds a known pilot locality mentioned in the text", () => {
     expect(extractPlace(REAL_DW719_TEXT)).toBe("Nowa Wieś");
   });
   test("returns null when no known locality is mentioned", () => {
     expect(extractPlace("Ogólny komunikat bez żadnej konkretnej miejscowości.")).toBeNull();
+  });
+
+  // ── F3B-S2PL — "Pruszkowie" (locative) must resolve to canonical
+  // "Pruszków" (nominative, the exact string stored in PILOT_LOCALITIES),
+  // never the inflected form that matched. ──────────────────────────────
+  test("nominative 'Pruszków' resolves to canonical 'Pruszków'", () => {
+    expect(extractPlace("Komunikat dotyczy miasta Pruszków.")).toBe("Pruszków");
+  });
+  test("locative 'w Pruszkowie' resolves to canonical 'Pruszków', not 'Pruszkowie'", () => {
+    expect(extractPlace("Utrudnienia w Pruszkowie od jutra.")).toBe("Pruszków");
+  });
+  test("the exact proposed raw_text (F3B-S2XG) resolves to canonical 'Pruszków'", () => {
+    expect(extractPlace(REAL_PRUSZKOW_ROAD_CLOSURE_TEXT)).toBe("Pruszków");
+  });
+  test("boundary: an unrelated longer word containing 'Pruszkowie' as a mere substring is never matched", () => {
+    // "Pruszkowieckiego" contains the literal substring "Pruszkowie" but is
+    // not a real mention of the locality — a naive includes() check would
+    // wrongly match it (confirmed: pre-fix `"...Pruszkowieckiego...".includes("Pruszkowie")`
+    // is true). No other pilot locality appears in this text either.
+    expect(
+      extractPlace("Fikcyjny raport z gminy Pruszkowieckiego bez faktycznej lokalizacji.")
+    ).toBeNull();
+  });
+  test("boundary: an unrelated longer word containing 'Pruszków' as a mere substring is never matched", () => {
+    expect(extractPlace("Nazwa fikcyjnej miejscowości: Pruszkówka.")).toBeNull();
   });
 });
 
@@ -853,6 +887,34 @@ test.describe("evaluateAutoPublishEligibility — safe candidate", () => {
       expect(result.fields.startsAt).toBe("2026-08-10T05:00:00.000Z");
       expect(result.fields.place).toBe("Pruszków");
       expect(result.fields.category).toBe("roads");
+    }
+  });
+
+  // Sprint 192 (F3B-S2PL) — the EXACT proposed candidate payload from the
+  // F3B-S2XG audit, reusing its own real raw_text verbatim (only the
+  // locative "w Pruszkowie" form, no nominative "Pruszków" anywhere in the
+  // text) — this is the specific case that was failing closed on
+  // `place_not_detected` before this sprint's extractPlace fix.
+  test("the exact F3B-S2XG proposed candidate (locative-only place mention) is eligible", () => {
+    const candidate = makeCandidate({
+      sourceKey: "pruszkow-aktualnosci",
+      sourceName: "Miasto Pruszków",
+      sourceUrl:
+        "https://www.pruszkow.pl/mieszkancy/komunikat-o-czasowej-zmianie-organizacji-ruchu-na-ul-ks-romana-indrzejczyka/",
+      candidateUrl:
+        "https://www.pruszkow.pl/mieszkancy/komunikat-o-czasowej-zmianie-organizacji-ruchu-na-ul-ks-romana-indrzejczyka/",
+      title: "Komunikat o czasowej zmianie organizacji ruchu na ul. Ks. Romana Indrzejczyka",
+      text: REAL_PRUSZKOW_ROAD_CLOSURE_TEXT,
+    });
+    const result = evaluateAutoPublishEligibility(candidate, [], new Date("2026-08-07T00:00:00Z"));
+    expect(result.eligible).toBe(true);
+    if (result.eligible) {
+      expect(result.fields.place).toBe("Pruszków");
+      expect(result.fields.startsAt).toBe("2026-08-10T05:00:00.000Z");
+      expect(result.fields.category).toBe("roads");
+      expect(result.fields.sourceUrl).toBe(
+        "https://www.pruszkow.pl/mieszkancy/komunikat-o-czasowej-zmianie-organizacji-ruchu-na-ul-ks-romana-indrzejczyka/"
+      );
     }
   });
 });
