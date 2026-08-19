@@ -749,6 +749,112 @@ test.describe("extractStartDateIso — numeric format (Sprint 192)", () => {
   });
 });
 
+// ── Sprint 193 (F3B-XWATER-PARSE) — the "w godzinach od H:MM ... do H:MM"
+// clause, verified against a real wodociagimichalowice.pl notice
+// (2026-08-18, F3B-XWATER-VAL audit). Deliberately a SECOND, narrow,
+// fully-enumerated keyword grammar (WORD_RANGE_TIME_KEYWORD_RE /
+// NUMERIC_RANGE_TIME_KEYWORD_RE) — not a widened `[^\d]{0,20}` scan and
+// not a generic "godzinach" keyword addition to WORD_TIME_KEYWORD_RE (see
+// that regex's own comment for why "godzinach" must never be treated as a
+// bare "godzina" match). Only the FIRST time value of the range is ever
+// read — this module still does not parse/store an ends_at. ─────────────
+
+test.describe("extractStartDateIso — 'w godzinach od' range clause (Sprint 193 / F3B-XWATER-PARSE)", () => {
+  const REAL_WODOCIAGI_MICHALOWICE_TEXT =
+    "Wodociągi Michałowice Sp. z o.o. informują, że w dniu 20 sierpnia 2026 roku tj. czwartek, " +
+    "w godzinach od 9:00 do 12:00 wystąpi przerwa w dostawie wody w miejscowości Michałowice " +
+    "w rejonie ul. Banasiówka, ul. Działkowa, ul. Miła (...) z powodu prac na sieci wodociągowej.";
+
+  // A. Exact real Wodociągi Michałowice text (named-month + "tj. <dzień
+  // tygodnia>" + "w godzinach od").
+  test("A. the exact real Wodociągi Michałowice notice resolves to 09:00 Europe/Warsaw", () => {
+    expect(extractStartDateIso(REAL_WODOCIAGI_MICHALOWICE_TEXT)).toBe("2026-08-20T07:00:00.000Z");
+  });
+
+  test("named-month variant without 'tj. <dzień tygodnia>': 'roku, w godzinach od'", () => {
+    expect(
+      extractStartDateIso("W dniu 20 sierpnia 2026 roku, w godzinach od 9:00 do 12:00 wystąpi przerwa.")
+    ).toBe("2026-08-20T07:00:00.000Z");
+  });
+
+  test("named-month variant with only a comma, no 'roku'/'r.': '2026, w godzinach od'", () => {
+    expect(extractStartDateIso("W dniu 20 sierpnia 2026, w godzinach od 9:00 do 12:00 wystąpi przerwa.")).toBe(
+      "2026-08-20T07:00:00.000Z"
+    );
+  });
+
+  test("named-month variant with 'r.,' instead of 'roku': '2026 r., w godzinach od'", () => {
+    expect(extractStartDateIso("W dniu 20 sierpnia 2026 r., w godzinach od 9:00 do 12:00 wystąpi przerwa.")).toBe(
+      "2026-08-20T07:00:00.000Z"
+    );
+  });
+
+  // B. Numeric parity.
+  test("B. numeric-date parity: '20.08.2026 r., w godzinach od 9:00 do 12:00' resolves the same as the named-month form", () => {
+    expect(extractStartDateIso("W dniu 20.08.2026 r., w godzinach od 9:00 do 12:00 wystąpi przerwa.")).toBe(
+      "2026-08-20T07:00:00.000Z"
+    );
+  });
+
+  // C. Malformed hour — fails closed, never falls back to midnight.
+  test("C. malformed: 'w godzinach od 25:00 do 12:00' → null (fail-closed, not midnight)", () => {
+    expect(
+      extractStartDateIso("W dniu 20 sierpnia 2026 roku, w godzinach od 25:00 do 12:00 wystąpi przerwa.")
+    ).toBeNull();
+  });
+
+  // D. Malformed minute — fails closed.
+  test("D. malformed: 'w godzinach od 9:5 do 12:00' → null (fail-closed, not midnight)", () => {
+    expect(
+      extractStartDateIso("W dniu 20 sierpnia 2026 roku, w godzinach od 9:5 do 12:00 wystąpi przerwa.")
+    ).toBeNull();
+  });
+
+  test("malformed: 'w godzinach od 9:00:30 do 12:00' → null (fail-closed, not midnight)", () => {
+    expect(
+      extractStartDateIso("W dniu 20 sierpnia 2026 roku, w godzinach od 9:00:30 do 12:00 wystąpi przerwa.")
+    ).toBeNull();
+  });
+
+  // E. False positives this new grammar must NOT match — falls through to
+  // the pre-existing date-only/midnight semantics, exactly as before this
+  // sprint.
+  test("E. 'w godzinach porannych' is NOT an explicit time clause — date-only, midnight UTC", () => {
+    expect(
+      extractStartDateIso("20 sierpnia 2026 roku, w godzinach porannych będą prowadzone prace.")
+    ).toBe("2026-08-20T00:00:00.000Z");
+  });
+
+  test("'przez kilka godzin' is NOT an explicit time clause — date-only, midnight UTC", () => {
+    expect(extractStartDateIso("20 sierpnia 2026 roku, przez kilka godzin wystąpią utrudnienia.")).toBe(
+      "2026-08-20T00:00:00.000Z"
+    );
+  });
+
+  test("'godziny pracy urzędu' is NOT an explicit time clause — date-only, midnight UTC", () => {
+    expect(
+      extractStartDateIso("20 sierpnia 2026 roku, godziny pracy urzędu pozostają bez zmian.")
+    ).toBe("2026-08-20T00:00:00.000Z");
+  });
+
+  test("dash-range 'w godzinach 9:00–12:00' (no 'od') is out of the narrow supported schema — date-only, midnight UTC", () => {
+    expect(extractStartDateIso("20 sierpnia 2026 roku, w godzinach 9:00–12:00 wystąpi przerwa.")).toBe(
+      "2026-08-20T00:00:00.000Z"
+    );
+  });
+
+  // F. Existing 'godz.' formats must remain completely unaffected.
+  test("F. existing 'od godz. H:MM' (DW 719-style) regression — unaffected by this sprint", () => {
+    expect(extractStartDateIso(REAL_DW719_TEXT)).toBe("2026-07-29T07:00:00.000Z");
+  });
+
+  test("existing numeric 'godz. H:MM' (Pruszków-style) regression — unaffected by this sprint", () => {
+    expect(extractStartDateIso("Od 10.08.2026 r., godz. 7:00 obowiązuje zmiana organizacji ruchu.")).toBe(
+      "2026-08-10T05:00:00.000Z"
+    );
+  });
+});
+
 // ── Sprint 192 (F3B-S2TZF) — operational-year boundary (MIN_SUPPORTED_
 // ALERT_YEAR / MAX_SUPPORTED_ALERT_YEAR = 2000–2100 inclusive), covering
 // both date formats. Boundary-accepted cases use a date deep in summer
@@ -915,6 +1021,47 @@ test.describe("evaluateAutoPublishEligibility — safe candidate", () => {
       expect(result.fields.sourceUrl).toBe(
         "https://www.pruszkow.pl/mieszkancy/komunikat-o-czasowej-zmianie-organizacji-ruchu-na-ul-ks-romana-indrzejczyka/"
       );
+    }
+  });
+
+  // G. Sprint 193 (F3B-XWATER-PARSE) — the exact real Wodociągi Michałowice
+  // candidate from the F3B-XWATER-VAL audit, with wodociagi-michalowice
+  // simulated onto the auto-publish allowlist (same
+  // set-then-restore-in-`finally` pattern the "Config gates" describe
+  // block above already uses to test getAutoPublishSourceIds — never
+  // touches .env.local or any real deployment, restored unconditionally).
+  test("G. the exact real Wodociągi Michałowice candidate is eligible with the Warsaw-converted 09:00 start", () => {
+    const original = process.env.SCHEDULED_AUTO_PUBLISH_SOURCE_IDS;
+    process.env.SCHEDULED_AUTO_PUBLISH_SOURCE_IDS = JSON.stringify([
+      "pruszkow-aktualnosci",
+      "wodociagi-michalowice",
+    ]);
+    try {
+      const candidate = makeCandidate({
+        id: "f3b-xwater-val-real-candidate",
+        sourceKey: "wodociagi-michalowice",
+        sourceName: "Wodociągi Michałowice",
+        sourceUrl: "https://wodociagimichalowice.pl/2026/08/18/przerwa-w-dostawie-wody-198/",
+        candidateUrl: "https://wodociagimichalowice.pl/2026/08/18/przerwa-w-dostawie-wody-198/",
+        title: "Przerwa w dostawie wody",
+        text:
+          "Wodociągi Michałowice Sp. z o.o. informują, że w dniu 20 sierpnia 2026 roku tj. czwartek, " +
+          "w godzinach od 9:00 do 12:00 wystąpi przerwa w dostawie wody w miejscowości Michałowice " +
+          "w rejonie ul. Banasiówka, ul. Działkowa, ul. Miła (...) z powodu prac na sieci wodociągowej.",
+      });
+      const result = evaluateAutoPublishEligibility(candidate, [], new Date("2026-08-19T09:38:00.000Z"));
+      expect(result.eligible).toBe(true);
+      if (result.eligible) {
+        expect(result.fields.place).toBe("Michałowice");
+        expect(result.fields.category).toBe("water");
+        expect(result.fields.startsAt).toBe("2026-08-20T07:00:00.000Z");
+        expect(result.fields.sourceUrl).toBe(
+          "https://wodociagimichalowice.pl/2026/08/18/przerwa-w-dostawie-wody-198/"
+        );
+      }
+    } finally {
+      if (original === undefined) delete process.env.SCHEDULED_AUTO_PUBLISH_SOURCE_IDS;
+      else process.env.SCHEDULED_AUTO_PUBLISH_SOURCE_IDS = original;
     }
   });
 });

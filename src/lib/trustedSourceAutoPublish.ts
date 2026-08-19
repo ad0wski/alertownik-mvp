@@ -182,6 +182,36 @@ const WORD_TIME_KEYWORD_RE = new RegExp(
   "i"
 );
 
+// Sprint 193 (F3B-XWATER-PARSE) — a SECOND, narrower named-month keyword
+// regex for the one additional real-world clause shape this sprint adds:
+// "20 sierpnia 2026 roku tj. czwartek, w godzinach od 9:00 do 12:00"
+// (verified live: wodociagimichalowice.pl, 2026-08-18 notice). Deliberately
+// NOT a change to WORD_TIME_KEYWORD_RE above and deliberately NOT a wider
+// `[^\d]{0,N}` scan — "godzinach" (locative/plural) is a real Polish word
+// this module must never treat as a bare "godz."/"godzina" keyword (see
+// WORD_TIME_KEYWORD_RE's own boundary comment), so this is an explicit,
+// fully-enumerated optional-token grammar anchored at the exact position
+// immediately after the date match, matching ONLY this literal clause
+// shape and nothing broader:
+//   (optional "r."/"roku") (optional "tj. <polski dzień tygodnia>")
+//   (optional ",") "w godzinach od "
+// Every piece but the final "w godzinach od" is optional — so it also
+// matches the bare "20 sierpnia 2026, w godzinach od 9:00 ..." and
+// "20 sierpnia 2026 r., w godzinach od 9:00 ..." variants — but the
+// grammar never skips arbitrary text: an unlisted weekday, or any word
+// other than "roku"/"r." before "tj.", or anything after "od" but a time
+// token, simply fails to match, falling through to the SAME "no time
+// clause" (date-only, midnight) semantics as before this sprint. This is
+// why "w godzinach porannych", "przez kilka godzin", and "godziny pracy
+// urzędu" (none of which contain "w godzinach od ") can never match this
+// regex or WORD_TIME_KEYWORD_RE above — neither is a scan, both are
+// anchored, explicit grammars.
+const POLISH_WEEKDAYS_RE = "poniedziałek|wtorek|środa|czwartek|piątek|sobota|niedziela";
+const WORD_RANGE_TIME_KEYWORD_RE = new RegExp(
+  `^\\s*(?:r\\.|roku)?\\s*(?:tj\\.\\s*(?:${POLISH_WEEKDAYS_RE})\\s*)?,?\\s*w\\s+godzinach\\s+od\\s+`,
+  "i"
+);
+
 // Sprint 192 (F3B-S2R/F3B-S2RF) — numeric Polish date format, the second
 // real form official municipal notices actually use alongside the
 // named-month one above (e.g. pruszkow.pl: "10.08.2026 r., godz. 7:00").
@@ -226,6 +256,15 @@ const NUMERIC_TIME_KEYWORD_RE = new RegExp(
   `^(?:od\\s+)?${POLISH_LETTER_LOOKBEHIND}(?:godz\\.?|godzina)${POLISH_LETTER_LOOKAHEAD}\\s*`,
   "i"
 );
+
+// Sprint 193 (F3B-XWATER-PARSE) — numeric-format parity with
+// WORD_RANGE_TIME_KEYWORD_RE above, for "20.08.2026 r., w godzinach od
+// 9:00 do 12:00". Simpler than its named-month counterpart because
+// NUMERIC_DATE_PREFIX_RE already consumes the trailing "r."/comma/
+// whitespace suffix itself (see that regex's own comment) — nothing
+// optional needs re-matching here, just the literal, anchored "w
+// godzinach od " clause opener.
+const NUMERIC_RANGE_TIME_KEYWORD_RE = /^w\s+godzinach\s+od\s+/i;
 
 /** Parses a numeric H[:MM] time value from the text immediately following
  *  a matched "godz."/"od godz." keyword — SHARED by both the numeric and
@@ -603,24 +642,42 @@ export function extractStartDateIso(text: string): string | null {
     const wordRemainder = text.slice(wordDateMatch.index + wordDateMatch[0].length);
 
     const wordKeywordMatch = WORD_TIME_KEYWORD_RE.exec(wordRemainder);
-    if (!wordKeywordMatch) {
-      // Case 1: no "godz." clause at all — date-only, valid, defaults to
-      // midnight UTC (never Warsaw-converted).
-      return buildValidatedStartDateIso(year, monthIndex, day, 0, 0, false);
+    if (wordKeywordMatch) {
+      const wordTimeValue = parseExplicitTimeValue(wordRemainder.slice(wordKeywordMatch[0].length));
+      if (!wordTimeValue) {
+        // Case 3: the clause is present but malformed — fail the whole
+        // candidate closed, never fall back to case 1's midnight default,
+        // never truncated to a plausible-looking prefix (Sprint 192 /
+        // F3B-S2TZF: this is the exact gap a review found in the old
+        // single-regex named-month time group).
+        return null;
+      }
+      // Case 2: a complete, well-formed time clause — Europe/Warsaw local,
+      // converted to UTC by buildValidatedStartDateIso.
+      return buildValidatedStartDateIso(year, monthIndex, day, wordTimeValue.hour, wordTimeValue.minute, true);
     }
 
-    const wordTimeValue = parseExplicitTimeValue(wordRemainder.slice(wordKeywordMatch[0].length));
-    if (!wordTimeValue) {
-      // Case 3: the clause is present but malformed — fail the whole
-      // candidate closed, never fall back to case 1's midnight default,
-      // never truncated to a plausible-looking prefix (Sprint 192 /
-      // F3B-S2TZF: this is the exact gap a review found in the old
-      // single-regex named-month time group).
-      return null;
+    // Sprint 193 (F3B-XWATER-PARSE) — the "w godzinach od H:MM ..." clause
+    // shape, tried only after WORD_TIME_KEYWORD_RE has already failed to
+    // match (so a genuine "godz."/"godzina" clause is never re-parsed by a
+    // second path). Only the FIRST time value of the range is ever read —
+    // this module does not parse/store an ends_at, by design (unchanged
+    // this sprint).
+    const rangeKeywordMatch = WORD_RANGE_TIME_KEYWORD_RE.exec(wordRemainder);
+    if (rangeKeywordMatch) {
+      const rangeTimeValue = parseExplicitTimeValue(wordRemainder.slice(rangeKeywordMatch[0].length));
+      if (!rangeTimeValue) {
+        // Same fail-closed rule as case 3 above: an explicit "w godzinach
+        // od" clause was written but the time itself doesn't parse — never
+        // silently falls back to midnight.
+        return null;
+      }
+      return buildValidatedStartDateIso(year, monthIndex, day, rangeTimeValue.hour, rangeTimeValue.minute, true);
     }
-    // Case 2: a complete, well-formed time clause — Europe/Warsaw local,
-    // converted to UTC by buildValidatedStartDateIso.
-    return buildValidatedStartDateIso(year, monthIndex, day, wordTimeValue.hour, wordTimeValue.minute, true);
+
+    // Case 1: no recognized time clause at all — date-only, valid,
+    // defaults to midnight UTC (never Warsaw-converted).
+    return buildValidatedStartDateIso(year, monthIndex, day, 0, 0, false);
   }
 
   const dateMatch = NUMERIC_DATE_PREFIX_RE.exec(text);
@@ -631,22 +688,34 @@ export function extractStartDateIso(text: string): string | null {
     const remainder = text.slice(dateMatch.index + dateMatch[0].length);
 
     const keywordMatch = NUMERIC_TIME_KEYWORD_RE.exec(remainder);
-    if (!keywordMatch) {
-      // Case 1: no "godz."/"od godz." clause at all — date-only, valid,
-      // defaults to midnight UTC (never Warsaw-converted — there is no
-      // real moment to convert without a stated hour).
-      return buildValidatedStartDateIso(year, monthIndex, day, 0, 0, false);
+    if (keywordMatch) {
+      const timeValue = parseExplicitTimeValue(remainder.slice(keywordMatch[0].length));
+      if (!timeValue) {
+        // Case 3: the clause is present but malformed — fail the whole
+        // candidate closed, never fall back to case 1's midnight default.
+        return null;
+      }
+      // Case 2: a complete, well-formed time clause — Europe/Warsaw local,
+      // converted to UTC by buildValidatedStartDateIso.
+      return buildValidatedStartDateIso(year, monthIndex, day, timeValue.hour, timeValue.minute, true);
     }
 
-    const timeValue = parseExplicitTimeValue(remainder.slice(keywordMatch[0].length));
-    if (!timeValue) {
-      // Case 3: the clause is present but malformed — fail the whole
-      // candidate closed, never fall back to case 1's midnight default.
-      return null;
+    // Sprint 193 (F3B-XWATER-PARSE) — numeric-format parity, see
+    // WORD_RANGE_TIME_KEYWORD_RE's own comment above for the full
+    // reasoning; only the first time value of the range is ever read.
+    const rangeKeywordMatch = NUMERIC_RANGE_TIME_KEYWORD_RE.exec(remainder);
+    if (rangeKeywordMatch) {
+      const rangeTimeValue = parseExplicitTimeValue(remainder.slice(rangeKeywordMatch[0].length));
+      if (!rangeTimeValue) {
+        return null;
+      }
+      return buildValidatedStartDateIso(year, monthIndex, day, rangeTimeValue.hour, rangeTimeValue.minute, true);
     }
-    // Case 2: a complete, well-formed time clause — Europe/Warsaw local,
-    // converted to UTC by buildValidatedStartDateIso.
-    return buildValidatedStartDateIso(year, monthIndex, day, timeValue.hour, timeValue.minute, true);
+
+    // Case 1: no "godz."/"od godz."/"w godzinach od" clause at all —
+    // date-only, valid, defaults to midnight UTC (never Warsaw-converted —
+    // there is no real moment to convert without a stated hour).
+    return buildValidatedStartDateIso(year, monthIndex, day, 0, 0, false);
   }
 
   return null;
