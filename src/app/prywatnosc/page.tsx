@@ -4,7 +4,7 @@ import { FEEDBACK_EMAIL } from "@/lib/feedbackMailto";
 export const metadata = {
   title: "Polityka prywatności — Alertownik",
   description:
-    "Polityka prywatności serwisu Alertownik (wersja beta) — jakie dane przetwarzamy, po co i jakie masz prawa.",
+    "Polityka prywatności serwisu Alertownik — jakie dane przetwarzamy, po co i jakie masz prawa.",
 };
 
 const sectionClass = "bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 sm:p-5";
@@ -28,10 +28,7 @@ export default function PrivacyPage() {
           Polityka prywatności
         </h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-          Wersja beta (szkic) — 3 lipca 2026. Ten dokument opisuje uczciwie
-          obecny stan serwisu w fazie pilotażu i zostanie zaktualizowany oraz
-          zweryfikowany przed szerszym publicznym startem lub publikacją w
-          sklepach z aplikacjami.
+          Ostatnia aktualizacja: 21 sierpnia 2026.
         </p>
       </div>
 
@@ -142,6 +139,10 @@ export default function PrivacyPage() {
 
         <section className={sectionClass}>
           <h2 className={h2Class}>Komu powierzamy dane (podmioty przetwarzające)</h2>
+          <p className={`${pClass} mb-2`}>
+            Połączenia z serwisem i usługami backendowymi są realizowane z
+            użyciem szyfrowanych połączeń HTTPS/TLS.
+          </p>
           <ul className={listClass}>
             <li>
               <span className="font-medium">Vercel</span> — hosting aplikacji
@@ -151,10 +152,7 @@ export default function PrivacyPage() {
               Europejskim Obszarem Gospodarczym. Vercel deklaruje w swojej
               dokumentacji prywatności stosowanie mechanizmów ochrony
               transferu danych (m.in. EU–U.S. Data Privacy Framework oraz
-              odpowiednie klauzule umowne, gdy mają zastosowanie). Alertownik
-              korzysta obecnie z bezpłatnego planu Vercel (Hobby); dokładny
-              zakres obowiązującej relacji umownej wymaga ponownej
-              weryfikacji przed szerszym startem publicznym.
+              odpowiednie klauzule umowne, gdy mają zastosowanie).
             </li>
             <li>
               <span className="font-medium">Supabase</span> — baza danych
@@ -214,13 +212,12 @@ export default function PrivacyPage() {
           </p>
         </section>
 
-        <section className="bg-amber-50 dark:bg-amber-500/15 rounded-2xl border border-amber-200 dark:border-amber-500/30 shadow-sm p-4 sm:p-5">
+        <section className={sectionClass}>
           <h2 className={h2Class}>Status tego dokumentu</h2>
           <p className={pClass}>
-            To szkic na czas pilotażu (beta) — napisany uczciwie na podstawie
-            faktycznego działania serwisu, ale nieprzeznaczony jako ostateczna
-            porada prawna. Przed szerszym startem publicznym lub publikacją w
-            sklepie z aplikacjami zostanie zweryfikowany i zaktualizowany.
+            Polityka opisuje aktualne zasady przetwarzania danych w
+            Alertowniku. W przypadku istotnych zmian w sposobie przetwarzania
+            danych dokument zostanie odpowiednio zaktualizowany.
           </p>
         </section>
       </div>
