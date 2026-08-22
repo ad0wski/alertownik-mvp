@@ -490,11 +490,12 @@ test.describe("PWA install instructions (/about#instalacja)", () => {
 // Sprint 109B — public legal pages (beta drafts). Static content, no auth,
 // no Supabase dependency.
 test.describe("Legal pages (/prywatnosc, /zasady)", () => {
-  test("privacy policy page shows heading, beta-draft status and privacy contact", async ({ page }) => {
+  test("privacy policy page shows heading, last-updated date and privacy contact", async ({ page }) => {
     await page.goto("/prywatnosc");
     await expect(page.locator("h1")).toContainText("Polityka prywatności");
-    await expect(page.getByText(/Wersja beta \(szkic\)/)).toBeVisible();
+    await expect(page.getByText(/Ostatnia aktualizacja: 21 sierpnia 2026/)).toBeVisible();
     await expect(page.getByText(/Status tego dokumentu/)).toBeVisible();
+    await expect(page.getByRole("link", { name: "alertownik.kontakt@gmail.com" }).first()).toBeVisible();
     // The honest "what we do NOT collect" line — a core trust claim.
     await expect(page.getByText(/Czego NIE zbieramy/)).toBeVisible();
   });
@@ -520,7 +521,11 @@ test.describe("Legal pages (/prywatnosc, /zasady)", () => {
     await expect(page.getByText(/Stany Zjednoczone/)).toBeVisible();
     await expect(page.getByText(/poza Europejskim\s+Obszarem Gospodarczym/)).toBeVisible();
     await expect(page.getByText(/EU–U\.S\. Data Privacy Framework/)).toBeVisible();
-    await expect(page.getByText(/bezpłatnego planu Vercel \(Hobby\)/)).toBeVisible();
+    // Vercel is still named as the infrastructure/hosting provider — the
+    // Hobby-plan-specific wording was dropped from the release copy
+    // (docs(privacy) release prep, e881c0e) and is intentionally not
+    // asserted here anymore.
+    await expect(page.getByText(/Vercel — hosting aplikacji/)).toBeVisible();
     const html = await page.content();
     // No overclaim that Alertownik has an active Vercel DPA...
     expect(html).not.toContain("Alertownik ma aktywny DPA Vercela");

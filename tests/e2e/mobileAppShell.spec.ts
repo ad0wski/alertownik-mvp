@@ -113,7 +113,10 @@ test.describe("Bottom navigation — layout and touch targets", () => {
     await page.goto("/wiecej");
     const nav = page.getByRole("navigation", { name: "Nawigacja główna" });
     const navBox = await nav.boundingBox();
-    const lastRow = page.getByRole("link", { name: /Panel admina/ });
+    // "Panel admina" was removed from the public /wiecej menu for security
+    // reasons (d09ebe5, fix(security): remove public admin panel links) —
+    // "Kontakt / feedback" is now the last row.
+    const lastRow = page.getByRole("link", { name: /Kontakt \/ feedback/ });
     await lastRow.scrollIntoViewIfNeeded();
     const rowBox = await lastRow.boundingBox();
     expect(navBox).not.toBeNull();
@@ -210,7 +213,6 @@ test.describe("'Więcej' page (/wiecej)", () => {
       "Prywatność",
       "Współpraca",
       "Kontakt / feedback",
-      "Panel admina",
     ]) {
       await expect(main.getByText(label, { exact: true })).toBeVisible();
     }
