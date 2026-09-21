@@ -472,10 +472,10 @@ test.describe("PWA install instructions (/about#instalacja)", () => {
     await expect(page.getByText("iPhone (Safari)")).toBeVisible();
   });
 
-  test("install section honestly states the app is not in any store yet", async ({ page }) => {
+  test("install section honestly states the app is not publicly available in any store yet", async ({ page }) => {
     await page.goto("/about");
     await expect(
-      page.getByText(/nie ma jeszcze w\s+Google Play ani App Store/)
+      page.getByText(/nie jest jeszcze publicznie dostępny w\s+Google Play ani App Store/)
     ).toBeVisible();
   });
 

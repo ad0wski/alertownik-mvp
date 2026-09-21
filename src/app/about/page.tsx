@@ -133,8 +133,8 @@ export default function AboutPage() {
           <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-3">
             Alertownik działa w przeglądarce i możesz dodać go do ekranu
             głównego telefonu — będzie otwierał się jak aplikacja, bez
-            pobierania czegokolwiek ze sklepu. Alertownika nie ma jeszcze w
-            Google Play ani App Store.
+            pobierania czegokolwiek ze sklepu. Alertownik nie jest jeszcze
+            publicznie dostępny w Google Play ani App Store.
           </p>
           <div className="flex flex-col gap-3">
             <div className="border border-slate-100 dark:border-slate-800 rounded-xl p-3">

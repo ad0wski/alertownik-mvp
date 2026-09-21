@@ -44,9 +44,9 @@ export default function InstalacjaPage() {
         </h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
           Dodaj go do ekranu głównego telefonu (bez pobierania czegokolwiek
-          ze sklepu — Alertownika nie ma jeszcze w Google Play ani App
-          Store), sprawdź kilka rzeczy poniżej i odeślij krótką opinię —
-          jedno lub dwa zdania w zupełności wystarczą.
+          ze sklepu — Alertownik nie jest jeszcze publicznie dostępny w
+          Google Play ani App Store), sprawdź kilka rzeczy poniżej i odeślij
+          krótką opinię — jedno lub dwa zdania w zupełności wystarczą.
         </p>
         <details className="mt-2">
           <summary className="text-xs text-slate-500 dark:text-slate-400 cursor-pointer select-none hover:text-slate-600 dark:hover:text-slate-300">
