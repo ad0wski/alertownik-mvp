@@ -1,6 +1,12 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { createHash } from "crypto";
-import { textSimilarity, normalizeForCompare, stripConfirmedDedupBoilerplate } from "@/lib/candidateWarnings";
+import {
+  textSimilarity,
+  normalizeForCompare,
+  stripConfirmedDedupBoilerplate,
+  extractPlace,
+  extractStartDateIso,
+} from "@/lib/candidateWarnings";
 import type { CheckProposal } from "@/lib/sourceCheck";
 import { SAFE_CHECK_SOURCE_IDS } from "@/lib/sourceCheck";
 import type { FetchDiagnosticCode } from "@/lib/scheduledWriterRunSafety";
@@ -235,6 +241,109 @@ export function classifyProposalAgainstExisting(
     proposal.text,
     existingItems.map((item) => item.text)
   );
+}
+
+// ── Cross-source candidate dedup (P0-2C fix) ──────────────────────────────────
+//
+// Pre-launch audit P0 finding: findExistingCandidateTexts (above) only
+// ever compares a new proposal against OTHER CANDIDATES FROM THE SAME
+// SOURCE (source_key/source_id match) — two different official sources
+// independently reporting the same real-world event each create their
+// own, uncompared `pending` candidate. classifyProposalAgainstExisting's
+// existing cross-table ALERT comparison doesn't help here either: it only
+// ever sees alerts, and both candidates are still merely `pending`.
+//
+// Deliberately reuses, never reinvents: the exact same exact-URL check,
+// the exact same stripConfirmedDedupBoilerplate + textSimilarity scoring,
+// and the exact same DUPLICATE_CONFIDENCE_THRESHOLD/
+// AMBIGUOUS_SIMILARITY_THRESHOLD values classifyProposalAgainstExisting
+// already uses — no second similarity algorithm, no new threshold.
+//
+// The ONE addition: a place/date MISMATCH overrides and vetoes an
+// otherwise-high similarity score for that specific pair. This is the
+// explicit guard against the exact false-positive this task warns
+// about — two unrelated notices sharing generic/boilerplate-heavy
+// municipal wording (e.g. a shared administrative template) must never
+// be merged just because the wording looks similar; a genuine duplicate
+// describes the SAME place and the SAME date, not merely similar words.
+// Reuses extractPlace/extractStartDateIso verbatim (the exact same
+// functions evaluateAutoPublishEligibility already uses) — never a new
+// extraction heuristic. Agreement (or "unknown" on either side, when a
+// place/date can't be extracted from one or both texts) never FORCES a
+// match by itself — it only fails to veto one; only a genuine,
+// extractable DISAGREEMENT vetoes.
+//
+// "Fail conservatively" (per the task brief) means: when the override
+// does not apply and similarity still lands in the ambiguous band, the
+// caller must treat that exactly like same-source ambiguity already is
+// — counted, never silently inserted, never silently discarded. This
+// function only classifies; writeCandidatesForSource (below) is what
+// actually withholds the insert.
+function placesDisagree(a: string, b: string): boolean {
+  const placeA = extractPlace(a);
+  const placeB = extractPlace(b);
+  return Boolean(placeA && placeB && placeA !== placeB);
+}
+
+function datesDisagree(a: string, b: string): boolean {
+  const dateA = extractStartDateIso(a);
+  const dateB = extractStartDateIso(b);
+  return Boolean(dateA && dateB && dateA.slice(0, 10) !== dateB.slice(0, 10));
+}
+
+/** Classifies a new proposal against PENDING candidates from OTHER
+ *  sources only (the caller is responsible for scoping the input list to
+ *  "other sources" — see findPendingCandidatesFromOtherSources below;
+ *  this function itself has no notion of "source" at all, it only scores
+ *  the items it's given). Same new/duplicate/ambiguous classification,
+ *  same thresholds as classifyProposalAgainstExisting — see the file
+ *  comment above for exactly what's new. */
+export function classifyProposalAgainstOtherSourceCandidates(
+  proposal: { text: string; url?: string },
+  otherSourceCandidates: DedupComparisonItem[]
+): DuplicateClassification {
+  if (proposal.url) {
+    const normalizedProposalUrl = normalizeUrlForCompare(proposal.url);
+    const urlMatch = otherSourceCandidates.some(
+      (item) => item.url && normalizeUrlForCompare(item.url) === normalizedProposalUrl
+    );
+    if (urlMatch) return "duplicate";
+  }
+
+  const strippedProposal = stripConfirmedDedupBoilerplate(proposal.text);
+  let bestScore = 0;
+  for (const item of otherSourceCandidates) {
+    if (!item.text) continue;
+    // Place/date disagreement is a structural signal that these are two
+    // different real-world events — it overrides any amount of textual
+    // similarity for THIS pair specifically (other pairs are still
+    // scored on their own merits), never the other way around.
+    if (placesDisagree(proposal.text, item.text)) continue;
+    if (datesDisagree(proposal.text, item.text)) continue;
+
+    const score = textSimilarity(strippedProposal, stripConfirmedDedupBoilerplate(item.text));
+    if (score > bestScore) bestScore = score;
+  }
+
+  if (bestScore >= DUPLICATE_CONFIDENCE_THRESHOLD) return "duplicate";
+  if (bestScore >= AMBIGUOUS_SIMILARITY_THRESHOLD) return "ambiguous";
+  return "new";
+}
+
+/** The more conservative of two classifications — duplicate beats
+ *  ambiguous beats new. Used to combine the same-source classification
+ *  (classifyProposalAgainstExisting) with the new cross-source one
+ *  (classifyProposalAgainstOtherSourceCandidates): either one alone is
+ *  enough to withhold an insert, matching "fail conservatively" from
+ *  the task brief — neither check can ever be loosened by the other
+ *  being more permissive. */
+export function moreConservativeClassification(
+  a: DuplicateClassification,
+  b: DuplicateClassification
+): DuplicateClassification {
+  if (a === "duplicate" || b === "duplicate") return "duplicate";
+  if (a === "ambiguous" || b === "ambiguous") return "ambiguous";
+  return "new";
 }
 
 // ── Insert payload builders ──────────────────────────────────────────────────
@@ -592,6 +701,18 @@ export interface PendingAutoPublishCandidateRow {
   text: string;
   status: string;
   convertedAlertId: string | null;
+  /** P0-2C fix — ISO timestamp of source_notice_candidates.detected_at,
+   *  so evaluateAutoPublishEligibility can enforce
+   *  MAX_AUTO_PUBLISH_CANDIDATE_AGE_HOURS. Previously not selected at
+   *  all — a pre-launch-audit P0 finding (no candidate-age cap existed). */
+  detectedAt: string;
+  /** P0-2C fix — the candidate's own alert_sources mapping
+   *  (source_notice_candidates.source_id), when one exists. Previously
+   *  not selected at all; buildAutoPublishAlertInsert hardcoded
+   *  alerts.source_id to null unconditionally even when a legitimate
+   *  mapping was available. `null` when no mapping exists — never
+   *  invented. */
+  registrySourceId: string | null;
 }
 
 export interface AutoPublishAlertInsertPayload {
@@ -605,7 +726,14 @@ export interface AutoPublishAlertInsertPayload {
   action: string;
   source_name: string;
   source_url: string;
-  source_id: null;
+  /** P0-2C fix — was hardcoded `null` unconditionally; now carries the
+   *  candidate's own registrySourceId when a legitimate mapping exists,
+   *  preserving `null` only when none does. Safe without a migration —
+   *  the live "Scheduled writer can insert trusted-source auto-published
+   *  alert" WITH CHECK policy places no restriction on source_id at all,
+   *  and the column is a plain nullable FK (verified against the live
+   *  schema this session). */
+  source_id: string | null;
   status: "published";
   published_at: string;
 }
@@ -653,6 +781,17 @@ export interface ScheduledSourceWriter {
    *  needed. Ordered oldest-first so a long-pending candidate is
    *  considered before a just-created one. */
   findPendingAutoPublishCandidates?(sourceIds: readonly string[]): Promise<PendingAutoPublishCandidateRow[]>;
+  /** P0-2C fix — bounded read (limit 50, same convention as
+   *  findExistingCandidateTexts) of `pending` candidates from every
+   *  OTHER source (source_key != excludeSourceKey), for the new
+   *  cross-source duplicate check (classifyProposalAgainstOtherSourceCandidates).
+   *  Optional for the same reason findExistingAlertComparisons is: every
+   *  pre-existing hand-written fake writer keeps compiling and passing
+   *  unmodified — a fake/writer that doesn't implement it degrades to
+   *  "no other-source candidates available", never breaking candidate
+   *  creation, matching this file's own established convention for
+   *  optional writer methods. */
+  findPendingCandidatesFromOtherSources?(excludeSourceKey: string): Promise<DedupComparisonItem[]>;
 }
 
 /** Postgres unique_violation — the exact code the proposed migration's
@@ -678,6 +817,8 @@ interface PendingCandidateFullRow {
   raw_text?: string;
   status: string;
   converted_alert_id?: string | null;
+  detected_at: string;
+  source_id?: string | null;
 }
 
 interface ExistingAlertRow {
@@ -691,6 +832,17 @@ interface ExistingAlertRow {
  *  a single, capped read per source per invocation, never unbounded
  *  history, never one query per proposal. */
 const EXISTING_ALERT_COMPARISON_LIMIT = 200;
+
+/** P0-2C fix — same bound as findExistingCandidateTexts's own limit, for
+ *  the same reason: a single, capped read per invocation. */
+const OTHER_SOURCE_CANDIDATE_LIMIT = 50;
+
+interface OtherSourceCandidateRow {
+  title?: string;
+  excerpt?: string;
+  raw_text?: string;
+  candidate_url?: string | null;
+}
 
 /** The only real (Supabase-backed) implementation of ScheduledSourceWriter.
  *  Tests never construct this — they hand-write a fake ScheduledSourceWriter
@@ -772,7 +924,11 @@ export function createSupabaseScheduledWriter(client: SupabaseClient): Scheduled
       if (sourceIds.length === 0) return [];
       const { data } = await client
         .from("source_notice_candidates")
-        .select("id, source_key, source_name, source_url, candidate_url, title, excerpt, raw_text, status, converted_alert_id")
+        // P0-2C fix: detected_at (candidate-age cap) and source_id (real
+        // registry provenance) added — both were previously unselected.
+        .select(
+          "id, source_key, source_name, source_url, candidate_url, title, excerpt, raw_text, status, converted_alert_id, detected_at, source_id"
+        )
         .eq("status", "pending")
         .in("source_key", [...sourceIds])
         .order("created_at", { ascending: true })
@@ -787,6 +943,8 @@ export function createSupabaseScheduledWriter(client: SupabaseClient): Scheduled
         text: row.raw_text || row.excerpt || row.title || "",
         status: row.status,
         convertedAlertId: row.converted_alert_id ?? null,
+        detectedAt: row.detected_at,
+        registrySourceId: row.source_id ?? null,
       }));
     },
     // Sprint 177E — reads through the writer's OWN authenticated session
@@ -821,6 +979,25 @@ export function createSupabaseScheduledWriter(client: SupabaseClient): Scheduled
         .map((row) => ({
           text: [row.title, row.change].filter(Boolean).join(" ").trim(),
           url: row.source_url || null,
+        }))
+        .filter((item) => item.text.length > 0);
+    },
+    // P0-2C fix — reads through the writer's existing unrestricted
+    // (non source-scoped) SELECT policy on source_notice_candidates,
+    // same policy findPendingAutoPublishCandidates already relies on —
+    // no new grant needed.
+    async findPendingCandidatesFromOtherSources(excludeSourceKey) {
+      const { data } = await client
+        .from("source_notice_candidates")
+        .select("title, excerpt, raw_text, candidate_url")
+        .eq("status", "pending")
+        .neq("source_key", excludeSourceKey)
+        .order("detected_at", { ascending: false })
+        .limit(OTHER_SOURCE_CANDIDATE_LIMIT);
+      return ((data as OtherSourceCandidateRow[] | null) ?? [])
+        .map((row) => ({
+          text: row.raw_text || row.excerpt || row.title || "",
+          url: row.candidate_url || null,
         }))
         .filter((item) => item.text.length > 0);
     },
@@ -916,6 +1093,21 @@ export async function writeCandidatesForSource(
     ...existingAlerts,
   ];
 
+  // P0-2C fix — same call-once-per-invocation shape as the two reads
+  // above, degrading the same way (missing method or failed read → no
+  // cross-source candidates available, never breaking candidate
+  // creation). Same-source dedup (existingItems, above) is completely
+  // unchanged by this addition — this is a strictly additive, second,
+  // independent check.
+  let otherSourceCandidates: DedupComparisonItem[] = [];
+  if (writer.findPendingCandidatesFromOtherSources) {
+    try {
+      otherSourceCandidates = await writer.findPendingCandidatesFromOtherSources(input.sourceKey);
+    } catch {
+      otherSourceCandidates = [];
+    }
+  }
+
   let candidatesInserted = 0;
   let duplicatesSkipped = 0;
   let ambiguousCandidates = 0;
@@ -923,7 +1115,19 @@ export async function writeCandidatesForSource(
   let duplicatesPreventedByDatabase = 0;
   for (const proposal of input.proposals) {
     const text = proposal.rawText || proposal.excerpt || proposal.title;
-    const classification = classifyProposalAgainstExisting({ text, url: proposal.url }, existingItems);
+    const sameSourceClassification = classifyProposalAgainstExisting({ text, url: proposal.url }, existingItems);
+    // P0-2C fix — the cross-source check only needs to run when the
+    // same-source check didn't already decide "duplicate" (nothing more
+    // conservative is possible beyond that), saving the extra scoring
+    // pass in the common case while never changing the outcome: either
+    // check alone is already sufficient to withhold an insert.
+    const classification =
+      sameSourceClassification === "duplicate"
+        ? "duplicate"
+        : moreConservativeClassification(
+            sameSourceClassification,
+            classifyProposalAgainstOtherSourceCandidates({ text, url: proposal.url }, otherSourceCandidates)
+          );
 
     if (classification === "duplicate") {
       duplicatesSkipped++;

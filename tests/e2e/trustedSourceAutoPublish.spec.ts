@@ -8,6 +8,7 @@ import {
   evaluateAutoPublishEligibility,
   runTrustedSourceAutoPublish,
   buildAutoPublishAlertInsert,
+  MAX_AUTO_PUBLISH_CANDIDATE_AGE_HOURS,
   type AutoPublishCandidateInput,
 } from "@/lib/trustedSourceAutoPublish";
 import type { ScheduledSourceWriter, DedupComparisonItem, AutoPublishAlertInsertPayload } from "@/lib/scheduledWriter";
@@ -41,6 +42,16 @@ function makeCandidate(overrides: Partial<AutoPublishCandidateInput> = {}): Auto
     text: REAL_DW719_TEXT,
     status: "pending",
     convertedAlertId: null,
+    // P0-2C — 2 hours before FIXED_NOW below: comfortably fresh by
+    // default so every pre-existing test (none of which cared about
+    // candidate age) keeps passing unmodified; the dedicated
+    // MAX_AUTO_PUBLISH_CANDIDATE_AGE_HOURS tests override this
+    // explicitly. No legitimate registry mapping by default (matches
+    // this candidate's real Production history — the Pruszków canary
+    // predates SCHEDULED_WRITER_SOURCE_REGISTRY_IDS being configured for
+    // it); the dedicated source_id test overrides this explicitly too.
+    detectedAt: "2026-07-28T22:00:00.000Z",
+    registrySourceId: null,
     ...overrides,
   };
 }
@@ -185,11 +196,91 @@ test.describe("evaluateAutoPublishEligibility — safe candidate", () => {
       expect(result.fields.place).toBe("Nowa Wieś");
       expect(result.fields.startsAt).toBe("2026-07-29T09:00:00.000Z");
       expect(result.fields.title).toBe("Zmiana organizacji ruchu na drodze wojewódzkiej nr 719");
-      expect(result.fields.sourceUrl).toBe("https://www.pruszkow.pl/mieszkancy/aktualnosci-mieszkaniec/");
+      // P0-2C fix — sourceUrl is now the candidate's own verified direct
+      // permalink (candidateUrl), never the generic source listing page
+      // (candidate.sourceUrl) — this is the exact provenance fix itself,
+      // pinned here against the real DW 719 fixture.
+      expect(result.fields.sourceUrl).toBe(makeCandidate().candidateUrl);
+      expect(result.fields.sourceUrl).not.toBe(makeCandidate().sourceUrl);
+      expect(result.fields.sourceId).toBeNull();
       expect(result.fields.severity).toBe("info");
       expect(result.fields.slug).toContain("758819cc".slice(0, 8));
     }
   });
+
+  // P0-2C Fix 4 — source_id is carried through from the candidate's own
+  // registry mapping when one legitimately exists, instead of always
+  // being discarded.
+  test("a candidate with a real registry mapping carries source_id through to the published alert's fields", () => {
+    const result = evaluateAutoPublishEligibility(
+      makeCandidate({ registrySourceId: "real-alert-sources-uuid" }),
+      [],
+      FIXED_NOW
+    );
+    expect(result.eligible).toBe(true);
+    if (result.eligible) {
+      expect(result.fields.sourceId).toBe("real-alert-sources-uuid");
+    }
+  });
+});
+
+// P0-2C Fix 2 — maximum candidate age before AUTO-PUBLISH eligibility.
+// Separate from, and independent of, the pre-existing PAST_GRACE_MS
+// content-date check: that one judges what the notice's OWN text claims;
+// this one judges how long the candidate ROW has sat `pending`,
+// regardless of what its text says. Both gates must pass.
+test.describe(`evaluateAutoPublishEligibility — MAX_AUTO_PUBLISH_CANDIDATE_AGE_HOURS (${MAX_AUTO_PUBLISH_CANDIDATE_AGE_HOURS}h)`, () => {
+  const HOUR_MS = 60 * 60 * 1000;
+
+  test("fresh candidate (detected 1 hour ago) is eligible", () => {
+    const detectedAt = new Date(FIXED_NOW.getTime() - 1 * HOUR_MS).toISOString();
+    const result = evaluateAutoPublishEligibility(makeCandidate({ detectedAt }), [], FIXED_NOW);
+    expect(result.eligible).toBe(true);
+  });
+
+  test("just inside the boundary (23h59m old) is eligible", () => {
+    const detectedAt = new Date(
+      FIXED_NOW.getTime() - (MAX_AUTO_PUBLISH_CANDIDATE_AGE_HOURS * HOUR_MS - 60_000)
+    ).toISOString();
+    const result = evaluateAutoPublishEligibility(makeCandidate({ detectedAt }), [], FIXED_NOW);
+    expect(result.eligible).toBe(true);
+  });
+
+  test("exactly at the boundary (24h old to the millisecond) is still eligible — '>', never '>='", () => {
+    const detectedAt = new Date(FIXED_NOW.getTime() - MAX_AUTO_PUBLISH_CANDIDATE_AGE_HOURS * HOUR_MS).toISOString();
+    const result = evaluateAutoPublishEligibility(makeCandidate({ detectedAt }), [], FIXED_NOW);
+    expect(result.eligible).toBe(true);
+  });
+
+  test("just outside the boundary (24h + 1 minute old) is rejected as candidate_too_old", () => {
+    const detectedAt = new Date(
+      FIXED_NOW.getTime() - (MAX_AUTO_PUBLISH_CANDIDATE_AGE_HOURS * HOUR_MS + 60_000)
+    ).toISOString();
+    const result = evaluateAutoPublishEligibility(makeCandidate({ detectedAt }), [], FIXED_NOW);
+    expect(result).toEqual({ eligible: false, reason: "candidate_too_old" });
+  });
+
+  test("a very old candidate (90 days) is rejected as candidate_too_old, never silently published", () => {
+    const detectedAt = new Date(FIXED_NOW.getTime() - 90 * 24 * HOUR_MS).toISOString();
+    const result = evaluateAutoPublishEligibility(makeCandidate({ detectedAt }), [], FIXED_NOW);
+    expect(result).toEqual({ eligible: false, reason: "candidate_too_old" });
+  });
+
+  test("candidate age is checked independently of, and before, the content-date (PAST_GRACE_MS) check", () => {
+    // A candidate old enough to fail BOTH gates must report the
+    // candidate-age reason, not the content-date reason — proving the
+    // two checks are genuinely independent, not aliases of each other,
+    // and that the (cheaper, no-text-parsing) age check runs first.
+    const detectedAt = new Date(FIXED_NOW.getTime() - 90 * 24 * HOUR_MS).toISOString();
+    const result = evaluateAutoPublishEligibility(makeCandidate({ detectedAt }), [], FIXED_NOW);
+    expect(result).toEqual({ eligible: false, reason: "candidate_too_old" });
+  });
+
+  // Structural note, not a separate runtime test: evaluateAutoPublishEligibility
+  // takes no writer/database parameter at all (candidate, existingItems,
+  // now) — it is architecturally incapable of deleting a stale candidate
+  // regardless of its verdict, matching the requirement that stale
+  // candidates stay available for audit/manual review, never removed.
 });
 
 test.describe("evaluateAutoPublishEligibility — fail-closed cases", () => {
@@ -354,6 +445,7 @@ test.describe("buildAutoPublishAlertInsert ↔ getAlertTimeStatus — P0-1 fresh
       action: "Działanie testowe.",
       sourceName: "Źródło testowe",
       sourceUrl: "https://example.com/test",
+      sourceId: null,
     };
   }
 
@@ -418,6 +510,11 @@ test.describe("runTrustedSourceAutoPublish — end to end", () => {
   });
 
   test("exact URL duplicate against a pre-existing alert → zero publications", async () => {
+    // P0-2C note — this fixture's `url: candidateUrl` is no longer an
+    // artificial shortcut: after the Fix 3 provenance correction, a REAL
+    // published alert's own source_url genuinely equals the candidate's
+    // candidateUrl (see buildAutoPublishAlertInsert), so this is exactly
+    // the shape findExistingAlertComparisons() would really produce.
     const { writer, insertedAlerts } = makeFakeWriter({
       candidates: [makeCandidate()],
       existingAlerts: [{ text: "inny tekst", url: makeCandidate().candidateUrl! }],
@@ -462,6 +559,67 @@ test.describe("runTrustedSourceAutoPublish — end to end", () => {
     expect(outcome.status).toBe("mark_converted_failed");
     expect(insertedAlerts).toHaveLength(1);
     expect(outcome.alertId).toBe("alert-1");
+  });
+
+  // P0-2C Fix 5 — realistic end-to-end idempotency proof. The P0-2C
+  // audit found the ONE existing idempotency test for this exact
+  // scenario ("exact URL duplicate against a pre-existing alert",
+  // above) used an unrealistic fixture — it directly set
+  // `existingAlerts[].url` to the candidate's own candidateUrl by hand,
+  // which is not what buildAutoPublishAlertInsert actually produced
+  // BEFORE the Fix 3 provenance correction (it used the generic
+  // candidate.sourceUrl, not candidateUrl, so the two would never have
+  // matched in reality). This test uses no shortcuts: it runs the real
+  // pipeline once (insert succeeds, mark fails), takes the REAL
+  // resulting AutoPublishAlertInsertPayload, derives the "existing
+  // alert" comparison item the exact same way
+  // createSupabaseScheduledWriter.findExistingAlertComparisons's real
+  // implementation does (scheduledWriter.ts: `{title, change}.join(" ")`
+  // for text, `source_url` for url), and only THEN runs the pipeline a
+  // second time against the SAME still-pending candidate.
+  test("realistic partial-failure idempotency: insert succeeds, mark fails, candidate stays pending, a later run must not create a second alert", async () => {
+    // 1–3. First run: candidate is eligible, alert insert succeeds,
+    // markCandidateAutoPublished fails → candidate remains pending.
+    const firstRun = makeFakeWriter({
+      candidates: [makeCandidate()],
+      markShouldFail: true,
+    });
+    const firstOutcome = await runTrustedSourceAutoPublish(firstRun.writer, FIXED_NOW);
+    expect(firstOutcome.status).toBe("mark_converted_failed");
+    expect(firstRun.insertedAlerts).toHaveLength(1);
+    const publishedAlert = firstRun.insertedAlerts[0];
+    // Pins the real Fix 3 field mapping this test depends on — if this
+    // ever regresses back to the generic listing URL, this assertion
+    // fails here, loudly, rather than this test silently stopping being
+    // realistic again.
+    expect(publishedAlert.source_url).toBe(makeCandidate().candidateUrl);
+
+    // 4. The candidate itself is untouched by the failed mark — still
+    // `pending`, still convertedAlertId: null (markCandidateAutoPublished
+    // never ran any update in this fake, matching the real writer's own
+    // "mark only after a successful insert" ordering).
+    const stillPendingCandidate = makeCandidate();
+    expect(stillPendingCandidate.status).toBe("pending");
+    expect(stillPendingCandidate.convertedAlertId).toBeNull();
+
+    // 5. A later run's findExistingAlertComparisons() would now return
+    // this alert — derived the exact same way the REAL implementation
+    // does (scheduledWriter.ts), not an artificially-injected shortcut.
+    const realDerivedExistingAlert: DedupComparisonItem = {
+      text: [publishedAlert.title, publishedAlert.change].filter(Boolean).join(" ").trim(),
+      url: publishedAlert.source_url,
+    };
+
+    const secondRun = makeFakeWriter({
+      candidates: [stillPendingCandidate],
+      existingAlerts: [realDerivedExistingAlert],
+    });
+    const secondOutcome = await runTrustedSourceAutoPublish(secondRun.writer, FIXED_NOW);
+
+    // 6. MUST NOT create a second alert.
+    expect(secondOutcome.status).toBe("no_eligible_candidate");
+    expect(secondOutcome.skipped).toEqual([{ candidateId: stillPendingCandidate.id, reason: "duplicate" }]);
+    expect(secondRun.insertedAlerts).toHaveLength(0);
   });
 
   test("a writer missing the Sprint 180C methods (older/test fake) degrades safely to no_eligible_candidate", async () => {

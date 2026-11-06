@@ -1,7 +1,11 @@
 import type { AlertCategory, AlertSeverity } from "@/types/alert";
-import { PILOT_LOCALITIES } from "@/lib/officialSourceChecklist";
 import { detectCandidateCategory } from "@/lib/candidateVerifier";
-import { MONTHS_PL, normalizeForCompare } from "@/lib/candidateWarnings";
+// P0-2C — extractPlace/extractStartDateIso moved to candidateWarnings.ts
+// (so scheduledWriter.ts's new cross-source dedup can reuse them without
+// an import cycle) and re-exported here verbatim — this module's own
+// public API, and every existing test importing them from
+// "@/lib/trustedSourceAutoPublish", is unchanged.
+import { extractPlace, extractStartDateIso } from "@/lib/candidateWarnings";
 import {
   classifyProposalAgainstExisting,
   type DedupComparisonItem,
@@ -10,6 +14,8 @@ import {
   type ScheduledSourceWriter,
 } from "@/lib/scheduledWriter";
 import { SAFE_CHECK_SOURCE_IDS } from "@/lib/sourceCheck";
+
+export { extractPlace, extractStartDateIso };
 
 // Sprint 180C — Trusted Source Auto-Publish v1.
 //
@@ -25,9 +31,9 @@ import { SAFE_CHECK_SOURCE_IDS } from "@/lib/sourceCheck";
 //
 // Reuses, never reimplements: classifyProposalAgainstExisting (the SAME
 // cross-table dedup classifier write-candidates already uses),
-// detectCandidateCategory (candidateVerifier.ts), PILOT_LOCALITIES
-// (officialSourceChecklist.ts), MONTHS_PL/normalizeForCompare
-// (candidateWarnings.ts). No second dedup algorithm, no second category
+// detectCandidateCategory (candidateVerifier.ts), extractPlace/
+// extractStartDateIso (candidateWarnings.ts, re-exported here — see
+// P0-2C comment above). No second dedup algorithm, no second category
 // keyword list, no second locality list exists anywhere in this module.
 
 // ── Fail-closed configuration gates (mirrors scheduledWriter.ts's own
@@ -72,8 +78,16 @@ export function getMaxAutoPublishPerInvocation(): number {
 
 /** A direct, safe, public http(s) permalink — never a `/wp-json/` API
  *  endpoint (which is a data payload, not a page a resident can open and
- *  read), never missing. */
-export function isDirectSafePermalink(url: string | null | undefined): boolean {
+ *  read), never missing.
+ *
+ *  P0-2C — upgraded to a type predicate (`url is string`), purely a
+ *  static-type change: the runtime behavior/return values are byte-for-
+ *  byte identical (still plain `true`/`false`), so every existing test
+ *  asserting on them is unaffected. This lets evaluateAutoPublishEligibility
+ *  below narrow `candidate.candidateUrl` to a real `string` after this
+ *  check passes, so the auto-published alert's `source_url` (Fix 3) can
+ *  use it directly — no `!` non-null assertion, no second validation. */
+export function isDirectSafePermalink(url: string | null | undefined): url is string {
   if (!url || !url.trim()) return false;
   let parsed: URL;
   try {
@@ -84,74 +98,6 @@ export function isDirectSafePermalink(url: string | null | undefined): boolean {
   if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return false;
   if (parsed.pathname.includes("/wp-json/")) return false;
   return true;
-}
-
-// ── Deterministic Polish date extraction (day + named month + year,
-// optional "od godz. HH:MM") — reuses MONTHS_PL, the exact same month
-// list detectDateInText already validates presence with, so a text that
-// passes detectDateInText and a text this function can parse are governed
-// by one shared vocabulary, never two that could silently drift apart. ──
-
-const MONTH_INDEX: Record<string, number> = {
-  stycznia: 0,
-  lutego: 1,
-  marca: 2,
-  kwietnia: 3,
-  maja: 4,
-  czerwca: 5,
-  lipca: 6,
-  sierpnia: 7,
-  wrzesnia: 8,
-  pazdziernika: 9,
-  listopada: 10,
-  grudnia: 11,
-};
-
-const START_DATE_RE = new RegExp(
-  `\\b(\\d{1,2})\\s+(${MONTHS_PL})\\b[^\\d]{0,10}(\\d{4})(?:[^\\d]{0,20}godz\\.?\\s*(\\d{1,2})(?:[:.](\\d{2}))?)?`,
-  "i"
-);
-
-/** Returns an ISO datetime for the first "D miesiąca RRRR[, od godz. H:MM]"
- *  pattern found, or null when no such pattern is present — never a
- *  guessed/partial date. Time defaults to 00:00 UTC when no "godz." clause
- *  is present (matches this project's existing convention of a
- *  date-only ISO string being valid, e.g. the DW 719 alert's own
- *  `starts_at: "2026-07-09 00:00:00+00"`). */
-export function extractStartDateIso(text: string): string | null {
-  const match = START_DATE_RE.exec(text);
-  if (!match) return null;
-  const day = Number(match[1]);
-  const monthWord = normalizeForCompare(match[2]).replace(/\s+/g, "");
-  const year = Number(match[3]);
-  const monthIndex = MONTH_INDEX[monthWord];
-  if (monthIndex === undefined) return null;
-  const hour = match[4] ? Number(match[4]) : 0;
-  const minute = match[5] ? Number(match[5]) : 0;
-  const date = new Date(Date.UTC(year, monthIndex, day, hour, minute));
-  if (Number.isNaN(date.getTime())) return null;
-  // Sanity check: the constructed date must round-trip to the same
-  // day/month/year — Date.UTC silently rolls over an invalid day (e.g.
-  // "31 lutego") into the next month instead of failing, so this catches
-  // that rather than publishing a nonsensical date.
-  if (
-    date.getUTCFullYear() !== year ||
-    date.getUTCMonth() !== monthIndex ||
-    date.getUTCDate() !== day
-  ) {
-    return null;
-  }
-  return date.toISOString();
-}
-
-// ── Place extraction — exact match against the known pilot locality list,
-// never a fuzzy/invented location. ──────────────────────────────────────────
-
-export function extractPlace(text: string): string | null {
-  for (const locality of PILOT_LOCALITIES) {
-    if (text.includes(locality)) return locality;
-  }
-  return null;
 }
 
 // ── Slug (mirrors src/app/builder/page.tsx's own generateSlug() exactly —
@@ -206,8 +152,28 @@ const MIN_TEXT_LENGTH = 40;
  *  still count as "current" — covers a notice whose effective date has
  *  just passed but is still practically relevant (e.g. checked hours
  *  after the stated start time), without accepting something genuinely
- *  stale. */
+ *  stale. This is about the CONTENT's own stated date — kept as a fully
+ *  separate rule from MAX_AUTO_PUBLISH_CANDIDATE_AGE_HOURS below, which
+ *  is about how long the candidate ROW has sat `pending` regardless of
+ *  what date its text happens to mention. */
 const PAST_GRACE_MS = 24 * 60 * 60 * 1000;
+
+// P0-2C fix — pre-launch audit P0 finding: evaluateAutoPublishEligibility
+// previously never looked at `detected_at` at all, so a candidate could
+// sit `pending` for months and still be auto-published the moment
+// auto-publish was (re-)enabled, as long as its own embedded text date
+// still looked current relative to the evaluation moment. Alertownik is
+// a near-real-time local alert product — a stale, unprocessed candidate
+// must never surface, unreviewed, as a "new" published alert just
+// because the flag happened to flip back on later.
+//
+// Deliberately NOT the same rule as PAST_GRACE_MS above: that one judges
+// the NOTICE's own claimed date; this one judges how long OUR OWN
+// pipeline has had the candidate sitting unprocessed, independent of
+// what the text says. Both must pass — neither substitutes for the
+// other.
+export const MAX_AUTO_PUBLISH_CANDIDATE_AGE_HOURS = 24;
+const MAX_AUTO_PUBLISH_CANDIDATE_AGE_MS = MAX_AUTO_PUBLISH_CANDIDATE_AGE_HOURS * 60 * 60 * 1000;
 
 /** Re-exported for callers of this module — the canonical definition lives
  *  in scheduledWriter.ts (see PendingAutoPublishCandidateRow) so the
@@ -224,7 +190,17 @@ export interface AutoPublishAlertFields {
   change: string;
   action: string;
   sourceName: string;
+  /** P0-2C fix — the candidate's own verified, direct permalink
+   *  (`candidate.candidateUrl`, already proven safe by
+   *  isDirectSafePermalink below), never the source's generic listing
+   *  URL. See buildAutoPublishAlertInsert's own comment for the full
+   *  provenance-regression this closes. */
   sourceUrl: string;
+  /** P0-2C fix — the candidate's own registry mapping
+   *  (`source_notice_candidates.source_id`), carried through to the
+   *  published alert's `source_id` when a legitimate mapping exists;
+   *  `null` otherwise — never invented. See buildAutoPublishAlertInsert. */
+  sourceId: string | null;
 }
 
 export type AutoPublishEligibility =
@@ -233,6 +209,7 @@ export type AutoPublishEligibility =
 
 export type AutoPublishIneligibleReason =
   | "not_pending_or_already_converted"
+  | "candidate_too_old"
   | "source_not_on_auto_publish_allowlist"
   | "missing_or_unsafe_candidate_url"
   | "duplicate"
@@ -260,6 +237,16 @@ export function evaluateAutoPublishEligibility(
 ): AutoPublishEligibility {
   if (candidate.status !== "pending" || candidate.convertedAlertId !== null) {
     return { eligible: false, reason: "not_pending_or_already_converted" };
+  }
+  // P0-2C fix — cheapest check (no text parsing), so it runs early: a
+  // candidate detected more than MAX_AUTO_PUBLISH_CANDIDATE_AGE_HOURS ago
+  // is never eligible, regardless of what its own text says. Exactly 24
+  // hours still passes (`>`, not `>=`) — matches this codebase's existing
+  // boundary-inclusive convention (e.g. getAlertTimeStatus.ts's
+  // OPEN_ENDED_ALERT_FRESHNESS_DAYS check).
+  const candidateAgeMs = now.getTime() - new Date(candidate.detectedAt).getTime();
+  if (candidateAgeMs > MAX_AUTO_PUBLISH_CANDIDATE_AGE_MS) {
+    return { eligible: false, reason: "candidate_too_old" };
   }
   if (!getAutoPublishSourceIds().includes(candidate.sourceKey)) {
     return { eligible: false, reason: "source_not_on_auto_publish_allowlist" };
@@ -313,7 +300,14 @@ export function evaluateAutoPublishEligibility(
       change,
       action: STANDARD_ACTION_BY_CATEGORY[category],
       sourceName: candidate.sourceName,
-      sourceUrl: candidate.sourceUrl,
+      // P0-2C fix — candidate.candidateUrl, not candidate.sourceUrl: the
+      // isDirectSafePermalink check above already proved it's a real,
+      // safe, direct permalink (and narrowed its type to `string`) — the
+      // generic source_url check below remains a separate, defense-in-
+      // depth sanity check on the candidate's own registry provenance,
+      // it is simply no longer what feeds this field.
+      sourceUrl: candidate.candidateUrl,
+      sourceId: candidate.registrySourceId,
     },
   };
 }
@@ -346,6 +340,30 @@ export function evaluateAutoPublishEligibility(
 // Auto-publish itself remains fully disabled (SCHEDULED_AUTO_PUBLISH_ENABLED
 // is unset in every environment) and this audit made no change to that —
 // see CLAUDE.md Security Rule #10.
+//
+// P0-2C fix — two further pre-launch-audit findings closed here:
+//   - `source_url` now carries `fields.sourceUrl`, which
+//     evaluateAutoPublishEligibility now populates from
+//     `candidate.candidateUrl` (the verified, direct permalink) instead
+//     of the source's generic listing page. Previously, EVERY alert
+//     auto-published from one source shared the exact same `source_url`
+//     (the listing page), so "Zobacz źródło →" never pointed at the
+//     actual notice that was verified — a real provenance regression,
+//     even though the candidate's own `candidate_url` was captured and
+//     validated correctly all along. Never falls back to the generic
+//     listing URL: if `candidate.candidateUrl` were ever unavailable/
+//     unsafe, evaluateAutoPublishEligibility's own earlier
+//     isDirectSafePermalink check already made the whole candidate
+//     ineligible — this function is only ever called with a payload
+//     already carrying a verified, direct URL.
+//   - `source_id` now carries `fields.sourceId` (from
+//     `candidate.registrySourceId`) instead of being hardcoded `null`.
+//     Investigated and confirmed safe without a migration: the live
+//     "Scheduled writer can insert trusted-source auto-published alert"
+//     WITH CHECK policy places no constraint on source_id at all, and
+//     the column is a plain nullable FK — verified directly against the
+//     live schema this session. Stays `null` exactly when no legitimate
+//     registry mapping exists; never invented.
 export function buildAutoPublishAlertInsert(fields: AutoPublishAlertFields): AutoPublishAlertInsertPayload {
   return {
     slug: fields.slug,
@@ -358,7 +376,7 @@ export function buildAutoPublishAlertInsert(fields: AutoPublishAlertFields): Aut
     action: fields.action,
     source_name: fields.sourceName,
     source_url: fields.sourceUrl,
-    source_id: null,
+    source_id: fields.sourceId,
     status: "published",
     published_at: new Date().toISOString(),
   } as const;

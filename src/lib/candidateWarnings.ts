@@ -1,6 +1,19 @@
-// Lightweight, dependency-free helpers for flagging likely-duplicate or
-// likely-stale candidate notices using only data already loaded by the
-// queue/source-check UI — no new schema, no fuzzy-matching library.
+// Lightweight helpers for flagging likely-duplicate or likely-stale
+// candidate notices using only data already loaded by the queue/source-
+// check UI — no new schema, no fuzzy-matching library.
+//
+// P0-2C — extractPlace/extractStartDateIso relocated here (verbatim,
+// from trustedSourceAutoPublish.ts) so scheduledWriter.ts's new
+// cross-source dedup override (classifyProposalAgainstOtherSourceCandidates)
+// can reuse them too, without creating an import cycle: scheduledWriter.ts
+// is the lower-level module trustedSourceAutoPublish.ts already depends
+// on (never the reverse — see scheduledWriter.ts's own "one-way import
+// direction" convention for PendingAutoPublishCandidateRow etc.), so
+// these two functions move down to this already-shared, already-
+// dependency-light module instead. trustedSourceAutoPublish.ts re-exports
+// both from here verbatim — its own public API (and every existing test
+// importing them from "@/lib/trustedSourceAutoPublish") is unchanged.
+import { PILOT_LOCALITIES } from "@/lib/officialSourceChecklist";
 
 export const MONTHS_PL =
   "stycznia|lutego|marca|kwietnia|maja|czerwca|lipca|sierpnia|wrze[sś]nia|pa[zź]dziernika|listopada|grudnia";
@@ -192,4 +205,73 @@ export function findSimilarText(text: string, candidates: string[]): string | nu
     }
   }
   return best?.text ?? null;
+}
+
+// ── Deterministic Polish date extraction (day + named month + year,
+// optional "od godz. HH:MM") — relocated here from trustedSourceAutoPublish.ts
+// (P0-2C), verbatim. Reuses MONTHS_PL, the exact same month list
+// detectDateInText already validates presence with, so a text that
+// passes detectDateInText and a text this function can parse are governed
+// by one shared vocabulary, never two that could silently drift apart. ──
+
+const MONTH_INDEX: Record<string, number> = {
+  stycznia: 0,
+  lutego: 1,
+  marca: 2,
+  kwietnia: 3,
+  maja: 4,
+  czerwca: 5,
+  lipca: 6,
+  sierpnia: 7,
+  wrzesnia: 8,
+  pazdziernika: 9,
+  listopada: 10,
+  grudnia: 11,
+};
+
+const START_DATE_RE = new RegExp(
+  `\\b(\\d{1,2})\\s+(${MONTHS_PL})\\b[^\\d]{0,10}(\\d{4})(?:[^\\d]{0,20}godz\\.?\\s*(\\d{1,2})(?:[:.](\\d{2}))?)?`,
+  "i"
+);
+
+/** Returns an ISO datetime for the first "D miesiąca RRRR[, od godz. H:MM]"
+ *  pattern found, or null when no such pattern is present — never a
+ *  guessed/partial date. Time defaults to 00:00 UTC when no "godz." clause
+ *  is present (matches this project's existing convention of a
+ *  date-only ISO string being valid, e.g. the DW 719 alert's own
+ *  `starts_at: "2026-07-09 00:00:00+00"`). */
+export function extractStartDateIso(text: string): string | null {
+  const match = START_DATE_RE.exec(text);
+  if (!match) return null;
+  const day = Number(match[1]);
+  const monthWord = normalizeForCompare(match[2]).replace(/\s+/g, "");
+  const year = Number(match[3]);
+  const monthIndex = MONTH_INDEX[monthWord];
+  if (monthIndex === undefined) return null;
+  const hour = match[4] ? Number(match[4]) : 0;
+  const minute = match[5] ? Number(match[5]) : 0;
+  const date = new Date(Date.UTC(year, monthIndex, day, hour, minute));
+  if (Number.isNaN(date.getTime())) return null;
+  // Sanity check: the constructed date must round-trip to the same
+  // day/month/year — Date.UTC silently rolls over an invalid day (e.g.
+  // "31 lutego") into the next month instead of failing, so this catches
+  // that rather than publishing a nonsensical date.
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== monthIndex ||
+    date.getUTCDate() !== day
+  ) {
+    return null;
+  }
+  return date.toISOString();
+}
+
+// ── Place extraction — exact match against the known pilot locality list,
+// never a fuzzy/invented location. ──────────────────────────────────────────
+
+export function extractPlace(text: string): string | null {
+  for (const locality of PILOT_LOCALITIES) {
+    if (text.includes(locality)) return locality;
+  }
+  return null;
 }

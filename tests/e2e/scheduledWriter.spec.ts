@@ -7,6 +7,8 @@ import {
   describeAutomatedFetchFailure,
   logFailedSourceCheck,
   classifyCandidateAgainstExisting,
+  classifyProposalAgainstOtherSourceCandidates,
+  moreConservativeClassification,
   getRegistrySourceId,
   writeCandidatesForSource,
   DUPLICATE_CONFIDENCE_THRESHOLD,
@@ -16,6 +18,7 @@ import {
   DEFAULT_ALLOWED_WRITE_SOURCE_IDS,
   getAllowedWriteSourceIds,
   type ScheduledSourceWriter,
+  type DedupComparisonItem,
 } from "@/lib/scheduledWriter";
 
 /**
@@ -355,6 +358,129 @@ test.describe("classifyCandidateAgainstExisting — conservative, three-way, no 
   });
 });
 
+// ── classifyProposalAgainstOtherSourceCandidates — cross-source dedup
+// (P0-2C fix) ─────────────────────────────────────────────────────────────────
+//
+// What constitutes a cross-source duplicate after this fix: a new
+// proposal from source A is treated as a duplicate/ambiguous match of a
+// PENDING candidate from a DIFFERENT source B only when (1) the same
+// word-overlap similarity classifyProposalAgainstExisting already uses
+// (boilerplate-stripped, same 0.9/0.6 thresholds) would call them
+// similar, AND (2) that is not contradicted by extracted place/date: if
+// both texts yield an extractable place and those places differ, or both
+// yield an extractable date and those dates differ, the pair is excluded
+// from scoring entirely — a place/date mismatch proves two different
+// real-world events even when the wording looks similar.
+
+test.describe("classifyProposalAgainstOtherSourceCandidates", () => {
+  test("1. same notice, same source is unaffected by this function — writeCandidatesForSource's same-source check alone already blocks it (see integration tests below)", () => {
+    // Pure sanity: this function takes an explicit "other source" pool —
+    // it has no notion of "same source" at all, by construction.
+    const result = classifyProposalAgainstOtherSourceCandidates({ text: "dowolny tekst" }, []);
+    expect(result).toBe("new");
+  });
+
+  test("2. same notice, different source, same place and date → classified as a duplicate (second candidate must not be created)", () => {
+    const proposal = {
+      text: "Informujemy mieszkańców, że od 10 listopada 2026 roku w miejscowości Komorów planowane jest wyłączenie wody w związku z pracami konserwacyjnymi na sieci wodociągowej.",
+    };
+    const otherSource: DedupComparisonItem[] = [
+      {
+        text: "Urząd Gminy informuje mieszkańców, że od 10 listopada 2026 roku w miejscowości Komorów planowane jest wyłączenie wody w związku z pracami konserwacyjnymi na sieci wodociągowej. Prosimy o zapas wody.",
+      },
+    ];
+    expect(classifyProposalAgainstOtherSourceCandidates(proposal, otherSource)).toBe("duplicate");
+  });
+
+  test("3. genuinely different notices from different sources → new (both may exist)", () => {
+    const proposal = {
+      text: "Informujemy mieszkańców, że od 10 listopada 2026 roku w miejscowości Komorów planowane jest wyłączenie wody w związku z pracami konserwacyjnymi na sieci wodociągowej.",
+    };
+    const otherSource: DedupComparisonItem[] = [
+      {
+        text: "Od 15 grudnia 2026 r. nastąpi zmiana rozkładu jazdy linii WKD w związku z remontem przejazdu kolejowego w Pruszkowie.",
+      },
+    ];
+    expect(classifyProposalAgainstOtherSourceCandidates(proposal, otherSource)).toBe("new");
+  });
+
+  test("4. similar generic/administrative wording but a different locality AND date → new, never a false duplicate", () => {
+    // Deliberately near-identical except for the place and the date —
+    // the shared administrative template text alone would score well
+    // above DUPLICATE_CONFIDENCE_THRESHOLD without the override (this is
+    // asserted explicitly below), proving the override is doing real
+    // work, not just reproducing what boilerplate-stripping already
+    // handled.
+    const proposal = {
+      text: "Urząd Gminy informuje mieszkańców, że od 10 listopada 2026 roku w miejscowości Komorów planowane jest wyłączenie wody w związku z pracami konserwacyjnymi na sieci wodociągowej.",
+    };
+    const otherSource: DedupComparisonItem[] = [
+      {
+        text: "Urząd Gminy informuje mieszkańców, że od 20 grudnia 2026 roku w miejscowości Pruszków planowane jest wyłączenie wody w związku z pracami konserwacyjnymi na sieci wodociągowej.",
+      },
+    ];
+    // Confirms the premise: raw textSimilarity (no place/date awareness)
+    // alone already lands in the "do not silently insert" band (ambiguous
+    // or duplicate — either would already withhold an insert under the
+    // existing same-source convention) purely from the shared
+    // administrative template text, with no place/date signal involved
+    // at all. This proves the override below is doing real work, not
+    // merely reproducing what boilerplate-stripping already handled.
+    const rawClassification = classifyCandidateAgainstExisting(proposal.text, otherSource.map((i) => i.text));
+    expect(rawClassification).not.toBe("new");
+    // The actual cross-source function must still say "new" — the place
+    // AND date mismatch overrides that raw signal.
+    expect(classifyProposalAgainstOtherSourceCandidates(proposal, otherSource)).toBe("new");
+  });
+
+  test("place agreement alone does not itself force a match — genuinely low text similarity still correctly decides 'new'", () => {
+    const proposal = {
+      text: "W miejscowości Komorów odbędzie się w sobotę wieczorem koncert orkiestry dętej na rynku.",
+    };
+    const otherSource: DedupComparisonItem[] = [
+      { text: "W miejscowości Komorów zepsuła się winda w budynku urzędu gminy i trwa jej naprawa." },
+    ];
+    // Confirms the premise: these two sentences share only the place
+    // name and short/common words, nothing substantive — genuinely "new"
+    // on text alone, so the place match below is confirmed NOT to be
+    // what's producing the "new" verdict.
+    expect(classifyCandidateAgainstExisting(proposal.text, otherSource.map((i) => i.text))).toBe("new");
+    expect(classifyProposalAgainstOtherSourceCandidates(proposal, otherSource)).toBe("new");
+  });
+
+  test("exact-URL match against an other-source candidate is still a confident duplicate, independent of place/date extraction", () => {
+    const proposal = {
+      text: "Zupełnie inaczej opisana treść.",
+      url: "https://example.pl/ten-sam-artykul/",
+    };
+    const otherSource: DedupComparisonItem[] = [
+      { text: "Inny opis tego samego zdarzenia.", url: "https://example.pl/ten-sam-artykul/" },
+    ];
+    expect(classifyProposalAgainstOtherSourceCandidates(proposal, otherSource)).toBe("duplicate");
+  });
+
+  test("empty other-source pool → always new", () => {
+    expect(classifyProposalAgainstOtherSourceCandidates({ text: "dowolny tekst" }, [])).toBe("new");
+  });
+});
+
+test.describe("moreConservativeClassification", () => {
+  test("duplicate beats everything", () => {
+    expect(moreConservativeClassification("duplicate", "new")).toBe("duplicate");
+    expect(moreConservativeClassification("new", "duplicate")).toBe("duplicate");
+    expect(moreConservativeClassification("duplicate", "ambiguous")).toBe("duplicate");
+  });
+
+  test("ambiguous beats new", () => {
+    expect(moreConservativeClassification("ambiguous", "new")).toBe("ambiguous");
+    expect(moreConservativeClassification("new", "ambiguous")).toBe("ambiguous");
+  });
+
+  test("new + new → new", () => {
+    expect(moreConservativeClassification("new", "new")).toBe("new");
+  });
+});
+
 // ── writeCandidatesForSource — full decision-logic coverage via a fake
 // in-memory ScheduledSourceWriter (no network, no real Supabase client) ────
 
@@ -365,7 +491,14 @@ function makeFakeWriter(
   // above is completely unaffected. Only logFailedSourceCheck's own
   // tests below ever pass a non-default value, to cover its
   // never-throws-on-a-failed-insert path.
-  options: { insertSourceCheckResult?: { ok: boolean } } = {}
+  options: {
+    insertSourceCheckResult?: { ok: boolean };
+    // P0-2C — same additive pattern: omitted entirely by default, so
+    // every pre-existing test keeps exercising the "method absent →
+    // degrades to no other-source candidates" path, unchanged. Only the
+    // new cross-source dedup tests below pass this explicitly.
+    otherSourceCandidates?: DedupComparisonItem[];
+  } = {}
 ) {
   const insertedCandidates: ReturnType<typeof buildPendingCandidateInsert>[] = [];
   const insertedChecks: ReturnType<typeof buildAutomatedSourceCheckInsert>[] = [];
@@ -383,6 +516,13 @@ function makeFakeWriter(
       insertedChecks.push(payload);
       return options.insertSourceCheckResult ?? { ok: true };
     },
+    ...(options.otherSourceCandidates
+      ? {
+          async findPendingCandidatesFromOtherSources() {
+            return options.otherSourceCandidates!;
+          },
+        }
+      : {}),
   };
   return { writer, insertedCandidates, insertedChecks, findExistingCandidateTextsCalls };
 }
@@ -646,6 +786,125 @@ test.describe("writeCandidatesForSource — ambiguous duplicates are never silen
     expect(result.candidatesInserted).toBe(0);
     expect(result.duplicatesSkipped).toBe(0);
     expect(insertedCandidates).toHaveLength(0);
+  });
+});
+
+// ── writeCandidatesForSource — cross-source dedup integration (P0-2C fix) ────
+//
+// Proves the real wiring end to end (not just the pure classifier above):
+// same-source dedup is unaffected; a cross-source duplicate withholds the
+// insert exactly like a same-source one already does; a genuinely
+// different cross-source notice is still inserted.
+
+test.describe("writeCandidatesForSource — cross-source dedup", () => {
+  test("1. same notice, same source → one candidate (same-source dedup alone already blocks the repeat, cross-source pool empty/irrelevant)", async () => {
+    const existing = ["Testowe uruchomienie syren alarmowych w gminie 16 lipca 2026 roku o godzinie 12:00"];
+    const { writer, insertedCandidates } = makeFakeWriter(existing);
+    const result = await writeCandidatesForSource(writer, {
+      ...baseSourceInfo,
+      proposals: [
+        {
+          title: "Syreny",
+          excerpt: "e",
+          rawText: "Testowe uruchomienie syren alarmowych w gminie 16 lipca 2026 roku o godzinie 12:00",
+          hasDate: true,
+        },
+      ],
+      registrySourceId: "fake-source-uuid",
+    });
+    expect(result.candidatesInserted).toBe(0);
+    expect(result.duplicatesSkipped).toBe(1);
+    expect(insertedCandidates).toHaveLength(0);
+  });
+
+  test("2. same notice reported by a different source → second candidate is NOT created", async () => {
+    const otherSourceCandidates: DedupComparisonItem[] = [
+      {
+        text: "Urząd Gminy informuje mieszkańców, że od 10 listopada 2026 roku w miejscowości Komorów planowane jest wyłączenie wody w związku z pracami konserwacyjnymi na sieci wodociągowej. Prosimy o zapas wody.",
+      },
+    ];
+    const { writer, insertedCandidates } = makeFakeWriter([], { otherSourceCandidates });
+    const result = await writeCandidatesForSource(writer, {
+      ...baseSourceInfo,
+      proposals: [
+        {
+          title: "Przerwa w dostawie wody",
+          excerpt: "e",
+          rawText:
+            "Informujemy mieszkańców, że od 10 listopada 2026 roku w miejscowości Komorów planowane jest wyłączenie wody w związku z pracami konserwacyjnymi na sieci wodociągowej.",
+          hasDate: true,
+        },
+      ],
+      registrySourceId: "fake-source-uuid",
+    });
+    expect(result.candidatesInserted).toBe(0);
+    expect(result.duplicatesSkipped).toBe(1);
+    expect(insertedCandidates).toHaveLength(0);
+  });
+
+  test("3. genuinely different notices from different sources → both may exist (this source's candidate is still inserted)", async () => {
+    const otherSourceCandidates: DedupComparisonItem[] = [
+      {
+        text: "Od 15 grudnia 2026 r. nastąpi zmiana rozkładu jazdy linii WKD w związku z remontem przejazdu kolejowego w Pruszkowie.",
+      },
+    ];
+    const { writer, insertedCandidates } = makeFakeWriter([], { otherSourceCandidates });
+    const result = await writeCandidatesForSource(writer, {
+      ...baseSourceInfo,
+      proposals: [
+        {
+          title: "Przerwa w dostawie wody",
+          excerpt: "e",
+          rawText:
+            "Informujemy mieszkańców, że od 10 listopada 2026 roku w miejscowości Komorów planowane jest wyłączenie wody w związku z pracami konserwacyjnymi na sieci wodociągowej.",
+          hasDate: true,
+        },
+      ],
+      registrySourceId: "fake-source-uuid",
+    });
+    expect(result.candidatesInserted).toBe(1);
+    expect(result.duplicatesSkipped).toBe(0);
+    expect(insertedCandidates).toHaveLength(1);
+  });
+
+  test("4. similar generic/administrative wording from another source but a different locality and date → inserted, not a false duplicate", async () => {
+    const otherSourceCandidates: DedupComparisonItem[] = [
+      {
+        text: "Urząd Gminy informuje mieszkańców, że od 20 grudnia 2026 roku w miejscowości Pruszków planowane jest wyłączenie wody w związku z pracami konserwacyjnymi na sieci wodociągowej.",
+      },
+    ];
+    const { writer, insertedCandidates } = makeFakeWriter([], { otherSourceCandidates });
+    const result = await writeCandidatesForSource(writer, {
+      ...baseSourceInfo,
+      proposals: [
+        {
+          title: "Przerwa w dostawie wody",
+          excerpt: "e",
+          rawText:
+            "Urząd Gminy informuje mieszkańców, że od 10 listopada 2026 roku w miejscowości Komorów planowane jest wyłączenie wody w związku z pracami konserwacyjnymi na sieci wodociągowej.",
+          hasDate: true,
+        },
+      ],
+      registrySourceId: "fake-source-uuid",
+    });
+    expect(result.candidatesInserted).toBe(1);
+    expect(result.duplicatesSkipped).toBe(0);
+    expect(result.ambiguousCandidates).toBe(0);
+    expect(insertedCandidates).toHaveLength(1);
+  });
+
+  test("a writer that does not implement findPendingCandidatesFromOtherSources degrades safely — candidate creation is unaffected", async () => {
+    // makeFakeWriter() with no otherSourceCandidates option omits the
+    // method entirely, exactly like every pre-existing test above
+    // already (implicitly) exercises.
+    const { writer, insertedCandidates } = makeFakeWriter();
+    const result = await writeCandidatesForSource(writer, {
+      ...baseSourceInfo,
+      proposals: [{ title: "T", excerpt: "e", rawText: "Zupełnie nowa, unikalna treść bez żadnego odpowiednika.", hasDate: false }],
+      registrySourceId: "fake-source-uuid",
+    });
+    expect(result.candidatesInserted).toBe(1);
+    expect(insertedCandidates).toHaveLength(1);
   });
 });
 
