@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
 /**
  * Sprint 163 — mobile app shell, "Dzisiaj" view, bottom navigation, /alerty,
@@ -9,6 +9,47 @@ import { test, expect } from "@playwright/test";
  */
 
 const MOBILE_WIDTHS = [375, 390, 414];
+
+// Pre-launch audit follow-up (2026-11-06) — "renders the full alert count /
+// empty state" below previously read live Production data directly and
+// implicitly assumed Production always has at least one currently-"active"
+// alert. The P0-1 freshness fix (getAlertTimeStatus.ts) correctly aged out
+// Production's long-stale open-ended alerts, which made that assumption
+// false and this test fail with a strict-mode violation (both
+// "Wszystkich alertów" and "Brak aktualnych alertów" rendering at once —
+// the real, honest "all alerts are ended" state). Mocking the Supabase
+// REST response for `alerts` removes the Production dependency entirely —
+// same convention as tests/e2e/wasteScheduleData.spec.ts's
+// mockWasteScheduleRows and tests/e2e/public.spec.ts's mockAlertsRows
+// (not imported here to keep each spec file's fixtures self-contained,
+// matching this repo's existing per-file convention).
+const MOCK_ACTIVE_ALERT = {
+  id: "mock-active-alert-1",
+  slug: "mock-aktywny-alert-e2e-shell",
+  category: "roads",
+  severity: "info",
+  title: "Testowy alert e2e — aktywny",
+  place: "Komorów, ul. Testowa",
+  starts_at: "2026-10-20T00:00:00+00:00",
+  ends_at: "2099-01-01T00:00:00+00:00",
+  change: "Testowa zmiana do testów e2e.",
+  action: "Testowe działanie do testów e2e.",
+  source_name: "Źródło testowe e2e",
+  source_url: "https://example.com/test-e2e",
+  source_id: null,
+  published_at: "2026-01-05T00:00:00+00:00",
+  updated_at: "2026-01-05T00:00:00+00:00",
+};
+
+async function mockAlertsRows(page: Page, rows: unknown[] = [MOCK_ACTIVE_ALERT]) {
+  await page.route("**/rest/v1/alerts**", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(rows),
+    })
+  );
+}
 
 test.describe("Bottom navigation — visibility", () => {
   test("visible on a public mobile page (/alerty)", async ({ page }) => {
@@ -190,6 +231,7 @@ test.describe("Full alert list (/alerty)", () => {
   });
 
   test("renders the full alert count / empty state, same as the old homepage did", async ({ page }) => {
+    await mockAlertsRows(page);
     await page.goto("/alerty");
     await expect(
       page.getByText(/Wszystkich alertów|Brak aktualnych alertów/)

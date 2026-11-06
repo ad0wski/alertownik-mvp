@@ -1,4 +1,5 @@
 import { findSuspiciousFields } from "@/lib/testContentDetection";
+import { OPEN_ENDED_ALERT_FRESHNESS_DAYS } from "@/lib/getAlertTimeStatus";
 
 // One consolidated pre-publish checklist for Builder — covers fields a
 // resident actually reads (Sprint 73), suspicious test/placeholder
@@ -28,6 +29,18 @@ export function getPrePublishWarnings(f: PrePublishCheckInput): string[] {
   if (!f.action.trim()) warnings.push("Brak opisu „Co zrobić”.");
   if (!f.sourceName.trim()) warnings.push("Brak nazwy źródła.");
   if (!f.sourceUrl?.trim()) warnings.push("Brak linku do źródła.");
+  // P0-1 fix (pre-launch audit, 2026-11-06) — publishing with no end date
+  // is legitimate (some situations genuinely have no known end yet), but
+  // the admin should know what happens as a result: getAlertTimeStatus.ts
+  // now caps how long a no-end-date alert can show as "Trwa" before it's
+  // treated as ended, specifically so this can never again go
+  // unnoticed for months (the real incident this fix addresses).
+  if (!f.endsAt?.trim()) {
+    warnings.push(
+      `Brak daty zakończenia („do”) — po ${OPEN_ENDED_ALERT_FRESHNESS_DAYS} dniach od daty rozpoczęcia alert ` +
+        `przestanie być oznaczany jako „Trwa” (automatycznie, bez zmiany danych).`
+    );
+  }
   if (f.startsAt && f.endsAt && f.endsAt < f.startsAt) {
     warnings.push("Data „do” jest wcześniejsza niż data „od” — sprawdź zakres dat.");
   }

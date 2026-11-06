@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { getPrePublishWarnings } from "@/lib/alertQuality";
+import { OPEN_ENDED_ALERT_FRESHNESS_DAYS } from "@/lib/getAlertTimeStatus";
 
 /**
  * Unit-style tests for the Sprint 91 pre-publish quality checklist.
@@ -46,6 +47,29 @@ test.describe("getPrePublishWarnings", () => {
   test("does not flag a missing endsAt as an inverted range", () => {
     const warnings = getPrePublishWarnings(makeAlert({ endsAt: undefined }));
     expect(warnings.some((w) => w.includes("wcześniejsza niż data"))).toBe(false);
+  });
+
+  // P0-1 fix (pre-launch audit, 2026-11-06) — publishing without an end
+  // date is still allowed (requirement 2 of the fix brief), but the admin
+  // must now be told explicitly what that means, since the real incident
+  // this addresses was an open-ended alert nobody noticed had gone stale
+  // for months. These pin the new warning to the exact fix in
+  // getAlertTimeStatus.ts (OPEN_ENDED_ALERT_FRESHNESS_DAYS), so the two
+  // files can never silently drift apart.
+  test("flags a missing endsAt with an explicit freshness-window warning", () => {
+    const warnings = getPrePublishWarnings(makeAlert({ endsAt: undefined }));
+    expect(warnings.some((w) => w.includes("Brak daty zakończenia"))).toBe(true);
+    expect(warnings.some((w) => w.includes(String(OPEN_ENDED_ALERT_FRESHNESS_DAYS)))).toBe(true);
+  });
+
+  test("flags a blank/whitespace-only endsAt the same way as a fully missing one", () => {
+    const warnings = getPrePublishWarnings(makeAlert({ endsAt: "   " }));
+    expect(warnings.some((w) => w.includes("Brak daty zakończenia"))).toBe(true);
+  });
+
+  test("does not flag a fully filled endsAt — the warning is specific to the open-ended case", () => {
+    const warnings = getPrePublishWarnings(makeAlert());
+    expect(warnings.some((w) => w.includes("Brak daty zakończenia"))).toBe(false);
   });
 
   test("flags very short change/action text as possibly not specific enough", () => {

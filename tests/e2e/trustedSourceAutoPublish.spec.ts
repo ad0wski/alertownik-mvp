@@ -11,6 +11,7 @@ import {
   type AutoPublishCandidateInput,
 } from "@/lib/trustedSourceAutoPublish";
 import type { ScheduledSourceWriter, DedupComparisonItem, AutoPublishAlertInsertPayload } from "@/lib/scheduledWriter";
+import { getAlertTimeStatus, OPEN_ENDED_ALERT_FRESHNESS_DAYS } from "@/lib/getAlertTimeStatus";
 
 /**
  * Sprint 180C — Trusted Source Auto-Publish v1. CLAUDE.md Security Rule
@@ -327,6 +328,56 @@ test.describe("buildAutoPublishAlertInsert", () => {
     expect(payload.status).toBe("published");
     expect(typeof payload.published_at).toBe("string");
     expect(payload.source_id).toBeNull();
+  });
+});
+
+// ── P0-1 bridge: buildAutoPublishAlertInsert ↔ getAlertTimeStatus ────────────
+//
+// Pre-launch audit finding (2026-11-06): this module's insert payload has
+// no `ends_at` field at all, which — before the getAlertTimeStatus.ts fix
+// — meant any future auto-published alert would have shown as
+// indefinitely "Trwa" with zero freshness protection. Auto-publish stays
+// fully disabled (SCHEDULED_AUTO_PUBLISH_ENABLED unset everywhere) and
+// nothing in this file changes that or any eligibility rule — these tests
+// only prove the generic fix actually reaches this path, rather than
+// assuming it does because the two modules happen to compose.
+test.describe("buildAutoPublishAlertInsert ↔ getAlertTimeStatus — P0-1 freshness protection", () => {
+  function makeFields(startsAt: string) {
+    return {
+      slug: "test-auto-publish-freshness-bridge",
+      category: "roads" as const,
+      severity: "info" as const,
+      title: "Testowy wpis mostka freshness",
+      place: "Pruszków",
+      startsAt,
+      change: "Treść testowa.",
+      action: "Działanie testowe.",
+      sourceName: "Źródło testowe",
+      sourceUrl: "https://example.com/test",
+    };
+  }
+
+  test("the payload never carries an ends_at field — this module cannot invent or set one", () => {
+    const eligibility = evaluateAutoPublishEligibility(makeCandidate(), [], FIXED_NOW);
+    expect(eligibility.eligible).toBe(true);
+    if (!eligibility.eligible) return;
+    const payload = buildAutoPublishAlertInsert(eligibility.fields);
+    expect(Object.prototype.hasOwnProperty.call(payload, "ends_at")).toBe(false);
+  });
+
+  test("an auto-published alert with an old starts_at is NOT indefinitely active — it inherits the generic open-ended freshness cap", () => {
+    const dayMs = 24 * 60 * 60 * 1000;
+    const oldStartsAt = new Date(Date.now() - (OPEN_ENDED_ALERT_FRESHNESS_DAYS + 30) * dayMs).toISOString();
+    const payload = buildAutoPublishAlertInsert(makeFields(oldStartsAt));
+    // Exercises the real mechanism: payload.starts_at feeds directly into
+    // getAlertTimeStatus with no second argument, since the payload
+    // genuinely has none to pass.
+    expect(getAlertTimeStatus(payload.starts_at, undefined)).toBe("ended");
+  });
+
+  test("a freshly auto-published alert (starts_at now) is still active — the cap only bites once the window elapses, same as any other open-ended alert", () => {
+    const payload = buildAutoPublishAlertInsert(makeFields(new Date().toISOString()));
+    expect(getAlertTimeStatus(payload.starts_at, undefined)).toBe("active");
   });
 });
 

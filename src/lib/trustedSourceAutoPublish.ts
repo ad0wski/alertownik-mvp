@@ -321,7 +321,31 @@ export function evaluateAutoPublishEligibility(
 // ── Insert payload builder — mirrors buildPendingCandidateInsert's own
 // "only known-safe fields can ever be passed" shape: status/published_at
 // are never parameters here, always the same literal values. ─────────────
-
+//
+// Pre-launch audit finding (2026-11-06), inspected deliberately: this
+// payload has NO `ends_at` field at all (AutoPublishAlertInsertPayload,
+// scheduledWriter.ts) — nothing here can invent an end date it cannot
+// derive with confidence (consistent with every other field in this
+// module), and nothing here ever will. This was previously a real gap:
+// an auto-published alert would have shown as indefinitely "Trwa" with
+// zero freshness protection, since the old getAlertTimeStatus.ts treated
+// a missing `ends_at` as permanently active.
+//
+// That gap is now closed generically, not here: getAlertTimeStatus.ts's
+// OPEN_ENDED_ALERT_FRESHNESS_DAYS window applies at READ time to every
+// alert with `ends_at = null`, regardless of which code path inserted
+// it — manual Builder publish or this auto-publish path alike. An
+// alert this function produces is therefore automatically subject to
+// the same bounded freshness window as any other open-ended alert; no
+// change to this module's fields, eligibility rules, or output shape
+// was needed or made. See tests/e2e/trustedSourceAutoPublish.spec.ts's
+// "auto-published alert inherits the open-ended freshness cap" test,
+// which proves this against the real buildAutoPublishAlertInsert +
+// getAlertTimeStatus pairing rather than assuming it.
+//
+// Auto-publish itself remains fully disabled (SCHEDULED_AUTO_PUBLISH_ENABLED
+// is unset in every environment) and this audit made no change to that —
+// see CLAUDE.md Security Rule #10.
 export function buildAutoPublishAlertInsert(fields: AutoPublishAlertFields): AutoPublishAlertInsertPayload {
   return {
     slug: fields.slug,

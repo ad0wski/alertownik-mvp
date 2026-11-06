@@ -1,12 +1,111 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
 /**
  * Public homepage smoke tests.
  *
- * These tests cover the public-facing UI only. They do not log in, do not create
- * or delete any Supabase data, and do not depend on a specific alert being published.
- * Tests that involve alert cards gracefully skip if no alerts are published.
+ * These tests cover the public-facing UI only. They do not log in, do not
+ * create or delete any Supabase data.
+ *
+ * Tests that need a real, clickable alert card (expand details, open the
+ * detail page, check its trust-signal copy, …) mock the Supabase REST
+ * response for `alerts` at the network level — the same convention
+ * tests/e2e/wasteScheduleData.spec.ts already uses for
+ * `waste_schedule_items` — via mockAlertsRows()/MOCK_ACTIVE_ALERT below,
+ * instead of depending on whatever happens to be published in real
+ * Production. This also fixed a real coupling bug: these tests previously
+ * read live Production data directly, and silently relied on Production
+ * always having at least one currently-"active" alert — an assumption the
+ * P0-1 freshness fix (getAlertTimeStatus.ts) correctly invalidated once
+ * Production's own long-stale open-ended alerts aged out, which is why
+ * these specific tests started failing only after that fix landed.
  */
+
+// Two deterministic, active alerts across different categories, used by
+// every test below that needs real cards to interact with. `ends_at` is
+// an explicit far-future date on both — deliberately decoupled from the
+// P0-1 open-ended freshness window (OPEN_ENDED_ALERT_FRESHNESS_DAYS,
+// getAlertTimeStatus.ts) so these UI/navigation tests never depend on
+// that unrelated policy or need updating as that window changes. Each
+// `slug` deliberately does not collide with any src/data/sampleAlerts.ts
+// slug, so a broken mock fails honestly (AlertDetailClient's "Nie
+// znaleziono alertu" state) instead of silently passing via that
+// dev-only fallback.
+//
+// TWO categories, not one: the "mobile category select" test below
+// filters to "transport" and asserts a non-empty result — the real,
+// unmocked data it originally depended on happened to include transport
+// alerts (see docs audit), so a single roads-only mock made that specific
+// filter legitimately empty, surfacing the real (and correctly worded)
+// "Nie ma obecnie aktywnych alertów kategorii Transport w tym widoku."
+// empty state — honest, but not what that test's own assertion expected.
+// Restoring "transport has a match too" fixes the fixture to match what
+// the test always assumed, rather than weakening the assertion.
+const MOCK_ACTIVE_ALERT = {
+  id: "mock-active-alert-1",
+  slug: "mock-aktywny-alert-e2e",
+  category: "roads",
+  severity: "info",
+  title: "Testowy alert e2e — aktywny (drogi)",
+  place: "Komorów, ul. Testowa",
+  starts_at: "2026-10-20T00:00:00+00:00",
+  ends_at: "2099-01-01T00:00:00+00:00",
+  change: "Testowa zmiana do testów e2e.",
+  action: "Testowe działanie do testów e2e.",
+  source_name: "Źródło testowe e2e",
+  source_url: "https://example.com/test-e2e",
+  source_id: null,
+  published_at: "2026-01-05T00:00:00+00:00",
+  updated_at: "2026-01-05T00:00:00+00:00",
+};
+
+const MOCK_ACTIVE_ALERT_TRANSPORT = {
+  id: "mock-active-alert-2",
+  slug: "mock-aktywny-alert-e2e-transport",
+  category: "transport",
+  severity: "info",
+  title: "Testowy alert e2e — aktywny (transport)",
+  place: "Pruszków",
+  starts_at: "2026-10-21T00:00:00+00:00",
+  ends_at: "2099-01-01T00:00:00+00:00",
+  change: "Testowa zmiana do testów e2e.",
+  action: "Testowe działanie do testów e2e.",
+  source_name: "Źródło testowe e2e",
+  source_url: "https://example.com/test-e2e-transport",
+  source_id: null,
+  published_at: "2026-01-05T00:00:00+00:00",
+  updated_at: "2026-01-05T00:00:00+00:00",
+};
+
+async function mockAlertsRows(
+  page: Page,
+  rows: unknown[] = [MOCK_ACTIVE_ALERT, MOCK_ACTIVE_ALERT_TRANSPORT]
+) {
+  await page.route("**/rest/v1/alerts**", (route) => {
+    const url = route.request().url();
+    // getSupabaseAlertBySlug() (src/lib/getSupabaseAlerts.ts) uses
+    // `.single()`, which Supabase/PostgREST serves as a bare JSON object,
+    // not an array, for a by-slug lookup — exactly what AlertDetailClient
+    // requests when a card's "Otwórz alert →" link is followed. Returning
+    // an array here instead would make that fetch resolve as an error and
+    // the component would silently fall through to its sampleAlerts
+    // dev-only fallback, masking a broken mock as a false pass.
+    if (url.includes("slug=eq.")) {
+      const match = (rows as Array<{ slug: string }>).find((r) =>
+        url.includes(`slug=eq.${encodeURIComponent(r.slug)}`)
+      );
+      return route.fulfill({
+        status: match ? 200 : 406,
+        contentType: "application/json",
+        body: JSON.stringify(match ?? {}),
+      });
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(rows),
+    });
+  });
+}
 
 test.describe("Public homepage", () => {
   test("main heading is visible", async ({ page }) => {
@@ -86,19 +185,15 @@ test.describe("Public homepage", () => {
   });
 
   test("alert card expands to show detail labels", async ({ page }) => {
+    await mockAlertsRows(page);
     await page.goto("/alerty");
 
-    // Wait for loading to finish: either the alert counter or the empty-state message appears
     await expect(
       page.getByText(/Wszystkich alertów|Brak aktualnych alertów/)
     ).toBeVisible({ timeout: 15_000 });
 
     const detailsBtn = page.getByRole("button", { name: /Szczegóły/ }).first();
-    if (!(await detailsBtn.isVisible())) {
-      // No published alerts in Supabase — nothing to expand
-      return;
-    }
-
+    await expect(detailsBtn).toBeVisible();
     await detailsBtn.click();
     await expect(page.getByText("Kiedy")).toBeVisible();
     await expect(page.getByText("Co się zmienia")).toBeVisible();
@@ -106,6 +201,7 @@ test.describe("Public homepage", () => {
   });
 
   test("opening alert detail page does not crash the app", async ({ page }) => {
+    await mockAlertsRows(page);
     await page.goto("/alerty");
 
     await expect(
@@ -113,11 +209,7 @@ test.describe("Public homepage", () => {
     ).toBeVisible({ timeout: 15_000 });
 
     const openLink = page.getByRole("link", { name: /Otwórz alert/ }).first();
-    if (!(await openLink.isVisible())) {
-      // No published alerts — nothing to navigate to
-      return;
-    }
-
+    await expect(openLink).toBeVisible();
     await openLink.click();
     // Should navigate away from the homepage — allow extra time for dev-server SSR of the dynamic route
     await expect(page).not.toHaveURL("/", { timeout: 15_000 });
@@ -126,6 +218,7 @@ test.describe("Public homepage", () => {
   });
 
   test("alert detail page shows the official-source trust disclaimer", async ({ page }) => {
+    await mockAlertsRows(page);
     await page.goto("/alerty");
 
     await expect(
@@ -133,11 +226,7 @@ test.describe("Public homepage", () => {
     ).toBeVisible({ timeout: 15_000 });
 
     const openLink = page.getByRole("link", { name: /Otwórz alert/ }).first();
-    if (!(await openLink.isVisible())) {
-      // No published alerts — nothing to navigate to
-      return;
-    }
-
+    await expect(openLink).toBeVisible();
     await openLink.click();
     await expect(page).not.toHaveURL("/", { timeout: 15_000 });
     // Sprint 148: AlertDetailClient fetches its data client-side in a
@@ -156,6 +245,7 @@ test.describe("Public homepage", () => {
   // that it was manually approved, not just imply it via /about's general
   // copy — this is the per-alert version of that trust signal.
   test("alert detail page states the alert was manually approved by an admin", async ({ page }) => {
+    await mockAlertsRows(page);
     await page.goto("/alerty");
 
     await expect(
@@ -163,11 +253,7 @@ test.describe("Public homepage", () => {
     ).toBeVisible({ timeout: 15_000 });
 
     const openLink = page.getByRole("link", { name: /Otwórz alert/ }).first();
-    if (!(await openLink.isVisible())) {
-      // No published alerts — nothing to navigate to
-      return;
-    }
-
+    await expect(openLink).toBeVisible();
     await openLink.click();
     await expect(page).not.toHaveURL("/", { timeout: 15_000 });
     // Sprint 148: same client-side-fetch timing allowance as the
@@ -222,6 +308,7 @@ test.describe("Public homepage", () => {
   });
 
   test("Wszystkie alerty / Moja okolica toggle has no regression: both modes still show the alert-list area", async ({ page }) => {
+    await mockAlertsRows(page);
     await page.goto("/alerty");
     const allBtn = page.getByRole("button", { name: "Wszystkie alerty" });
     const myBtn = page.getByRole("button", { name: "Moja okolica", exact: true });
@@ -315,6 +402,7 @@ test.describe("Public homepage", () => {
   });
 
   test("alert detail page offers a way to report a wrong/outdated alert", async ({ page }) => {
+    await mockAlertsRows(page);
     await page.goto("/alerty");
 
     await expect(
@@ -322,11 +410,7 @@ test.describe("Public homepage", () => {
     ).toBeVisible({ timeout: 15_000 });
 
     const openLink = page.getByRole("link", { name: /Otwórz alert/ }).first();
-    if (!(await openLink.isVisible())) {
-      // No published alerts — nothing to navigate to
-      return;
-    }
-
+    await expect(openLink).toBeVisible();
     await openLink.click();
     await expect(page).not.toHaveURL("/", { timeout: 15_000 });
     // Sprint 148: same client-side-fetch timing allowance as the other
@@ -610,6 +694,7 @@ test.describe("Sprint 156B — homepage value-first + personalization", () => {
   });
 
   test("alert list is visible immediately, with no blocking onboarding modal", async ({ page }) => {
+    await mockAlertsRows(page);
     await page.goto("/alerty");
     await expect(
       page.getByText(/Wszystkich alertów|Brak aktualnych alertów/)
@@ -619,6 +704,7 @@ test.describe("Sprint 156B — homepage value-first + personalization", () => {
   });
 
   test("locality quick-pick CTA is visible and does not require login or an exact address", async ({ page }) => {
+    await mockAlertsRows(page);
     await page.goto("/alerty");
     await expect(
       page.getByText(/Ustaw swoją okolicę, aby widzieć tylko alerty/)
@@ -780,6 +866,7 @@ test.describe("Sprint 156B — waste page hierarchy", () => {
 // findings.
 test.describe("Sprint 158A — personalization clarity and empty states", () => {
   test("all alerts, no preferences: default view shows the full list with no personalization active", async ({ page }) => {
+    await mockAlertsRows(page);
     await page.goto("/alerty");
     await expect(
       page.getByText(/Wszystkich alertów|Brak aktualnych alertów/)
@@ -948,6 +1035,7 @@ test.describe("Sprint 158A — personalization clarity and empty states", () => 
 test.describe("Sprint 158A-2 — mobile category control and first viewport", () => {
   for (const width of [375, 390, 414]) {
     test(`mobile category select works end-to-end at ${width}px: default, change, filter, revert, no scroll`, async ({ page }) => {
+      await mockAlertsRows(page);
       await page.setViewportSize({ width, height: 812 });
       await page.goto("/alerty");
       await expect(
@@ -999,6 +1087,7 @@ test.describe("Sprint 158A-2 — mobile category control and first viewport", ()
   });
 
   test("first active alert card starts with a clear, usable margin above the fold at 390×844", async ({ page }) => {
+    await mockAlertsRows(page);
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/alerty");
     await expect(
@@ -1006,12 +1095,7 @@ test.describe("Sprint 158A-2 — mobile category control and first viewport", ()
     ).toBeVisible({ timeout: 15_000 });
 
     const firstCard = page.locator("main article").first();
-    if (!(await firstCard.isVisible().catch(() => false))) {
-      // No published alerts in Supabase for this environment — nothing to
-      // measure. The empty-state message assertion above already covers
-      // this branch; this test only pins the layout when a card exists.
-      return;
-    }
+    await expect(firstCard).toBeVisible();
 
     const box = await firstCard.boundingBox();
     expect(box).not.toBeNull();
@@ -1123,14 +1207,23 @@ async function getFgBgRgb(
   return { fg: normalize(style.color), bg: resolvedBg };
 }
 
+// Pre-launch audit fix (2026-11-06) — this test previously did
+// `test.skip(true, "No published alert card in this environment")`
+// whenever no published alert happened to exist in whatever real
+// Supabase project ran the suite, making the assertion non-deterministic
+// instead of a real regression gate. Now uses the shared
+// mockAlertsRows()/MOCK_ACTIVE_ALERT defined at the top of this file (the
+// same mock every other alert-card-dependent test in this file now uses),
+// so a real alert card renders on every run, independent of what's
+// actually published anywhere. The assertion itself is unchanged and
+// unweakened: it still requires the date line to be visible and to pass
+// the real computed 4.5:1 contrast ratio.
 test.describe("Contrast Hardening — muted text meets WCAG AA against its real background", () => {
   test("alert card place/date line passes 4.5:1 in light mode", async ({ page }) => {
+    await mockAlertsRows(page);
     await page.goto("/alerty");
     const dateLine = page.locator("main article p", { hasText: /\d{2}\.\d{2}\.\d{4}/ }).first();
-    if (!(await dateLine.isVisible().catch(() => false))) {
-      test.skip(true, "No published alert card in this environment");
-      return;
-    }
+    await expect(dateLine).toBeVisible();
     const { fg, bg } = await dateLine.evaluate(getFgBgRgb);
     const ratio = contrastRatio(fg, bg);
     expect(ratio).toBeGreaterThanOrEqual(4.5);
