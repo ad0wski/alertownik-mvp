@@ -4,6 +4,8 @@ import {
   getScheduledWriterCredentials,
   buildPendingCandidateInsert,
   buildAutomatedSourceCheckInsert,
+  describeAutomatedFetchFailure,
+  logFailedSourceCheck,
   classifyCandidateAgainstExisting,
   getRegistrySourceId,
   writeCandidatesForSource,
@@ -200,10 +202,118 @@ test.describe("buildAutomatedSourceCheckInsert — result restricted, self-attri
     expect(payload.related_alert_id).toBeNull();
   });
 
+  // B. P0-2B regression check: the two pre-existing, unmodified success
+  // call sites (writeCandidatesForSource's "no_changes"/"found_notice"
+  // branches) must keep producing exactly the same row shape as before
+  // this change — the new error fields default to null, never leak a
+  // stray value into the success path.
+  test("found_notice/no_changes success paths are unchanged: error_code and error_summary are both null", () => {
+    for (const result of ["no_changes", "found_notice"] as const) {
+      const payload = buildAutomatedSourceCheckInsert({
+        sourceId: "fake-source-uuid",
+        writerUserId: "fake-writer-uuid",
+        result,
+      });
+      expect(payload.error_code).toBeNull();
+      expect(payload.error_summary).toBeNull();
+    }
+  });
+
   test("the type only allows the two automatable outcomes (no generic status manipulation)", () => {
     const okValues: Array<"no_changes" | "found_notice"> = ["no_changes", "found_notice"];
     for (const result of okValues) {
       expect(buildAutomatedSourceCheckInsert({ sourceId: "s", writerUserId: "w", result }).result).toBe(result);
+    }
+  });
+
+  // P0-2B — 'failed' added alongside the original two. These do not
+  // remove or weaken the test above (both original outcomes still work
+  // exactly as before, still asserted above) — they add coverage for the
+  // new, objective (non-human-judgment) third outcome.
+  test("failed insert mapping carries error_code and a sanitized error_summary", () => {
+    const payload = buildAutomatedSourceCheckInsert({
+      sourceId: "fake-source-uuid",
+      writerUserId: "fake-writer-uuid",
+      result: "failed",
+      errorCode: "http_5xx",
+      errorSummary: "Zaplanowane sprawdzenie: źródło odpowiedziało błędem serwera (5xx).",
+    });
+    expect(payload.result).toBe("failed");
+    expect(payload.related_alert_id).toBeNull();
+    expect(payload.created_by).toBe("fake-writer-uuid");
+    expect(payload.source_id).toBe("fake-source-uuid");
+    expect(payload.error_code).toBe("http_5xx");
+    expect(payload.error_summary).toBe("Zaplanowane sprawdzenie: źródło odpowiedziało błędem serwera (5xx).");
+  });
+
+  test("error_code/error_summary are forced null for non-failed results, even if a caller mistakenly passes them", () => {
+    // errorCode/errorSummary are plain optional fields on
+    // AutomatedSourceCheckInput, not discriminated by `result` at the
+    // type level — so this combination compiles, and the runtime guard
+    // in buildAutomatedSourceCheckInsert is exactly what has to catch it.
+    const payload = buildAutomatedSourceCheckInsert({
+      sourceId: "fake-source-uuid",
+      writerUserId: "fake-writer-uuid",
+      result: "no_changes",
+      errorCode: "http_5xx",
+      errorSummary: "should never appear",
+    });
+    expect(payload.error_code).toBeNull();
+    expect(payload.error_summary).toBeNull();
+  });
+
+  test("an error_summary longer than the live 200-char CHECK constraint is truncated, never rejected or left raw", () => {
+    const longSummary = "x".repeat(250);
+    const payload = buildAutomatedSourceCheckInsert({
+      sourceId: "fake-source-uuid",
+      writerUserId: "fake-writer-uuid",
+      result: "failed",
+      errorCode: "timeout_10s",
+      errorSummary: longSummary,
+    });
+    expect(payload.error_summary).not.toBeNull();
+    expect(payload.error_summary!.length).toBe(200);
+  });
+
+  test("a missing error_summary on a failed result becomes null, never an empty string", () => {
+    const payload = buildAutomatedSourceCheckInsert({
+      sourceId: "fake-source-uuid",
+      writerUserId: "fake-writer-uuid",
+      result: "failed",
+      errorCode: "network_error",
+    });
+    expect(payload.error_summary).toBeNull();
+  });
+});
+
+// ── describeAutomatedFetchFailure — bounded, Polish, exhaustive ─────────────
+
+test.describe("describeAutomatedFetchFailure", () => {
+  const ALL_DIAGNOSTICS = [
+    "http_4xx",
+    "http_5xx",
+    "non_html_content_type",
+    "network_error",
+    "timeout_10s",
+    "parse_exception",
+  ] as const;
+
+  for (const diagnostic of ALL_DIAGNOSTICS) {
+    test(`${diagnostic} produces a non-empty, well-bounded Polish summary`, () => {
+      const summary = describeAutomatedFetchFailure(diagnostic);
+      expect(typeof summary).toBe("string");
+      expect(summary.length).toBeGreaterThan(0);
+      // Comfortably under the live 200-char source_checks CHECK
+      // constraint on its own, before sanitizeErrorSummary even runs —
+      // this function must never be the reason truncation is needed.
+      expect(summary.length).toBeLessThanOrEqual(120);
+    });
+  }
+
+  test("never leaks a raw exception message or stack-trace shape", () => {
+    for (const diagnostic of ALL_DIAGNOSTICS) {
+      const summary = describeAutomatedFetchFailure(diagnostic);
+      expect(summary).not.toMatch(/at \S+\(|\.ts:\d+|\.js:\d+|Error:/);
     }
   });
 });
@@ -248,7 +358,15 @@ test.describe("classifyCandidateAgainstExisting — conservative, three-way, no 
 // ── writeCandidatesForSource — full decision-logic coverage via a fake
 // in-memory ScheduledSourceWriter (no network, no real Supabase client) ────
 
-function makeFakeWriter(existingTexts: string[] = []) {
+function makeFakeWriter(
+  existingTexts: string[] = [],
+  // P0-2B — optional, defaults to the exact pre-existing behavior
+  // (insertSourceCheck always succeeds) so every existing call site
+  // above is completely unaffected. Only logFailedSourceCheck's own
+  // tests below ever pass a non-default value, to cover its
+  // never-throws-on-a-failed-insert path.
+  options: { insertSourceCheckResult?: { ok: boolean } } = {}
+) {
   const insertedCandidates: ReturnType<typeof buildPendingCandidateInsert>[] = [];
   const insertedChecks: ReturnType<typeof buildAutomatedSourceCheckInsert>[] = [];
   const findExistingCandidateTextsCalls: { sourceKey: string; registrySourceId: string | null }[] = [];
@@ -263,11 +381,79 @@ function makeFakeWriter(existingTexts: string[] = []) {
     },
     async insertSourceCheck(payload) {
       insertedChecks.push(payload);
-      return { ok: true };
+      return options.insertSourceCheckResult ?? { ok: true };
     },
   };
   return { writer, insertedCandidates, insertedChecks, findExistingCandidateTextsCalls };
 }
+
+// ── logFailedSourceCheck — persists a failed scheduled fetch, never a
+// candidate, never a publish (P0-2B) ────────────────────────────────────────
+
+test.describe("logFailedSourceCheck", () => {
+  test("A. registered source: persists source identity, error_code, error_summary, and inserts no candidate", async () => {
+    const { writer, insertedCandidates, insertedChecks } = makeFakeWriter();
+    const result = await logFailedSourceCheck(writer, {
+      registrySourceId: "real-registry-uuid",
+      writerUserId: "writer-uuid",
+      diagnostic: "http_5xx",
+    });
+    expect(result.sourceChecksInserted).toBe(1);
+    expect(insertedChecks).toHaveLength(1);
+    expect(insertedChecks[0].source_id).toBe("real-registry-uuid");
+    expect(insertedChecks[0].result).toBe("failed");
+    expect(insertedChecks[0].error_code).toBe("http_5xx");
+    expect(insertedChecks[0].error_summary).toBe(describeAutomatedFetchFailure("http_5xx"));
+    expect(insertedChecks[0].related_alert_id).toBeNull();
+    // C. a source's failure never fabricates a candidate — this code
+    // path has no call to insertPendingCandidate at all.
+    expect(insertedCandidates).toHaveLength(0);
+  });
+
+  test("unregistered source (no alert_sources mapping): never calls insertSourceCheck — source_checks.source_id is NOT NULL, nothing honest to insert", async () => {
+    const { writer, insertedChecks, insertedCandidates } = makeFakeWriter();
+    const result = await logFailedSourceCheck(writer, {
+      registrySourceId: null,
+      writerUserId: "writer-uuid",
+      diagnostic: "timeout_10s",
+    });
+    expect(result.sourceChecksInserted).toBe(0);
+    expect(insertedChecks).toHaveLength(0);
+    expect(insertedCandidates).toHaveLength(0);
+  });
+
+  test("D. every diagnostic code produces a distinct, sanitized error_code/error_summary pair", async () => {
+    const diagnostics: Array<Parameters<typeof describeAutomatedFetchFailure>[0]> = [
+      "http_4xx",
+      "http_5xx",
+      "non_html_content_type",
+      "network_error",
+      "timeout_10s",
+      "parse_exception",
+    ];
+    for (const diagnostic of diagnostics) {
+      const { writer, insertedChecks } = makeFakeWriter();
+      await logFailedSourceCheck(writer, {
+        registrySourceId: "real-registry-uuid",
+        writerUserId: "writer-uuid",
+        diagnostic,
+      });
+      expect(insertedChecks[0].error_code).toBe(diagnostic);
+      expect(insertedChecks[0].error_summary).toBe(describeAutomatedFetchFailure(diagnostic));
+      expect(insertedChecks[0].error_summary!.length).toBeLessThanOrEqual(200);
+    }
+  });
+
+  test("a failed insertSourceCheck call (DB-level failure) never throws and is reported as zero inserted, not a crash", async () => {
+    const { writer } = makeFakeWriter([], { insertSourceCheckResult: { ok: false } });
+    const result = await logFailedSourceCheck(writer, {
+      registrySourceId: "real-registry-uuid",
+      writerUserId: "writer-uuid",
+      diagnostic: "parse_exception",
+    });
+    expect(result.sourceChecksInserted).toBe(0);
+  });
+});
 
 const baseSourceInfo = {
   sourceKey: "wkd-aktualnosci",
@@ -289,8 +475,20 @@ test.describe("writeCandidatesForSource — zero proposals", () => {
     expect(result.ambiguousCandidates).toBe(0);
     expect(result.sourceChecksInserted).toBe(1);
     expect(insertedCandidates).toHaveLength(0);
+    // P0-2B — error_code/error_summary added to the row shape (both null
+    // here, correctly, since this is the pre-existing success path, not
+    // a failure) — see the dedicated "found_notice/no_changes success
+    // paths are unchanged" regression test above for the same guarantee
+    // isolated from writeCandidatesForSource's own orchestration.
     expect(insertedChecks).toEqual([
-      { source_id: "fake-source-uuid", result: "no_changes", related_alert_id: null, created_by: "fake-writer-uuid" },
+      {
+        source_id: "fake-source-uuid",
+        result: "no_changes",
+        related_alert_id: null,
+        created_by: "fake-writer-uuid",
+        error_code: null,
+        error_summary: null,
+      },
     ]);
   });
 
@@ -330,8 +528,16 @@ test.describe("writeCandidatesForSource — proposals present, no duplicates", (
     expect(result.cappedSkipped).toBe(0);
     expect(result.sourceChecksInserted).toBe(1);
     expect(insertedCandidates).toHaveLength(2);
+    // P0-2B — same shape addition as the no_changes test above.
     expect(insertedChecks).toEqual([
-      { source_id: "fake-source-uuid", result: "found_notice", related_alert_id: null, created_by: "fake-writer-uuid" },
+      {
+        source_id: "fake-source-uuid",
+        result: "found_notice",
+        related_alert_id: null,
+        created_by: "fake-writer-uuid",
+        error_code: null,
+        error_summary: null,
+      },
     ]);
     for (const candidate of insertedCandidates) {
       expect(candidate.status).toBe("pending");

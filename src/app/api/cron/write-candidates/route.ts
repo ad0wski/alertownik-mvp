@@ -14,6 +14,7 @@ import {
   getAllowedWriteSourceIds,
   createSupabaseScheduledWriter,
   writeCandidatesForSource,
+  logFailedSourceCheck,
 } from "@/lib/scheduledWriter";
 import {
   checkDatabaseEnvironmentGuard,
@@ -24,7 +25,7 @@ import { fetchAndParseProposals } from "@/lib/scheduledSourceFetch";
 import { createSupabaseScheduledWriterHistory, buildRunHistoryCloseUpdate } from "@/lib/scheduledWriterHistory";
 import { REST_PARSERS_BY_SOURCE_ID } from "@/lib/sourceParsers/pageParser";
 import type { SafeCheckSourceId } from "@/lib/sourceCheck";
-import type { RunOutcome } from "@/lib/scheduledWriterRunSafety";
+import { resolveRunTrigger, type RunOutcome } from "@/lib/scheduledWriterRunSafety";
 import { isOperationalNotificationRuntimeEnabled } from "@/lib/operationalNotificationRuntimeConfig";
 import { createSupabaseOperationalNotificationLedger } from "@/lib/operationalNotificationLedgerSupabase";
 import { createConfiguredNotificationAdapter } from "@/lib/notificationAdapterFactory";
@@ -161,7 +162,14 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const environmentTag = getConfiguredDatabaseEnvironmentTag() ?? "unknown";
 
   const runId = randomUUID();
-  const openResult = await history.openRun(runId, "manual", environmentTag).catch(() => ({ opened: false }));
+  // P0-2B — previously hardcoded "manual" regardless of caller, even
+  // though Vercel Cron (vercel.json) is this route's only configured
+  // caller. See resolveRunTrigger's own doc comment
+  // (scheduledWriterRunSafety.ts) for why x-vercel-cron-schedule is the
+  // one real, non-invented signal used here, and why its absence still
+  // conservatively resolves to "manual" rather than a guessed "cron".
+  const trigger = resolveRunTrigger(req.headers.get("x-vercel-cron-schedule"));
+  const openResult = await history.openRun(runId, trigger, environmentTag).catch(() => ({ opened: false }));
   if (!openResult.opened) {
     return NextResponse.json(
       { ok: false, error: "Poprzednie uruchomienie wciąż trwa.", reason: "lock_held" },
@@ -200,6 +208,12 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     const results = await Promise.all(
       sources.map(async (source) => {
         const sourceKey = source.id as SafeCheckSourceId;
+        // P0-2B — resolved once per source, before the fetch, so it's
+        // available to both the failure branch below (new this change)
+        // and the pre-existing success branch — same value, same
+        // registry mapping, now shared instead of only computed on the
+        // success path.
+        const registrySourceId = getRegistrySourceId(sourceKey);
         try {
           const fetched = await fetchAndParseProposals({
             officialUrl: source.officialUrl,
@@ -207,6 +221,18 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
             parseRestPosts: REST_PARSERS_BY_SOURCE_ID[source.id],
           });
           if (!fetched.ok) {
+            // P0-2B — previously reported only in this invocation's HTTP
+            // response and the run-level aggregate counters, never
+            // persisted per source. Never creates a candidate, never
+            // touches alerts — strictly a source_checks log row, the
+            // same table and the same fail-closed "only when registered"
+            // gate writeCandidatesForSource's own success path already
+            // uses (source_checks.source_id is NOT NULL).
+            const logged = await logFailedSourceCheck(writer, {
+              registrySourceId,
+              writerUserId: signIn.userId,
+              diagnostic: fetched.diagnostic,
+            });
             return {
               sourceKey,
               sourceName: source.name,
@@ -217,12 +243,11 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
               duplicatesSkipped: 0,
               ambiguousCandidates: 0,
               cappedSkipped: 0,
-              sourceChecksInserted: 0,
+              sourceChecksInserted: logged.sourceChecksInserted,
               duplicatesPreventedByDatabase: 0,
             };
           }
 
-          const registrySourceId = getRegistrySourceId(sourceKey);
           const written = await writeCandidatesForSource(writer, {
             sourceKey,
             sourceName: source.name,

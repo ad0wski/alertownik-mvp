@@ -3,6 +3,8 @@ import { createHash } from "crypto";
 import { textSimilarity, normalizeForCompare, stripConfirmedDedupBoilerplate } from "@/lib/candidateWarnings";
 import type { CheckProposal } from "@/lib/sourceCheck";
 import { SAFE_CHECK_SOURCE_IDS } from "@/lib/sourceCheck";
+import type { FetchDiagnosticCode } from "@/lib/scheduledWriterRunSafety";
+import { sanitizeErrorSummary } from "@/lib/sourceHealth";
 
 // Sprint 147 — Scheduled Writer Foundation v1.
 //
@@ -330,14 +332,35 @@ export function buildPendingCandidateInsert(input: PendingCandidateInput) {
 }
 
 /** Matches the live-verified source_checks WITH CHECK exactly: result
- *  restricted to the two outcomes an automated check can honestly claim
+ *  restricted to the outcomes an automated check can honestly claim
  *  (never 'alert_created'/'needs_followup' — both are human-judgment
  *  outcomes), related_alert_id forced null, created_by self-attributed
- *  via the signed-in writer's own uid. */
+ *  via the signed-in writer's own uid.
+ *
+ *  P0-2B — 'failed' added alongside the original two. Unlike
+ *  'alert_created'/'needs_followup', a failed fetch is not a human
+ *  judgment call: the request either succeeded or it didn't, exactly the
+ *  same objective distinction the manual admin check write path (the
+ *  admin-triggered "Sprawdź teraz przez aplikację" check, a sibling
+ *  write path to this one) already persists via this exact same live
+ *  column — this mirrors that existing model rather than inventing a
+ *  second one. `errorCode`/`errorSummary` are only ever meaningful (and
+ *  only ever set by a caller) when result is 'failed'. */
 export interface AutomatedSourceCheckInput {
   sourceId: string;
   writerUserId: string;
-  result: "no_changes" | "found_notice";
+  result: "no_changes" | "found_notice" | "failed";
+  /** Stable, machine-readable — the same FetchDiagnosticCode vocabulary
+   *  the live source_checks_error_code_check CHECK constraint already
+   *  accepts (verified against the live schema this session). */
+  errorCode?: FetchDiagnosticCode;
+  /** Already-curated, admin-facing Polish text — see
+   *  describeAutomatedFetchFailure below. Passed through
+   *  sanitizeErrorSummary (the exact function the manual check path
+   *  already uses) so the 200-char CHECK constraint and the "no empty
+   *  string, null instead" convention are enforced in one shared place,
+   *  never duplicated. */
+  errorSummary?: string;
 }
 
 export function buildAutomatedSourceCheckInsert(input: AutomatedSourceCheckInput) {
@@ -346,7 +369,86 @@ export function buildAutomatedSourceCheckInsert(input: AutomatedSourceCheckInput
     result: input.result,
     related_alert_id: null,
     created_by: input.writerUserId,
+    error_code: input.result === "failed" ? (input.errorCode ?? null) : null,
+    error_summary: input.result === "failed" ? sanitizeErrorSummary(input.errorSummary) : null,
   } as const;
+}
+
+// ── Automated fetch-failure persistence (P0-2B) ──────────────────────────────
+//
+// Pre-launch audit follow-up finding: a fetch failure during
+// write-candidates was reported only in that invocation's own HTTP
+// response and the run-level scheduled_writer_runs aggregate counters —
+// never as a per-source source_checks row, unlike the manual admin check
+// path. With one source this was tolerable; it does not scale to the 44
+// sources already configured (src/lib/sourceCheck.ts
+// SAFE_CHECK_SOURCE_IDS) — without this, a failing run tells you "N of M
+// sources failed" with no way to learn which ones from the database
+// alone. This closes that gap using only the already-live
+// error_code/error_summary columns — no migration.
+
+/** Short, generic, admin-facing Polish summary for an automated fetch
+ *  failure. Deliberately generic per diagnostic bucket rather than
+ *  per-HTTP-status: unlike the manual check path's own richer messages
+ *  (manualSourceCheckFetch.ts, which has a real status code to describe),
+ *  the automated fetch layer (scheduledSourceFetch.ts) only ever surfaces
+ *  the already-classified FetchDiagnosticCode at this point — this
+ *  function never claims more detail than that layer actually has.
+ *  Exhaustive over FetchDiagnosticCode's exact 6 values; a new value
+ *  added there without updating this switch is a TypeScript error, not a
+ *  silent fallback. */
+export function describeAutomatedFetchFailure(diagnostic: FetchDiagnosticCode): string {
+  switch (diagnostic) {
+    case "http_4xx":
+      return "Zaplanowane sprawdzenie: źródło odpowiedziało błędem 4xx (np. 403/404).";
+    case "http_5xx":
+      return "Zaplanowane sprawdzenie: źródło odpowiedziało błędem serwera (5xx).";
+    case "non_html_content_type":
+      return "Zaplanowane sprawdzenie: źródło zwróciło nieoczekiwany typ treści.";
+    case "network_error":
+      return "Zaplanowane sprawdzenie: nie udało się połączyć ze źródłem (błąd sieci).";
+    case "timeout_10s":
+      return "Zaplanowane sprawdzenie: źródło nie odpowiedziało w czasie 10 s.";
+    case "parse_exception":
+      return "Zaplanowane sprawdzenie: źródło zwróciło dane w nieprawidłowym formacie.";
+  }
+}
+
+export interface LogFailedSourceCheckInput {
+  /** Null when the source has no alert_sources mapping configured
+   *  (SCHEDULED_WRITER_SOURCE_REGISTRY_IDS) — mirrors
+   *  writeCandidatesForSource's own existing "only when registered" gate
+   *  below, since source_checks.source_id is NOT NULL and there is
+   *  nothing honest to insert without it. */
+  registrySourceId: string | null;
+  writerUserId: string;
+  diagnostic: FetchDiagnosticCode;
+}
+
+/** Persists a failed scheduled fetch to source_checks — called from the
+ *  write-candidates route strictly on the branch where fetchAndParseProposals
+ *  itself already failed, i.e. strictly BEFORE writeCandidatesForSource
+ *  would ever run for that source. Never creates a candidate, never
+ *  touches alerts, never throws (the caller's own Promise.all per-source
+ *  isolation already does not depend on that, but this matches the same
+ *  "one source's failure never takes down the batch" principle by
+ *  construction: insertSourceCheck's own real implementation already
+ *  resolves to {ok:false} rather than throwing on a Postgrest error). */
+export async function logFailedSourceCheck(
+  writer: ScheduledSourceWriter,
+  input: LogFailedSourceCheckInput
+): Promise<{ sourceChecksInserted: number }> {
+  if (!input.registrySourceId) return { sourceChecksInserted: 0 };
+  const result = await writer.insertSourceCheck(
+    buildAutomatedSourceCheckInsert({
+      sourceId: input.registrySourceId,
+      writerUserId: input.writerUserId,
+      result: "failed",
+      errorCode: input.diagnostic,
+      errorSummary: describeAutomatedFetchFailure(input.diagnostic),
+    })
+  );
+  return { sourceChecksInserted: result.ok ? 1 : 0 };
 }
 
 // ── First-live-write safety caps — server-side, never caller-controlled ────

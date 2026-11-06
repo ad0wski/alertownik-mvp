@@ -12,6 +12,7 @@ import {
 } from "@/lib/databaseEnvironmentGuard";
 import { createSupabaseScheduledWriterHistory, buildRunHistoryCloseUpdate } from "@/lib/scheduledWriterHistory";
 import { isAutoPublishEnabled, runTrustedSourceAutoPublish } from "@/lib/trustedSourceAutoPublish";
+import { resolveRunTrigger } from "@/lib/scheduledWriterRunSafety";
 import { randomUUID } from "crypto";
 
 // Sprint 180C — Trusted Source Auto-Publish v1.
@@ -87,7 +88,12 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const history = createSupabaseScheduledWriterHistory(signIn.client);
   const environmentTag = getConfiguredDatabaseEnvironmentTag() ?? "unknown";
   const runId = randomUUID();
-  const openResult = await history.openRun(runId, "manual", environmentTag).catch(() => ({ opened: false }));
+  // P0-2B — same fix as write-candidates/route.ts: previously hardcoded
+  // "manual" regardless of caller, even though Vercel Cron (vercel.json)
+  // is this route's only configured caller. See resolveRunTrigger's own
+  // doc comment (scheduledWriterRunSafety.ts).
+  const trigger = resolveRunTrigger(req.headers.get("x-vercel-cron-schedule"));
+  const openResult = await history.openRun(runId, trigger, environmentTag).catch(() => ({ opened: false }));
   if (!openResult.opened) {
     return NextResponse.json(
       { ok: false, error: "Poprzednie uruchomienie wciąż trwa.", reason: "lock_held" },

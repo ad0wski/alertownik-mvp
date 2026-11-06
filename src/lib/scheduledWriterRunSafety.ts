@@ -161,6 +161,37 @@ export type RunOutcome =
 
 export type RunTrigger = "cron" | "manual";
 
+// ── Trigger resolution — "cron" vs "manual" from one concrete signal ────────
+//
+// P0-2B (pre-launch audit follow-up) — both write-capable cron routes
+// previously hardcoded `"manual"` regardless of who actually called them,
+// even though Vercel Cron is their only configured caller (vercel.json)
+// and the live `scheduled_writer_runs_trigger_check` constraint already
+// accepts `'cron'` (verified directly against the live schema this
+// session — not a migration target). This left run history unable to
+// tell a real scheduled run apart from a deliberate manual canary
+// invocation (the exact, already-documented procedure in
+// docs/SPRINT_173_ACTIVATION_CHECKPOINT_V1.md and
+// docs/PROTECTED_CRON_DRY_RUN_ENDPOINT_V1.md: an admin manually curls the
+// route with the real CRON_SECRET to observe one controlled run).
+//
+// `x-vercel-cron-schedule` is the one concrete, non-invented signal
+// available: Vercel's platform sets it only on requests it generates
+// itself from this project's own Cron Jobs schedule — already named in
+// this repo's own docs/SPRINT_153_FIRST_CRON_OBSERVATION_CHECKLIST_V1.md
+// as something to confirm in real Runtime Logs during an actual
+// Production cron window. A manually-curled request (with or without the
+// correct secret) never carries it, so it correctly resolves to
+// "manual" — the conservative default, not a third invented state. Takes
+// a plain header value (never a Request/NextRequest) to stay consistent
+// with this codebase's existing framework-free pattern for this kind of
+// check (see checkCronAuth in cronCheckSources.ts, which takes the
+// Authorization header value the same way) and to stay trivially
+// testable with fake strings, no HTTP mocking required.
+export function resolveRunTrigger(cronScheduleHeader: string | null | undefined): RunTrigger {
+  return cronScheduleHeader && cronScheduleHeader.trim().length > 0 ? "cron" : "manual";
+}
+
 // ── Revision 2 (post read-only security audit) — mirrored validation specs ──
 //
 // The atomic SQL functions (open_scheduled_writer_run,

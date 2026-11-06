@@ -198,6 +198,40 @@ test.describe("Sprint 149 — per-source failure isolation (Section E item 9: on
   });
 });
 
+// E, G. P0-2B — trigger semantics. Same static-source-text convention as
+// the Sprint 149 block above, for the same reason (this codebase
+// deliberately does not mock a full Supabase sign-in for route-level
+// tests, so the real openRun() call can't be observed by actually
+// calling GET()). This proves two things at once: (E) the route now
+// computes its trigger from resolveRunTrigger() instead of a hardcoded
+// literal, and (G) openRun's own call shape (runId, trigger,
+// environmentTag) — the thing the lock mechanism actually depends on —
+// is otherwise unchanged, so the existing lock/concurrency tests in
+// scheduledWriterRouteHistoryLock.spec.ts keep covering the real
+// guarantee without modification.
+test.describe("P0-2B — write-candidates run-history trigger is computed, not hardcoded", () => {
+  const routeSrc = readFileSync(
+    path.join(process.cwd(), "src/app/api/cron/write-candidates/route.ts"),
+    "utf8"
+  );
+
+  test("resolveRunTrigger is imported from scheduledWriterRunSafety", () => {
+    expect(routeSrc).toMatch(/import\s*\{[^}]*resolveRunTrigger[^}]*\}\s*from\s*["']@\/lib\/scheduledWriterRunSafety["']/);
+  });
+
+  test("the trigger passed to openRun is read from the x-vercel-cron-schedule header, not hardcoded", () => {
+    expect(routeSrc).toMatch(/resolveRunTrigger\(req\.headers\.get\(["']x-vercel-cron-schedule["']\)\)/);
+  });
+
+  test("openRun's call shape is unchanged: still exactly (runId, trigger, environmentTag)", () => {
+    expect(routeSrc).toMatch(/history\.openRun\(runId,\s*trigger,\s*environmentTag\)/);
+  });
+
+  test("no hardcoded 'manual' literal is passed to openRun anymore", () => {
+    expect(routeSrc).not.toMatch(/openRun\(runId,\s*"manual"/);
+  });
+});
+
 test.describe("GET /api/cron/write-candidates — two independent kill switches (write mode disabled by default)", () => {
   test("no env configured at all → 503 disabled, nothing fetched", async () => {
     await withEnv(
@@ -210,6 +244,38 @@ test.describe("GET /api/cron/write-candidates — two independent kill switches 
         });
         try {
           const res = await GET(authedRequest());
+          expect(res.status).toBe(503);
+          expect(fetchCalled).toBe(false);
+        } finally {
+          restore();
+        }
+      }
+    );
+  });
+
+  // H. P0-2B — the new x-vercel-cron-schedule-based trigger detection
+  // (resolveRunTrigger) must never become a new way to bypass a kill
+  // switch. This header is read only after both kill switches and auth
+  // already passed (see the route's own source order) — asserted here
+  // by confirming the response and fetch-not-called guarantee hold
+  // identically whether or not the header is present.
+  test("kill switches still block even when the request carries a genuine-looking x-vercel-cron-schedule header", async () => {
+    await withEnv(
+      { SCHEDULED_CHECKS_ENABLED: undefined, SCHEDULED_WRITES_ENABLED: undefined, CRON_SECRET: undefined },
+      async () => {
+        let fetchCalled = false;
+        const restore = mockFetch(async () => {
+          fetchCalled = true;
+          throw new Error("fetch must not be called");
+        });
+        try {
+          const req = new NextRequest("http://localhost/api/cron/write-candidates", {
+            headers: {
+              authorization: `Bearer ${FAKE_CRON_SECRET}`,
+              "x-vercel-cron-schedule": "0 5 * * *",
+            },
+          });
+          const res = await GET(req);
           expect(res.status).toBe(503);
           expect(fetchCalled).toBe(false);
         } finally {

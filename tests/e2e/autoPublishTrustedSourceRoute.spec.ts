@@ -61,6 +61,30 @@ test.describe("GET /api/cron/auto-publish-trusted-source — independent kill sw
     );
   });
 
+  // H. P0-2B — same guarantee as write-candidates' own equivalent test:
+  // the new x-vercel-cron-schedule-based trigger detection must never
+  // become a way to bypass a kill switch, since the header is only ever
+  // read after both kill switches and auth already passed.
+  test("kill switch still blocks even when the request carries a genuine-looking x-vercel-cron-schedule header", async () => {
+    await withEnv(
+      {
+        ...GUARD_PASS_ENV,
+        SCHEDULED_CHECKS_ENABLED: "true",
+        SCHEDULED_WRITES_ENABLED: "true",
+        SCHEDULED_AUTO_PUBLISH_ENABLED: undefined,
+      },
+      async () => {
+        const withHeader = new NextRequest("http://localhost/api/cron/auto-publish-trusted-source", {
+          headers: { "x-vercel-cron-schedule": "45 5 * * *" },
+        });
+        const res = await autoPublishGet(withHeader);
+        expect(res.status).toBe(503);
+        const body = await res.json();
+        expect(body.ok).toBe(false);
+      }
+    );
+  });
+
   test("SCHEDULED_AUTO_PUBLISH_ENABLED=true but SCHEDULED_WRITES_ENABLED=false still reaches the auth layer (independent flags) — auto-publish does not depend on write-candidates' own switch", async () => {
     await withEnv(
       {
@@ -165,5 +189,34 @@ test.describe("static audit — route independence from SCHEDULED_WRITES_ENABLED
     );
     expect(routeSrc).not.toContain("fetchAndParseProposals");
     expect(routeSrc).not.toContain("insertPendingCandidate");
+  });
+});
+
+// F, G. P0-2B — same static-source convention as write-candidates' own
+// equivalent block (scheduledWriterRoute.spec.ts): proves (F) the trigger
+// is now computed from resolveRunTrigger() instead of a hardcoded
+// literal, and (G) openRun's own call shape is otherwise unchanged, so
+// the run-lock guarantee this route shares with write-candidates (same
+// RPC, same unique-index scope) is unaffected.
+test.describe("P0-2B — auto-publish run-history trigger is computed, not hardcoded", () => {
+  const routeSrc = readFileSync(
+    path.join(process.cwd(), "src/app/api/cron/auto-publish-trusted-source/route.ts"),
+    "utf8"
+  );
+
+  test("resolveRunTrigger is imported from scheduledWriterRunSafety", () => {
+    expect(routeSrc).toMatch(/import\s*\{[^}]*resolveRunTrigger[^}]*\}\s*from\s*["']@\/lib\/scheduledWriterRunSafety["']/);
+  });
+
+  test("the trigger passed to openRun is read from the x-vercel-cron-schedule header, not hardcoded", () => {
+    expect(routeSrc).toMatch(/resolveRunTrigger\(req\.headers\.get\(["']x-vercel-cron-schedule["']\)\)/);
+  });
+
+  test("openRun's call shape is unchanged: still exactly (runId, trigger, environmentTag)", () => {
+    expect(routeSrc).toMatch(/history\.openRun\(runId,\s*trigger,\s*environmentTag\)/);
+  });
+
+  test("no hardcoded 'manual' literal is passed to openRun anymore", () => {
+    expect(routeSrc).not.toMatch(/openRun\(runId,\s*"manual"/);
   });
 });

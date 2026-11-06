@@ -10,6 +10,7 @@ import {
   isCloseRunInputValid,
   ALLOWED_RUN_OUTCOMES,
   ERROR_SUMMARY_MAX_LENGTH,
+  resolveRunTrigger,
   type RunLockRow,
   type CloseRunValidationInput,
 } from "@/lib/scheduledWriterRunSafety";
@@ -325,5 +326,32 @@ test.describe("isCloseRunInputValid — mirrors close_scheduled_writer_run()'s o
     expect(isCloseRunInputValid(validCloseInput({ errorSummary: "a".repeat(ERROR_SUMMARY_MAX_LENGTH + 1) }))).toBe(
       false
     );
+  });
+});
+
+// P0-2B — resolveRunTrigger: "cron" vs "manual" from the one real,
+// documented Vercel signal (x-vercel-cron-schedule), never an invented
+// third state. Both write-capable cron routes previously hardcoded
+// "manual" unconditionally — these tests pin the fix at the pure-function
+// level the routes now actually call.
+test.describe("resolveRunTrigger", () => {
+  test("x-vercel-cron-schedule header present and non-empty → cron", () => {
+    expect(resolveRunTrigger("0 5 * * *")).toBe("cron");
+  });
+
+  test("header missing (null) → manual (the conservative default, not a guess)", () => {
+    expect(resolveRunTrigger(null)).toBe("manual");
+  });
+
+  test("header absent (undefined) → manual", () => {
+    expect(resolveRunTrigger(undefined)).toBe("manual");
+  });
+
+  test("header present but empty string → manual, not blindly truthy", () => {
+    expect(resolveRunTrigger("")).toBe("manual");
+  });
+
+  test("header present but whitespace-only → manual", () => {
+    expect(resolveRunTrigger("   ")).toBe("manual");
   });
 });
