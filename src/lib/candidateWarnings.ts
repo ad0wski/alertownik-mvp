@@ -14,6 +14,7 @@
 // both from here verbatim — its own public API (and every existing test
 // importing them from "@/lib/trustedSourceAutoPublish") is unchanged.
 import { PILOT_LOCALITIES } from "@/lib/officialSourceChecklist";
+import { warsawWallTimeToUtcIso } from "@/lib/formatAlertDate";
 
 export const MONTHS_PL =
   "stycznia|lutego|marca|kwietnia|maja|czerwca|lipca|sierpnia|wrze[sś]nia|pa[zź]dziernika|listopada|grudnia";
@@ -243,18 +244,47 @@ const START_DATE_RE = new RegExp(
 // first — see extractStartDateIso's own comment for why.
 const NUMERIC_START_DATE_RE = /\b(\d{1,2})\.(\d{1,2})\.(\d{4})\b(?:[^\d]{0,10}?(\d{1,2}):(\d{2}))?/;
 
-/** Shared round-trip validator for both date formats below — constructs
- *  the UTC date and confirms it didn't silently roll over (e.g.
- *  "31 lutego"/"31.02.2026" into early March), the one real failure mode
- *  `Date.UTC` has for an impossible calendar date. Single source of truth
- *  so the spelled-month and numeric paths can never validate differently. */
-function buildValidatedIsoDate(year: number, monthIndex: number, day: number, hour: number, minute: number): string | null {
-  const date = new Date(Date.UTC(year, monthIndex, day, hour, minute));
-  if (Number.isNaN(date.getTime())) return null;
-  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== monthIndex || date.getUTCDate() !== day) {
+/** Shared validator for both date formats below. Calendar validity (e.g.
+ *  rejecting "31 lutego"/"31.02.2026") is checked independently of any
+ *  time component, via the same UTC round-trip trick as before — one
+ *  source of truth so the spelled-month and numeric paths can never
+ *  validate differently.
+ *
+ *  fix(time) — when the source text gave an explicit time clause
+ *  (`hasExplicitTime`), `hour`/`minute` are Europe/Warsaw wall-clock time
+ *  (the only timezone any official source this app reads ever means), so
+ *  they're converted via the single shared warsawWallTimeToUtcIso helper
+ *  (formatAlertDate.ts) — never a naive `Date.UTC(..., hour, minute)` as
+ *  if the stated local hour were already UTC. Previously, EVERY extracted
+ *  time was off by this project's own real-world incident margin: 1 hour
+ *  late in winter (CET), 2 hours late in summer (CEST) — confirmed against
+ *  the real Michałowice "Brak wody - Reguły" notice ("godz. 11:00 - 15:00")
+ *  during manual publication preflight.
+ *
+ *  When no time clause was present at all, behavior is UNCHANGED from
+ *  before this fix: plain UTC midnight, never Warsaw-converted (that would
+ *  wrongly shift a genuinely date-only value to 22:00/23:00 the PREVIOUS
+ *  UTC day, breaking the existing, separate "date-only" convention this
+ *  module's own doc comment already describes). */
+function buildValidatedIsoDate(
+  year: number,
+  monthIndex: number,
+  day: number,
+  hour: number,
+  minute: number,
+  hasExplicitTime: boolean
+): string | null {
+  const naiveUtcMidnight = new Date(Date.UTC(year, monthIndex, day));
+  if (
+    Number.isNaN(naiveUtcMidnight.getTime()) ||
+    naiveUtcMidnight.getUTCFullYear() !== year ||
+    naiveUtcMidnight.getUTCMonth() !== monthIndex ||
+    naiveUtcMidnight.getUTCDate() !== day
+  ) {
     return null;
   }
-  return date.toISOString();
+  if (!hasExplicitTime) return naiveUtcMidnight.toISOString();
+  return warsawWallTimeToUtcIso(year, monthIndex + 1, day, hour, minute);
 }
 
 /** Returns an ISO datetime for the first recognized date pattern found, or
@@ -262,6 +292,11 @@ function buildValidatedIsoDate(year: number, monthIndex: number, day: number, ho
  *  defaults to 00:00 UTC when no time clause is present (matches this
  *  project's existing convention of a date-only ISO string being valid,
  *  e.g. the DW 719 alert's own `starts_at: "2026-07-09 00:00:00+00"`).
+ *  fix(time) — when a time clause IS present ("godz. H:MM"), it is now
+ *  correctly treated as Europe/Warsaw local time and converted to the
+ *  equivalent UTC instant (see buildValidatedIsoDate above) — previously
+ *  stored as if the stated local hour were already UTC, off by exactly
+ *  this app's real DST offset.
  *
  *  Tries the spelled-month Polish format ("D miesiąca RRRR[, od godz.
  *  H:MM]") FIRST, and only falls back to the numeric "DD.MM.YYYY[ HH:MM]"
@@ -285,9 +320,10 @@ export function extractStartDateIso(text: string): string | null {
     const year = Number(spelledMatch[3]);
     const monthIndex = MONTH_INDEX[monthWord];
     if (monthIndex === undefined) return null;
-    const hour = spelledMatch[4] ? Number(spelledMatch[4]) : 0;
+    const hasExplicitTime = Boolean(spelledMatch[4]);
+    const hour = hasExplicitTime ? Number(spelledMatch[4]) : 0;
     const minute = spelledMatch[5] ? Number(spelledMatch[5]) : 0;
-    return buildValidatedIsoDate(year, monthIndex, day, hour, minute);
+    return buildValidatedIsoDate(year, monthIndex, day, hour, minute, hasExplicitTime);
   }
 
   const numericMatch = NUMERIC_START_DATE_RE.exec(text);
@@ -296,9 +332,10 @@ export function extractStartDateIso(text: string): string | null {
   const month = Number(numericMatch[2]);
   const year = Number(numericMatch[3]);
   if (month < 1 || month > 12 || day < 1 || day > 31) return null;
-  const hour = numericMatch[4] ? Number(numericMatch[4]) : 0;
+  const hasExplicitTime = Boolean(numericMatch[4]);
+  const hour = hasExplicitTime ? Number(numericMatch[4]) : 0;
   const minute = numericMatch[5] ? Number(numericMatch[5]) : 0;
-  return buildValidatedIsoDate(year, month - 1, day, hour, minute);
+  return buildValidatedIsoDate(year, month - 1, day, hour, minute, hasExplicitTime);
 }
 
 // ── Place extraction — exact match against the known pilot locality list,

@@ -20,6 +20,11 @@ import {
 import { normalizeAlertSeverity } from "@/lib/normalizeAlert";
 import { markCandidateConverted } from "@/lib/supabaseCandidateWrites";
 import { getPrePublishWarnings, confirmPrePublish } from "@/lib/alertQuality";
+import {
+  combineDateAndOptionalTime,
+  isValidTimeString,
+  parseAlertTimestamp,
+} from "@/lib/formatAlertDate";
 
 // Same sessionStorage contract /admin/queue and /ai-helper already use for
 // sourceId — a persistent candidate notice (Sprint 78) flowing through
@@ -56,7 +61,16 @@ const initialForm = {
   slug: "",
   place: "",
   startsAt: "",
+  // fix(time) — optional Europe/Warsaw local time-of-day, "HH:MM" from an
+  // <input type="time">. Empty means "no specific time" — the existing
+  // date-only/all-day storage convention, completely unchanged. Never
+  // combined into startsAt/endsAt in form state itself; see
+  // combineDateAndOptionalTime usages below, which compute the actual
+  // write/preview value on demand so the plain <input type="date">
+  // binding above never needs to change shape.
+  startsAtTime: "",
   endsAt: "",
+  endsAtTime: "",
   change: "",
   action: "",
   sourceName: "",
@@ -93,6 +107,28 @@ function pickPlace(place: unknown, location: unknown, fallback: string): string 
   return fallback;
 }
 
+// fix(time) — pure validation helper, module-level (not an inline closure
+// inside the component) so it can never be mistaken for render-impure
+// code: it only ever reads plain string/Date values it's given, no
+// Date.now()/Math.random()/other impure call anywhere in it.
+function computeTimeValidationError(
+  startsAtTime: string,
+  endsAtTime: string,
+  startsAtIso: string | null,
+  endsAtIso: string | null | undefined
+): string | null {
+  if (startsAtTime && !isValidTimeString(startsAtTime)) {
+    return "Godzina od ma nieprawidłowy format (wymagane GG:MM).";
+  }
+  if (endsAtTime && !isValidTimeString(endsAtTime)) {
+    return "Godzina do ma nieprawidłowy format (wymagane GG:MM).";
+  }
+  if (startsAtIso && endsAtIso && new Date(endsAtIso).getTime() < new Date(startsAtIso).getTime()) {
+    return "Data/godzina „do” nie może być wcześniejsza niż „od”.";
+  }
+  return null;
+}
+
 function normalizeCategory(value: unknown): AlertCategory | null {
   if (typeof value !== "string") return null;
   const v = value.toLowerCase().trim();
@@ -111,7 +147,13 @@ function buildFormFromJson(data: Record<string, unknown>, sourceId: string): typ
     slug: stringField(data.slug, ""),
     place: pickPlace(data.place, data.location, ""),
     startsAt: dateField(data.startsAt, ""),
+    // fix(time) — JSON import/AI-Helper handoff never carries a time
+    // component (out of this fix's scope, unchanged from before); an
+    // admin who needs a specific time still enters it directly in Builder
+    // after import, same as any other field they'd refine by hand.
+    startsAtTime: "",
     endsAt: dateField(data.endsAt, ""),
+    endsAtTime: "",
     change: stringField(data.change, ""),
     action: stringField(data.action, ""),
     sourceName: stringField(data.sourceName, ""),
@@ -232,6 +274,25 @@ type BuilderView = "edit" | "alerts" | "tools";
 
 export default function BuilderPage() {
   const [form, setForm] = useState(initialForm);
+
+  // fix(time) — the actual value written to Supabase / shown in the
+  // preview card, computed on demand from the plain date + optional time
+  // form fields above. `form.startsAt`/`form.endsAt` themselves stay pure
+  // "YYYY-MM-DD" strings bound to their <input type="date">s, unchanged;
+  // only these derived values ever carry a combined Warsaw-local time,
+  // converted to the correct UTC instant via the single shared helper
+  // (formatAlertDate.ts) — never a second implementation.
+  const startsAtIso = combineDateAndOptionalTime(form.startsAt, form.startsAtTime || undefined);
+  const endsAtIso = form.endsAt
+    ? combineDateAndOptionalTime(form.endsAt, form.endsAtTime || undefined)
+    : undefined;
+  const timeValidationError = computeTimeValidationError(
+    form.startsAtTime,
+    form.endsAtTime,
+    startsAtIso,
+    endsAtIso
+  );
+
   const [copied, setCopied] = useState(false);
   const [jsonInput, setJsonInput] = useState("");
   const [importStatus, setImportStatus] = useState<ImportStatus>("idle");
@@ -291,7 +352,16 @@ export default function BuilderPage() {
       slug: a.slug,
       place: a.place,
       startsAt: a.startsAt.split("T")[0],
+      // fix(time) — pre-fill the optional time input with this alert's
+      // real Warsaw-local time-of-day, using the SAME parser the display
+      // layer already uses, so editing an existing timed alert never
+      // silently drops its time (previously, every edit truncated
+      // straight to the bare date via split("T")[0] above, discarding any
+      // time this alert actually had). An all-day alert's "hhmm: null"
+      // correctly yields "" — no new time field prefilled.
+      startsAtTime: parseAlertTimestamp(a.startsAt).hhmm ?? "",
       endsAt: a.endsAt ? a.endsAt.split("T")[0] : "",
+      endsAtTime: a.endsAt ? parseAlertTimestamp(a.endsAt).hhmm ?? "" : "",
       change: a.change,
       action: a.action,
       sourceName: a.sourceName,
@@ -448,6 +518,16 @@ export default function BuilderPage() {
   function publishAlert() {
     const now = Date.now();
     const today = new Date().toISOString().split("T")[0];
+    // fix(time) — computed locally rather than reading the shared
+    // startsAtIso/endsAtIso consts above: this is the legacy, browser-
+    // storage-only demo flow (see builderLocalToolsAntiDrift.spec.ts —
+    // this function never performs a real database write), kept fully
+    // self-contained on purpose so it never shares render-time-computed
+    // values with the real write/preview paths.
+    const localStartsAtIso = combineDateAndOptionalTime(form.startsAt, form.startsAtTime || undefined);
+    const localEndsAtIso = form.endsAt
+      ? combineDateAndOptionalTime(form.endsAt, form.endsAtTime || undefined)
+      : undefined;
     const newAlert: PublishedAlert = {
       id: `local-${now}`,
       slug: form.slug || generateSlug(form.title || "alert"),
@@ -455,8 +535,8 @@ export default function BuilderPage() {
       severity: form.severity,
       title: form.title,
       place: form.place,
-      startsAt: form.startsAt || today,
-      ...(form.endsAt ? { endsAt: form.endsAt } : {}),
+      startsAt: localStartsAtIso ?? form.startsAt ?? today,
+      ...(localEndsAtIso ? { endsAt: localEndsAtIso } : {}),
       change: form.change,
       action: form.action,
       sourceName: form.sourceName,
@@ -478,7 +558,9 @@ export default function BuilderPage() {
       slug: pa.slug ?? "",
       place: pa.place,
       startsAt: pa.startsAt.split("T")[0],
+      startsAtTime: parseAlertTimestamp(pa.startsAt).hhmm ?? "",
       endsAt: pa.endsAt ? pa.endsAt.split("T")[0] : "",
+      endsAtTime: pa.endsAt ? parseAlertTimestamp(pa.endsAt).hhmm ?? "" : "",
       change: pa.change,
       action: pa.action,
       sourceName: pa.sourceName,
@@ -524,6 +606,7 @@ export default function BuilderPage() {
     if (!form.category) return "Uzupełnij wymagane pola przed zapisem.";
     if (!normalizeAlertSeverity(form.severity)) return "Nieprawidłowy poziom ważności alertu.";
     if (!form.startsAt) return "Uzupełnij wymagane pola przed zapisem.";
+    if (timeValidationError) return timeValidationError;
     return null;
   }
 
@@ -542,8 +625,8 @@ export default function BuilderPage() {
       severity: form.severity,
       title: form.title,
       place: form.place,
-      startsAt: form.startsAt,
-      endsAt: form.endsAt || undefined,
+      startsAt: startsAtIso ?? form.startsAt,
+      endsAt: endsAtIso ?? undefined,
       change: form.change,
       action: form.action,
       sourceName: form.sourceName,
@@ -609,6 +692,7 @@ export default function BuilderPage() {
     if (!form.category) return "Kategoria jest wymagana.";
     if (!normalizeAlertSeverity(form.severity)) return "Nieprawidłowy poziom ważności alertu.";
     if (!form.startsAt) return "Data od jest wymagana.";
+    if (timeValidationError) return timeValidationError;
     const slug = form.slug.trim() || generateSlug(form.title);
     if (!slug) return "Nie udało się wygenerować slugu. Wpisz tytuł lub slug ręcznie.";
     // Zapis (nie edycja) z istniejącym slugiem nadpisałby inny alert (upsert po slug).
@@ -632,8 +716,8 @@ export default function BuilderPage() {
       severity: form.severity,
       title: form.title,
       place: form.place,
-      startsAt: form.startsAt,
-      endsAt: form.endsAt || undefined,
+      startsAt: startsAtIso ?? form.startsAt,
+      endsAt: endsAtIso ?? undefined,
       change: form.change,
       action: form.action,
       sourceName: form.sourceName,
@@ -678,8 +762,8 @@ export default function BuilderPage() {
       severity: form.severity,
       title: form.title,
       place: form.place,
-      startsAt: form.startsAt,
-      endsAt: form.endsAt || undefined,
+      startsAt: startsAtIso ?? form.startsAt,
+      endsAt: endsAtIso ?? undefined,
       change: form.change,
       action: form.action,
       sourceName: form.sourceName,
@@ -731,8 +815,8 @@ export default function BuilderPage() {
     severity: form.severity,
     title: form.title || "Tytuł alertu",
     place: form.place || "Lokalizacja",
-    startsAt: form.startsAt || today,
-    endsAt: form.endsAt || undefined,
+    startsAt: startsAtIso ?? form.startsAt ?? today,
+    endsAt: endsAtIso ?? undefined,
     change: form.change || "Opis zmian pojawi się tutaj.",
     action: form.action || "Zalecane działanie pojawi się tutaj.",
     sourceName: form.sourceName || "Nazwa źródła",
@@ -746,8 +830,8 @@ export default function BuilderPage() {
     severity: normalizeAlertSeverity(form.severity) ?? form.severity,
     title: form.title,
     place: form.place,
-    startsAt: form.startsAt,
-    ...(form.endsAt ? { endsAt: form.endsAt } : {}),
+    startsAt: startsAtIso ?? form.startsAt,
+    ...(endsAtIso ? { endsAt: endsAtIso } : {}),
     change: form.change,
     action: form.action,
     sourceName: form.sourceName,
@@ -1036,7 +1120,39 @@ export default function BuilderPage() {
               className={inputClass}
             />
           </div>
+          {/* fix(time) — optional Warsaw-local time-of-day. Only meaningful
+              alongside the date above; left blank, nothing about the
+              existing date-only alert behavior changes at all. */}
+          <div className="flex flex-col gap-2">
+            <label className={labelClass}>
+              Godzina od{" "}
+              <span className="font-normal text-slate-500 dark:text-slate-400">(opcjonalnie)</span>
+            </label>
+            <input
+              type="time"
+              name="startsAtTime"
+              value={form.startsAtTime}
+              onChange={handleChange}
+              className={inputClass}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className={labelClass}>
+              Godzina do{" "}
+              <span className="font-normal text-slate-500 dark:text-slate-400">(opcjonalnie)</span>
+            </label>
+            <input
+              type="time"
+              name="endsAtTime"
+              value={form.endsAtTime}
+              onChange={handleChange}
+              className={inputClass}
+            />
+          </div>
         </div>
+        {timeValidationError && (
+          <p className="text-sm text-red-600 dark:text-red-400">{timeValidationError}</p>
+        )}
 
         {/* Change */}
         <div className="flex flex-col gap-2">

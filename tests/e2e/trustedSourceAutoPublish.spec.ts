@@ -256,8 +256,11 @@ test.describe("isDirectSafePermalink", () => {
 
 test.describe("extractStartDateIso", () => {
   test("extracts the real DW 719 date+time correctly", () => {
+    // fix(time) — "od godz. 9:00" is Europe/Warsaw local time; 29 lipca is
+    // summer (CEST, UTC+2), so the correct UTC instant is 07:00, not the
+    // naive 09:00 face value this test asserted before the timezone fix.
     const iso = extractStartDateIso(REAL_DW719_TEXT);
-    expect(iso).toBe("2026-07-29T09:00:00.000Z");
+    expect(iso).toBe("2026-07-29T07:00:00.000Z");
   });
   test("extracts a date without a time clause, defaulting to midnight UTC", () => {
     expect(extractStartDateIso("Od 9 lipca 2026 r. obowiązuje nowa organizacja ruchu.")).toBe(
@@ -284,8 +287,10 @@ test.describe("extractStartDateIso", () => {
   });
 
   test("DD.MM.YYYY HH:MM is parsed correctly, including the time", () => {
+    // fix(time) — "17:00" is Europe/Warsaw local time; 8 listopada is
+    // winter (CET, UTC+1), so the correct UTC instant is 16:00.
     expect(extractStartDateIso("Data wydarzenia: 08.11.2026 17:00\n‼️Koncert odwołany!")).toBe(
-      "2026-11-08T17:00:00.000Z"
+      "2026-11-08T16:00:00.000Z"
     );
   });
 
@@ -312,7 +317,21 @@ test.describe("extractStartDateIso", () => {
     // spelled-month EVENT date — the spelled-month one must win.
     const text =
       "06.11.2026 14:55\nInformujemy, że 10 listopada 2026 r., w godz. 11:00 - 15:00 nastąpi przerwa w dostawie wody.";
-    expect(extractStartDateIso(text)).toBe("2026-11-10T11:00:00.000Z");
+    // fix(time) — "godz. 11:00" is Europe/Warsaw local time; 10 listopada
+    // is winter (CET, UTC+1), so the correct UTC instant is 10:00 — this
+    // is the exact real "Brak wody - Reguły" case that surfaced the bug.
+    expect(extractStartDateIso(text)).toBe("2026-11-10T10:00:00.000Z");
+  });
+
+  // fix(time) — the exact real-world bug this fix closes, pinned
+  // explicitly: the "Brak wody - Reguły" official notice's own stated
+  // time, verified live against the real source during manual Reguły
+  // publication preflight.
+  test("regression: the real 'Brak wody - Reguły' notice's stated time converts correctly in both directions", () => {
+    const text =
+      "Informujemy, że 10 listopada 2026 r., w godz. 11:00 - 15:00 nastąpi przerwa w dostawie wody do posesji " +
+      "położonych w miejscowości Reguły.";
+    expect(extractStartDateIso(text)).toBe("2026-11-10T10:00:00.000Z");
   });
 });
 
@@ -334,7 +353,8 @@ test.describe("evaluateAutoPublishEligibility — safe candidate", () => {
     if (result.eligible) {
       expect(result.fields.category).toBe("roads");
       expect(result.fields.place).toBe("Nowa Wieś");
-      expect(result.fields.startsAt).toBe("2026-07-29T09:00:00.000Z");
+      // fix(time) — "od godz. 9:00" Warsaw local, summer (CEST, UTC+2) → 07:00Z.
+      expect(result.fields.startsAt).toBe("2026-07-29T07:00:00.000Z");
       expect(result.fields.title).toBe("Zmiana organizacji ruchu na drodze wojewódzkiej nr 719");
       // P0-2C fix — sourceUrl is now the candidate's own verified direct
       // permalink (candidateUrl), never the generic source listing page
