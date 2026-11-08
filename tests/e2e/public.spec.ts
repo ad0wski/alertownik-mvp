@@ -123,9 +123,9 @@ test.describe("Public homepage", () => {
   // still there once expanded.
   test("hero states the pilot's covered area", async ({ page }) => {
     await page.goto("/alerty");
-    await expect(page.locator("h1")).toContainText(/Komorowa, Pruszkowa i okolic/);
+    await expect(page.locator("h1")).toContainText(/gminy Michałowice i powiatu pruszkowskiego/);
     await page.getByText("Jak działa Alertownik?").click();
-    await expect(page.getByText(/Komorowa, Pruszkowa i okolic/).last()).toBeVisible();
+    await expect(page.getByText(/gminy Michałowice i powiatu pruszkowskiego/).last()).toBeVisible();
   });
 
   // Sprint 96 — a practical "reason to return" status line, computed from
@@ -679,7 +679,7 @@ test.describe("Sprint 156B — homepage value-first + personalization", () => {
   // Alertownik?" detail, per real user feedback about too much intro text.
   test("hero is short (one sentence) and states the covered area", async ({ page }) => {
     await page.goto("/alerty");
-    await expect(page.locator("h1")).toContainText(/Komorowa, Pruszkowa i okolic/);
+    await expect(page.locator("h1")).toContainText(/gminy Michałowice i powiatu pruszkowskiego/);
     await page.getByText("Jak działa Alertownik?").click();
     await expect(page.getByText(/Sprawdź, co może dziś wpłynąć na Twój dzień/)).toBeVisible();
   });

@@ -69,12 +69,13 @@ export default function AboutPage() {
             urzędów, operatorów transportu czy dostawców usług). Do przygotowania
             treści admin może korzystać z pomocy AI, ale AI nigdy nie publikuje
             alertów samodzielnie — każdy alert trafia na stronę główną tylko po
-            akceptacji administratora. Jedyny wyjątek: dla jednego, ściśle
-            zdefiniowanego zaufanego źródła (aktualności Miasta Pruszków) działa
-            wąski, w pełni deterministyczny (bez udziału AI) mechanizm
-            automatycznej publikacji, uruchamiany tylko po jednoczesnym
+            akceptacji administratora. Jedyny zaplanowany wyjątek: dla jednego,
+            ściśle zdefiniowanego zaufanego źródła (komunikaty gminy Michałowice)
+            przygotowany jest wąski, w pełni deterministyczny (bez udziału AI)
+            mechanizm automatycznej publikacji, uruchamiany tylko po jednoczesnym
             spełnieniu wszystkich zdefiniowanych warunków bezpieczeństwa —
-            odwracalny natychmiast, jednym przełącznikiem.
+            na razie wciąż wyłączony i czeka na kontrolowany test, odwracalny
+            natychmiast, jednym przełącznikiem.
           </p>
         </section>
 

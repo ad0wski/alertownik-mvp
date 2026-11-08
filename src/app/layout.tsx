@@ -44,7 +44,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "Alertownik",
   description:
-    "Lokalne alerty w jednym miejscu — transport, woda, prąd, odpady i komunikaty gminne dla Komorowa, Pruszkowa i okolic.",
+    "Lokalne alerty w jednym miejscu — transport, woda, prąd, odpady i komunikaty gminne w rejonie gminy Michałowice i powiatu pruszkowskiego.",
   applicationName: "Alertownik",
   appleWebApp: {
     capable: true,

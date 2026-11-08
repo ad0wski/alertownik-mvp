@@ -18,7 +18,7 @@ export default function AlertyPage() {
     <main className="max-w-3xl mx-auto w-full px-4 sm:px-6 py-2 sm:py-10">
       <div className="mb-2 sm:mb-4">
         <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight leading-snug mb-1">
-          Lokalne alerty dla Komorowa, Pruszkowa i okolic.
+          Lokalne alerty w rejonie gminy Michałowice i powiatu pruszkowskiego.
         </h1>
         {/* Sprint 182A — first real user feedback (Adam's mom, via mailto)
             said the intro had too much text before search/alerts appeared.
@@ -31,8 +31,8 @@ export default function AlertyPage() {
           <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 leading-snug sm:leading-relaxed mt-1.5">
             Sprawdź, co może dziś wpłynąć na Twój dzień w okolicy. Alertownik
             zbiera w jednym miejscu komunikaty o transporcie, wodzie, prądzie,
-            drogach i odpadach dla{" "}
-            <span className="font-medium text-slate-600 dark:text-slate-400">Komorowa, Pruszkowa i okolic</span>.
+            drogach i odpadach w rejonie{" "}
+            <span className="font-medium text-slate-600 dark:text-slate-400">gminy Michałowice i powiatu pruszkowskiego</span>.
           </p>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
             Wczesny pilotaż —{" "}
