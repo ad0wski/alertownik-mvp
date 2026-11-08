@@ -1,5 +1,11 @@
 -- ============================================================================
--- NOT YET APPLIED — REQUIRES ADAM'S EXPLICIT MANUAL EXECUTION
+-- APPLIED — live-reconfirmed against Production on 2026-11-08 (P0-2H.1,
+-- via `select policyname, with_check from pg_policies where
+-- tablename in ('alerts','source_notice_candidates')`): both policies
+-- below exist on Production with the exact WITH CHECK conditions this file
+-- specifies. Kept here as the durable record of what was applied and why
+-- — re-run the query above before trusting this line indefinitely, rather
+-- than assuming either state without checking.
 -- ============================================================================
 -- Sprint 180C — Trusted Source Auto-Publish RLS v1.
 --

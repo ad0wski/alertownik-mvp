@@ -8,6 +8,8 @@ import {
   MAX_CHECK_PROPOSALS,
   MIN_PROPOSAL_TEXT_LENGTH,
 } from "@/lib/sourceCheck";
+import { classifyProposalAgainstExisting, type DedupComparisonItem } from "@/lib/scheduledWriter";
+import { isDirectSafePermalink } from "@/lib/trustedSourceAutoPublish";
 
 /**
  * Sprint 138 — fixture-based reliability tests for the Gmina Michałowice
@@ -85,6 +87,112 @@ test.describe("Michałowice news-item listing (realistic fixture)", () => {
 
   test("a found notice suggests the found_notice check result", () => {
     expect(suggestCheckResult(proposals.length)).toBe("found_notice");
+  });
+});
+
+// P0-2H.1 — the news-item title link's own href is now captured as the
+// notice's direct permalink (previously always discarded, so every
+// Michałowice candidate's candidate_url was null, structurally blocking
+// auto-publish eligibility regardless of freshness). These fixtures use
+// inline HTML rather than the shared michalowice-komunikaty.html fixture
+// above, since that fixture's hrefs point at a different example domain
+// (gmina-testowa.example) than BASE_URL — correct for testing "unrelated
+// pre-existing fixture still parses", but not suitable for testing a
+// same-origin permalink, which needs a href matching BASE_URL's own host.
+test.describe("P0-2H.1 — Michałowice notice permalink extraction", () => {
+  function newsItemHtml(titleHref: string, title = "Komunikat testowy o pracach na terenie gminy"): string {
+    return `
+      <html><body><div class="row"><div class="news-item div-link">
+        <div><div class="description">
+          <div class="date">05.11.2026 10:00</div>
+          <div class="h3 title-border">${
+            titleHref ? `<a href="${titleHref}">${title}</a>` : title
+          }</div>
+          <div class="description-body">Treść komunikatu testowego, wystarczająco długa, aby przejść przez filtr minimalnej długości.</div>
+        </div></div>
+      </div></div></body></html>`;
+  }
+
+  test("a direct absolute permalink on the official domain is captured as candidate_url", () => {
+    const url = "https://www.michalowice.pl/dzieje-sie/zaproszenia/kulturalne/koncert-slawy-przybylskiej-odwolany,p1266210672";
+    const proposals = buildCheckProposals(parsePageHtml(newsItemHtml(url), BASE_URL));
+    expect(proposals).toHaveLength(1);
+    expect(proposals[0].url).toBe(url);
+    // Normal candidate generation (title/text) is unaffected by the url change.
+    expect(proposals[0].title).toBe("Komunikat testowy o pracach na terenie gminy");
+  });
+
+  test("a relative permalink is normalized to an absolute official URL", () => {
+    const proposals = buildCheckProposals(
+      parsePageHtml(newsItemHtml("/dzieje-sie/aktualnosci/komunikaty/rok-2026/brak-wody-reguly,p1077989952"), BASE_URL)
+    );
+    expect(proposals[0].url).toBe(
+      "https://www.michalowice.pl/dzieje-sie/aktualnosci/komunikaty/rok-2026/brak-wody-reguly,p1077989952"
+    );
+  });
+
+  test("a missing href (no link around the title at all) yields candidate_url null", () => {
+    const proposals = buildCheckProposals(parsePageHtml(newsItemHtml(""), BASE_URL));
+    expect(proposals[0].url).toBeUndefined();
+  });
+
+  test("an external domain href is rejected, never saved as candidate_url", () => {
+    const proposals = buildCheckProposals(
+      parsePageHtml(newsItemHtml("https://not-michalowice.example/komunikat"), BASE_URL)
+    );
+    expect(proposals[0].url).toBeUndefined();
+  });
+
+  test("a /wp-json/ href is rejected, even on the official domain", () => {
+    const proposals = buildCheckProposals(
+      parsePageHtml(newsItemHtml("https://www.michalowice.pl/wp-json/wp/v2/posts/1"), BASE_URL)
+    );
+    expect(proposals[0].url).toBeUndefined();
+  });
+
+  test("a href pointing back at the listing page itself is rejected, not treated as a direct permalink", () => {
+    const proposals = buildCheckProposals(parsePageHtml(newsItemHtml(BASE_URL), BASE_URL));
+    expect(proposals[0].url).toBeUndefined();
+  });
+
+  test("a malformed href never crashes parsing — falls back to candidate_url null", () => {
+    // A plain relative-looking string like "not a url at all" is NOT a
+    // genuine WHATWG URL-constructor failure case — it resolves cleanly
+    // as a (percent-encoded) relative path against BASE_URL, which is
+    // correct, safe behavior, not a crash to guard against. A string
+    // that actually throws in `new URL(href, base)` is an unterminated
+    // IPv6-bracket host (confirmed via a direct Node check before writing
+    // this test) — this is the real "malformed" case this test exists
+    // to cover.
+    const proposals = buildCheckProposals(parsePageHtml(newsItemHtml("http://[not-a-valid-host"), BASE_URL));
+    expect(proposals[0].url).toBeUndefined();
+  });
+
+  test("a bare '#' anchor href is rejected (same-page anchor, not a real notice link)", () => {
+    const proposals = buildCheckProposals(parsePageHtml(newsItemHtml("#"), BASE_URL));
+    expect(proposals[0].url).toBeUndefined();
+  });
+
+  test("dedup still blocks re-detecting the same notice, now that it carries a url", () => {
+    const url = "https://www.michalowice.pl/dzieje-sie/aktualnosci/komunikaty/rok-2026/przyklad,p1";
+    const proposals = buildCheckProposals(parsePageHtml(newsItemHtml(url), BASE_URL));
+    const existing: DedupComparisonItem[] = [{ text: proposals[0].rawText, url }];
+    // Same exact-URL dedup classifier writeCandidatesForSource already
+    // uses — not a reimplementation.
+    expect(classifyProposalAgainstExisting({ text: proposals[0].rawText, url: proposals[0].url }, existing)).toBe(
+      "duplicate"
+    );
+  });
+
+  test("a captured Michałowice permalink passes isDirectSafePermalink — the same gate auto-publish eligibility checks", () => {
+    const url = "https://www.michalowice.pl/dzieje-sie/zaproszenia/kulturalne/koncert-slawy-przybylskiej-odwolany,p1266210672";
+    const proposals = buildCheckProposals(parsePageHtml(newsItemHtml(url), BASE_URL));
+    expect(isDirectSafePermalink(proposals[0].url)).toBe(true);
+  });
+
+  test("a rejected (missing) permalink correctly fails isDirectSafePermalink too — fail-closed all the way to auto-publish", () => {
+    const proposals = buildCheckProposals(parsePageHtml(newsItemHtml(""), BASE_URL));
+    expect(isDirectSafePermalink(proposals[0].url)).toBe(false);
   });
 });
 

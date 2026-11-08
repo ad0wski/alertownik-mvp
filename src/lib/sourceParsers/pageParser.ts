@@ -151,7 +151,52 @@ function buildCandidates(blocks: Block[]): PageCandidate[] {
 
 const MAX_NEWS_ITEMS = 8;
 
-function extractNewsListItems(html: string): PageCandidate[] {
+// P0-2H.1 — the title block's own <a href="..."> is the notice's direct
+// official permalink (verified live, 2026-11-08: michalowice.pl renders an
+// absolute https://www.michalowice.pl/... URL here, pointing at the actual
+// article, distinct from the komunikaty listing page itself). Previously
+// only the link's inner TEXT was captured (for the heading) and the href
+// was discarded entirely — every Michałowice candidate therefore always
+// got candidate_url=null, structurally blocking it from ever passing
+// isDirectSafePermalink (trustedSourceAutoPublish.ts), regardless of
+// freshness or any other eligibility factor.
+//
+// Deliberately NOT reusing isDirectSafePermalink/safePostPermalink
+// directly: this check additionally requires same-origin-as-the-listing
+// (neither of those two checks the domain at all, since a WordPress REST
+// `link` field or an already-validated auto-publish candidate_url have no
+// "did this scrape wander onto another domain" risk the way raw HTML
+// scraping does). A URL this function accepts is always a strict SUBSET of
+// what isDirectSafePermalink would separately accept later (same protocol
+// and /wp-json/ rules, plus the extra origin check) — so this can never
+// smuggle through something auto-publish's own gate would have rejected,
+// and never weakens that gate.
+function resolveSafeNoticePermalink(href: string | undefined, baseUrl: string): string | undefined {
+  if (!href) return undefined;
+  const trimmed = decodeEntities(href).trim();
+  if (!trimmed || trimmed.startsWith("#")) return undefined;
+
+  let base: URL;
+  let resolved: URL;
+  try {
+    base = new URL(baseUrl);
+    resolved = new URL(trimmed, base);
+  } catch {
+    return undefined;
+  }
+  if (resolved.protocol !== "http:" && resolved.protocol !== "https:") return undefined;
+  if (resolved.pathname.includes("/wp-json/")) return undefined;
+  // Reject any domain other than the listing page's own — a scrape must
+  // never report an external link as the source's own official permalink.
+  if (resolved.hostname !== base.hostname) return undefined;
+  // Reject a link that just points back at the listing itself (no real
+  // per-notice path) — never a usable "direct" permalink.
+  if (resolved.pathname === base.pathname && resolved.search === base.search) return undefined;
+
+  return resolved.toString();
+}
+
+function extractNewsListItems(html: string, baseUrl: string): PageCandidate[] {
   // Each split segment starts inside one news-item and runs until the next
   // one opens, so the FIRST date/title/body match in a segment belongs to
   // that item — no need to balance nested <div>s with regex.
@@ -162,15 +207,21 @@ function extractNewsListItems(html: string): PageCandidate[] {
     if (items.length >= MAX_NEWS_ITEMS) break;
 
     const dateMatch = seg.match(/<div[^>]*class="[^"]*\bdate\b[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+    // Captures the <a ...> tag's own attributes (group 1) separately from
+    // its inner text (group 2), so the href can be read without changing
+    // how the heading text itself is extracted.
     const titleMatch = seg.match(
-      /<div[^>]*class="[^"]*\b(?:h3|title)[^"]*"[^>]*>[\s\S]*?<a[^>]*>([\s\S]*?)<\/a>/i
+      /<div[^>]*class="[^"]*\b(?:h3|title)[^"]*"[^>]*>[\s\S]*?<a([^>]*)>([\s\S]*?)<\/a>/i
     );
     const bodyMatch = seg.match(
       /<div[^>]*class="[^"]*\bdescription-body\b[^"]*"[^>]*>([\s\S]*?)<\/div>/i
     );
 
+    const hrefMatch = titleMatch ? titleMatch[1].match(/href=["']([^"']+)["']/i) : null;
+    const url = resolveSafeNoticePermalink(hrefMatch?.[1], baseUrl);
+
     const heading = titleMatch
-      ? stripTags(titleMatch[1]).replace(/\s+/g, " ").trim().slice(0, 120) || undefined
+      ? stripTags(titleMatch[2]).replace(/\s+/g, " ").trim().slice(0, 120) || undefined
       : undefined;
     const date = dateMatch ? stripTags(dateMatch[1]).replace(/\s+/g, " ").trim() : "";
     const body = bodyMatch ? stripTags(bodyMatch[1]).replace(/\s+/g, " ").trim().slice(0, 600) : "";
@@ -184,6 +235,7 @@ function extractNewsListItems(html: string): PageCandidate[] {
       heading,
       text,
       hasDate: detectDateInText(`${heading ?? ""} ${text}`),
+      url,
     });
   }
 
@@ -506,7 +558,7 @@ export function parsePageHtml(html: string, baseUrl: string): PageParseResult {
   // targeted pass when it finds items, and search the whole stripped page
   // rather than `content`: the class="content" fallback match above can
   // truncate at the first nested </div> and lose items.
-  const newsItems = extractNewsListItems(stripped);
+  const newsItems = extractNewsListItems(stripped, baseUrl);
   const listItems = newsItems.length > 0 ? newsItems : extractBlogPostItems(stripped);
   const blocks = extractBlocks(content);
   const candidates = listItems.length > 0 ? listItems : buildCandidates(blocks);

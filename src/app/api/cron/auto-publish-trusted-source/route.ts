@@ -41,11 +41,14 @@ import { randomUUID } from "crypto";
 //   3. CRON_SECRET-authenticated bearer token.
 //   4. Scheduled-writer technical account credentials + a successful
 //      automation_identities-gated sign-in.
-//   5. The (not yet applied — see docs/sql/PROPOSED_SPRINT_180C_TRUSTED_
-//      SOURCE_AUTO_PUBLISH_RLS_V1.sql) database-level INSERT/UPDATE
-//      policies — even if every layer above were somehow bypassed, an
-//      unmigrated Production database still rejects every write with
-//      42501. RLS remains the actual enforcement boundary, not this route.
+//   5. The database-level INSERT/UPDATE policies from docs/sql/PROPOSED_
+//      SPRINT_180C_TRUSTED_SOURCE_AUTO_PUBLISH_RLS_V1.sql — even if every
+//      layer above were somehow bypassed, these policies (not this route)
+//      are the actual enforcement boundary: a row that doesn't already
+//      satisfy them is rejected with 42501, full stop. P0-2H.1 — live-
+//      reconfirmed applied against Production on 2026-11-08 via
+//      `pg_policies`; re-verify live before relying on this comment rather
+//      than assuming either state indefinitely.
 //
 // Every actual decision (which candidate, whether it's eligible, what
 // fields to publish) lives in trustedSourceAutoPublish.ts, testable there

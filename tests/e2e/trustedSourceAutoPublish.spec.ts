@@ -62,6 +62,14 @@ interface FakeWriterOptions {
   candidates?: AutoPublishCandidateInput[];
   existingAlerts?: DedupComparisonItem[];
   insertShouldFail?: boolean;
+  /** P0-2H.1 — lets a test pick the exact InsertPublishedAlertResult
+   *  failure reason the real createSupabaseScheduledWriter.insertPublishedAlert
+   *  would surface for a given Postgres error (scheduledWriter.ts:900-907:
+   *  code 23505 → "duplicate_prevented_by_database", anything else →
+   *  "unknown_error"). Defaults to "unknown_error" so every pre-existing
+   *  insertShouldFail test (which never cared about the reason) keeps
+   *  passing unmodified. */
+  insertFailReason?: "unknown_error" | "duplicate_prevented_by_database";
   markShouldFail?: boolean;
 }
 
@@ -86,7 +94,7 @@ function makeFakeWriter(opts: FakeWriterOptions = {}) {
       return opts.candidates ?? [];
     },
     async insertPublishedAlert(payload) {
-      if (opts.insertShouldFail) return { ok: false, reason: "unknown_error" };
+      if (opts.insertShouldFail) return { ok: false, reason: opts.insertFailReason ?? "unknown_error" };
       insertedAlerts.push(payload);
       idCounter += 1;
       return { ok: true, id: `alert-${idCounter}` };
@@ -547,6 +555,34 @@ test.describe("runTrustedSourceAutoPublish — end to end", () => {
     const outcome = await runTrustedSourceAutoPublish(writer, FIXED_NOW);
     expect(outcome.status).toBe("insert_failed");
     expect(insertedAlerts).toHaveLength(0);
+    expect(markedConverted).toHaveLength(0);
+  });
+
+  // P0-2H.1 — P0-2H flagged this exact scenario (the database's own
+  // `alerts_slug_key` UNIQUE constraint, a live-confirmed race backstop
+  // for two concurrent auto-publish invocations deterministically
+  // computing the same slug for the same candidate.id — buildAutoPublishSlug
+  // is pure/deterministic) as having no dedicated test, even though the
+  // real createSupabaseScheduledWriter.insertPublishedAlert already maps
+  // Postgres 23505 to this exact reason (scheduledWriter.ts:900-907,
+  // identical pattern to insertPendingCandidate's own handling just above
+  // it). This test confirms the orchestration layer treats that specific
+  // reason exactly as safely as any other insert failure — no special
+  // casing needed, none added — fail-closed: no second alert, no
+  // candidate incorrectly marked converted.
+  test("database-level unique-slug race (23505 → duplicate_prevented_by_database) → fails closed, no partial write, no incorrect conversion", async () => {
+    const { writer, insertedAlerts, markedConverted } = makeFakeWriter({
+      candidates: [makeCandidate()],
+      insertShouldFail: true,
+      insertFailReason: "duplicate_prevented_by_database",
+    });
+    const outcome = await runTrustedSourceAutoPublish(writer, FIXED_NOW);
+    expect(outcome.status).toBe("insert_failed");
+    expect(outcome.candidateId).toBe("758819cc-b532-4b54-af86-d25d28da45b4");
+    // No second alert was created by this losing invocation.
+    expect(insertedAlerts).toHaveLength(0);
+    // The candidate must never be marked as successfully converted when
+    // its own insert attempt was the one that lost the race.
     expect(markedConverted).toHaveLength(0);
   });
 

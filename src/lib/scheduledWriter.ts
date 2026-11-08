@@ -889,14 +889,23 @@ export function createSupabaseScheduledWriter(client: SupabaseClient): Scheduled
       const { error } = await client.from("source_checks").insert(payload);
       return { ok: !error };
     },
-    // Sprint 180C — relies on the (not yet applied — see
-    // docs/sql/PROPOSED_SPRINT_180C_TRUSTED_SOURCE_AUTO_PUBLISH_RLS_V1.sql)
-    // narrow INSERT policy on `alerts`. Until that migration is applied,
-    // every call here fails at the database with 42501, surfaced below as
-    // `unknown_error` — the same safe, generic-diagnostic convention every
-    // other write path in this file already follows. `.insert()`, never
-    // `.upsert()`: a genuine slug collision with an unrelated existing
-    // alert must fail closed (unique_violation), never silently overwrite.
+    // Sprint 180C — relies on the narrow INSERT policy on `alerts` from
+    // docs/sql/PROPOSED_SPRINT_180C_TRUSTED_SOURCE_AUTO_PUBLISH_RLS_V1.sql
+    // ("Scheduled writer can insert trusted-source auto-published alert").
+    // P0-2H.1 — live-reconfirmed against Production on 2026-11-08 (`select
+    // policyname, with_check from pg_policies where tablename='alerts'`):
+    // this policy IS applied, requiring the inserted row to already be
+    // status='published' with every core field (title/place/change/action/
+    // source_url/source_name) non-null and non-empty — the actual
+    // enforcement boundary, not merely this application code. If this
+    // policy were ever absent or dropped, every call here would instead
+    // fail at the database with 42501, surfaced below as `unknown_error`
+    // (the same safe, generic-diagnostic convention every other write path
+    // in this file already follows) — re-verify live with the query above
+    // before trusting this comment again, rather than assuming either
+    // state. `.insert()`, never `.upsert()`: a genuine slug collision with
+    // an unrelated existing alert must fail closed (unique_violation),
+    // never silently overwrite.
     async insertPublishedAlert(payload) {
       const { data, error } = await client.from("alerts").insert(payload).select("id").single();
       if (!error) return { ok: true, id: (data?.id as string) ?? "" };
@@ -905,10 +914,14 @@ export function createSupabaseScheduledWriter(client: SupabaseClient): Scheduled
       }
       return { ok: false, reason: "unknown_error" };
     },
-    // Sprint 180C — relies on the same not-yet-applied migration's narrow
-    // UPDATE policy on `source_notice_candidates` (pending → published
-    // only). Always called AFTER insertPublishedAlert succeeds, never
-    // before — see writeCandidatesForSource's own sibling function in
+    // Sprint 180C — relies on the same migration's narrow UPDATE policy on
+    // `source_notice_candidates` ("Scheduled writer can mark own pending
+    // candidate as auto-publish": pending → published only). P0-2H.1 —
+    // live-reconfirmed applied against Production on 2026-11-08, same
+    // query as insertPublishedAlert's own comment above; re-verify live
+    // rather than trusting this comment indefinitely. Always called AFTER
+    // insertPublishedAlert succeeds, never before — see
+    // writeCandidatesForSource's own sibling function in
     // trustedSourceAutoPublish.ts for the exact ordering and why a failure
     // here does not risk a double-publish on retry (the exact-URL dedup
     // check against the now-published alert's own source_url is the real
