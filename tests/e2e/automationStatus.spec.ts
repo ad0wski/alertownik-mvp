@@ -542,7 +542,14 @@ test.describe("GET /api/admin/automation-status — admin session, real environm
     );
   });
 
-  test("Sprint 180C — SCHEDULED_AUTO_PUBLISH_ENABLED unset → autoPublish reported disabled with the default single-source allowlist", async () => {
+  // P0-2H.4 — getAutoPublishSourceIds() no longer falls back to any
+  // default source when SCHEDULED_AUTO_PUBLISH_SOURCE_IDS is unset; an
+  // unconfigured allowlist now correctly reports as EMPTY, not as a
+  // silent "pruszkow-aktualnosci by default". This test's title and
+  // expectations are updated to match that intentional, safer contract —
+  // the old assertions here were pinning the exact fallback behavior
+  // P0-2H.4 removed.
+  test("Sprint 180C / P0-2H.4 — SCHEDULED_AUTO_PUBLISH_ENABLED and SOURCE_IDS both unset → autoPublish reported disabled with an EMPTY allowlist (never a silent default source)", async () => {
     await withEnv(
       { ...SUPABASE_ENV, SCHEDULED_AUTO_PUBLISH_ENABLED: undefined, SCHEDULED_AUTO_PUBLISH_SOURCE_IDS: undefined, SCHEDULED_AUTO_PUBLISH_MAX_PER_RUN: undefined },
       async () => {
@@ -551,9 +558,31 @@ test.describe("GET /api/admin/automation-status — admin session, real environm
           const res = await automationStatusGet(authedRequest("a-genuinely-valid-admin-token"));
           const body = await res.json();
           expect(body.status.autoPublish.enabled).toBe(false);
-          expect(body.status.autoPublish.isSingleSourceAllowlist).toBe(true);
-          expect(body.status.autoPublish.allowlistedSources[0].id).toBe("pruszkow-aktualnosci");
+          expect(body.status.autoPublish.isSingleSourceAllowlist).toBe(false);
+          expect(body.status.autoPublish.allowlistedSources).toEqual([]);
           expect(body.status.autoPublish.maxPerRun).toBe(1);
+        } finally {
+          restore();
+        }
+      }
+    );
+  });
+
+  test("P0-2H.4 — an explicitly configured single safe source (e.g. Michałowice) is still reported correctly", async () => {
+    await withEnv(
+      {
+        ...SUPABASE_ENV,
+        SCHEDULED_AUTO_PUBLISH_ENABLED: undefined,
+        SCHEDULED_AUTO_PUBLISH_SOURCE_IDS: JSON.stringify(["michalowice-komunikaty"]),
+        SCHEDULED_AUTO_PUBLISH_MAX_PER_RUN: undefined,
+      },
+      async () => {
+        const restore = mockFetch(mockAuthedAdmin());
+        try {
+          const res = await automationStatusGet(authedRequest("a-genuinely-valid-admin-token"));
+          const body = await res.json();
+          expect(body.status.autoPublish.isSingleSourceAllowlist).toBe(true);
+          expect(body.status.autoPublish.allowlistedSources[0].id).toBe("michalowice-komunikaty");
         } finally {
           restore();
         }

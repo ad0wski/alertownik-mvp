@@ -44,25 +44,45 @@ export function isAutoPublishEnabled(flagValue: string | undefined): boolean {
   return flagValue === "true";
 }
 
+/** P0-2H.4 — kept as a pinned historical reference ONLY: 8 sourceScale
+ *  batch regression tests (tests/e2e/sourceScaleMazowszeWave1Batch.spec.ts,
+ *  sourceScaleEtapFWave2–8Batch.spec.ts) import this exact constant to
+ *  assert each newly-added SAFE_CHECK_SOURCE_IDS entry was never also
+ *  silently added here, and that this value is still exactly the single
+ *  pre-existing entry — a real, independent purpose, unrelated to
+ *  getAutoPublishSourceIds' own runtime behavior below. NOT used as a
+ *  runtime fallback anymore — see that function's own comment for why. */
 export const DEFAULT_AUTO_PUBLISH_SOURCE_IDS: readonly string[] = ["pruszkow-aktualnosci"];
 
-/** Any value supplied via the env var is still filtered through
+/** P0-2H.4 — fail-closed by construction: every failure mode (env unset,
+ *  malformed JSON, valid JSON that isn't a string array, an empty array,
+ *  or an array containing only unrecognized ids) returns an empty list,
+ *  never a fallback to any default source. Explicit configuration is
+ *  REQUIRED for auto-publish to consider anything at all — previously,
+ *  every one of those failure modes silently fell back to
+ *  DEFAULT_AUTO_PUBLISH_SOURCE_IDS (Pruszków), which meant a misconfigured
+ *  or accidentally-cleared env var could switch a safety-critical
+ *  allowlist to a DIFFERENT source without anyone choosing that. An empty
+ *  result flows safely into runTrustedSourceAutoPublish: findPendingAuto
+ *  PublishCandidates([]) already returns zero rows for an empty source
+ *  list (scheduledWriter.ts), so SCHEDULED_AUTO_PUBLISH_ENABLED=true with
+ *  no (or an invalid) source configuration is a safe, confirmed no-op —
+ *  never an implicit publish from an unintended source.
+ *
+ *  Any value supplied via the env var is still filtered through
  *  SAFE_CHECK_SOURCE_IDS — this can only ever narrow within the existing
  *  safe allowlist, never add an arbitrary source (same guarantee as
  *  getAllowedWriteSourceIds in scheduledWriter.ts). */
 export function getAutoPublishSourceIds(): readonly string[] {
   const raw = process.env.SCHEDULED_AUTO_PUBLISH_SOURCE_IDS;
-  if (!raw) return DEFAULT_AUTO_PUBLISH_SOURCE_IDS;
+  if (!raw) return [];
   try {
     const parsed: unknown = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.every((v) => typeof v === "string")) {
-      const filtered = parsed.filter((id) => (SAFE_CHECK_SOURCE_IDS as readonly string[]).includes(id));
-      return filtered.length > 0 ? filtered : DEFAULT_AUTO_PUBLISH_SOURCE_IDS;
-    }
+    if (!Array.isArray(parsed) || !parsed.every((v) => typeof v === "string")) return [];
+    return parsed.filter((id) => (SAFE_CHECK_SOURCE_IDS as readonly string[]).includes(id));
   } catch {
-    // fall through to default
+    return [];
   }
-  return DEFAULT_AUTO_PUBLISH_SOURCE_IDS;
 }
 
 export const DEFAULT_MAX_AUTO_PUBLISH_PER_INVOCATION = 1;

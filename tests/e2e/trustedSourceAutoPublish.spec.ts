@@ -77,10 +77,18 @@ test.beforeEach(() => {
   process.env.SCHEDULED_WRITER_SOURCE_REGISTRY_IDS = JSON.stringify({
     "pruszkow-aktualnosci": TRUSTED_TEST_REGISTRY_ID,
   });
+  // P0-2H.4 — getAutoPublishSourceIds() no longer has any default; every
+  // test in this file that expects an "eligible" outcome for the default
+  // makeCandidate() fixture (sourceKey: pruszkow-aktualnosci) needs this
+  // explicit configuration now, exactly matching the fail-closed contract
+  // this sprint introduces (no configuration → [] → nothing eligible by
+  // source, ever).
+  process.env.SCHEDULED_AUTO_PUBLISH_SOURCE_IDS = JSON.stringify(["pruszkow-aktualnosci"]);
 });
 
 test.afterEach(() => {
   delete process.env.SCHEDULED_WRITER_SOURCE_REGISTRY_IDS;
+  delete process.env.SCHEDULED_AUTO_PUBLISH_SOURCE_IDS;
 });
 
 interface FakeWriterOptions {
@@ -144,26 +152,81 @@ test.describe("Config gates", () => {
     expect(isAutoPublishEnabled("TRUE")).toBe(false);
   });
 
-  test("getAutoPublishSourceIds defaults to pruszkow-aktualnosci only", () => {
+  // P0-2H.4 — fail-closed source scope contract: every malformed/missing/
+  // empty/unrecognized configuration returns [], NEVER a fallback to
+  // Pruszków or any other default. Each test below saves/restores the
+  // (beforeEach-set) env var explicitly, matching this file's existing
+  // convention.
+  function withSourceIdsEnv<T>(value: string | undefined, fn: () => T): T {
     const original = process.env.SCHEDULED_AUTO_PUBLISH_SOURCE_IDS;
-    delete process.env.SCHEDULED_AUTO_PUBLISH_SOURCE_IDS;
+    if (value === undefined) delete process.env.SCHEDULED_AUTO_PUBLISH_SOURCE_IDS;
+    else process.env.SCHEDULED_AUTO_PUBLISH_SOURCE_IDS = value;
     try {
-      expect(getAutoPublishSourceIds()).toEqual(["pruszkow-aktualnosci"]);
+      return fn();
     } finally {
       if (original === undefined) delete process.env.SCHEDULED_AUTO_PUBLISH_SOURCE_IDS;
       else process.env.SCHEDULED_AUTO_PUBLISH_SOURCE_IDS = original;
     }
+  }
+
+  test("env unset → [] (never a fallback to any default source)", () => {
+    withSourceIdsEnv(undefined, () => {
+      expect(getAutoPublishSourceIds()).toEqual([]);
+    });
   });
 
-  test("getAutoPublishSourceIds can only narrow within SAFE_CHECK_SOURCE_IDS, never widen to an arbitrary source", () => {
-    const original = process.env.SCHEDULED_AUTO_PUBLISH_SOURCE_IDS;
-    process.env.SCHEDULED_AUTO_PUBLISH_SOURCE_IDS = JSON.stringify(["not-a-real-source", "wkd-aktualnosci"]);
-    try {
+  test("malformed JSON → [] (never a fallback)", () => {
+    withSourceIdsEnv("{not valid json", () => {
+      expect(getAutoPublishSourceIds()).toEqual([]);
+    });
+  });
+
+  test("a bare, unquoted string (not valid JSON at all) → [] (never a fallback)", () => {
+    withSourceIdsEnv("michalowice-komunikaty", () => {
+      expect(getAutoPublishSourceIds()).toEqual([]);
+    });
+  });
+
+  test("a valid JSON string, but not an array → [] (never a fallback)", () => {
+    withSourceIdsEnv('"michalowice-komunikaty"', () => {
+      expect(getAutoPublishSourceIds()).toEqual([]);
+    });
+  });
+
+  test("an explicit empty array → [] (never a fallback)", () => {
+    withSourceIdsEnv("[]", () => {
+      expect(getAutoPublishSourceIds()).toEqual([]);
+    });
+  });
+
+  test("an array containing only unrecognized source ids → [] (never a fallback)", () => {
+    withSourceIdsEnv(JSON.stringify(["totally-made-up-source"]), () => {
+      expect(getAutoPublishSourceIds()).toEqual([]);
+    });
+  });
+
+  test("a valid safe Michałowice array → Michałowice only", () => {
+    withSourceIdsEnv(JSON.stringify(["michalowice-komunikaty"]), () => {
+      expect(getAutoPublishSourceIds()).toEqual(["michalowice-komunikaty"]);
+    });
+  });
+
+  test("a valid safe Pruszków array → Pruszków only", () => {
+    withSourceIdsEnv(JSON.stringify(["pruszkow-aktualnosci"]), () => {
+      expect(getAutoPublishSourceIds()).toEqual(["pruszkow-aktualnosci"]);
+    });
+  });
+
+  test("getAutoPublishSourceIds can only narrow within SAFE_CHECK_SOURCE_IDS, never widen to an arbitrary source (safe+unsafe mixed → only the safe subset)", () => {
+    withSourceIdsEnv(JSON.stringify(["not-a-real-source", "wkd-aktualnosci"]), () => {
       expect(getAutoPublishSourceIds()).toEqual(["wkd-aktualnosci"]);
-    } finally {
-      if (original === undefined) delete process.env.SCHEDULED_AUTO_PUBLISH_SOURCE_IDS;
-      else process.env.SCHEDULED_AUTO_PUBLISH_SOURCE_IDS = original;
-    }
+    });
+  });
+
+  test("duplicate entries produce a deterministic result (no crash, no invented dedup logic beyond what's already there)", () => {
+    withSourceIdsEnv(JSON.stringify(["michalowice-komunikaty", "michalowice-komunikaty"]), () => {
+      expect(getAutoPublishSourceIds()).toEqual(["michalowice-komunikaty", "michalowice-komunikaty"]);
+    });
   });
 });
 
@@ -940,6 +1003,58 @@ test.describe("runTrustedSourceAutoPublish — end to end", () => {
     const outcome = await runTrustedSourceAutoPublish(writer, FIXED_NOW);
     expect(outcome.status).toBe("no_eligible_candidate");
     expect(insertedAlerts).toHaveLength(0);
+  });
+
+  // P0-2H.4 — CRITICAL regression test. A malformed SCHEDULED_AUTO_PUBLISH_
+  // SOURCE_IDS must resolve to an empty source list ALL THE WAY THROUGH to
+  // the actual DB query the orchestration issues — never silently querying
+  // for (and therefore never selecting) Pruszków or any other default,
+  // even if a real, eligible Pruszków candidate exists and the writer
+  // would happily return it if asked. This is the exact incident class
+  // P0-2H.4 closes: "safety-critical allowlist silently switches to an
+  // unintended source when configuration is broken."
+  test("malformed source scope env → the orchestration queries with [], never implicitly with Pruszków — even a real-looking writer response is never reached", async () => {
+    let receivedSourceIds: readonly string[] | null = null;
+    const writer: ScheduledSourceWriter = {
+      async findExistingCandidateTexts() {
+        return [];
+      },
+      async findExistingAlertComparisons() {
+        return [];
+      },
+      async insertPendingCandidate() {
+        return { ok: true };
+      },
+      async insertSourceCheck() {
+        return { ok: true };
+      },
+      async findPendingAutoPublishCandidates(sourceIds) {
+        receivedSourceIds = sourceIds;
+        // Deliberately returns a real-looking, otherwise-eligible Pruszków
+        // candidate regardless of what it was asked for — if the
+        // orchestration ever queried with a non-empty/wrong list, this
+        // would make the bug observable as an actual (wrong) publication,
+        // not just a silently-correct empty result for the wrong reason.
+        return sourceIds.includes("pruszkow-aktualnosci") ? [makeCandidate()] : [];
+      },
+      async insertPublishedAlert() {
+        return { ok: true, id: "alert-should-never-exist" };
+      },
+      async markCandidateAutoPublished() {
+        return { ok: true };
+      },
+    };
+
+    const originalScope = process.env.SCHEDULED_AUTO_PUBLISH_SOURCE_IDS;
+    process.env.SCHEDULED_AUTO_PUBLISH_SOURCE_IDS = "{not valid json";
+    try {
+      const outcome = await runTrustedSourceAutoPublish(writer, FIXED_NOW);
+      expect(receivedSourceIds).toEqual([]);
+      expect(outcome.status).toBe("no_eligible_candidate");
+    } finally {
+      if (originalScope === undefined) delete process.env.SCHEDULED_AUTO_PUBLISH_SOURCE_IDS;
+      else process.env.SCHEDULED_AUTO_PUBLISH_SOURCE_IDS = originalScope;
+    }
   });
 
   // ── Sprint 180C fix — self-comparison regression (real Production
