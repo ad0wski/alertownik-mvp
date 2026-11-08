@@ -31,6 +31,14 @@ const REAL_DW719_TEXT =
   "22+531 do km 23+274 i są związane z realizacją inwestycji pn. „Rozbudowa DW nr 719 od km " +
   "22+531 do km 23+274 w miejscowości Nowa Wieś [...]";
 
+// P0-2H.2 — a representative, fake (never a real Production value) trusted
+// registry id, used as both the env mapping's value (via the module-wide
+// beforeEach/afterEach below) and makeCandidate()'s default
+// registrySourceId, so every pre-existing test demonstrates a GENUINELY
+// trusted candidate under the new provenance gate rather than happening to
+// reuse a real UUID out of context.
+const TRUSTED_TEST_REGISTRY_ID = "11111111-1111-4111-8111-111111111111";
+
 function makeCandidate(overrides: Partial<AutoPublishCandidateInput> = {}): AutoPublishCandidateInput {
   return {
     id: "758819cc-b532-4b54-af86-d25d28da45b4",
@@ -46,17 +54,34 @@ function makeCandidate(overrides: Partial<AutoPublishCandidateInput> = {}): Auto
     // default so every pre-existing test (none of which cared about
     // candidate age) keeps passing unmodified; the dedicated
     // MAX_AUTO_PUBLISH_CANDIDATE_AGE_HOURS tests override this
-    // explicitly. No legitimate registry mapping by default (matches
-    // this candidate's real Production history — the Pruszków canary
-    // predates SCHEDULED_WRITER_SOURCE_REGISTRY_IDS being configured for
-    // it); the dedicated source_id test overrides this explicitly too.
+    // explicitly.
     detectedAt: "2026-07-28T22:00:00.000Z",
-    registrySourceId: null,
+    // P0-2H.2 — matches TRUSTED_TEST_REGISTRY_ID, which the module-wide
+    // beforeEach below maps pruszkow-aktualnosci to, so this candidate
+    // passes the new provenance gate by default. The real DW 719
+    // candidate's actual Production history had no registry mapping at
+    // all (it predates SCHEDULED_WRITER_SOURCE_REGISTRY_IDS being
+    // configured for Pruszków) — this fixture intentionally diverges from
+    // that history to represent what a genuinely trusted candidate looks
+    // like under this stricter gate, which every test in this file that
+    // expects "eligible" now needs. Tests exercising a MISSING/mismatched
+    // registry id override this explicitly.
+    registrySourceId: TRUSTED_TEST_REGISTRY_ID,
     ...overrides,
   };
 }
 
 const FIXED_NOW = new Date("2026-07-29T00:00:00Z");
+
+test.beforeEach(() => {
+  process.env.SCHEDULED_WRITER_SOURCE_REGISTRY_IDS = JSON.stringify({
+    "pruszkow-aktualnosci": TRUSTED_TEST_REGISTRY_ID,
+  });
+});
+
+test.afterEach(() => {
+  delete process.env.SCHEDULED_WRITER_SOURCE_REGISTRY_IDS;
+});
 
 interface FakeWriterOptions {
   candidates?: AutoPublishCandidateInput[];
@@ -182,6 +207,50 @@ test.describe("extractStartDateIso", () => {
   test("returns null for an impossible calendar date (31 lutego)", () => {
     expect(extractStartDateIso("Od 31 lutego 2026 r. coś się zmieni.")).toBeNull();
   });
+
+  // P0-2H.2 — numeric "DD.MM.YYYY[ HH:MM]" fallback (Polish day-first
+  // convention, confirmed against the real "Koncert Sławy Przybylskiej
+  // odwołany!" Michałowice candidate, which has no spelled-month date
+  // anywhere in its text).
+  test("DD.MM.YYYY (two-digit day) is parsed correctly", () => {
+    expect(extractStartDateIso("Data wydarzenia: 08.11.2026")).toBe("2026-11-08T00:00:00.000Z");
+  });
+
+  test("D.MM.YYYY (single-digit day) is parsed correctly", () => {
+    expect(extractStartDateIso("Data wydarzenia: 8.11.2026")).toBe("2026-11-08T00:00:00.000Z");
+  });
+
+  test("DD.MM.YYYY HH:MM is parsed correctly, including the time", () => {
+    expect(extractStartDateIso("Data wydarzenia: 08.11.2026 17:00\n‼️Koncert odwołany!")).toBe(
+      "2026-11-08T17:00:00.000Z"
+    );
+  });
+
+  test("a valid leap-day numeric date (29.02.2028) is accepted", () => {
+    expect(extractStartDateIso("Wydarzenie odbędzie się 29.02.2028.")).toBe("2028-02-29T00:00:00.000Z");
+  });
+
+  test("an impossible numeric calendar date (31.02.2026) is rejected, never rolled over silently", () => {
+    expect(extractStartDateIso("Termin: 31.02.2026.")).toBeNull();
+  });
+
+  test("a malformed numeric date (out-of-range month) is rejected, never a crash", () => {
+    expect(() => extractStartDateIso("Termin: 32.13.2026.")).not.toThrow();
+    expect(extractStartDateIso("Termin: 32.13.2026.")).toBeNull();
+  });
+
+  test("a 2-digit year is never guessed — no match at all, not even a wrong one", () => {
+    expect(extractStartDateIso("Termin: 08.11.26.")).toBeNull();
+  });
+
+  test("the spelled-month Polish format still works unchanged, and is preferred over a numeric date in the same text", () => {
+    // Mirrors the real "Brak wody - Reguły" candidate's shape exactly: a
+    // leading numeric EDIT timestamp, followed by the notice's own
+    // spelled-month EVENT date — the spelled-month one must win.
+    const text =
+      "06.11.2026 14:55\nInformujemy, że 10 listopada 2026 r., w godz. 11:00 - 15:00 nastąpi przerwa w dostawie wody.";
+    expect(extractStartDateIso(text)).toBe("2026-11-10T11:00:00.000Z");
+  });
 });
 
 test.describe("extractPlace", () => {
@@ -210,7 +279,10 @@ test.describe("evaluateAutoPublishEligibility — safe candidate", () => {
       // pinned here against the real DW 719 fixture.
       expect(result.fields.sourceUrl).toBe(makeCandidate().candidateUrl);
       expect(result.fields.sourceUrl).not.toBe(makeCandidate().sourceUrl);
-      expect(result.fields.sourceId).toBeNull();
+      // P0-2H.2 — sourceId is no longer nullable: the provenance gate
+      // above already guarantees it matches the trusted registry mapping
+      // by the time eligible:true is reached (see TRUSTED_TEST_REGISTRY_ID).
+      expect(result.fields.sourceId).toBe(TRUSTED_TEST_REGISTRY_ID);
       expect(result.fields.severity).toBe("info");
       expect(result.fields.slug).toContain("758819cc".slice(0, 8));
     }
@@ -218,16 +290,28 @@ test.describe("evaluateAutoPublishEligibility — safe candidate", () => {
 
   // P0-2C Fix 4 — source_id is carried through from the candidate's own
   // registry mapping when one legitimately exists, instead of always
-  // being discarded.
+  // being discarded. P0-2H.2 — now ALSO exercises the provenance gate
+  // itself: the env mapping is overridden to a different trusted id than
+  // the module default, and the candidate's own registrySourceId matches
+  // it exactly, proving carry-through still works when the trusted id
+  // isn't the default fixture value.
   test("a candidate with a real registry mapping carries source_id through to the published alert's fields", () => {
-    const result = evaluateAutoPublishEligibility(
-      makeCandidate({ registrySourceId: "real-alert-sources-uuid" }),
-      [],
-      FIXED_NOW
-    );
-    expect(result.eligible).toBe(true);
-    if (result.eligible) {
-      expect(result.fields.sourceId).toBe("real-alert-sources-uuid");
+    const original = process.env.SCHEDULED_WRITER_SOURCE_REGISTRY_IDS;
+    process.env.SCHEDULED_WRITER_SOURCE_REGISTRY_IDS = JSON.stringify({
+      "pruszkow-aktualnosci": "real-alert-sources-uuid",
+    });
+    try {
+      const result = evaluateAutoPublishEligibility(
+        makeCandidate({ registrySourceId: "real-alert-sources-uuid" }),
+        [],
+        FIXED_NOW
+      );
+      expect(result.eligible).toBe(true);
+      if (result.eligible) {
+        expect(result.fields.sourceId).toBe("real-alert-sources-uuid");
+      }
+    } finally {
+      process.env.SCHEDULED_WRITER_SOURCE_REGISTRY_IDS = original;
     }
   });
 });
@@ -374,6 +458,31 @@ test.describe("evaluateAutoPublishEligibility — fail-closed cases", () => {
     expect(result).toEqual({ eligible: false, reason: "notice_expired" });
   });
 
+  // P0-2H.2 — the same freshness check (PAST_GRACE_MS) applies identically
+  // whether extractStartDateIso found the date via the spelled-month
+  // regex or the new numeric fallback — it's the SAME extracted ISO value
+  // feeding the SAME downstream check either way, not a separate code path.
+  test("a stale numeric date (DD.MM.YYYY, well in the past) is still rejected by freshness logic", () => {
+    const result = evaluateAutoPublishEligibility(
+      makeCandidate({ text: "Od 01.01.2020 r. obowiązywała czasowa organizacja ruchu na drodze wojewódzkiej nr 719 w miejscowości Nowa Wieś." }),
+      [],
+      FIXED_NOW
+    );
+    expect(result).toEqual({ eligible: false, reason: "notice_expired" });
+  });
+
+  test("a current/fresh numeric date (DD.MM.YYYY) passes the date gate and the candidate is fully eligible", () => {
+    const result = evaluateAutoPublishEligibility(
+      makeCandidate({ text: "Od 29.07.2026 r. obowiązuje czasowa organizacja ruchu na drodze wojewódzkiej nr 719 w miejscowości Nowa Wieś." }),
+      [],
+      FIXED_NOW
+    );
+    expect(result.eligible).toBe(true);
+    if (result.eligible) {
+      expect(result.fields.startsAt).toBe("2026-07-29T00:00:00.000Z");
+    }
+  });
+
   test("no category-matching keywords → ineligible", () => {
     const result = evaluateAutoPublishEligibility(
       makeCandidate({ text: "Od 29 lipca 2026 r. w Nowej Wsi odbędzie się lokalne wydarzenie kulturalne dla mieszkańców." }),
@@ -416,6 +525,150 @@ test.describe("evaluateAutoPublishEligibility — fail-closed cases", () => {
   });
 });
 
+// P0-2H.2 — trusted provenance gate. sourceKey alone was never sufficient
+// proof a candidate genuinely came from the automated writer for that
+// source — these tests pin exactly what IS required: a configured
+// registry mapping for the sourceKey, AND the candidate's own
+// registrySourceId matching it exactly.
+test.describe("evaluateAutoPublishEligibility — trusted provenance gate (P0-2H.2)", () => {
+  function withRegistryEnv(value: string | undefined, fn: () => void): void {
+    const original = process.env.SCHEDULED_WRITER_SOURCE_REGISTRY_IDS;
+    if (value === undefined) delete process.env.SCHEDULED_WRITER_SOURCE_REGISTRY_IDS;
+    else process.env.SCHEDULED_WRITER_SOURCE_REGISTRY_IDS = value;
+    try {
+      fn();
+    } finally {
+      if (original === undefined) delete process.env.SCHEDULED_WRITER_SOURCE_REGISTRY_IDS;
+      else process.env.SCHEDULED_WRITER_SOURCE_REGISTRY_IDS = original;
+    }
+  }
+
+  // Case 1 — trusted source key + correct source_id → passes provenance
+  // (the default fixture already demonstrates this implicitly in every
+  // other "eligible" test in this file; this test makes it explicit).
+  test("trusted source key + correct source_id → passes the provenance gate (and is fully eligible)", () => {
+    const result = evaluateAutoPublishEligibility(makeCandidate(), [], FIXED_NOW);
+    expect(result.eligible).toBe(true);
+  });
+
+  // Case 2 — trusted source key + source_id null → rejected.
+  test("trusted source key + source_id null → rejected (candidate_source_id_missing)", () => {
+    const result = evaluateAutoPublishEligibility(makeCandidate({ registrySourceId: null }), [], FIXED_NOW);
+    expect(result).toEqual({ eligible: false, reason: "candidate_source_id_missing" });
+  });
+
+  // Case 3 — trusted source key + wrong UUID → rejected.
+  test("trusted source key + wrong UUID → rejected (candidate_source_id_mismatch)", () => {
+    const result = evaluateAutoPublishEligibility(
+      makeCandidate({ registrySourceId: "22222222-2222-4222-8222-222222222222" }),
+      [],
+      FIXED_NOW
+    );
+    expect(result).toEqual({ eligible: false, reason: "candidate_source_id_mismatch" });
+  });
+
+  // Case 4 — trusted source key + missing registry mapping → rejected.
+  test("trusted source key + no registry mapping configured at all → rejected (source_registry_mapping_missing)", () => {
+    withRegistryEnv(undefined, () => {
+      const result = evaluateAutoPublishEligibility(makeCandidate(), [], FIXED_NOW);
+      expect(result).toEqual({ eligible: false, reason: "source_registry_mapping_missing" });
+    });
+  });
+
+  // Case 5 — malformed registry env → rejected safely, no crash.
+  test("malformed registry env (invalid JSON) → rejected safely as source_registry_mapping_missing, never a crash", () => {
+    withRegistryEnv("{not valid json", () => {
+      expect(() => evaluateAutoPublishEligibility(makeCandidate(), [], FIXED_NOW)).not.toThrow();
+      const result = evaluateAutoPublishEligibility(makeCandidate(), [], FIXED_NOW);
+      expect(result).toEqual({ eligible: false, reason: "source_registry_mapping_missing" });
+    });
+  });
+
+  // Case 5b — registry env present but genuinely empty for this sourceKey
+  // (e.g. only an unrelated source is mapped) → same safe rejection.
+  test("registry env present but missing this specific sourceKey → rejected safely, never a crash", () => {
+    withRegistryEnv(JSON.stringify({ "some-other-source": "33333333-3333-4333-8333-333333333333" }), () => {
+      const result = evaluateAutoPublishEligibility(makeCandidate(), [], FIXED_NOW);
+      expect(result).toEqual({ eligible: false, reason: "source_registry_mapping_missing" });
+    });
+  });
+
+  // Case 6 — non-allowlisted source → still rejected, even with a
+  // perfectly correct-looking source_id — the allowlist check fires
+  // first, independent of provenance.
+  test("non-allowlisted source is still rejected, even with an otherwise-correct source_id", () => {
+    withRegistryEnv(
+      JSON.stringify({ "pruszkow-aktualnosci": TRUSTED_TEST_REGISTRY_ID, "wkd-aktualnosci": TRUSTED_TEST_REGISTRY_ID }),
+      () => {
+        const result = evaluateAutoPublishEligibility(
+          makeCandidate({ sourceKey: "wkd-aktualnosci", registrySourceId: TRUSTED_TEST_REGISTRY_ID }),
+          [],
+          FIXED_NOW
+        );
+        expect(result).toEqual({ eligible: false, reason: "source_not_on_auto_publish_allowlist" });
+      }
+    );
+  });
+
+  // Case 7 — legacy candidate without source_id → never auto-published.
+  test("a legacy candidate predating the registry mapping (no source_id) is never auto-published", () => {
+    const result = evaluateAutoPublishEligibility(
+      makeCandidate({ registrySourceId: null, id: "legacy-candidate-id" }),
+      [],
+      FIXED_NOW
+    );
+    expect(result.eligible).toBe(false);
+  });
+
+  // Case 8 — manual-looking candidate with a correct source_key but no
+  // trusted source_id → rejected. Same mechanism as case 2/7, distinct
+  // scenario: this represents a candidate an admin saved manually (which
+  // never sets source_id, per supabaseCandidateWrites.ts) that happens to
+  // carry the same source_key text as a trusted source.
+  test("a manual-looking candidate (correct source_key, no trusted source_id) is rejected, never treated as writer-sourced", () => {
+    const result = evaluateAutoPublishEligibility(
+      makeCandidate({ registrySourceId: null, candidateUrl: null }),
+      [],
+      FIXED_NOW
+    );
+    expect(result.eligible).toBe(false);
+    expect(result.eligible ? null : result.reason).toBe("candidate_source_id_missing");
+  });
+
+  // Case 9 — the real Michałowice writer candidate shape, with its real
+  // Production registry id, under a hypothetically-widened allowlist —
+  // confirms the provenance gate itself passes for genuine Michałowice
+  // provenance, matching P0-2H.1's live-confirmed registry id exactly.
+  test("a real Michałowice writer candidate with its real source_id passes the provenance gate", () => {
+    const MICHALOWICE_REGISTRY_ID = "a56cfb33-a443-47aa-8365-89c6303e7fcc";
+    const original = process.env.SCHEDULED_AUTO_PUBLISH_SOURCE_IDS;
+    withRegistryEnv(JSON.stringify({ "michalowice-komunikaty": MICHALOWICE_REGISTRY_ID }), () => {
+      process.env.SCHEDULED_AUTO_PUBLISH_SOURCE_IDS = JSON.stringify(["michalowice-komunikaty"]);
+      try {
+        const result = evaluateAutoPublishEligibility(
+          makeCandidate({ sourceKey: "michalowice-komunikaty", registrySourceId: MICHALOWICE_REGISTRY_ID }),
+          [],
+          FIXED_NOW
+        );
+        // The provenance gate itself must not be the reason for any
+        // rejection here — whatever the outcome, it must never be one of
+        // the three provenance-specific reasons.
+        if (!result.eligible) {
+          expect(result.reason).not.toBe("source_registry_mapping_missing");
+          expect(result.reason).not.toBe("candidate_source_id_missing");
+          expect(result.reason).not.toBe("candidate_source_id_mismatch");
+          expect(result.reason).not.toBe("source_not_on_auto_publish_allowlist");
+        } else {
+          expect(result.fields.sourceId).toBe(MICHALOWICE_REGISTRY_ID);
+        }
+      } finally {
+        if (original === undefined) delete process.env.SCHEDULED_AUTO_PUBLISH_SOURCE_IDS;
+        else process.env.SCHEDULED_AUTO_PUBLISH_SOURCE_IDS = original;
+      }
+    });
+  });
+});
+
 // ── buildAutoPublishAlertInsert — payload shape ───────────────────────────────
 
 test.describe("buildAutoPublishAlertInsert", () => {
@@ -426,7 +679,9 @@ test.describe("buildAutoPublishAlertInsert", () => {
     const payload = buildAutoPublishAlertInsert(eligibility.fields);
     expect(payload.status).toBe("published");
     expect(typeof payload.published_at).toBe("string");
-    expect(payload.source_id).toBeNull();
+    // P0-2H.2 — no longer null by default: the provenance gate guarantees
+    // a verified trusted registry id by the time eligible:true exists.
+    expect(payload.source_id).toBe(TRUSTED_TEST_REGISTRY_ID);
   });
 });
 
@@ -453,7 +708,12 @@ test.describe("buildAutoPublishAlertInsert ↔ getAlertTimeStatus — P0-1 fresh
       action: "Działanie testowe.",
       sourceName: "Źródło testowe",
       sourceUrl: "https://example.com/test",
-      sourceId: null,
+      // P0-2H.2 — AutoPublishAlertFields.sourceId is no longer nullable
+      // (the provenance gate guarantees a real, verified registry id by
+      // the time this shape exists) — an arbitrary test UUID, unrelated
+      // to what this describe block actually exercises (ends_at/freshness
+      // behavior, not provenance).
+      sourceId: "11111111-1111-4111-8111-111111111111",
     };
   }
 

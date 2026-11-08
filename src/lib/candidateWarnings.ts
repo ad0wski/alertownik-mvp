@@ -234,36 +234,71 @@ const START_DATE_RE = new RegExp(
   "i"
 );
 
-/** Returns an ISO datetime for the first "D miesiąca RRRR[, od godz. H:MM]"
- *  pattern found, or null when no such pattern is present — never a
- *  guessed/partial date. Time defaults to 00:00 UTC when no "godz." clause
- *  is present (matches this project's existing convention of a
- *  date-only ISO string being valid, e.g. the DW 719 alert's own
- *  `starts_at: "2026-07-09 00:00:00+00"`). */
-export function extractStartDateIso(text: string): string | null {
-  const match = START_DATE_RE.exec(text);
-  if (!match) return null;
-  const day = Number(match[1]);
-  const monthWord = normalizeForCompare(match[2]).replace(/\s+/g, "");
-  const year = Number(match[3]);
-  const monthIndex = MONTH_INDEX[monthWord];
-  if (monthIndex === undefined) return null;
-  const hour = match[4] ? Number(match[4]) : 0;
-  const minute = match[5] ? Number(match[5]) : 0;
+// P0-2H.2 — numeric "DD.MM.YYYY[ HH:MM]" fallback, Polish day-first
+// convention only (never the US MM/DD/YYYY order — there's no slash
+// variant supported at all, only dots, so the two conventions can never
+// be confused with each other). Year must be exactly 4 digits — no
+// 2-digit-year guessing, matching this project's existing "never guess a
+// partial/ambiguous date" rule. Deliberately only a fallback, never tried
+// first — see extractStartDateIso's own comment for why.
+const NUMERIC_START_DATE_RE = /\b(\d{1,2})\.(\d{1,2})\.(\d{4})\b(?:[^\d]{0,10}?(\d{1,2}):(\d{2}))?/;
+
+/** Shared round-trip validator for both date formats below — constructs
+ *  the UTC date and confirms it didn't silently roll over (e.g.
+ *  "31 lutego"/"31.02.2026" into early March), the one real failure mode
+ *  `Date.UTC` has for an impossible calendar date. Single source of truth
+ *  so the spelled-month and numeric paths can never validate differently. */
+function buildValidatedIsoDate(year: number, monthIndex: number, day: number, hour: number, minute: number): string | null {
   const date = new Date(Date.UTC(year, monthIndex, day, hour, minute));
   if (Number.isNaN(date.getTime())) return null;
-  // Sanity check: the constructed date must round-trip to the same
-  // day/month/year — Date.UTC silently rolls over an invalid day (e.g.
-  // "31 lutego") into the next month instead of failing, so this catches
-  // that rather than publishing a nonsensical date.
-  if (
-    date.getUTCFullYear() !== year ||
-    date.getUTCMonth() !== monthIndex ||
-    date.getUTCDate() !== day
-  ) {
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== monthIndex || date.getUTCDate() !== day) {
     return null;
   }
   return date.toISOString();
+}
+
+/** Returns an ISO datetime for the first recognized date pattern found, or
+ *  null when none is present — never a guessed/partial date. Time
+ *  defaults to 00:00 UTC when no time clause is present (matches this
+ *  project's existing convention of a date-only ISO string being valid,
+ *  e.g. the DW 719 alert's own `starts_at: "2026-07-09 00:00:00+00"`).
+ *
+ *  Tries the spelled-month Polish format ("D miesiąca RRRR[, od godz.
+ *  H:MM]") FIRST, and only falls back to the numeric "DD.MM.YYYY[ HH:MM]"
+ *  format when no spelled-month date exists anywhere in the text — never
+ *  the reverse, and never "whichever appears earlier in the string".
+ *  P0-2H.2 — this ordering is load-bearing, not arbitrary: real
+ *  Michałowice notices routinely carry a leading numeric post/edit
+ *  timestamp ("06.11.2026 14:55") immediately before the notice's own
+ *  spelled-month event date ("10 listopada 2026") — confirmed against the
+ *  real "Brak wody - Reguły" candidate. Trying numeric first would have
+ *  incorrectly extracted the edit timestamp as the event's start date.
+ *  Known, accepted limitation: a notice using ONLY numeric dates, with
+ *  more than one in the text (no spelled-month date to disambiguate by),
+ *  is not currently distinguished — not observed in any real candidate so
+ *  far; revisit if one appears. */
+export function extractStartDateIso(text: string): string | null {
+  const spelledMatch = START_DATE_RE.exec(text);
+  if (spelledMatch) {
+    const day = Number(spelledMatch[1]);
+    const monthWord = normalizeForCompare(spelledMatch[2]).replace(/\s+/g, "");
+    const year = Number(spelledMatch[3]);
+    const monthIndex = MONTH_INDEX[monthWord];
+    if (monthIndex === undefined) return null;
+    const hour = spelledMatch[4] ? Number(spelledMatch[4]) : 0;
+    const minute = spelledMatch[5] ? Number(spelledMatch[5]) : 0;
+    return buildValidatedIsoDate(year, monthIndex, day, hour, minute);
+  }
+
+  const numericMatch = NUMERIC_START_DATE_RE.exec(text);
+  if (!numericMatch) return null;
+  const day = Number(numericMatch[1]);
+  const month = Number(numericMatch[2]);
+  const year = Number(numericMatch[3]);
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  const hour = numericMatch[4] ? Number(numericMatch[4]) : 0;
+  const minute = numericMatch[5] ? Number(numericMatch[5]) : 0;
+  return buildValidatedIsoDate(year, month - 1, day, hour, minute);
 }
 
 // ── Place extraction — exact match against the known pilot locality list,

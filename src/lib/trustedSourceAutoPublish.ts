@@ -8,6 +8,7 @@ import { detectCandidateCategory } from "@/lib/candidateVerifier";
 import { extractPlace, extractStartDateIso } from "@/lib/candidateWarnings";
 import {
   classifyProposalAgainstExisting,
+  getRegistrySourceId,
   type DedupComparisonItem,
   type AutoPublishAlertInsertPayload,
   type PendingAutoPublishCandidateRow,
@@ -196,11 +197,15 @@ export interface AutoPublishAlertFields {
    *  URL. See buildAutoPublishAlertInsert's own comment for the full
    *  provenance-regression this closes. */
   sourceUrl: string;
-  /** P0-2C fix — the candidate's own registry mapping
-   *  (`source_notice_candidates.source_id`), carried through to the
-   *  published alert's `source_id` when a legitimate mapping exists;
-   *  `null` otherwise — never invented. See buildAutoPublishAlertInsert. */
-  sourceId: string | null;
+  /** P0-2C fix, tightened by P0-2H.2's provenance gate: the candidate's
+   *  own registry mapping (`source_notice_candidates.source_id`), carried
+   *  through to the published alert's `source_id`. By the time this
+   *  `eligible: true` branch is reached, the provenance gate above has
+   *  already confirmed this is non-null AND exactly matches the trusted
+   *  registry mapping for this candidate's sourceKey — never invented,
+   *  and never merely "whatever happened to be on the row." See
+   *  buildAutoPublishAlertInsert. */
+  sourceId: string;
 }
 
 export type AutoPublishEligibility =
@@ -211,6 +216,9 @@ export type AutoPublishIneligibleReason =
   | "not_pending_or_already_converted"
   | "candidate_too_old"
   | "source_not_on_auto_publish_allowlist"
+  | "source_registry_mapping_missing"
+  | "candidate_source_id_missing"
+  | "candidate_source_id_mismatch"
   | "missing_or_unsafe_candidate_url"
   | "duplicate"
   | "ambiguous"
@@ -251,6 +259,33 @@ export function evaluateAutoPublishEligibility(
   if (!getAutoPublishSourceIds().includes(candidate.sourceKey)) {
     return { eligible: false, reason: "source_not_on_auto_publish_allowlist" };
   }
+
+  // P0-2H.2 — trusted provenance gate. Being on the auto-publish
+  // allowlist only proves candidate.sourceKey is a trusted STRING — it
+  // says nothing about whether this specific row actually came from the
+  // automated writer for that source, as opposed to a manual/legacy/
+  // forged candidate that merely happens to share the same source_key
+  // (source_key is admin-settable free text on every other write path —
+  // nothing before this gate ever constrained it). Requires candidate.
+  // registrySourceId to exactly equal the SAME SCHEDULED_WRITER_SOURCE_
+  // REGISTRY_IDS mapping the writer itself already uses for this exact
+  // sourceKey (getRegistrySourceId, scheduledWriter.ts) — reused, not
+  // reparsed, so there is exactly one place this env var's JSON shape is
+  // ever understood. Any of: no mapping configured for this sourceKey,
+  // no source_id on the candidate at all, or a source_id that doesn't
+  // match → fails closed, every one a distinct, reported reason, never
+  // a guess or a silent pass.
+  const expectedRegistrySourceId = getRegistrySourceId(candidate.sourceKey);
+  if (!expectedRegistrySourceId) {
+    return { eligible: false, reason: "source_registry_mapping_missing" };
+  }
+  if (!candidate.registrySourceId) {
+    return { eligible: false, reason: "candidate_source_id_missing" };
+  }
+  if (candidate.registrySourceId !== expectedRegistrySourceId) {
+    return { eligible: false, reason: "candidate_source_id_mismatch" };
+  }
+
   if (!isDirectSafePermalink(candidate.candidateUrl)) {
     return { eligible: false, reason: "missing_or_unsafe_candidate_url" };
   }
