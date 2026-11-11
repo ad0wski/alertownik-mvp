@@ -290,8 +290,8 @@ function extractBlogPostItems(html: string): PageCandidate[] {
 
 // ── WordPress REST API extraction (Sprint 168) ───────────────────────────────
 
-// wodociagimichalowice.pl (and potentially other municipal-adjacent sites
-// on WordPress) exposes its own notices as structured JSON via the
+// Many municipal-adjacent sites on WordPress (first seen on a water
+// utility's site) expose their own notices as structured JSON via the
 // standard `/wp-json/wp/v2/posts` REST API — verified live in Sprint 168:
 // 294 posts in category 1 ("Aktualności"), overwhelmingly genuine water-
 // interruption notices ("Przerwa w dostawie wody") plus occasional
@@ -428,14 +428,14 @@ function candidatesToPageParseResult(title: string, candidates: PageCandidate[])
 }
 
 /** Turns already-fetched, already-JSON-parsed WordPress REST API post
- *  objects from wodociagimichalowice.pl into the same PageParseResult
+ *  objects (any water-utility WordPress site) into the same PageParseResult
  *  shape every other extraction pass produces, so it flows through the
  *  exact same buildCheckProposals() safety filtering (min length,
  *  boilerplate, count cap, title dedup) as HTML-sourced candidates — no
  *  parallel pipeline. */
 export function parseWordpressRestPosts(posts: WordpressRestPost[]): PageParseResult {
   return candidatesToPageParseResult(
-    "Wodociągi Michałowice — Aktualności",
+    "Komunikaty wodociągowe — aktualności",
     extractWordpressRestCandidates(posts, OPERATIONAL_NOTICE_KEYWORDS_RX)
   );
 }
@@ -472,7 +472,6 @@ export function parseTransportRoadsRestPosts(posts: WordpressRestPost[]): PagePa
 // REST-backed source only needs one map updated, not two kept in sync by
 // hand. Sources without an apiUrl never look this up.
 export const REST_PARSERS_BY_SOURCE_ID: Record<string, (posts: WordpressRestPost[]) => PageParseResult> = {
-  "wodociagi-michalowice": parseWordpressRestPosts,
   "pruszkow-aktualnosci": parsePruszkowRestPosts,
   "mzk-grudziadz": parseTransportRoadsRestPosts,
   "zdiz-gdynia": parseTransportRoadsRestPosts,

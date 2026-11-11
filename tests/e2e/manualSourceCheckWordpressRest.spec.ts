@@ -3,7 +3,7 @@ import { fetchAndParseManualCheck } from "@/lib/manualSourceCheckFetch";
 
 /**
  * Sprint 168 — bounded retry + failure-mode coverage for the manual
- * check's WordPress REST API fetch branch (wodociagimichalowice.pl).
+ * check's WordPress REST API fetch branch (generic water-utility WordPress site).
  * Mirrors manualSourceCheckFetchRetry.spec.ts's shape exactly, but
  * exercises the `apiUrl` target so the JSON branch (attemptWordpressRestFetch)
  * runs instead of the HTML branch.
@@ -18,8 +18,8 @@ function mockFetch(impl: typeof fetch) {
 }
 
 const TARGET = {
-  officialUrl: "https://wodociagimichalowice.pl/category/aktualnosci/",
-  apiUrl: "https://wodociagimichalowice.pl/wp-json/wp/v2/posts?categories=1&per_page=6",
+  officialUrl: "https://wodociagi.example/category/aktualnosci/",
+  apiUrl: "https://wodociagi.example/wp-json/wp/v2/posts?categories=1&per_page=6",
 };
 
 const SAMPLE_POSTS = [
@@ -30,7 +30,7 @@ const SAMPLE_POSTS = [
         "<p>Przerwa w dostawie wody w Komorowie z powodu awarii sieci wodociągowej, prosimy o cierpliwość.</p>",
     },
     date: "2026-07-21T09:00:00",
-    link: "https://wodociagimichalowice.pl/2026/07/21/przerwa/",
+    link: "https://wodociagi.example/2026/07/21/przerwa/",
   },
 ];
 
@@ -175,7 +175,7 @@ test.describe("fetchAndParseManualCheck — WordPress REST branch (apiUrl target
         {
           ...SAMPLE_POSTS[0],
           yoast_head: "<html>...</html>",
-          _links: { self: [{ href: "https://wodociagimichalowice.pl/wp-json/wp/v2/posts/1" }] },
+          _links: { self: [{ href: "https://wodociagi.example/wp-json/wp/v2/posts/1" }] },
         },
       ])
     );

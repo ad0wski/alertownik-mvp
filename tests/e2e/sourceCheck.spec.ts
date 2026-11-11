@@ -45,11 +45,10 @@ const FIXTURE_HTML = `
 `;
 
 test.describe("safe-source allowlist (getSafeCheckSource)", () => {
-  test("exactly forty-four safe sources after Etap F Fala 8 — growing the list stays a per-block decision", () => {
+  test("exactly forty-three safe sources after Etap F Fala 8 and LR-3A's removal of the wrong-municipality wodociagi-michalowice — growing the list stays a per-block decision", () => {
     expect(SAFE_CHECK_SOURCE_IDS).toEqual([
       "michalowice-komunikaty",
       "wkd-aktualnosci",
-      "wodociagi-michalowice",
       "pruszkow-aktualnosci",
       "powiat-pruszkowski-wiadomosci",
       "eko-raszyn",

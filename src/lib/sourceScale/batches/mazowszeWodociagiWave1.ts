@@ -12,8 +12,7 @@
 // (real HTTP verification, not guessed) behind every URL below.
 //
 // All 10 instances share the exact adapter type already implemented and
-// proven in production (wordpress_rest, same mechanics as the existing
-// wodociagimichalowice.pl source) — batch onboarding needs zero new parser
+// proven (generic wordpress_rest adapter, parseWordpressRestPosts) — batch onboarding needs zero new parser
 // code, only this configuration data.
 
 import type { SourceBatch } from "@/lib/sourceScale/batchOnboardingConfig";

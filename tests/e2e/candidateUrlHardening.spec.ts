@@ -72,12 +72,12 @@ test.describe("Wodociągi REST parser — shares the same safe-link path", () =>
         rendered:
           "<p>Przerwa w dostawie wody w dniu 27 lipca 2026 roku w godzinach 8:00-16:00 na terenie Komorowa.</p>",
       },
-      link: "https://wodociagimichalowice.pl/2026/07/27/przerwa-w-dostawie-wody/",
+      link: "https://wodociagi.example/2026/07/27/przerwa-w-dostawie-wody/",
     });
     const parse = parseWordpressRestPosts([wodociagiPost]);
-    expect(parse.candidates[0].url).toBe("https://wodociagimichalowice.pl/2026/07/27/przerwa-w-dostawie-wody/");
+    expect(parse.candidates[0].url).toBe("https://wodociagi.example/2026/07/27/przerwa-w-dostawie-wody/");
     expect(buildCheckProposals(parse)[0].url).toBe(
-      "https://wodociagimichalowice.pl/2026/07/27/przerwa-w-dostawie-wody/"
+      "https://wodociagi.example/2026/07/27/przerwa-w-dostawie-wody/"
     );
   });
 
@@ -85,7 +85,7 @@ test.describe("Wodociągi REST parser — shares the same safe-link path", () =>
     const wodociagiPost = post({
       title: { rendered: "Przerwa w dostawie wody" },
       excerpt: { rendered: "<p>Przerwa w dostawie wody w dniu 27 lipca 2026 roku.</p>" },
-      link: "https://wodociagimichalowice.pl/wp-json/wp/v2/posts/1",
+      link: "https://wodociagi.example/wp-json/wp/v2/posts/1",
     });
     expect(parseWordpressRestPosts([wodociagiPost]).candidates[0].url).toBeUndefined();
   });

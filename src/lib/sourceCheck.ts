@@ -31,14 +31,16 @@ import { trimAtWord } from "@/lib/candidateWarnings";
 // Sprint 134 started with Michałowice; Sprint 139 added WKD after verifying
 // the live page fetches cleanly (HTTP 200 for our UA) and its Joomla
 // blogPost markup parses deterministically (pageParser.extractBlogPostItems,
-// fixture-tested). Sprint 168 added Wodociągi Michałowice after verifying
-// its WordPress REST API returns clean, structured JSON (294 posts in the
-// "Aktualności" category, overwhelmingly genuine water-interruption
-// notices) and that a deterministic keyword filter
-// (pageParser.parseWordpressRestPosts) separates operational notices from
-// generic informational/PR posts — fixture-tested
-// (tests/e2e/wordpressRestParser.spec.ts,
-// tests/e2e/manualSourceCheckWordpressRest.spec.ts). Sprint 169 added
+// fixture-tested). Sprint 168 added the generic WordPress REST adapter
+// (pageParser.parseWordpressRestPosts — a deterministic keyword filter
+// separating operational notices from generic informational/PR posts,
+// fixture-tested in tests/e2e/wordpressRestParser.spec.ts and
+// tests/e2e/manualSourceCheckWordpressRest.spec.ts). The source it was
+// first wired to, `wodociagi-michalowice` (wodociagimichalowice.pl), was
+// REMOVED in LR-3A (2026-11-11): it serves Gmina Michałowice in Małopolska
+// (near Kraków), not the pilot's Gmina Michałowice near Warsaw — see
+// docs/LR3A_SOURCE_CORRECTION_V1.md. The adapter itself stays, shared by
+// the correctly-identified sources below. Sprint 169 added
 // Pruszków aktualności: the historical HTTP 403 (Sprint 73/77) turned out
 // to apply only to the rendered HTML page — pruszkow.pl's own WordPress
 // REST API is publicly reachable, and pageParser.parsePruszkowRestPosts
@@ -58,7 +60,7 @@ import { trimAtWord } from "@/lib/candidateWarnings";
 // review queue).
 // Blok Wykonawczy 2 — sub-batch 1 of 2 (Etap E first national-scale wave):
 // 5 HTTP-verified Mazowieckie water utilities added as check-only, same
-// wordpress_rest mechanics as wodociagi-michalowice (default
+// generic wordpress_rest mechanics (default
 // parseWordpressRestPosts filter via REST_PARSERS_BY_SOURCE_ID's fallback —
 // no new parser code). Deliberately NOT added anywhere in scheduledWriter.ts
 // or trustedSourceAutoPublish.ts — both of those allowlists already filter
@@ -72,7 +74,6 @@ import { trimAtWord } from "@/lib/candidateWarnings";
 export const SAFE_CHECK_SOURCE_IDS = [
   "michalowice-komunikaty",
   "wkd-aktualnosci",
-  "wodociagi-michalowice",
   "pruszkow-aktualnosci",
   "powiat-pruszkowski-wiadomosci",
   "eko-raszyn",

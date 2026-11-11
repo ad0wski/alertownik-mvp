@@ -1,5 +1,15 @@
 # Sprint 168 — Wodociągi Michałowice source added (implementation)
 
+> ## ⛔ REJECTED — WRONG MUNICIPALITY (LR-3A, 2026-11-11)
+>
+> **This document is a historical audit record only. Do NOT follow it as an instruction.**
+> The source it describes, `wodociagi-michalowice` (`wodociagimichalowice.pl`), is the water
+> utility of **Gmina Michałowice in Małopolska** (32-091, near Kraków) — **not** the pilot's
+> Gmina Michałowice near Warsaw (05-816, powiat pruszkowski). It never covered Komorów,
+> Nowa Wieś, Granica, Michałowice (Mazowieckie) or Reguły. The source was removed from all
+> runtime configuration in LR-3A and was never activated in Production. See
+> `docs/LR3A_SOURCE_CORRECTION_V1.md`.
+
 **Status: implemented, tested, locally verified. Not merged to `main`, not deployed.**
 
 Follow-up to `docs/SPRINT_168_SOURCE_COVERAGE_INVESTIGATION_V1.md`, which

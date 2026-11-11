@@ -1,5 +1,11 @@
 # Sprint 176 — Pruszków Controlled Pipeline (Day 8 closeout)
 
+> **Correction (LR-3A, 2026-11-11) — REJECTED — WRONG MUNICIPALITY:** every mention of
+> `wodociagi-michalowice` / `wodociagimichalowice.pl` / "Wodociągi Michałowice" below refers to
+> the water utility of Gmina Michałowice in **Małopolska** (near Kraków), not the pilot's Gmina
+> Michałowice near Warsaw. It was removed from all runtime configuration and was never
+> activated in Production. Historical record only — see `docs/LR3A_SOURCE_CORRECTION_V1.md`.
+
 Status: **CLOSED, full success.** First real end-to-end scheduled-writer run on a second source (Miasto Pruszków — aktualności), taken all the way from a controlled `write-candidates` HTTP call through human review to a published public alert. Automation kill switches confirmed off at the end. Documentation-only branch, no merge to `main`.
 
 ## 1. Cel Dnia 8

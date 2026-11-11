@@ -1,5 +1,11 @@
 # Blok Wykonawczy 2 — rozszerzenie i aktywacja check-only pierwszej fali (Etap E)
 
+> **Correction (LR-3A, 2026-11-11) — REJECTED — WRONG MUNICIPALITY:** every mention of
+> `wodociagi-michalowice` / `wodociagimichalowice.pl` / "Wodociągi Michałowice" below refers to
+> the water utility of Gmina Michałowice in **Małopolska** (near Kraków), not the pilot's Gmina
+> Michałowice near Warsaw. It was removed from all runtime configuration and was never
+> activated in Production. Historical record only — see `docs/LR3A_SOURCE_CORRECTION_V1.md`.
+
 Status: **10 źródeł aktywowanych jako check-only na Production. Zero
 zapisów, zero writera, zero auto-publish.**
 

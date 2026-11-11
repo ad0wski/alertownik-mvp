@@ -50,7 +50,8 @@ export default function TermsPage() {
             <li>
               Serwis zbiera i porządkuje lokalne informacje z publicznie
               dostępnych, oficjalnych źródeł (urzędy, operatorzy transportu,
-              dostawcy mediów) dla Komorowa, Pruszkowa i okolic.
+              dostawcy mediów) dla rejonu gminy Michałowice i powiatu
+              pruszkowskiego.
             </li>
             <li>
               Każdy alert jest przygotowywany i publikowany ręcznie przez

@@ -12,7 +12,7 @@ import { buildPilotInterestMailto } from "@/lib/feedbackMailto";
 export const metadata = {
   title: "Zobacz Alertownik — demo dla gmin i partnerów",
   description:
-    "Krótkie demo Alertownika: lokalne komunikaty dla Komorowa, Pruszkowa i okolic w jednym miejscu, zebrane z oficjalnych źródeł.",
+    "Krótkie demo Alertownika: lokalne komunikaty dla rejonu gminy Michałowice i powiatu pruszkowskiego w jednym miejscu, zebrane z oficjalnych źródeł.",
 };
 
 const cardClass =

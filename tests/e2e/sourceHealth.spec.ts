@@ -61,7 +61,7 @@ test.describe("buildSourceHealthRows — coverage and API-support flags", () => 
     expect(rows.map((r) => r.checklistId)).toEqual(OFFICIAL_SOURCE_CHECKS.map((s) => s.id));
   });
 
-  test("exactly forty-four sources are API-supported after Etap F Fala 8: Fala 7's 42 plus 2 more (first Dolnośląskie+Opolskie+Lubuskie+Warmińsko-Mazurskie)", () => {
+  test("exactly forty-three sources are API-supported: Etap F Fala 8's 44 minus the wrong-municipality wodociagi-michalowice removed in LR-3A", () => {
     const rows = rowsFor();
     const supported = rows.filter((r) => r.apiSupported).map((r) => r.checklistId);
     // Checklist order matches officialSourceChecklist.ts's array order.
@@ -69,7 +69,6 @@ test.describe("buildSourceHealthRows — coverage and API-support flags", () => 
       "wkd-aktualnosci",
       "michalowice-komunikaty",
       "pruszkow-aktualnosci",
-      "wodociagi-michalowice",
       "eko-raszyn",
       "bpwik-brwinow",
       "pkn-nadarzyn",
@@ -208,7 +207,7 @@ test.describe("summarizeSourceHealth", () => {
     });
     const summary = summarizeSourceHealth(rows);
     expect(summary.total).toBe(OFFICIAL_SOURCE_CHECKS.length);
-    expect(summary.apiSupported).toBe(44);
+    expect(summary.apiSupported).toBe(43);
     expect(summary.checkedRecently).toBe(1); // only reg-mich has a fresh check
     expect(summary.needsAttention).toBe(summary.total - summary.checkedRecently);
   });
@@ -230,7 +229,7 @@ test.describe("dashboard copy (anti-drift — Sprint 137 req. 5/6/7)", () => {
     expect(HEALTH_API_SUPPORTED_LABEL).toContain("check przez aplikację");
     expect(HEALTH_API_SUPPORT_NOTE).toContain("Gmina Michałowice — komunikaty");
     expect(HEALTH_API_SUPPORT_NOTE).toContain("WKD — aktualności");
-    expect(HEALTH_API_SUPPORT_NOTE).toContain("Wodociągi Michałowice — awarie i przerwy");
+    expect(HEALTH_API_SUPPORT_NOTE).not.toContain("Wodociągi Michałowice");
     expect(HEALTH_API_SUPPORT_NOTE).toContain("Miasto Pruszków — aktualności");
     expect(HEALTH_API_SUPPORT_NOTE).toContain("ręcznie");
   });

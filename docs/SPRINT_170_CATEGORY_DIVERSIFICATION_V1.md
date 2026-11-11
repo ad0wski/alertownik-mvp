@@ -1,5 +1,11 @@
 # Sprint 170 — category diversification audit (final attempt, no code change)
 
+> **Correction (LR-3A, 2026-11-11) — REJECTED — WRONG MUNICIPALITY:** every mention of
+> `wodociagi-michalowice` / `wodociagimichalowice.pl` / "Wodociągi Michałowice" below refers to
+> the water utility of Gmina Michałowice in **Małopolska** (near Kraków), not the pilot's Gmina
+> Michałowice near Warsaw. It was removed from all runtime configuration and was never
+> activated in Production. Historical record only — see `docs/LR3A_SOURCE_CORRECTION_V1.md`.
+
 **Status: audit complete, no fifth source added. Source-expansion phase
 formally closed with 4 active sources.**
 

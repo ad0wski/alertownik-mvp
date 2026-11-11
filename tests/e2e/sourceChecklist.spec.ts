@@ -21,7 +21,6 @@ const OFFICIAL_DOMAINS = [
   "michalowice.pl",
   "pruszkow.pl",
   "pgedystrybucja.pl",
-  "wodociagimichalowice.pl",
   "samorzad.gov.pl",
   // Blok Wykonawczy 2 (Etap E) — 10 HTTP-verified Mazowieckie water
   // utilities, check-only, deliberately outside PILOT_LOCALITIES (see

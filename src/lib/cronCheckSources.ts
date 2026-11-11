@@ -251,7 +251,7 @@ function classifyFetchError(err: unknown): CronDiagnosticCode {
 }
 
 // Sprint 173 — dry-run twin of the fix in scheduledSourceFetch.ts: without
-// this, a dry-run preview of Wodociągi Michałowice or Pruszków aktualności
+// this, a dry-run preview of a water-utility REST source or Pruszków aktualności
 // would fetch their officialUrl as HTML and report a misleading result
 // (zero candidates or a permanent error) instead of previewing what a real
 // scheduled run would actually see via their REST API.

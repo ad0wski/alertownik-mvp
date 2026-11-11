@@ -5,7 +5,7 @@ import { FEEDBACK_EMAIL } from "@/lib/feedbackMailto";
 export const metadata = {
   title: "Współpraca — Alertownik",
   description:
-    "Możliwości współpracy z Alertownikiem — lokalnym serwisem alertów dla Komorowa, Pruszkowa i okolic: sponsoring lokalny, wspólnoty mieszkaniowe, instytucje, partnerzy danych.",
+    "Możliwości współpracy z Alertownikiem — lokalnym serwisem alertów dla rejonu gminy Michałowice i powiatu pruszkowskiego: sponsoring lokalny, wspólnoty mieszkaniowe, instytucje, partnerzy danych.",
 };
 
 const cooperationTypes = [
@@ -47,7 +47,8 @@ export default function PartnersPage() {
           Współpraca i partnerstwa
         </h1>
         <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 leading-relaxed">
-          Alertownik to lokalny serwis alertów dla Komorowa, Pruszkowa i okolic —
+          Alertownik to lokalny serwis alertów dla rejonu gminy Michałowice i
+          powiatu pruszkowskiego —
           zbiera w jednym miejscu informacje o utrudnieniach w transporcie,
           dostawach wody i prądu, drogach, odpadach i komunikatach gminnych.
         </p>

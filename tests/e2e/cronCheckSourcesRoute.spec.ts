@@ -194,7 +194,7 @@ test.describe("GET /api/cron/check-sources — authentication (kill switch enabl
 });
 
 // Sprint 173 — SAFE_CHECK_SOURCE_IDS grew from 2 (Sprint 139) to 4 (Sprints
-// 168/169: wodociagi-michalowice, pruszkow-aktualnosci added). Those two
+// 168/169: REST-backed sources added). Those two
 // are REST-API-backed (apiUrl set), so a no-filter dry run now fetches a
 // mix of HTML and JSON targets — this fixture mock serves the right shape
 // per URL, mirroring how checkOneSource actually dispatches.
@@ -255,13 +255,12 @@ test.describe("GET /api/cron/check-sources — dry-run behavior (authorized)", (
         expect(body.savedCandidates).toBe(0);
         expect(body.savedSourceChecks).toBe(0);
         expect(body.published).toBe(false);
-        expect(body.checkedSources).toBe(44);
-        expect(body.results).toHaveLength(44);
+        expect(body.checkedSources).toBe(43);
+        expect(body.results).toHaveLength(43);
         for (const r of body.results) {
           expect([
             "michalowice-komunikaty",
             "wkd-aktualnosci",
-            "wodociagi-michalowice",
             "pruszkow-aktualnosci",
             "powiat-pruszkowski-wiadomosci",
             "eko-raszyn",
@@ -335,8 +334,8 @@ test.describe("GET /api/cron/check-sources — dry-run behavior (authorized)", (
         const res = await GET(authedRequest());
         expect(res.status).toBe(200);
         const body = await res.json();
-        expect(body.checkedSources).toBe(44);
-        expect(body.successfulSources).toBe(43);
+        expect(body.checkedSources).toBe(43);
+        expect(body.successfulSources).toBe(42);
         expect(body.failedSources).toBe(1);
         const wkdResult = body.results.find((r: { sourceKey: string }) => r.sourceKey === "wkd-aktualnosci");
         const michalowiceResult = body.results.find(
@@ -404,18 +403,18 @@ test.describe("GET /api/cron/check-sources — dry-run behavior (authorized)", (
   });
 
   // Sprint 173 — dedicated coverage for the REST-backed sources' dry-run
-  // path (wodociagi-michalowice/pruszkow-aktualnosci), added alongside the
+  // path (default water filter / pruszkow-aktualnosci), added alongside the
   // fix that made checkOneSource actually use their apiUrl.
-  test("a REST-backed source (wodociagi-michalowice) parses a genuine JSON response into a real proposal", async () => {
+  test("a REST-backed source (eko-raszyn) parses a genuine JSON response into a real proposal", async () => {
     await withEnv({ SCHEDULED_CHECKS_ENABLED: "true", CRON_SECRET: FAKE_TEST_SECRET }, async () => {
       const restore = mockFetch(async () =>
         new Response(REST_FIXTURE_POSTS, { status: 200, headers: { "content-type": "application/json" } })
       );
       try {
-        const res = await GET(authedRequest("?sourceKey=wodociagi-michalowice"));
+        const res = await GET(authedRequest("?sourceKey=eko-raszyn"));
         const body = await res.json();
         expect(body.results).toHaveLength(1);
-        expect(body.results[0].sourceKey).toBe("wodociagi-michalowice");
+        expect(body.results[0].sourceKey).toBe("eko-raszyn");
         expect(body.results[0].outcome).toBe("success");
         expect(body.results[0].proposalCount).toBe(1);
       } finally {
@@ -430,7 +429,7 @@ test.describe("GET /api/cron/check-sources — dry-run behavior (authorized)", (
         new Response("{}", { status: 200, headers: { "content-type": "application/json" } })
       );
       try {
-        const res = await GET(authedRequest("?sourceKey=wodociagi-michalowice"));
+        const res = await GET(authedRequest("?sourceKey=eko-raszyn"));
         const body = await res.json();
         expect(body.results[0].outcome).toBe("parse_error");
         expect(body.results[0].diagnostic).toBe("parse_exception");

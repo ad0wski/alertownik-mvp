@@ -1,5 +1,11 @@
 # Admin Click-through Runbook — Sprint 97
 
+> **Correction (LR-3A, 2026-11-11) — REJECTED — WRONG MUNICIPALITY:** every mention of
+> `wodociagi-michalowice` / `wodociagimichalowice.pl` / "Wodociągi Michałowice" below refers to
+> the water utility of Gmina Michałowice in **Małopolska** (near Kraków), not the pilot's Gmina
+> Michałowice near Warsaw. It was removed from all runtime configuration and was never
+> activated in Production. Historical record only — see `docs/LR3A_SOURCE_CORRECTION_V1.md`.
+
 For Adam. A one-time, real, end-to-end pass through the admin workflow on
 the **live Vercel deployment** (`https://alertownik-mvp.vercel.app/`), not
 localhost. This is the one thing no prior sprint's code-level audit could

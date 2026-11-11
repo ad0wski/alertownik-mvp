@@ -6,7 +6,7 @@ import { parsePruszkowRestPosts } from "@/lib/sourceParsers/pageParser";
  * Sprint 173 — REST-API-aware fetch branch of the scheduled writer's
  * source fetch layer. Before this sprint, scheduledSourceFetch.ts only
  * knew how to fetch a source's officialUrl as HTML — which meant a
- * scheduled run covering Wodociągi Michałowice or Pruszków aktualności
+ * scheduled run covering a water-utility REST source or Pruszków aktualności
  * (Sprints 168/169) would have silently fetched the wrong thing every
  * single time, since both were deliberately built to be checked via their
  * WordPress REST API instead. Mirrors scheduledSourceFetchRetry.spec.ts's
@@ -22,8 +22,8 @@ function mockFetch(impl: typeof fetch) {
 }
 
 const TARGET = {
-  officialUrl: "https://wodociagimichalowice.pl/category/aktualnosci/",
-  apiUrl: "https://wodociagimichalowice.pl/wp-json/wp/v2/posts?categories=1&per_page=6",
+  officialUrl: "https://wodociagi.example/category/aktualnosci/",
+  apiUrl: "https://wodociagi.example/wp-json/wp/v2/posts?categories=1&per_page=6",
 };
 
 const SAMPLE_POSTS = [

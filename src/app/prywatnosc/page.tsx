@@ -56,8 +56,8 @@ export default function PrivacyPage() {
           <h2 className={h2Class}>Co robi serwis</h2>
           <p className={pClass}>
             Alertownik zbiera w jednym miejscu lokalne alerty (transport, woda,
-            prąd, drogi, odpady, komunikaty gminne) dla Komorowa, Pruszkowa i
-            okolic, na podstawie oficjalnych, publicznie dostępnych źródeł.
+            prąd, drogi, odpady, komunikaty gminne) dla rejonu gminy Michałowice
+            i powiatu pruszkowskiego, na podstawie oficjalnych, publicznie dostępnych źródeł.
             Korzystanie z serwisu nie wymaga konta ani podawania danych
             osobowych.
           </p>

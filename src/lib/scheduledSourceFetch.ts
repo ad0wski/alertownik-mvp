@@ -25,7 +25,7 @@ import {
 //
 // Sprint 173 — this module previously only knew how to fetch a source's
 // officialUrl as HTML, which meant it silently could never work for
-// Wodociągi Michałowice or Pruszków aktualności (Sprints 168/169): both
+// a water-utility REST source or Pruszków aktualności (Sprints 168/169): both
 // were deliberately built to be checked via their WordPress REST API
 // instead, precisely because their rendered HTML doesn't yield real
 // candidates (Wodociągi's homepage) or is bot-blocked (Pruszków). Before

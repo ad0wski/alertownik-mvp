@@ -89,7 +89,8 @@ export const OFFICIAL_SOURCE_CHECKS: OfficialSourceCheck[] = [
     category: "municipal",
     officialUrl: "https://www.michalowice.pl/dzieje-sie/aktualnosci/komunikaty",
     whatToCheck:
-      "Komunikaty urzędu gminy: przerwy w dostawach, prace, zmiany organizacji ruchu, " +
+      "Komunikaty urzędu gminy: przerwy w dostawie wody („Brak wody” — gmina publikuje je " +
+      "tutaj, to jedyne oficjalne źródło wodne pilotażu), prace, zmiany organizacji ruchu, " +
       "ostrzeżenia lokalne. Filtruj wzrokiem pod kątem miejscowości pilotażowych.",
     localities: ["Komorów", "Nowa Wieś", "Granica", "Michałowice", "Reguły"],
     frequency: "weekly",
@@ -178,31 +179,17 @@ export const OFFICIAL_SOURCE_CHECKS: OfficialSourceCheck[] = [
     risk: "low",
     riskNote: "PDF-y są skanowane — daty przepisuje się ręcznie (workflow: data/waste/README.md).",
   },
-  {
-    id: "wodociagi-michalowice",
-    name: "Wodociągi Michałowice — awarie i przerwy",
-    category: "water",
-    officialUrl: "https://wodociagimichalowice.pl/category/aktualnosci/",
-    // Sprint 168 — the homepage itself exposes no notice list in a
-    // recognizable shape; the real content lives in this WordPress site's
-    // "Aktualności" category (verified live: 294 posts, overwhelmingly
-    // genuine water-interruption notices — "Przerwa w dostawie wody" —
-    // plus occasional office-hours/pricing announcements). The category
-    // archive page is kept as the human-facing officialUrl; the actual
-    // check uses the WordPress REST API below (apiUrl), which returns
-    // clean, structured, official data — not a scrape.
-    apiUrl: "https://wodociagimichalowice.pl/wp-json/wp/v2/posts?categories=1&per_page=6",
-    whatToCheck:
-      "Przerwy w dostawie wody, awarie sieci, płukanie sieci. Dla ciepłej wody/ciepła " +
-      "w Pruszkowie patrz też aktualności Pruszkowa (komunikaty ciepłownicze).",
-    localities: ["Komorów", "Nowa Wieś", "Granica", "Michałowice", "Reguły"],
-    frequency: "weekly",
-    risk: "low",
-  },
+  // LR-3A (2026-11-11) — the former `wodociagi-michalowice` entry
+  // (wodociagimichalowice.pl) was REMOVED here: that utility serves Gmina
+  // Michałowice in Małopolska (32-091, near Kraków), NOT the pilot's Gmina
+  // Michałowice near Warsaw (05-816, powiat pruszkowski). It never covered
+  // Komorów / Nowa Wieś / Granica / Reguły. Do not re-add it — see
+  // docs/LR3A_SOURCE_CORRECTION_V1.md and
+  // tests/e2e/wrongMunicipalitySourceGuard.spec.ts.
   // Blok Wykonawczy 2 (Etap E) — first real, HTTP-verified national-scale
   // wave: 7 Mazowieckie municipal water utilities near the existing pilot
   // (docs/EXEC_BLOCK_1_SOURCE_DISCOVERY_MAZOWIECKIE_V1.md), all sharing the
-  // exact wordpress_rest adapter already proven on wodociagi-michalowice —
+  // exact generic wordpress_rest adapter (parseWordpressRestPosts) —
   // zero new parser code, only this configuration. `localities: []` is
   // deliberate and honest: these towns are outside Alertownik's own
   // 6-locality PILOT_LOCALITIES union (a real, load-bearing TypeScript
@@ -307,7 +294,7 @@ export const OFFICIAL_SOURCE_CHECKS: OfficialSourceCheck[] = [
       "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
       "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów. Treść bywa " +
       "edukacyjna/PR — filtr słów kluczowych (parseWordpressRestPosts) już to obsługuje, " +
-      "ten sam wzorzec co wodociagi-michalowice.",
+      "ten sam generyczny adapter wordpress_rest.",
   },
   {
     id: "opwik-otwock",
@@ -399,7 +386,7 @@ export const OFFICIAL_SOURCE_CHECKS: OfficialSourceCheck[] = [
       "Poza 6 miejscowościami pilotażu — check-only, nigdy nie trafi do writera ani " +
       "auto-publish bez osobnej, jawnej zmiany allowlisty tych mechanizmów. Kanał miesza " +
       "komunikaty operacyjne z ogłoszeniami przetargowymi — filtr operacyjności " +
-      "(parseWordpressRestPosts) już to obsługuje, ten sam wzorzec co wodociagi-michalowice.",
+      "(parseWordpressRestPosts) już to obsługuje, ten sam generyczny adapter wordpress_rest.",
   },
   {
     id: "pwik-wyszkow",

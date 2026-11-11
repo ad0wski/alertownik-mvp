@@ -109,7 +109,9 @@ const PILOT_SOURCE_SUGGESTIONS: PilotSourceSuggestion[] = [
     url: "https://www.michalowice.pl/dzieje-sie/aktualnosci/komunikaty",
     category: "municipal",
     sourceType: "website",
-    notes: "Komunikaty gminne dla Komorowa i okolic (gmina Michałowice).",
+    notes:
+      "Komunikaty gminy Michałowice (pow. pruszkowski): Komorów, Nowa Wieś, Granica, Michałowice, Reguły — " +
+      "w tym przerwy w dostawie wody (gmina publikuje je sama, nie ma osobnego serwisu wodociągów).",
   },
   {
     id: "pruszkow",
@@ -132,14 +134,6 @@ const PILOT_SOURCE_SUGGESTIONS: PilotSourceSuggestion[] = [
       "Podstrona planowanych wyłączeń: pgedystrybucja.pl/wylaczenia/planowane-wylaczenia. Lista dla " +
       "konkretnego adresu wymaga wyboru rejonu w przeglądarce — sprawdzaj ręcznie (Komorów, Nowa Wieś, " +
       "Granica, Michałowice, Reguły, Pruszków), automatyczny podgląd zwykle nie pokaże aktualnych wyłączeń.",
-  },
-  {
-    id: "wodociagi-michalowice",
-    name: "Wodociągi Michałowice",
-    url: "https://wodociagimichalowice.pl/",
-    category: "water",
-    sourceType: "website",
-    notes: "Przerwy i awarie w dostawie wody w gminie Michałowice.",
   },
   {
     id: "mzo-pruszkow",

@@ -9,7 +9,7 @@ import { findSimilarText } from "@/lib/candidateWarnings";
 
 /**
  * Sprint 168 — fixture-based tests for the WordPress REST API extraction
- * pass (wodociagimichalowice.pl). All fixtures below are invented for
+ * pass (generic water-utility WordPress site). All fixtures below are invented for
  * this test only — modeled on the real, live response shape verified
  * during this sprint's investigation (title.rendered / excerpt.rendered
  * / date / link / slug), but the specific content is fictional.
@@ -20,7 +20,7 @@ function post(overrides: Partial<WordpressRestPost>): WordpressRestPost {
     title: { rendered: "Tytuł testowy" },
     excerpt: { rendered: "<p>Treść testowa.</p>" },
     date: "2026-07-21T09:36:15",
-    link: "https://wodociagimichalowice.pl/2026/07/21/test/",
+    link: "https://wodociagi.example/2026/07/21/test/",
     slug: "test",
     ...overrides,
   };
@@ -48,7 +48,7 @@ test.describe("parseWordpressRestPosts — genuine operational notices are inclu
         title: { rendered: "Przerwa w dostawie wody" },
         excerpt: {
           rendered:
-            "<p>Wodociągi Michałowice Sp. z o.o. informują, że w dniu 23 lipca 2026 roku tj. czwartek, " +
+            "<p>Wodociągi Przykładowe Sp. z o.o. informują, że w dniu 23 lipca 2026 roku tj. czwartek, " +
             "w godzinach od 9:00 do 14:00 wystąpi przerwa w dostawie wody w miejscowości Komorów " +
             "w rejonie ul. Krakowskiej, z powodu prac na sieci wodociągowej.</p>",
         },
@@ -68,7 +68,7 @@ test.describe("parseWordpressRestPosts — genuine operational notices are inclu
         title: { rendered: "" },
         excerpt: {
           rendered:
-            "<p>Wodociągi Michałowice informują o awarii sieci wodociągowej w miejscowości Granica, " +
+            "<p>Wodociągi Przykładowe informują o awarii sieci wodociągowej w miejscowości Granica, " +
             "trwa usuwanie awarii.</p>",
         },
       }),
@@ -126,7 +126,7 @@ test.describe("parseWordpressRestPosts — duplicate detection (existing generic
       title: { rendered: "Przerwa w dostawie wody" },
       excerpt: {
         rendered:
-          "<p>Wodociągi Michałowice informują, że w dniu 23 lipca 2026 roku wystąpi przerwa w " +
+          "<p>Wodociągi Przykładowe informują, że w dniu 23 lipca 2026 roku wystąpi przerwa w " +
           "dostawie wody w miejscowości Komorów w rejonie ul. Krakowskiej.</p>",
       },
     });
@@ -134,7 +134,7 @@ test.describe("parseWordpressRestPosts — duplicate detection (existing generic
       title: { rendered: "Przerwa w dostawie wody" },
       excerpt: {
         rendered:
-          "<p>Wodociągi Michałowice informują, że w dniu 23 lipca 2026 roku wystąpi przerwa w " +
+          "<p>Wodociągi Przykładowe informują, że w dniu 23 lipca 2026 roku wystąpi przerwa w " +
           "dostawie wody w miejscowości Komorów, ul. Krakowska.</p>",
       },
     });
