@@ -27,7 +27,7 @@ const whatItDoes = [
   "Ogranicza duplikaty i nieaktualne wpisy.",
 ];
 
-const scopeCategories = ["drogi", "komunikaty gminne", "transport (WKD)", "wodociągi"];
+const scopeCategories = ["drogi", "komunikaty gminne", "transport (WKD)", "przerwy w dostawie wody"];
 
 export default function DemoPage() {
   return (

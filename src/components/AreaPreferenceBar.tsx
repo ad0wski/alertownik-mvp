@@ -129,7 +129,7 @@ export function AreaPreferenceBar({ value, onChange }: Props) {
         </div>
       </div>
       <p className="text-xs text-slate-500 dark:text-slate-400">
-        Ta sama okolica jest też używana w „Moja okolica” na stronie głównej.
+        Ta sama okolica jest też używana w „Moja okolica” na stronie Alerty.
       </p>
     </div>
   );

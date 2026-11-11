@@ -84,6 +84,17 @@ export function TodayView() {
           <p className="text-base font-semibold text-slate-600 dark:text-slate-400">
             Brak pilnych alertów w tej chwili.
           </p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 px-4 leading-relaxed">
+            Aplikacja działa — po prostu nic pilnego nie dzieje się teraz w rejonie
+            gminy Michałowice i powiatu pruszkowskiego. Oficjalne komunikaty gminy
+            Michałowice sprawdzamy codziennie.
+          </p>
+          <Link
+            href="/alerty"
+            className="inline-flex items-center min-h-[44px] mt-1 px-3 text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline"
+          >
+            Zobacz zakończone alerty →
+          </Link>
         </div>
       )}
 

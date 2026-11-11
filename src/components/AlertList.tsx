@@ -719,8 +719,8 @@ export function AlertList() {
                 {showAllEndedNotice && (
                   <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 px-4 py-3">
                     <p className="text-sm text-slate-600 dark:text-slate-400">
-                      Brak aktualnych alertów — poniżej mogą być widoczne zakończone
-                      przykłady lub poprzednie komunikaty.
+                      Brak aktualnych alertów — to dobra wiadomość. Poniżej widać
+                      zakończone alerty z ostatnich miesięcy.
                     </p>
                   </div>
                 )}

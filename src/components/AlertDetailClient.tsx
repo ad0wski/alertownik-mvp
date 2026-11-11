@@ -8,6 +8,7 @@ import { formatAlertRange, formatAlertDateTime } from "@/lib/formatAlertDate";
 import { getAlertTimeStatus, type AlertTimeStatus } from "@/lib/getAlertTimeStatus";
 import { buildAlertReportMailto } from "@/lib/feedbackMailto";
 import { ShareAlertButton } from "@/components/ShareAlertButton";
+import { buildAlertShareText } from "@/lib/alertShareText";
 import type { Alert } from "@/types/alert";
 
 const timeStatusConfig: Record<
@@ -116,6 +117,7 @@ export function AlertDetailClient({ slug }: { slug: string }) {
   }
 
   const severity = severityConfig[alert.severity];
+  const timeStatus = getAlertTimeStatus(alert.startsAt, alert.endsAt);
   const isRealLink = Boolean(alert.sourceUrl && alert.sourceUrl !== "#");
   // Bare domain shown under the source name — lets a reader sanity-check
   // where the link actually goes before tapping it.
@@ -127,7 +129,6 @@ export function AlertDetailClient({ slug }: { slug: string }) {
       sourceHost = "";
     }
   }
-  const timeStatus = getAlertTimeStatus(alert.startsAt, alert.endsAt);
   const timeCfg = timeStatus !== "unknown" ? timeStatusConfig[timeStatus] : null;
 
   return (
@@ -179,7 +180,12 @@ export function AlertDetailClient({ slug }: { slug: string }) {
 
         <ShareAlertButton
           title={alert.title}
-          text={`${alert.title} — ${alert.place || "Alertownik"}`}
+          text={buildAlertShareText({
+            title: alert.title,
+            place: alert.place,
+            when: formatAlertRange(alert.startsAt, alert.endsAt),
+            sourceName: alert.sourceName,
+          })}
         />
 
         {/* Detail rows — always stacked vertically for clean mobile reading */}
@@ -257,6 +263,12 @@ export function AlertDetailClient({ slug }: { slug: string }) {
             >
               Zobacz oficjalny komunikat →
             </a>
+          )}
+          {isRealLink && timeStatus === "ended" && (
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
+              Ten alert jest już zakończony — wydawca mógł usunąć lub przenieść
+              oryginalny komunikat, więc link może już nie działać.
+            </p>
           )}
         </div>
 

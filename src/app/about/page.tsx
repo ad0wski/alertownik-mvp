@@ -46,8 +46,9 @@ export default function AboutPage() {
             Co testujemy i gdzie
           </h2>
           <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-2">
-            Pierwsza wersja pilotażu skupia się na okolicach WKD, Komorowa i
-            Pruszkowa — to tam admin na bieżąco sprawdza źródła i przygotowuje
+            Pierwsza wersja pilotażu skupia się na rejonie gminy Michałowice
+            (Komorów, Nowa Wieś, Granica, Michałowice, Reguły), Pruszkowie i
+            linii WKD — to tam administrator sprawdza źródła i przygotowuje
             alerty. Sprawdzamy, czy taki serwis realnie pomaga szybciej
             zrozumieć lokalne zmiany niż czytanie oficjalnych komunikatów.
           </p>
