@@ -928,9 +928,12 @@ test.describe("getMaxCandidatesPerInvocation — server-side cap, env-controlled
     });
   });
 
-  test("honors an explicit, valid env override", () => {
+  test("honors an explicit, valid env override — up to the hard ceiling of 2 (LR-5), never beyond", () => {
+    withEnv({ SCHEDULED_WRITER_MAX_CANDIDATES_PER_RUN: "2" }, () => {
+      expect(getMaxCandidatesPerInvocation()).toBe(2);
+    });
     withEnv({ SCHEDULED_WRITER_MAX_CANDIDATES_PER_RUN: "3" }, () => {
-      expect(getMaxCandidatesPerInvocation()).toBe(3);
+      expect(getMaxCandidatesPerInvocation()).toBe(2);
     });
   });
 });

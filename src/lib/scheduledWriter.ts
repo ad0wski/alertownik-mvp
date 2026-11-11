@@ -6,7 +6,10 @@ import {
   stripConfirmedDedupBoilerplate,
   extractPlace,
   extractStartDateIso,
+  extractEventDateIso,
+  extractEventPlaces,
 } from "@/lib/candidateWarnings";
+import { detectCandidateCategory } from "@/lib/candidateVerifier";
 import type { CheckProposal } from "@/lib/sourceCheck";
 import { SAFE_CHECK_SOURCE_IDS } from "@/lib/sourceCheck";
 import type { FetchDiagnosticCode } from "@/lib/scheduledWriterRunSafety";
@@ -241,6 +244,131 @@ export function classifyProposalAgainstExisting(
     proposal.text,
     existingItems.map((item) => item.text)
   );
+}
+
+// ── Same-source dedup with a place/date veto (LR-5) ──────────────────────────
+//
+// LR-4 finding, measured on the real 2026 archive of the Michałowice
+// notices feed: 36 of 43 genuine water-interruption notices scored
+// "ambiguous" (and 4 "duplicate") against EARLIER, unrelated water notices,
+// and were therefore silently withheld from the review queue. Cause: an
+// official source reuses one template for every such notice — only the
+// locality, streets and date differ — and textSimilarity's word-overlap
+// ratio (0.5–0.7 for these) cannot tell "the same notice again" from "the
+// same kind of notice about a different event".
+//
+// The fix is the one already proven on the cross-source path above
+// (classifyProposalAgainstOtherSourceCandidates): similarity ALONE may not
+// block a pair when there is structural evidence the two texts describe
+// different real-world events. Same thresholds, same scoring, same
+// boilerplate stripping — only pairs with provable disagreement are
+// excluded from scoring.
+//
+// What still wins, unchanged, before any veto is considered:
+//   - an identical direct permalink is a duplicate, always.
+// What the veto requires — both sides must be KNOWN and must DISAGREE:
+//   - event dates: extractEventDateIso on both, different calendar days.
+//     The listing's leading post timestamp is not an event date and never
+//     counts (see extractEventDateIso).
+//   - localities: extractEventPlaces on both, non-empty and with no
+//     locality in common. Overlapping sets ("Granica i Nowa Wieś" vs
+//     "Nowa Wieś") are NOT a disagreement.
+// When a date or a place is missing on either side, that signal is simply
+// absent: the pair is scored exactly as before. Unknown never vetoes —
+// the conservative behavior is the default, not the exception.
+//
+// Deliberately a separate function: classifyProposalAgainstExisting keeps
+// its exact behavior for its other caller, evaluateAutoPublishEligibility
+// (trustedSourceAutoPublish.ts) — this change does not loosen the
+// auto-publish gate in any way.
+
+/** What a text says about ITS OWN event, for the veto only. */
+interface EventSignals {
+  date: string | null;
+  places: string[];
+}
+
+function readEventSignals(text: string): EventSignals {
+  return { date: extractEventDateIso(text), places: extractEventPlaces(text) };
+}
+
+/** Signals for a proposal. The body is read exactly the way an existing
+ *  item's text is read, so a notice compared against its own stored copy
+ *  always agrees with itself — the title can only ADD what the body
+ *  lacks (a date when the body states none, extra localities), never
+ *  change what the body already says. */
+function readProposalEventSignals(text: string, title?: string): EventSignals {
+  const fromText = readEventSignals(text);
+  if (!title) return fromText;
+  const fromTitle = readEventSignals(title);
+  return {
+    date: fromText.date ?? fromTitle.date,
+    places: Array.from(new Set([...fromText.places, ...fromTitle.places])),
+  };
+}
+
+function eventDatesDisagree(a: EventSignals, b: EventSignals): boolean {
+  return Boolean(a.date && b.date && a.date.slice(0, 10) !== b.date.slice(0, 10));
+}
+
+function eventPlacesDisagree(a: EventSignals, b: EventSignals): boolean {
+  if (a.places.length === 0 || b.places.length === 0) return false;
+  return !a.places.some((place) => b.places.includes(place));
+}
+
+/** Same-source (other candidates of this source + existing alerts)
+ *  classification for the scheduled candidate writer. `title`, when
+ *  given, is used ONLY to read the proposal's own place/date — official
+ *  titles usually carry the locality ("Brak wody - Reguły") — never for
+ *  the similarity score, which is computed on exactly the same text as
+ *  before. */
+export function classifyProposalAgainstSameSourceItems(
+  proposal: { text: string; url?: string; title?: string },
+  existingItems: DedupComparisonItem[]
+): DuplicateClassification {
+  if (proposal.url) {
+    const normalizedProposalUrl = normalizeUrlForCompare(proposal.url);
+    const urlMatch = existingItems.some(
+      (item) => item.url && normalizeUrlForCompare(item.url) === normalizedProposalUrl
+    );
+    if (urlMatch) return "duplicate";
+  }
+
+  const proposalSignals = readProposalEventSignals(proposal.text, proposal.title);
+  const strippedProposal = stripConfirmedDedupBoilerplate(proposal.text);
+  let bestScore = 0;
+  for (const item of existingItems) {
+    if (!item.text) continue;
+    const itemSignals = readEventSignals(item.text);
+    if (eventDatesDisagree(proposalSignals, itemSignals)) continue;
+    if (eventPlacesDisagree(proposalSignals, itemSignals)) continue;
+
+    const score = textSimilarity(strippedProposal, stripConfirmedDedupBoilerplate(item.text));
+    if (score > bestScore) bestScore = score;
+  }
+
+  if (bestScore >= DUPLICATE_CONFIDENCE_THRESHOLD) return "duplicate";
+  if (bestScore >= AMBIGUOUS_SIMILARITY_THRESHOLD) return "ambiguous";
+  return "new";
+}
+
+/** LR-5 — order in which one run considers its proposals: those with a
+ *  detected alert category first, everything else after, each group in
+ *  its original source order (a stable partition — never a re-ranking
+ *  inside a group). Only decides WHICH pending candidates a capped run
+ *  creates first; nothing is removed, and a notice without a category is
+ *  still created whenever a slot is left for it. Before this, a job offer
+ *  listed above a water notice took the run's only slot (real case:
+ *  2026-11-07, "Obchody 108. rocznicy…" inserted ahead of "Brak wody -
+ *  Reguły"). */
+export function prioritizeActionableProposals(proposals: CheckProposal[]): CheckProposal[] {
+  const actionable: CheckProposal[] = [];
+  const rest: CheckProposal[] = [];
+  for (const proposal of proposals) {
+    const text = `${proposal.title}\n${proposal.rawText || proposal.excerpt || ""}`;
+    (detectCandidateCategory(text) ? actionable : rest).push(proposal);
+  }
+  return [...actionable, ...rest];
 }
 
 // ── Cross-source candidate dedup (P0-2C fix) ──────────────────────────────────
@@ -583,12 +711,21 @@ export async function logFailedSourceCheck(
  *  principle already applied to ambiguous-duplicate handling. */
 export const DEFAULT_MAX_CANDIDATES_PER_INVOCATION = 1;
 
+/** LR-5 — hard ceiling on the env override. One run may create at most
+ *  this many pending candidates no matter what
+ *  SCHEDULED_WRITER_MAX_CANDIDATES_PER_RUN says: a typo or an
+ *  over-eager value can never flood the review queue. Raising it is a
+ *  deliberate code change, not a configuration tweak. Unrelated to
+ *  auto-publish, which has its own, separate cap of one per invocation
+ *  (trustedSourceAutoPublish.ts). */
+export const MAX_ALLOWED_CANDIDATES_PER_INVOCATION = 2;
+
 export function getMaxCandidatesPerInvocation(): number {
   const raw = process.env.SCHEDULED_WRITER_MAX_CANDIDATES_PER_RUN;
   if (!raw) return DEFAULT_MAX_CANDIDATES_PER_INVOCATION;
   const parsed = Number(raw);
   if (!Number.isFinite(parsed) || parsed < 0) return DEFAULT_MAX_CANDIDATES_PER_INVOCATION;
-  return Math.floor(parsed);
+  return Math.min(Math.floor(parsed), MAX_ALLOWED_CANDIDATES_PER_INVOCATION);
 }
 
 /** Default, conservative source restriction for the WRITE route
@@ -1055,7 +1192,7 @@ export interface WriteCandidatesForSourceResult {
  *  pages and wires the real Supabase-backed writer in.
  *
  *  `maxCandidatesToInsert` defaults to `getMaxCandidatesPerInvocation()`
- *  (env-controlled, conservative default 1) rather than being left to the
+ *  (env-controlled, conservative default 1, hard ceiling 2) rather than being left to the
  *  caller to remember — callers may still override it explicitly (tests
  *  do, to exercise the cap deterministically without mutating env vars),
  *  but production call sites (the route) always get the safe default
@@ -1126,9 +1263,17 @@ export async function writeCandidatesForSource(
   let ambiguousCandidates = 0;
   let cappedSkipped = 0;
   let duplicatesPreventedByDatabase = 0;
-  for (const proposal of input.proposals) {
+  // LR-5 — category-detected notices are considered first, so the
+  // per-run cap is never spent on non-alert content while a real
+  // disruption notice waits (see prioritizeActionableProposals).
+  for (const proposal of prioritizeActionableProposals(input.proposals)) {
     const text = proposal.rawText || proposal.excerpt || proposal.title;
-    const sameSourceClassification = classifyProposalAgainstExisting({ text, url: proposal.url }, existingItems);
+    // LR-5 — same-source dedup with the place/date veto (see
+    // classifyProposalAgainstSameSourceItems).
+    const sameSourceClassification = classifyProposalAgainstSameSourceItems(
+      { text, url: proposal.url, title: proposal.title },
+      existingItems
+    );
     // P0-2C fix — the cross-source check only needs to run when the
     // same-source check didn't already decide "duplicate" (nothing more
     // conservative is possible beyond that), saving the extra scoring

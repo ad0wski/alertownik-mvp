@@ -4,7 +4,7 @@ import {
 } from "@/lib/officialSourceChecklist";
 import type { PageParseResult } from "@/lib/sourceParsers/pageParser";
 import type { SourceCheckResult } from "@/types/alertSource";
-import { trimAtWord } from "@/lib/candidateWarnings";
+import { trimAtWord, normalizeForCompare } from "@/lib/candidateWarnings";
 
 // Sprint 134 (A2) — deterministic layer of the manual Source Check API.
 //
@@ -202,7 +202,13 @@ export function buildCheckProposals(parse: PageParseResult): CheckProposal[] {
     if (looksLikeBoilerplate(text)) continue;
 
     const title = (c.heading?.trim() || trimAtWord(text, 80)).trim();
-    const titleKey = title.toLowerCase().replace(/\s+/g, " ");
+    // LR-5 — a repeat is the same title AND the same article (same
+    // permalink, or the same text when the source gives no permalink).
+    // Title alone is not enough: official sources reuse one templated
+    // title for unrelated events ("Brak wody - Komorów" twice in a day,
+    // different streets and hours), and collapsing those hid a real
+    // notice. A pinned/repeated listing item still collapses, as before.
+    const titleKey = `${title.toLowerCase().replace(/\s+/g, " ")}|${c.url ?? normalizeForCompare(text)}`;
     if (seenTitles.has(titleKey)) continue;
     seenTitles.add(titleKey);
 

@@ -347,3 +347,68 @@ export function extractPlace(text: string): string | null {
   }
   return null;
 }
+
+// ── LR-5 — dedup-only event signals (same-source place/date veto) ────────────
+//
+// Used ONLY by scheduledWriter.ts's classifyProposalAgainstSameSourceItems.
+// Deliberately separate from extractPlace/extractStartDateIso above, whose
+// existing callers (auto-publish eligibility, cross-source dedup) keep
+// their exact current behavior — nothing here changes what they return.
+
+// The listing parser prefixes every notice with its POST timestamp
+// ("06.11.2026 14:55\n…"). That is when the notice was posted, not when
+// the event happens, so it must never count as evidence that two notices
+// describe different events. Only this exact shape (a bare leading
+// "DD.MM.YYYY HH:MM") is dropped — a labelled "Data wydarzenia: …" or a
+// date inside the notice body is kept.
+const LEADING_POST_TIMESTAMP_RE = /^\s*(\d{1,2})\.(\d{1,2})\.(\d{4})\s+\d{1,2}:\d{2}\s+/;
+
+// "25 marca br." / "15 czerwca (poniedziałek)" — a day and a month with no
+// year. Official notices routinely write the event date this way.
+const YEARLESS_DATE_RE = new RegExp(`\\b(\\d{1,2})\\s+(${MONTHS_PL})\\b`, "i");
+const YEARLESS_LOOKBACK_MS = 30 * 24 * 60 * 60 * 1000;
+
+/** The notice's own EVENT date, or null when the text states none.
+ *
+ *  1. The leading post timestamp is removed, then extractStartDateIso
+ *     runs unchanged — so a notice with no event date of its own yields
+ *     null ("unknown") rather than its posting date.
+ *  2. Only if that finds nothing: a year-less "D miesiąca" in the body is
+ *     completed with the year of the notice's OWN post timestamp (a
+ *     notice posted on 25.03.2026 saying "25 marca br." means 2026). A
+ *     date that would land more than 30 days before the post is read as
+ *     next year (posted 30.12, "2 stycznia"). With no post timestamp to
+ *     take the year from, the result stays null — never a guessed year.
+ *
+ *  Deterministic on the text alone: the same notice always yields the
+ *  same date, so a re-scraped notice can never "disagree" with itself. */
+export function extractEventDateIso(text: string): string | null {
+  const post = LEADING_POST_TIMESTAMP_RE.exec(text);
+  const body = post ? text.slice(post[0].length) : text;
+  const stated = extractStartDateIso(body);
+  if (stated || !post) return stated;
+
+  const yearless = YEARLESS_DATE_RE.exec(body);
+  if (!yearless) return null;
+  const monthIndex = MONTH_INDEX[normalizeForCompare(yearless[2]).replace(/\s+/g, "")];
+  if (monthIndex === undefined) return null;
+  const day = Number(yearless[1]);
+  const postMs = Date.UTC(Number(post[3]), Number(post[2]) - 1, Number(post[1]));
+  let year = Number(post[3]);
+  if (Date.UTC(year, monthIndex, day) < postMs - YEARLESS_LOOKBACK_MS) year += 1;
+  return buildValidatedIsoDate(year, monthIndex, day, 0, 0, false);
+}
+
+// "gmina Michałowice" / "Urzędu Gminy Michałowice" names the municipality,
+// not the village of Michałowice — almost every notice contains it, so it
+// must not count as a locality of the event.
+const MUNICIPALITY_MENTION_RE = /gmin[a-ząęy]*\s+Michałowice/gi;
+
+/** EVERY pilot locality the text names (exact base form, same rule as
+ *  extractPlace), ignoring mentions of the municipality itself. A notice
+ *  can cover several localities ("Granica i Nowa Wieś"), which the
+ *  single-value extractPlace cannot express. Empty = unknown. */
+export function extractEventPlaces(text: string): string[] {
+  const withoutMunicipality = text.replace(MUNICIPALITY_MENTION_RE, " ");
+  return PILOT_LOCALITIES.filter((locality) => withoutMunicipality.includes(locality));
+}
