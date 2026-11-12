@@ -14,7 +14,7 @@ export const metadata = {
 // dopisanie "co sprawdzić" + "wyślij opinię" tutaj skraca drogę testera o
 // jeden krok/klik względem prowadzenia go przez dwie osobne strony.
 const CHECKLIST_ITEMS = [
-  "Czy widzisz listę dzisiejszych alertów na stronie głównej?",
+  "Czy strona główna pokazuje aktualny alert albo jasną informację, że teraz nic pilnego się nie dzieje?",
   "Czy działa zmiana okolicy (przycisk „Zmień\" przy nazwie okolicy)?",
   "Czy strona jest czytelna i wygodna na Twoim telefonie?",
   "Czy rozumiesz, skąd pochodzą te alerty?",

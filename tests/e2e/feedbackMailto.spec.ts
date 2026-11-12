@@ -58,4 +58,14 @@ test.describe("buildAlertReportMailto", () => {
     expect(bodyParam).toContain("nieaktualne albo błędne");
     expect(bodyParam).not.toContain(FEEDBACK_QUESTIONS[0]);
   });
+
+  test("LR-6: names the exact alert by its path when a slug is given — and nothing about the reporter", () => {
+    const href = buildAlertReportMailto("Brak wody - Komorów", "brak-wody-komorow-2026-11-05");
+    const bodyParam = new URL(href.replace("mailto:", "http://x/")).searchParams.get("body") ?? "";
+    expect(bodyParam).toContain("/alerts/brak-wody-komorow-2026-11-05");
+    expect(bodyParam.startsWith("Co jest nieaktualne albo błędne w tym alercie?")).toBe(true);
+    // without a slug the body is exactly what it was before
+    const plain = new URL(buildAlertReportMailto("Brak wody - Komorów").replace("mailto:", "http://x/")).searchParams.get("body");
+    expect(plain).toBe("Co jest nieaktualne albo błędne w tym alercie?\n\n");
+  });
 });

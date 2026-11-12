@@ -83,3 +83,20 @@ test.describe("ended alert — source link caveat", () => {
     await expect(page.getByRole("link", { name: /Zobacz oficjalny komunikat/ })).toBeVisible();
   });
 });
+
+test.describe("LR-6 — closed pilot: first screen and problem reports", () => {
+  test("Dzisiaj says in one line what the app is — visible on a phone without scrolling", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/");
+    const line = page.getByText(/z oficjalnych źródeł, w jednym miejscu/);
+    await expect(line).toBeVisible();
+    const box = await line.boundingBox();
+    expect(box!.y + box!.height).toBeLessThan(300);
+    // …and it does not push the day's main state below the fold.
+    const calm = page.getByText("Brak pilnych alertów w tej chwili.");
+    const anyCard = page.locator("main article").first();
+    await expect(calm.or(anyCard)).toBeVisible({ timeout: 15_000 });
+    const main = await calm.or(anyCard).first().boundingBox();
+    expect(main!.y).toBeLessThan(420);
+  });
+});

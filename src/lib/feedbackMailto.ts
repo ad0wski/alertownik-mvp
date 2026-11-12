@@ -35,9 +35,16 @@ export function buildFeedbackMailto(): string {
 // Per-alert "report a problem" link — a single targeted question instead
 // of the general list, since someone clicking this already knows exactly
 // what they're reporting.
-export function buildAlertReportMailto(alertTitle: string): string {
+//
+// LR-6 — `alertSlug`, when given, is appended as the alert's own path so
+// the report says exactly WHICH alert it is about (titles repeat: there
+// can be several "Brak wody - Komorów"). Nothing about the reporter is
+// added — no device, no location, no identifier.
+export function buildAlertReportMailto(alertTitle: string, alertSlug?: string): string {
   const subject = `Alertownik — zgłoszenie: ${alertTitle}`;
-  const body = "Co jest nieaktualne albo błędne w tym alercie?\n\n";
+  const body =
+    "Co jest nieaktualne albo błędne w tym alercie?\n\n" +
+    (alertSlug ? `\n(Dotyczy alertu: /alerts/${alertSlug})\n` : "");
   return `mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 

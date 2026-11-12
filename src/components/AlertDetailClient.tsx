@@ -286,7 +286,7 @@ export function AlertDetailClient({ slug }: { slug: string }) {
             źródło powyżej.
           </p>
           <a
-            href={buildAlertReportMailto(alert.title)}
+            href={buildAlertReportMailto(alert.title, slug)}
             className="inline-block mt-1.5 font-medium text-slate-500 dark:text-slate-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline"
           >
             Ten alert jest nieaktualny albo błędny? Zgłoś →

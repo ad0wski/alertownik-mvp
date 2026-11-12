@@ -70,6 +70,13 @@ export function TodayView() {
           <span className="text-blue-600 dark:text-blue-400 font-semibold">Zmień</span>
         </Link>
       </div>
+      {/* LR-6 — one line saying what this is, for someone opening the app
+          for the first time: on a phone there is no header tagline, and an
+          empty day otherwise shows nothing that explains the product. */}
+      <p className="text-sm text-slate-600 dark:text-slate-400 leading-snug -mt-1">
+        Przerwy w dostawie wody, utrudnienia na drogach, zmiany w transporcie
+        i odbiór odpadów w Twojej okolicy — z oficjalnych źródeł, w jednym miejscu.
+      </p>
 
       {/* 2. Most important state */}
       {loading ? (
