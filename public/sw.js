@@ -54,6 +54,84 @@ self.addEventListener("message", (event) => {
   }
 });
 
+// ── LR-8A — Web Push ───────────────────────────────────────────────────────
+// Payload (sent by /api/admin/push/alert-published, only public alert
+// fields): { v: 1, title, body, url: "/alerts/<slug>", tag }.
+// Anything malformed still shows a neutral notification — browsers require
+// a visible notification for every push — and opens the home page.
+
+const PUSH_FALLBACK = {
+  title: "Alertownik",
+  body: "Nowy alert w Twojej okolicy.",
+  url: "/",
+  tag: "alertownik",
+};
+const ALERT_PATH_RE = /^\/alerts\/[a-z0-9][a-z0-9-]{0,159}$/;
+
+function clip(value, max) {
+  return typeof value === "string" ? value.slice(0, max) : "";
+}
+
+// Exposed on self for tests; pure function, no side effects.
+function parsePushPayload(data) {
+  let raw = null;
+  try {
+    raw = data ? data.json() : null;
+  } catch (_) {
+    raw = null;
+  }
+  if (!raw || typeof raw !== "object") return PUSH_FALLBACK;
+  const url = typeof raw.url === "string" && ALERT_PATH_RE.test(raw.url) ? raw.url : "/";
+  return {
+    title: clip(raw.title, 100) || PUSH_FALLBACK.title,
+    body: clip(raw.body, 160) || PUSH_FALLBACK.body,
+    url,
+    tag: clip(raw.tag, 64) || PUSH_FALLBACK.tag,
+  };
+}
+self.parsePushPayload = parsePushPayload;
+
+self.addEventListener("push", (event) => {
+  const msg = parsePushPayload(event.data);
+  event.waitUntil(
+    self.registration.showNotification(msg.title, {
+      body: msg.body,
+      icon: "/icon-192.png",
+      badge: "/icon-192.png",
+      tag: msg.tag,
+      data: { url: msg.url },
+    })
+  );
+});
+
+// Same-origin only: the target is rebuilt from a validated path, never
+// taken as a full URL from the payload (no open redirect).
+function notificationTarget(data) {
+  const path = data && typeof data.url === "string" && ALERT_PATH_RE.test(data.url) ? data.url : "/";
+  return new URL(path, self.location.origin).href;
+}
+self.notificationTarget = notificationTarget;
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target = notificationTarget(event.notification.data);
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((windows) => {
+      for (const client of windows) {
+        if (new URL(client.url).origin === self.location.origin && "focus" in client) {
+          // navigate() only works on windows this worker controls; fall
+          // back to a new window rather than doing nothing.
+          return client
+            .navigate(target)
+            .then((c) => (c && typeof c.focus === "function" ? c : client).focus())
+            .catch(() => self.clients.openWindow(target));
+        }
+      }
+      return self.clients.openWindow(target);
+    })
+  );
+});
+
 self.addEventListener("fetch", (event) => {
   const { request } = event;
 

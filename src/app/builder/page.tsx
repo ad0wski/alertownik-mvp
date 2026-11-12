@@ -18,6 +18,7 @@ import {
   type AdminAlert,
 } from "@/lib/getAdminSupabaseAlerts";
 import { normalizeAlertSeverity } from "@/lib/normalizeAlert";
+import { notifyPushAfterManualPublish } from "@/lib/push/pushAdminClient";
 import { markCandidateConverted } from "@/lib/supabaseCandidateWrites";
 import { getPrePublishWarnings, confirmPrePublish } from "@/lib/alertQuality";
 import {
@@ -317,6 +318,8 @@ export default function BuilderPage() {
   const [supabaseAlertsError, setSupabaseAlertsError] = useState<string | null>(null);
   const [supabaseLoadedMsg, setSupabaseLoadedMsg] = useState(false);
   const [statusActionSlug, setStatusActionSlug] = useState<string | null>(null);
+  // LR-8A — one-line result of the push side effect after a manual publish.
+  const [pushNotice, setPushNotice] = useState<string | null>(null);
   const [statusActionMsg, setStatusActionMsg] = useState<{
     type: "success" | "error";
     text: string;
@@ -675,6 +678,11 @@ export default function BuilderPage() {
 
     if (result.ok) {
       setStatusActionMsg({ type: "success", text: successMsg });
+      if (action === "publish") {
+        // Side effect only — the publish above already succeeded.
+        setPushNotice(null);
+        void notifyPushAfterManualPublish(slug).then(setPushNotice);
+      }
       setTimeout(() => setStatusActionMsg(null), 4000);
       await refreshSupabaseAlerts();
     } else {
@@ -775,6 +783,9 @@ export default function BuilderPage() {
       setLastSavedAlert({ slug, title: form.title, category: form.category });
       setSupabaseSavedSlug(slug);
       setSupabaseSuccess("published");
+      // LR-8A — push is a side effect of the publish that just succeeded.
+      setPushNotice(null);
+      void notifyPushAfterManualPublish(slug).then(setPushNotice);
       if (pendingCandidateId) {
         // v2 statuses: the manual publish click is the ONLY path that may
         // set a candidate to `published` (see supabaseCandidateWrites.ts).
@@ -1404,6 +1415,11 @@ export default function BuilderPage() {
               >
                 Otwórz alert → /alerts/{supabaseSavedSlug}
               </a>
+              {pushNotice && (
+                <p className="text-xs text-slate-600 dark:text-slate-300" data-testid="push-notice">
+                  {pushNotice}
+                </p>
+              )}
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 Sprawdź publiczny widok wylogowany/incognito i na telefonie —
                 upewnij się, że alert nie wygląda jak placeholder.
@@ -1650,6 +1666,11 @@ export default function BuilderPage() {
           </div>
         )}
 
+        {pushNotice && supabaseSuccess !== "published" && (
+          <p className="text-xs text-slate-600 dark:text-slate-300 mb-2" data-testid="push-notice-list">
+            {pushNotice}
+          </p>
+        )}
         {statusActionMsg && (
           <div
             className={`rounded-xl px-4 py-3 mb-4 ${

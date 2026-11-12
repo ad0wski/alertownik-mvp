@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { PushNotificationsCard } from "@/components/PushNotificationsCard";
 
 export const metadata = {
   title: "Ustawienia — Alertownik",
@@ -35,6 +36,11 @@ export default function UstawieniaPage() {
         </p>
         <ThemeToggle />
       </section>
+
+      {/* LR-8A — hidden until push is switched on. */}
+      <div className="mt-4">
+        <PushNotificationsCard />
+      </div>
     </main>
   );
 }

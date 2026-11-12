@@ -27,5 +27,13 @@ export default defineConfig({
     url: "http://localhost:3000",
     reuseExistingServer: true,
     timeout: 120_000,
+    // LR-8A — shows the push opt-in UI in tests. Test-only PUBLIC key (its
+    // private half was discarded at generation); the server-side kill
+    // switch PUSH_NOTIFICATIONS_ENABLED stays unset, and tests intercept
+    // /api/push/* so nothing is ever stored or sent.
+    env: {
+      NEXT_PUBLIC_PUSH_NOTIFICATIONS_ENABLED: "true",
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: "BKeBnR7_lmMxgaGAJgDTJt4eXn9kuz6Cuco39GoOK0IpwSkDAmfzyjwx8ZHWgPGxn7KbTwZcVKfAguGXsycJqk0",
+    },
   },
 });

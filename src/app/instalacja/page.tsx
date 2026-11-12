@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { InstallAppButton } from "@/components/InstallAppButton";
-import { buildTesterFeedbackMailto } from "@/lib/feedbackMailto";
+import { buildFeedbackMailto } from "@/lib/feedbackMailto";
 
 export const metadata = {
   title: "Instalacja — Alertownik",
@@ -8,16 +8,14 @@ export const metadata = {
     "Jak dodać Alertownik do ekranu głównego telefonu lub zainstalować jako aplikację na komputerze.",
 };
 
-// Sprint 189 — Blok A+D "tester rescue". Krótkie sprawdzenie (checklista)
-// i przycisk opinii dodane bezpośrednio na tej stronie, zamiast osobnej
-// /testuj — to ta sama strona, którą Adam już wysyła nowym testerom, więc
-// dopisanie "co sprawdzić" + "wyślij opinię" tutaj skraca drogę testera o
-// jeden krok/klik względem prowadzenia go przez dwie osobne strony.
-const CHECKLIST_ITEMS = [
-  "Czy strona główna pokazuje aktualny alert albo jasną informację, że teraz nic pilnego się nie dzieje?",
-  "Czy działa zmiana okolicy (przycisk „Zmień\" przy nazwie okolicy)?",
-  "Czy strona jest czytelna i wygodna na Twoim telefonie?",
-  "Czy rozumiesz, skąd pochodzą te alerty?",
+// LR-8A — public copy. The tester checklist and "send tester feedback"
+// block (Sprint 189) are gone: this page must stay true for any visitor,
+// before and after a store release, so it makes no claim either way about
+// app stores and describes only what works today in the browser.
+const AFTER_INSTALL_ITEMS = [
+  "Ustaw swoją miejscowość: Alerty → „Ustaw moją okolicę\".",
+  "Każdy alert ma link do oficjalnego komunikatu — możesz sprawdzić źródło.",
+  "W zakładce Odpady zobaczysz najbliższe terminy odbioru (na razie dla Komorowa).",
 ];
 
 const sectionClass = "bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 sm:p-5";
@@ -36,17 +34,13 @@ export default function InstalacjaPage() {
       </Link>
 
       <div className="mb-6">
-        <span className="inline-flex items-center rounded-full bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 text-xs font-semibold px-2.5 py-1 mb-2">
-          Test wczesnej wersji — 5 minut
-        </span>
         <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight mb-2">
           Zainstaluj Alertownik
         </h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-          Dodaj go do ekranu głównego telefonu (bez pobierania czegokolwiek
-          ze sklepu — Alertownik nie jest jeszcze publicznie dostępny w
-          Google Play ani App Store), sprawdź kilka rzeczy poniżej i odeślij
-          krótką opinię — jedno lub dwa zdania w zupełności wystarczą.
+          Alertownik działa w przeglądarce. Możesz dodać go do ekranu
+          głównego telefonu albo zainstalować na komputerze — otworzy się
+          wtedy jak osobna aplikacja, bez zakładania konta.
         </p>
         <details className="mt-2">
           <summary className="text-xs text-slate-500 dark:text-slate-400 cursor-pointer select-none hover:text-slate-600 dark:hover:text-slate-300">
@@ -88,6 +82,11 @@ export default function InstalacjaPage() {
             <li>Wybierz „Do ekranu początkowego" i zatwierdź.</li>
             <li>Uruchom Alertownik z ikony na ekranie głównym.</li>
           </ol>
+          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mt-2">
+            Na iPhonie i iPadzie powiadomienia (jeśli je włączysz) działają
+            tylko w Alertowniku dodanym do ekranu początkowego, w systemie
+            iOS 16.4 lub nowszym.
+          </p>
         </section>
 
         <section className={sectionClass}>
@@ -105,25 +104,25 @@ export default function InstalacjaPage() {
         </section>
 
         <section className={sectionClass}>
-          <h2 className={h2Class}>Co sprawdzić (5 minut)</h2>
+          <h2 className={h2Class}>Po instalacji</h2>
           <ol className={listClass}>
-            {CHECKLIST_ITEMS.map((item) => (
+            {AFTER_INSTALL_ITEMS.map((item) => (
               <li key={item}>{item}</li>
             ))}
           </ol>
         </section>
 
         <section className={sectionClass}>
-          <h2 className={h2Class}>Wyślij opinię</h2>
+          <h2 className={h2Class}>Coś nie działa?</h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-3">
-            Jedno lub dwa zdania w zupełności wystarczą — każda opinia się
-            liczy.
+            Napisz do nas — pytania, błędy i pomysły pomagają ulepszać
+            Alertownik.
           </p>
           <a
-            href={buildTesterFeedbackMailto()}
+            href={buildFeedbackMailto()}
             className="inline-flex items-center justify-center min-h-[44px] rounded-xl bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-400 text-white text-sm font-medium px-4 py-2.5 transition-colors"
           >
-            Wyślij opinię
+            Napisz do nas
           </a>
         </section>
 

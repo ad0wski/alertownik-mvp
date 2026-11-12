@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AlertCard } from "@/components/AlertCard";
 import { BetaStatusCard } from "@/components/BetaStatusCard";
 import { NextCollectionCard } from "@/components/NextCollectionCard";
+import { PushNotificationsCard } from "@/components/PushNotificationsCard";
 import { getSupabaseAlerts } from "@/lib/getSupabaseAlerts";
 import { getAlertTimeStatus } from "@/lib/getAlertTimeStatus";
 import { loadPreferences } from "@/lib/userPreferences";
@@ -127,6 +128,11 @@ export function TodayView() {
           Zobacz wszystkie alerty →
         </Link>
       )}
+
+      {/* LR-8A — locality push opt-in; renders nothing unless push is
+          switched on (NEXT_PUBLIC_PUSH_NOTIFICATIONS_ENABLED) and the
+          visitor has set an area. */}
+      <PushNotificationsCard onlyWithArea />
 
       {/* 5. Compact pilot notice — full detail stays on /about, nothing new claimed here */}
       <BetaStatusCard />
