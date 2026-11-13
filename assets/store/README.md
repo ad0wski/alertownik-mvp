@@ -23,13 +23,23 @@ store-listing slogan below. If you re-run `generate-mobile-assets.mjs`,
 re-apply the slogan afterwards (or update the script's tagline text, which
 is a deliberate content decision, not something to change casually).
 
-The screenshots were captured against the **live production app**
+The screenshots are captured from the **live production app**
 (`https://alertownik-mvp.vercel.app`) with Playwright (already a
 devDependency — no new packages installed), at exact pixel output via
-`deviceScaleFactor`, on 2026-08-04. They are not stored generation scripts
-in this repo (one-off capture, run from a temp file) — to refresh them,
-recreate a small Playwright script that navigates to each public route at
-the viewport/scale combos below and re-run it, then replace the files here.
+`deviceScaleFactor`. Since FINAL-3 (Nov 2026) the capture is a stored,
+repeatable script that also refreshes the PWA manifest screenshots in
+`public/screenshots/`:
+
+```bash
+node scripts/capture-store-screenshots.mjs              # writes into this folder + public/screenshots
+node scripts/capture-store-screenshots.mjs --out /tmp/x --skip-guard   # layout preview only, outside the repo
+```
+
+It refuses to capture (exit 3) unless the live alert list shows at least one
+current or upcoming alert and none of the stale July items (ul. Działkowa,
+WKD timetable, DW 719) as current — store screenshots must show real,
+current content. The 2026-08-04 set was outdated (stale alerts shown as
+"Trwa", old heading) and is replaced by this script.
 
 Rules: no institution logos (WKD/PGE/gmina/Google), no claims of official
 affiliation, no store badges, no unreleased features (push notifications,
