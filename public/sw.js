@@ -52,6 +52,12 @@ self.addEventListener("message", (event) => {
   if (event.data === "SKIP_WAITING") {
     self.skipWaiting();
   }
+  // LR-8B.3 — capability check used by the push opt-in: only a worker that
+  // has the "push" listener below answers. Older versions stay silent, so
+  // the page knows it must activate a newer worker before subscribing.
+  if (event.data === "ALERTOWNIK_PUSH_PING" && event.ports && event.ports[0]) {
+    event.ports[0].postMessage("ALERTOWNIK_PUSH_READY");
+  }
 });
 
 // ── LR-8A — Web Push ───────────────────────────────────────────────────────

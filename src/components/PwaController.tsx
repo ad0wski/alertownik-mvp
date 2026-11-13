@@ -56,6 +56,17 @@ export function PwaController() {
       });
   }, []);
 
+  // LR-8B.3 — the push opt-in may activate the waiting worker itself (see
+  // pushClient.activateLatestWorker); hide the now-stale banner then.
+  useEffect(() => {
+    if (!waitingWorker) return;
+    const onChange = () => {
+      if (waitingWorker.state !== "installed") setWaitingWorker(null);
+    };
+    waitingWorker.addEventListener("statechange", onChange);
+    return () => waitingWorker.removeEventListener("statechange", onChange);
+  }, [waitingWorker]);
+
   if (!waitingWorker || dismissed) return null;
 
   return (

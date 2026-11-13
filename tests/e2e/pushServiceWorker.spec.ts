@@ -119,3 +119,28 @@ test.describe("LR-8A service worker push", () => {
     expect(w.opened).toEqual([`${ORIGIN}/alerts/a`]);
   });
 });
+
+// LR-8B.3 — the page activates a newer worker before subscribing when the
+// active one does not answer this ping (older sw.js versions never do).
+test.describe("LR-8B.3 service worker push capability ping", () => {
+  test("answers ALERTOWNIK_PUSH_PING on the given port; SKIP_WAITING still works; other messages ignored", () => {
+    const w = loadWorker();
+    const replies: unknown[] = [];
+    let skipped = 0;
+    (w.self as { skipWaiting: () => void }).skipWaiting = () => void skipped++;
+    const port = { postMessage: (m: unknown) => replies.push(m) };
+    w.handlers.message({ data: "ALERTOWNIK_PUSH_PING", ports: [port] });
+    expect(replies).toEqual(["ALERTOWNIK_PUSH_READY"]);
+    w.handlers.message({ data: "ALERTOWNIK_PUSH_PING", ports: [] }); // no port → no crash, no reply
+    w.handlers.message({ data: "SOMETHING_ELSE", ports: [port] });
+    expect(replies).toHaveLength(1);
+    w.handlers.message({ data: "SKIP_WAITING" });
+    expect(skipped).toBe(1);
+  });
+
+  test("the pre-LR-8A worker (fixture) has no push listener and never answers the ping", () => {
+    const old = readFileSync(join(__dirname, "..", "push-lab", "fixtures", "sw-pre-lr8a.js"), "utf-8");
+    expect(old).not.toContain('addEventListener("push"');
+    expect(old).not.toContain("ALERTOWNIK_PUSH_PING");
+  });
+});

@@ -37,7 +37,24 @@ async function installPushFakes(page: Page, opts: FakeOptions = {}) {
         return current;
       },
     };
-    const reg = { pushManager };
+    // A current, push-capable active worker (answers the LR-8B.3 capability ping).
+    const active = {
+      state: "activated",
+      postMessage: (msg: unknown, ports?: MessagePort[]) => {
+        if (msg === "ALERTOWNIK_PUSH_PING" && ports && ports[0]) ports[0].postMessage("ALERTOWNIK_PUSH_READY");
+      },
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    };
+    const reg = {
+      pushManager,
+      active,
+      waiting: null,
+      installing: null,
+      update: async () => undefined,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    };
     w.Notification = {
       get permission() {
         return permission;

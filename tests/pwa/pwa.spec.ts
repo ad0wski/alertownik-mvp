@@ -257,14 +257,14 @@ test.describe("Install UX (M6)", () => {
     await expect(page).toHaveURL(/\/instalacja$/);
   });
 
-  // Sprint 186A — Store Readiness audit. The app is not in any store yet;
-  // /instalacja must keep saying so plainly rather than letting a future
-  // reader assume otherwise once store work actually starts.
-  test("honestly states the app is not yet in Google Play or the App Store", async ({ page }) => {
+  // Sprint 186A — Store Readiness audit, updated by LR-8A: /instalacja is a
+  // public page that must stay true both before AND after the Google Play
+  // release, so it makes no store-availability claim either way (the old
+  // "nie ma jeszcze w Google Play" sentence was removed in LR-8A).
+  test("makes no store-availability claim either way (true before and after a store release)", async ({ page }) => {
     await page.goto("/instalacja");
-    await expect(
-      page.getByText(/Alertownika nie ma jeszcze w Google Play ani App Store/)
-    ).toBeVisible();
+    const text = await page.locator("main").innerText();
+    expect(text).not.toMatch(/Google Play|App Store/);
   });
 
   test("manifest.categories is a hint only — no store-availability claim in its values", async ({
@@ -294,30 +294,32 @@ test.describe("Install UX (M6)", () => {
     await expect(backLink).toBeFocused();
   });
 
-  // Sprint 189 — Blok A+D tester rescue. A tester following a link Adam
-  // sends must see, without scrolling past a wall of text, that this is a
-  // short test and how to reply — checked directly rather than assumed.
-  test("states this is an early-version test up front", async ({ page }) => {
+  // Sprint 189 tester checks, replaced in LR-8A (public launch copy): no
+  // tester-only language, a short "Po instalacji" list, and a one-click
+  // mailto for problems ("Coś nie działa? → Napisz do nas").
+  test("has no tester-only language (public page)", async ({ page }) => {
     await page.goto("/instalacja");
-    await expect(page.getByText(/Test wczesnej wersji/)).toBeVisible();
+    const text = await page.locator("main").innerText();
+    for (const banned of ["Test wczesnej wersji", "tester", "Co sprawdzić (5 minut)", "Wyślij opinię"]) {
+      expect(text, banned).not.toContain(banned);
+    }
   });
 
-  test("shows a short (max 4 item) checklist of what to check", async ({ page }) => {
+  test("shows a short 'Po instalacji' list", async ({ page }) => {
     await page.goto("/instalacja");
-    await expect(page.getByRole("heading", { name: "Co sprawdzić (5 minut)" })).toBeVisible();
-    const section = page.locator("section", { has: page.getByRole("heading", { name: "Co sprawdzić (5 minut)" }) });
-    const count = await section.locator("li").count();
+    const heading = page.getByRole("heading", { name: "Po instalacji" });
+    await expect(heading).toBeVisible();
+    const count = await page.locator("section", { has: heading }).locator("li").count();
     expect(count).toBeGreaterThan(0);
     expect(count).toBeLessThanOrEqual(4);
   });
 
-  test("has a one-click feedback mailto link asking for one or two sentences", async ({ page }) => {
+  test("has a one-click 'Napisz do nas' mailto to the project contact", async ({ page }) => {
     await page.goto("/instalacja");
-    const link = page.getByRole("link", { name: "Wyślij opinię" });
+    await expect(page.getByRole("heading", { name: "Coś nie działa?" })).toBeVisible();
+    const link = page.getByRole("link", { name: "Napisz do nas" });
     await expect(link).toBeVisible();
-    const href = await link.getAttribute("href");
-    expect(href).toContain("mailto:alertownik.kontakt@gmail.com");
-    expect(href).toContain(encodeURIComponent("Alertownik — opinia testera"));
+    expect(await link.getAttribute("href")).toMatch(/^mailto:alertownik\.kontakt@gmail\.com\?/);
   });
 });
 

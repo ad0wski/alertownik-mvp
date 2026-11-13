@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PILOT_LOCALITIES } from "@/lib/officialSourceChecklist";
 import { loadPreferences } from "@/lib/userPreferences";
-import { disablePush, enablePush, readPushState, type PushUiState } from "@/lib/push/pushClient";
+import { disablePush, enablePush, ensureLatestWorkerForPush, readPushState, type PushUiState } from "@/lib/push/pushClient";
 
 // LR-8A — opt-in for locality push notifications. Never asks for the
 // browser permission on its own: the prompt appears only after the user
@@ -26,7 +26,12 @@ export function PushNotificationsCard({ onlyWithArea = false }: { onlyWithArea?:
   useEffect(() => {
     setLocality(localityFromArea());
     setHasArea(loadPreferences().locationKeywords.trim().length > 0);
-    readPushState().then(setState).catch(() => setState({ kind: "unsupported" }));
+    // LR-8B.3 — a returning subscriber gets the newest (push-capable)
+    // service worker activated before the state is read; never subscribes.
+    ensureLatestWorkerForPush()
+      .then(readPushState)
+      .then(setState)
+      .catch(() => setState({ kind: "unsupported" }));
   }, []);
 
   if (state.kind === "hidden") return null;
