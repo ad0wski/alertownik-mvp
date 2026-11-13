@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { buildWebPushRequest, type PushHttpRequest, type VapidKeys } from "@/lib/push/webPushCrypto";
+import { buildWebPushRequest, type PushHttpRequest, type VapidKeys } from "@/lib/push/webPushRequest";
 import {
   buildPushPayload,
   evaluatePushEligibility,

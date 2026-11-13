@@ -13,13 +13,29 @@ import { sendAlertPush, type PushStore, type PushTransport, type SendSummary } f
 // SECURITY DEFINER function push_subscribe/push_unsubscribe (validates
 // again) → table. The anon role has NO direct grant on the table: it can
 // neither read, list nor modify subscriptions (see the LR-8A SQL file).
+// LR-8A.1: the functions also require a server-only gateway token, added
+// by pushRuntime.createGatewayRpc — so calling them directly with the
+// public anon key (bypassing this file) fails.
 
 export const MAX_BODY_BYTES = 4096;
 
 type Json = Record<string, unknown>;
 const json = (body: Json, status = 200) => NextResponse.json(body, { status, headers: { "Cache-Control": "no-store" } });
 
-export type RpcCall = (fn: "push_subscribe" | "push_unsubscribe", args: Record<string, string>) => Promise<{ error: unknown }>;
+export type RpcError = { code?: string; message?: string } | null;
+export type RpcCall = (fn: "push_subscribe" | "push_unsubscribe", args: Record<string, string>) => Promise<{ error: RpcError }>;
+
+/** Maps a database refusal to an HTTP answer without leaking details. */
+function rpcFailure(error: NonNullable<RpcError>, fallback: string): NextResponse {
+  // 54000 = global throttle in push_subscribe (all instances together).
+  if (error.code === "54000") return json({ ok: false, error: "rate_limited" }, 429);
+  // 42501 = gateway token refused: a server misconfiguration, not the user.
+  if (error.code === "42501") {
+    console.error("[push] gateway token refused by the database");
+    return json({ ok: false, error: "push_unavailable" }, 503);
+  }
+  return json({ ok: false, error: fallback }, 500);
+}
 
 export interface PublicPushDeps {
   config: PushServerConfig;
@@ -79,7 +95,7 @@ export async function handleSubscribe(req: Request, deps: PublicPushDeps): Promi
     p_auth: v.value.auth,
     p_locality: v.value.locality,
   });
-  if (error) return json({ ok: false, error: "subscribe_failed" }, 500);
+  if (error) return rpcFailure(error, "subscribe_failed");
   return json({ ok: true, locality: v.value.locality });
 }
 
@@ -93,7 +109,7 @@ export async function handleUnsubscribe(req: Request, deps: PublicPushDeps): Pro
   const v = validateUnsubscribeBody(parsed.body);
   if (!v.ok) return json({ ok: false, error: v.error }, 400);
   const { error } = await deps.rpc!("push_unsubscribe", { p_endpoint: v.value.endpoint });
-  if (error) return json({ ok: false, error: "unsubscribe_failed" }, 500);
+  if (error) return rpcFailure(error, "unsubscribe_failed");
   return json({ ok: true });
 }
 

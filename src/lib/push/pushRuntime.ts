@@ -5,20 +5,36 @@ import type { PushAlertRow } from "@/lib/push/pushPolicy";
 
 // LR-8A — real dependencies for the push routes. SERVER-ONLY.
 
-/** Anon-key client used ONLY to call the two SECURITY DEFINER functions.
- *  The anon role has no grant on the push tables themselves. */
-export function anonPushRpc(): RpcCall | null {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-  if (!url || !key) return null;
-  const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+/** Minimum length of PUSH_GATEWAY_TOKEN (the SQL functions check ≥ 32 too). */
+export const MIN_GATEWAY_TOKEN_LENGTH = 32;
+
+/**
+ * LR-8A.1 — wraps the two SECURITY DEFINER functions so every call carries
+ * the server-only gateway token. Without the token the functions refuse
+ * (42501), so the public anon key alone cannot subscribe or unsubscribe;
+ * the token never reaches the browser (no NEXT_PUBLIC_ prefix, used only
+ * here, in route handlers).
+ */
+export function createGatewayRpc(client: SupabaseClient, token: string): RpcCall {
   return async (fn, args) => {
-    const { error } = await client.rpc(fn, args);
-    return { error };
+    const { error } = await client.rpc(fn, { p_token: token, ...args });
+    return { error: error ? { code: error.code, message: error.message } : null };
   };
 }
 
-/** 20 subscribe/unsubscribe calls per 10 minutes per IP and instance. */
+/** Anon-key client + gateway token, or null when either is not configured
+ *  (the route then answers 503 — fail closed). */
+export function gatewayPushRpc(env: Record<string, string | undefined> = process.env): RpcCall | null {
+  const url = env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  const token = env.PUSH_GATEWAY_TOKEN;
+  if (!url || !key || !token || token.length < MIN_GATEWAY_TOKEN_LENGTH) return null;
+  const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+  return createGatewayRpc(client, token);
+}
+
+/** 20 subscribe/unsubscribe calls per 10 minutes per IP and instance. The
+ *  SQL function adds a global ceiling of 60 new subscriptions per minute. */
 export const publicPushRateLimit = createRateLimiter(20, 10 * 60 * 1000);
 
 export async function loadAlertForPush(client: SupabaseClient, slug: string): Promise<PushAlertRow | null> {

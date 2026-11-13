@@ -1,7 +1,10 @@
 import { test, expect } from "@playwright/test";
 import { NextResponse } from "next/server";
 import { createECDH, generateKeyPairSync } from "node:crypto";
-import { base64UrlDecode, base64UrlEncode, type PushHttpRequest } from "@/lib/push/webPushCrypto";
+import type { PushHttpRequest } from "@/lib/push/webPushRequest";
+
+const base64UrlEncode = (b: Uint8Array) => Buffer.from(b).toString("base64url");
+const base64UrlDecode = (s: string) => Buffer.from(s, "base64url");
 import {
   buildPushPayload,
   evaluatePushEligibility,
@@ -12,6 +15,7 @@ import { sendAlertPush, type PushStore, type PushSubscriptionRecord, type Delive
 import { handleSubscribe, handleUnsubscribe, handleAlertPublished, createRateLimiter } from "@/lib/push/pushApi";
 import { getPushServerConfig } from "@/lib/push/pushConfig";
 import { describePushResult } from "@/lib/push/pushAdminClient";
+import { createGatewayRpc, gatewayPushRpc, MIN_GATEWAY_TOKEN_LENGTH } from "@/lib/push/pushRuntime";
 
 // LR-8A — send pipeline and API handlers, all against in-memory fakes.
 // Nothing here talks to Supabase or to a real push service.
@@ -406,5 +410,45 @@ test.describe("LR-8A admin alert-published API", () => {
     expect(describePushResult(true, { ok: true, matched: 0, sent: 0 })).toContain("brak subskrybentów");
     expect(describePushResult(true, { ok: true, matched: 2, sent: 0, alreadyDelivered: 2 })).toContain("nie wysłano ponownie");
     expect(describePushResult(true, { ok: true, matched: 3, sent: 2, gone: 1 })).toBe("Powiadomienia: wysłano 2 (wygasłe subskrypcje: 1).");
+  });
+});
+
+// LR-8A.1 — the database functions require a server-only gateway token, so
+// the public anon key alone cannot subscribe (closes the direct-RPC bypass of
+// this route's rate limit). Real database behaviour: tests/sql/.
+test.describe("LR-8A.1 gateway token", () => {
+  test("no RPC client at all without a long enough PUSH_GATEWAY_TOKEN (fail closed → 503)", async () => {
+    const base = { NEXT_PUBLIC_SUPABASE_URL: "https://x.supabase.co", NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "anon" };
+    expect(gatewayPushRpc(base)).toBeNull();
+    expect(gatewayPushRpc({ ...base, PUSH_GATEWAY_TOKEN: "short" })).toBeNull();
+    expect(gatewayPushRpc({ ...base, PUSH_GATEWAY_TOKEN: "t".repeat(MIN_GATEWAY_TOKEN_LENGTH) })).not.toBeNull();
+    const res = await handleSubscribe(post("/api/push/subscribe", validBody()), {
+      config: ENABLED,
+      rpc: gatewayPushRpc(base),
+      allowRequest: () => true,
+    });
+    expect(res.status).toBe(503);
+  });
+
+  test("every RPC call carries the token, added server-side, never from the request", async () => {
+    const seen: Array<{ fn: string; args: Record<string, unknown> }> = [];
+    const fakeClient = { rpc: async (fn: string, args: Record<string, unknown>) => (seen.push({ fn, args }), { error: null }) };
+    const rpc = createGatewayRpc(fakeClient as never, "g".repeat(40));
+    const body = { ...validBody(), p_token: "attacker-supplied" };
+    expect((await handleSubscribe(post("/api/push/subscribe", body), { config: ENABLED, rpc, allowRequest: () => true })).status).toBe(200);
+    expect(seen[0].args.p_token).toBe("g".repeat(40));
+    expect(Object.keys(seen[0].args).sort()).toEqual(["p_auth", "p_endpoint", "p_locality", "p_p256dh", "p_token"]);
+  });
+
+  test("database refusals map to honest HTTP answers without details", async () => {
+    const failing = (code: string) => async () => ({ error: { code, message: "detail that must not leak" } });
+    const deps = (code: string) => ({ config: ENABLED, rpc: failing(code), allowRequest: () => true });
+    const r429 = await handleSubscribe(post("/api/push/subscribe", validBody()), deps("54000"));
+    expect(r429.status).toBe(429);
+    const r503 = await handleSubscribe(post("/api/push/subscribe", validBody()), deps("42501"));
+    expect(r503.status).toBe(503);
+    const r500 = await handleSubscribe(post("/api/push/subscribe", validBody()), deps("22023"));
+    expect(r500.status).toBe(500);
+    expect(JSON.stringify(await r500.json())).not.toContain("detail");
   });
 });

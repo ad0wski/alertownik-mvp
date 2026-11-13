@@ -10,6 +10,10 @@
       "schedule": "30 5 * * *"
     },
     {
+      "path": "/api/cron/write-candidates",
+      "schedule": "0 15 * * *"
+    },
+    {
       "path": "/api/cron/auto-publish-trusted-source",
       "schedule": "45 5 * * *"
     }

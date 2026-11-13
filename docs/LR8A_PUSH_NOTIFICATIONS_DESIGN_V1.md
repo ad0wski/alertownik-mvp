@@ -1,22 +1,29 @@
-# LR-8A — Minimum Web Push: design, safety and activation plan (2026-11-12)
+# LR-8A — Minimum Web Push: design, safety and activation plan (2026-11-12, hardened LR-8A.1 2026-11-13)
 
-Status: code merged locally behind two OFF switches. **Nothing is active on
+Status: code committed locally behind two OFF switches. **Nothing is active on
 Production**: no table, no keys, no env, no cron change, no notification
 sent. Activation is LR-8B, following §8 below.
 
 ## 1. Mechanism
 
 Standard Web Push (Push API + VAPID, RFC 8030/8291/8292). No Firebase/FCM
-SDK and no new npm package: encryption (aes128gcm) and the VAPID ES256 JWT
-are implemented on `node:crypto` in `src/lib/push/webPushCrypto.ts` and
-reproduce the RFC 8291 Appendix A test vector byte for byte.
+SDK. LR-8A.1 replaced the LR-8A hand-written crypto with the `web-push`
+library (web-push-libs, pinned `3.6.7` — the long-stable line; `4.0.0` was
+only 7 days old at review time). `src/lib/push/webPushRequest.ts` calls only
+`generateRequestDetails` (encryption + VAPID header); the HTTP POST stays in
+`pushSender.ts` on `fetch` with `redirect: "manual"` and a 10 s timeout, after
+the endpoint allowlist check, so the library never opens a connection or
+reads proxy settings. Tests pin the library: RFC 8291 Appendix A vector on
+its encryption layer, decryption in an independent RFC 8291 receiver, and
+ES256 verification of the VAPID JWT.
 
 ```
 visitor sets area → clicks "Włącz powiadomienia dla <miejscowość>"
   → browser permission prompt (only now)
   → PushManager.subscribe(public VAPID key)
-  → POST /api/push/subscribe (same-origin, validated)
-  → Postgres push_subscribe() (SECURITY DEFINER, validates again)
+  → POST /api/push/subscribe (same-origin, validated, rate-limited)
+  → Postgres push_subscribe(gateway token, …) (SECURITY DEFINER: checks the
+    token's SHA-256, validates again, global throttle)
 
 admin publishes manually in Builder (publish succeeds first)
   → POST /api/admin/push/alert-published {slug}  (admin bearer token)
@@ -25,14 +32,14 @@ admin publishes manually in Builder (publish succeeds first)
   → 404/410 → subscription disabled; other errors → logged, alert untouched
 ```
 
-## 2. Platform support (checked against vendor documentation, not on devices)
+## 2. Platform support (vendor documentation + the real TWA project files; no device test yet)
 
 | Platform | Status |
 |---|---|
 | Android Chrome, website or installed PWA | Supported (FCM endpoint). |
 | Desktop Chrome / Edge / Firefox, Safari macOS 13+ | Supported. |
 | iPhone/iPad | Only iOS/iPadOS 16.4+ **and** the site added to the Home Screen; the prompt must come from a tap. The card explains this when Alertownik runs in a Safari tab. |
-| Android TWA (Google Play wrapper) | **Not verified.** Chrome delegates TWA notifications to the wrapper app; on Android 13+ the app needs `POST_NOTIFICATIONS`. Whether the existing AAB was built with notification delegation enabled is not visible from this repo. Verify on a device in LR-8B; until then promise push for the web/PWA only. |
+| Android TWA (Google Play wrapper) | **Compatible by configuration (LR-8A.1 audit of `~/Projects/AndroidTwaProject`, Bubblewrap, android-browser-helper 2.6.2, targetSdk 36):** `enableNotifications: true`; manifest has `POST_NOTIFICATIONS`, `DelegationService` (TrustedWebActivityService) with `SMALL_ICON` = `ic_notification_icon` (5 densities) and `NotificationPermissionRequestActivity`; the built `app-release-bundle.aab` (versionCode 4) contains all of them. Asset Links live on Production. Chrome delegates the page's `Notification.requestPermission()` to the app, which shows the Android 13+ runtime prompt. Still to do in LR-8B: one real-device test with the Play build. |
 
 Sources: Android 13 notification permission (developer.android.com),
 TrustedWebActivityService (developer.android.com), Apple/vendor notes on
@@ -57,9 +64,22 @@ new cron).
 ## 4. Security
 
 - anon: no table grant, no policy. Only EXECUTE on `push_subscribe` /
-  `push_unsubscribe`, which validate host allowlist, key format, locality
-  and a 20 000-row ceiling. `push_unsubscribe` returns nothing, so it
-  cannot reveal whether an endpoint exists.
+  `push_unsubscribe`, and both refuse (42501) unless the first argument is
+  the server-only gateway token (`PUSH_GATEWAY_TOKEN`, Vercel env, never
+  `NEXT_PUBLIC_`); only its SHA-256 is stored, in `push_gateway_secret`
+  (RLS on, no grant, no policy — not even admins can read it). So the
+  public anon key alone can no longer call the RPC and bypass the route's
+  rate limit (LR-8A residual risk, closed in LR-8A.1). Then the functions
+  validate host allowlist, key format, locality, a global throttle of 60 new
+  subscriptions per minute (across all server instances) and a 20 000-row
+  ceiling. `push_unsubscribe` returns nothing, so it cannot reveal whether
+  an endpoint exists.
+- Why a token and not the project's automation-identity pattern (a
+  dedicated Supabase Auth account): that pattern signs in with a password
+  per run, which is fine for a daily cron but would put a Supabase Auth
+  sign-in (and its rate limit) on every cold start of a public endpoint.
+  The token gives the same "only our server can call it" property with no
+  Auth dependency, no new account, and no service_role.
 - authenticated: RLS = `admin_profiles` membership (same rule as alerts).
   The send path runs as the admin who clicked "Opublikuj"; **no
   service_role and no new server credential are needed.**
@@ -68,9 +88,8 @@ new cron).
   `*.notify.windows.com` over https, no redirects, 10 s timeout; checked in
   SQL, at subscribe and again at send.
 - Abuse: same-origin check, 4 KB body cap, 20 requests / 10 min per IP
-  (best effort, per server instance), SQL ceiling. Residual: the RPC is
-  callable directly with the public anon key; the SQL validation and
-  ceiling are the real boundary there.
+  (per server instance), global 60 new subscriptions / minute and 20 000-row
+  ceiling in SQL. A direct RPC call without the token fails.
 - Spam: only manual publishes, three categories, one push per alert per
   subscription (unique key, claimed before sending), `Topic` header so an
   undelivered older push for the same alert is replaced.
@@ -85,12 +104,21 @@ new cron).
 | `VAPID_SUBJECT` | Production | `mailto:` contact address |
 | `PUSH_NOTIFICATIONS_ENABLED` | Production | `true` to activate; anything else = kill switch |
 | `NEXT_PUBLIC_PUSH_NOTIFICATIONS_ENABLED` | Production | `true` to show the opt-in card |
+| `PUSH_GATEWAY_TOKEN` | Production (Sensitive) | random ≥ 32 chars; its SHA-256 goes into `push_gateway_secret` |
 
 Key generation (locally, output straight into the Vercel prompt, not into
 the chat or a file):
 `node -e "const c=require('crypto');const k=c.generateKeyPairSync('ec',{namedCurve:'prime256v1'});const p=k.publicKey.export({format:'jwk'}),s=k.privateKey.export({format:'jwk'});console.log(Buffer.concat([Buffer.from([4]),Buffer.from(p.x,'base64url'),Buffer.from(p.y,'base64url')]).toString('base64url'));console.error(s.d)"`
 (stdout = public key, stderr = private key). Rotating the key pair
 invalidates every existing subscription.
+
+Gateway token (locally; stderr = token for Vercel, stdout = hash for SQL):
+`node -e "const c=require('crypto');const t=c.randomBytes(32).toString('base64url');console.error(t);console.log(c.createHash('sha256').update(t).digest('hex'))"`
+then in the SQL editor:
+`insert into public.push_gateway_secret (token_sha256) values (decode('<hex>', 'hex'));`
+Rotation: `update public.push_gateway_secret set token_sha256 = decode('<new hex>', 'hex');`
+together with the new Vercel value and a redeploy (subscribe fails with 503
+in between; nothing is lost).
 
 ## 6. Privacy — staged wording for /prywatnosc (apply in LR-8B, with activation)
 
@@ -118,7 +146,7 @@ Add to "Komu powierzamy dane":
 Also adjust "Preferencje lokalne": the locality chosen for notifications
 is, unlike "Moja okolica", stored on our server.
 
-## 7. Second writer run (no change made)
+## 7. Second writer run (prepared in vercel.json in LR-8A.1; goes live with the push in LR-8B)
 
 - Plan verified via the Vercel API: **Hobby**. Docs: up to 100 cron jobs
   per project, each at most once a day, fired somewhere within the
@@ -137,10 +165,25 @@ is, unlike "Moja okolica", stored on our server.
 - Recommended: `{"path": "/api/cron/write-candidates", "schedule": "0 15 * * *"}`
   → 16:00–16:59 in winter (CET), 17:00–17:59 in summer (CEST). Catches every
   notice of the office day and leaves the evening to publish the push.
-- Production change required: one `vercel.json` entry (explicit approval
-  needed). Two entries with the same path is expected to be accepted; the
-  build in LR-8B will confirm it. Fallback if refused: the same path with a
-  query string (`/api/cron/write-candidates?run=afternoon`).
+- LR-8A.1: the entry is in `vercel.json` (committed locally, not pushed).
+  Vercel's cron docs explicitly allow the same path in several entries with
+  different schedules. Same route, same CRON_SECRET auth, same
+  max-candidates cap from server env, same dedup (an afternoon re-read of a
+  notice inserted in the morning is skipped). Auto-publish stays at one
+  morning run, so afternoon candidates wait for manual review. It goes
+  live when the commit is pushed (LR-8B step 4).
+
+## 7a. SQL integration test (LR-8A.1)
+
+`bash tests/sql/run-push-sql-integration.sh` starts a throwaway
+`supabase/postgres:17.6.1.170` (same PostgreSQL 17.6 as Production) +
+PostgREST on 127.0.0.1, loads a Production-like baseline
+(`tests/sql/lr8a1_prod_like_baseline.sql`: auth.uid(), alerts, admin_profiles,
+automation_identities, default ACLs, policies — read from Production
+read-only), then applies the migration, the token hash, every access check
+(SQL roles and supabase-js through PostgREST), the real route handlers and
+send store, the throttle and ceiling, the retention SQL and the rollback
+(twice, plus re-apply). Containers are deleted at the end.
 
 ## 8. LR-8B activation checklist (do not run in LR-8A)
 
@@ -148,11 +191,13 @@ is, unlike "Moja okolica", stored on our server.
 2. Run `PROPOSED_LR8A_PUSH_SUBSCRIPTIONS_V1.sql` manually in the Supabase SQL
    editor; then every query in `VERIFY_LR8A_PUSH_SUBSCRIPTIONS_READ_ONLY_V1.sql`
    (anon: zero table grants; 6 admin policies; 2 SECURITY DEFINER functions).
-3. Generate the VAPID pair locally (§5); set the five env vars in Vercel,
-   with `PUSH_NOTIFICATIONS_ENABLED` and `NEXT_PUBLIC_PUSH_NOTIFICATIONS_ENABLED`
+3. Generate the VAPID pair and the gateway token locally (§5); insert the
+   token hash into `push_gateway_secret`; set `NEXT_PUBLIC_VAPID_PUBLIC_KEY`,
+   `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `PUSH_GATEWAY_TOKEN` in Vercel, with
+   `PUSH_NOTIFICATIONS_ENABLED` and `NEXT_PUBLIC_PUSH_NOTIFICATIONS_ENABLED`
    still unset.
-4. Apply the privacy wording (§6) and, if approved, the second cron (§7).
-   Push the LR-8A commit + these changes; wait for the deployment.
+4. Apply the privacy wording (§6). Push the LR-8A + LR-8A.1 commits (this
+   also activates the afternoon writer cron, §7); wait for the deployment.
 5. Set `PUSH_NOTIFICATIONS_ENABLED=true` and
    `NEXT_PUBLIC_PUSH_NOTIFICATIONS_ENABLED=true`; redeploy.
 6. Smoke test on the owner's own devices only: Android Chrome (website),
@@ -170,7 +215,7 @@ is, unlike "Moja okolica", stored on our server.
 ## 9. Known limits
 
 - At-most-once: a send that failed after its claim is not retried.
-- Rate limiting is per server instance (best effort).
+- The per-IP limit is per server instance; the SQL throttle is global.
 - One locality per device.
 - Localities outside the pilot list (Opacz, Pęcice) cannot be chosen yet.
-- TWA delivery unverified (§2).
+- TWA: configuration verified (§2); delivery on a real device not yet.

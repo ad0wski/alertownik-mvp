@@ -1,4 +1,10 @@
-import { base64UrlDecode, type VapidKeys } from "@/lib/push/webPushCrypto";
+import type { VapidKeys } from "@/lib/push/webPushRequest";
+
+const B64URL = /^[A-Za-z0-9_-]+$/;
+const decode = (value: string) => {
+  if (!B64URL.test(value)) throw new Error("not_base64url");
+  return Buffer.from(value, "base64url");
+};
 
 // LR-8A — server-side push configuration. SERVER-ONLY (reads the VAPID
 // private key). Two independent switches, both default OFF:
@@ -23,8 +29,8 @@ export function getPushServerConfig(env: Record<string, string | undefined> = pr
   const subject = env.VAPID_SUBJECT;
   if (!publicKey || !privateKey) return { enabled: false, reason: "missing_keys" };
   try {
-    const pub = base64UrlDecode(publicKey);
-    const priv = base64UrlDecode(privateKey);
+    const pub = decode(publicKey);
+    const priv = decode(privateKey);
     if (pub.length !== 65 || pub[0] !== 0x04 || priv.length !== 32) return { enabled: false, reason: "invalid_keys" };
   } catch {
     return { enabled: false, reason: "invalid_keys" };
