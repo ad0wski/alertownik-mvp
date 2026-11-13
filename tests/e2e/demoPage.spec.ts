@@ -30,9 +30,9 @@ test.describe("Demo page (/demo)", () => {
     await expect(page.getByText(/Powiat Pruszkowski/)).toBeVisible();
   });
 
-  test("states early-pilot / independence status honestly", async ({ page }) => {
+  test("states pilot / independence status honestly", async ({ page }) => {
     await page.goto("/demo");
-    await expect(page.getByText(/wczesny pilot/)).toBeVisible();
+    await expect(page.getByText(/lokalny pilotaż/)).toBeVisible();
     await expect(page.getByText(/niezależny projekt/)).toBeVisible();
     await expect(
       page.getByText(/Nie jest oficjalną aplikacją żadnej gminy, WKD, PGE ani innej instytucji/)

@@ -26,8 +26,8 @@ const cooperationTypes = [
     text: "Prowadzisz źródło lokalnych informacji (np. o transporcie, mediach, drogach)? Możemy linkować i cytować Twoje komunikaty jako źródło — zawsze z podaniem pochodzenia.",
   },
   {
-    title: "Partner beta / tester",
-    text: "Chcesz po prostu pomóc testować i współtworzyć serwis na wczesnym etapie — jako osoba lub organizacja. Każda para oczu się liczy.",
+    title: "Wsparcie pilotażu",
+    text: "Chcesz pomóc rozwijać serwis — zgłaszając błędy, brakujące źródła albo pomysły, jako osoba lub organizacja? Każda uwaga się liczy.",
   },
 ];
 
@@ -178,7 +178,7 @@ export default function PartnersPage() {
           </p>
           <a
             href={`mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent("Alertownik — współpraca")}`}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-800 transition-colors"
           >
             Napisz w sprawie współpracy →
           </a>
@@ -203,8 +203,8 @@ export default function PartnersPage() {
             ·{" "}
             <Link href="/zasady" className="underline hover:text-slate-600 dark:hover:text-slate-400">
               Zasady korzystania
-            </Link>{" "}
-            (szkice beta).
+            </Link>
+            .
           </p>
         </section>
       </div>

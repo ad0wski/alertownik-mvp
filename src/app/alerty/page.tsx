@@ -30,14 +30,14 @@ export default function AlertyPage() {
           </summary>
           <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 leading-snug sm:leading-relaxed mt-1.5">
             Sprawdź, co może dziś wpłynąć na Twój dzień w okolicy. Alertownik
-            zbiera w jednym miejscu komunikaty o transporcie, wodzie, prądzie,
-            drogach i odpadach w rejonie{" "}
+            zbiera w jednym miejscu oficjalne komunikaty — przede wszystkim o
+            wodzie, drogach i odpadach — w rejonie{" "}
             <span className="font-medium text-slate-600 dark:text-slate-400">gminy Michałowice i powiatu pruszkowskiego</span>.
           </p>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
-            Wczesny pilotaż —{" "}
-            <Link href="/about#chce-testowac" className="font-medium text-emerald-600 hover:text-emerald-800 underline">
-              zgłoś się jako tester
+            Lokalny pilotaż —{" "}
+            <Link href="/about#zasieg" className="font-medium text-blue-700 dark:text-blue-300 hover:text-blue-800 underline">
+              zobacz zasięg i jak działa
             </Link>
             .
           </p>

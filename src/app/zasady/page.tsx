@@ -3,7 +3,7 @@ import Link from "next/link";
 export const metadata = {
   title: "Zasady korzystania — Alertownik",
   description:
-    "Zasady korzystania i zastrzeżenia serwisu Alertownik (wersja beta) — czym serwis jest, a czym nie jest.",
+    "Zasady korzystania i zastrzeżenia serwisu Alertownik — czym serwis jest, a czym nie jest.",
 };
 
 const sectionClass = "bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 sm:p-5";
@@ -27,7 +27,7 @@ export default function TermsPage() {
           Zasady korzystania i zastrzeżenia
         </h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-          Wersja beta (szkic) — 3 lipca 2026. Prosto i uczciwie: czym
+          Obowiązuje od 13 listopada 2026. Prosto i uczciwie: czym
           Alertownik jest, a czym nie jest.
         </p>
       </div>
@@ -76,7 +76,7 @@ export default function TermsPage() {
           <h2 className={h2Class}>Czego nie gwarantujemy (uczciwie)</h2>
           <ul className={listClass}>
             <li>
-              <span className="font-medium">Kompletności</span> — w fazie beta
+              <span className="font-medium">Kompletności</span> — w pilotażu
               monitorujemy ograniczoną liczbę źródeł i okolic; ważny komunikat
               może się u nas nie pojawić.
             </li>
@@ -128,10 +128,9 @@ export default function TermsPage() {
         <section className="bg-amber-50 dark:bg-amber-500/15 rounded-2xl border border-amber-200 dark:border-amber-500/30 shadow-sm p-4 sm:p-5">
           <h2 className={h2Class}>Status tego dokumentu</h2>
           <p className={pClass}>
-            Szkic na czas pilotażu (beta) — zostanie zweryfikowany i
-            zaktualizowany przed szerszym startem publicznym lub publikacją w
-            sklepach z aplikacjami. Zasady mogą się zmieniać wraz z rozwojem
-            serwisu; aktualna wersja zawsze będzie dostępna na tej stronie.
+            Zasady mogą się zmieniać wraz z rozwojem serwisu. Aktualna wersja
+            jest zawsze dostępna na tej stronie, a data powyżej pokazuje, od
+            kiedy obowiązuje.
           </p>
         </section>
       </div>

@@ -267,9 +267,16 @@ test.describe("Public homepage", () => {
     await expect(page.getByRole("link", { name: /Napisz do nas/ })).toBeVisible();
   });
 
-  test("about page has a tester-interest CTA", async ({ page }) => {
+  // FINAL-2 — public v1: no tester recruiting; an honest coverage section instead.
+  test("about page has no tester recruiting and states the real coverage", async ({ page }) => {
     await page.goto("/about");
-    await expect(page.getByRole("link", { name: /Chcę testować/ })).toBeVisible();
+    const text = await page.locator("main").innerText();
+    for (const banned of ["Chcę testować", "Chcesz testować", "testerów", "Co testujemy", "objętych testem"]) {
+      expect(text, banned).not.toContain(banned);
+    }
+    await expect(page.getByRole("heading", { name: "Zasięg" })).toBeVisible();
+    expect(text).toContain("Komunikaty gminy są");
+    expect(text).toContain("dwa razy dziennie");
   });
 
   test("about page lists known limitations", async ({ page }) => {
@@ -277,9 +284,9 @@ test.describe("Public homepage", () => {
     await expect(page.getByText("Znane ograniczenia")).toBeVisible();
   });
 
-  test("about page has tester instructions", async ({ page }) => {
+  test("about page has short getting-started steps", async ({ page }) => {
     await page.goto("/about");
-    await expect(page.getByText("Co sprawdzić w 60 sekund")).toBeVisible();
+    await expect(page.getByText("Jak zacząć w minutę")).toBeVisible();
   });
 
   // Sprint 98 — one-click feedback reasons, so a tester doesn't have to
@@ -392,13 +399,13 @@ test.describe("Public homepage", () => {
     await expect(page).toHaveURL(/\/odpady$/);
   });
 
-  test("homepage links to the tester-interest section", async ({ page }) => {
+  test("alert list links to the coverage section of /about", async ({ page }) => {
     await page.goto("/alerty");
-    // Sprint 182A — this link now lives inside the collapsed "Jak działa
+    // Sprint 182A — this link lives inside the collapsed "Jak działa
     // Alertownik?" details element, opened here before clicking.
     await page.getByText("Jak działa Alertownik?").click();
-    await page.getByRole("link", { name: /zgłoś się jako tester/ }).click();
-    await expect(page).toHaveURL(/\/about#chce-testowac$/);
+    await page.getByRole("link", { name: /zobacz zasięg i jak działa/ }).click();
+    await expect(page).toHaveURL(/\/about#zasieg$/);
   });
 
   test("alert detail page offers a way to report a wrong/outdated alert", async ({ page }) => {
@@ -456,7 +463,7 @@ test.describe("Partner page (/partnerzy)", () => {
       "Wspólnota mieszkaniowa / zarządca",
       "Gmina / lokalna instytucja",
       "Partner źródłowy / danych",
-      "Partner beta / tester",
+      "Wsparcie pilotażu",
     ]) {
       await expect(page.getByText(label, { exact: true })).toBeVisible();
     }
@@ -556,11 +563,12 @@ test.describe("PWA install instructions (/about#instalacja)", () => {
     await expect(page.getByText("iPhone (Safari)")).toBeVisible();
   });
 
-  test("install section honestly states the app is not publicly available in any store yet", async ({ page }) => {
+  // FINAL-2 — like /instalacja (LR-8A): no store-availability claim either
+  // way, so the page stays true before and after a store release.
+  test("install section makes no store-availability claim", async ({ page }) => {
     await page.goto("/about");
-    await expect(
-      page.getByText(/nie jest jeszcze publicznie dostępny w\s+Google Play ani App Store/)
-    ).toBeVisible();
+    const text = await page.locator("section#instalacja").innerText();
+    expect(text).not.toMatch(/Google Play|App Store/);
   });
 
   test("footer install line links to the install instructions", async ({ page }) => {
@@ -1289,5 +1297,40 @@ test.describe("Accessibility — login error announcement", () => {
     await page.getByRole("button", { name: "Zaloguj" }).click();
     const errorMessage = page.locator('[role="alert"]');
     await expect(errorMessage).toBeVisible({ timeout: 15_000 });
+  });
+});
+
+// FINAL-2 — ended alerts never fill the first view: always a separate,
+// collapsed section, also when nothing is current; no opacity dimming
+// (it failed WCAG AA contrast).
+test.describe("FINAL-2 alert list: ended alerts collapsed", () => {
+  const ENDED = {
+    ...MOCK_ACTIVE_ALERT,
+    id: "mock-ended-alert-1",
+    slug: "mock-zakonczony-alert-e2e",
+    title: "Testowy alert e2e — zakończony",
+    starts_at: "2026-01-01T08:00:00+00:00",
+    ends_at: "2026-01-01T12:00:00+00:00",
+  };
+
+  test("only ended alerts: 'no current alerts' notice first, history collapsed until asked", async ({ page }) => {
+    await mockAlertsRows(page, [ENDED]);
+    await page.goto("/alerty");
+    await expect(page.getByText("Brak aktualnych alertów — to dobra wiadomość.")).toBeVisible();
+    const toggle = page.getByRole("button", { name: "Pokaż zakończone (1)" });
+    await expect(toggle).toBeVisible();
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await expect(page.getByText("Testowy alert e2e — zakończony")).toHaveCount(0);
+    await toggle.click();
+    await expect(page.getByText("Testowy alert e2e — zakończony")).toBeVisible();
+    await expect(page.locator(".opacity-60")).toHaveCount(0);
+  });
+
+  test("current alerts come first; ended ones stay behind the toggle", async ({ page }) => {
+    await mockAlertsRows(page, [ENDED, MOCK_ACTIVE_ALERT]);
+    await page.goto("/alerty");
+    await expect(page.getByText(MOCK_ACTIVE_ALERT.title)).toBeVisible();
+    await expect(page.getByText("Testowy alert e2e — zakończony")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Pokaż zakończone (1)" })).toBeVisible();
   });
 });

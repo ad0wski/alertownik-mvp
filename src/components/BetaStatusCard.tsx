@@ -26,7 +26,7 @@ export function BetaStatusCard() {
           Status pilotażu
         </span>
         <span className="text-slate-300" aria-hidden="true">•</span>
-        <span className="text-slate-500 dark:text-slate-400">Wczesna beta, alerty sprawdzane ręcznie</span>
+        <span className="text-slate-500 dark:text-slate-400">Lokalny pilotaż, alerty sprawdzane ręcznie</span>
         <Link href="/about" className="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline">
           Jak działa pilotaż →
         </Link>

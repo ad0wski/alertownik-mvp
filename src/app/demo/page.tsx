@@ -89,7 +89,7 @@ export default function DemoPage() {
         <section className={cardClass}>
           <h2 className={h2Class}>Uczciwie o statusie</h2>
           <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-1.5 list-disc list-inside leading-relaxed">
-            <li>To wczesny pilot — wciąż rozwijany i testowany.</li>
+            <li>To lokalny pilotaż — wciąż rozwijany.</li>
             <li>Alertownik to niezależny projekt.</li>
             <li>Nie jest oficjalną aplikacją żadnej gminy, WKD, PGE ani innej instytucji.</li>
             <li>Część źródeł jest sprawdzana automatycznie, ale każdy alert zatwierdza człowiek przed publikacją.</li>
@@ -101,7 +101,7 @@ export default function DemoPage() {
           <div className="flex flex-col sm:flex-row gap-3">
             <Link
               href="/"
-              className="min-h-[44px] inline-flex items-center justify-center rounded-lg bg-blue-600 dark:bg-blue-500 px-4 text-sm font-medium text-white hover:bg-blue-700 dark:hover:bg-blue-400 transition-colors"
+              className="min-h-[44px] inline-flex items-center justify-center rounded-lg bg-blue-600 dark:bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700 dark:hover:bg-blue-700 transition-colors"
             >
               Zobacz działającą aplikację →
             </Link>
@@ -113,7 +113,7 @@ export default function DemoPage() {
             </Link>
             <a
               href={buildPilotInterestMailto()}
-              className="min-h-[44px] inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 text-sm font-medium text-white hover:bg-emerald-700 transition-colors"
+              className="min-h-[44px] inline-flex items-center justify-center rounded-lg bg-emerald-700 px-4 text-sm font-medium text-white hover:bg-emerald-800 transition-colors"
             >
               Zgłoś zainteresowanie pilotażem →
             </a>
