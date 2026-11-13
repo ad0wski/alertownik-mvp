@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, type ChangeEvent } from "react";
+import { slugAfterTitleChange, slugFromTitle } from "@/lib/builderSlug";
 import Link from "next/link";
 import { AlertCard } from "@/components/AlertCard";
 import { AuthGate } from "@/components/AuthGate";
@@ -205,18 +206,7 @@ function savePublished(alerts: PublishedAlert[]): void {
 }
 
 function generateSlug(title: string): string {
-  const polishMap: Record<string, string> = {
-    ą: "a", ć: "c", ę: "e", ł: "l", ń: "n", ó: "o", ś: "s", ź: "z", ż: "z",
-    Ą: "a", Ć: "c", Ę: "e", Ł: "l", Ń: "n", Ó: "o", Ś: "s", Ź: "z", Ż: "z",
-  };
-  const slug = title
-    .split("")
-    .map((c) => polishMap[c] ?? c)
-    .join("")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  return slug || `alert-${Date.now()}`;
+  return slugFromTitle(title) || `alert-${Date.now()}`;
 }
 
 function formatItemDate(iso: string): string {
@@ -455,8 +445,11 @@ export default function BuilderPage() {
     const { name, value } = e.target;
     setForm((prev) => {
       const next = { ...prev, [name]: value };
-      if (name === "title" && !prev.slug) {
-        next.slug = generateSlug(value);
+      // LR-8B.3 — the slug follows the whole title while it is automatic
+      // (see src/lib/builderSlug.ts); a manual slug, or the slug of an
+      // alert being edited, is never overwritten.
+      if (name === "title") {
+        next.slug = slugAfterTitleChange(prev, value, Boolean(editingSupabaseAlert));
       }
       return next;
     });
