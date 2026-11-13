@@ -28,7 +28,7 @@ export default function PrivacyPage() {
           Polityka prywatności
         </h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-          Ostatnia aktualizacja: 21 sierpnia 2026.
+          Ostatnia aktualizacja: 13 listopada 2026.
         </p>
       </div>
 
@@ -74,7 +74,20 @@ export default function PrivacyPage() {
             <li>
               <span className="font-medium">Preferencje lokalne („Moja okolica")</span>{" "}
               — wybrana okolica i kategorie są zapisywane wyłącznie w Twojej
-              przeglądarce (localStorage) i nie są wysyłane na nasz serwer.
+              przeglądarce (localStorage) i nie są wysyłane na nasz serwer. Wyjątek: jeśli
+              włączysz powiadomienia, miejscowość wybrana dla powiadomień jest
+              zapisywana na naszym serwerze (patrz niżej).
+            </li>
+            <li>
+              <span className="font-medium">Powiadomienia (jeśli je włączysz)</span>{" "}
+              — gdy klikniesz „Włącz powiadomienia", przeglądarka tworzy adres
+              subskrypcji i klucze szyfrujące. Zapisujemy je razem z wybraną
+              miejscowością, żeby wysyłać powiadomienia o alertach dla tej
+              miejscowości (woda, drogi, odpady). Nie zapisujemy imienia,
+              e-maila, numeru telefonu ani dokładnej lokalizacji. Treść
+              powiadomienia zawiera tylko publiczne informacje z alertu i jest
+              szyfrowana. Powiadomienia wyłączysz przyciskiem „Wyłącz
+              powiadomienia" w Ustawieniach.
             </li>
             <li>
               <span className="font-medium">Wygląd (jasny / ciemny / systemowy)</span>{" "}
@@ -94,8 +107,7 @@ export default function PrivacyPage() {
             </li>
             <li>
               <span className="font-medium">Czego NIE zbieramy:</span>{" "}
-              dokładnych adresów zamieszkania, danych płatniczych, tokenów
-              powiadomień push (powiadomień jeszcze nie ma), zewnętrznych
+              dokładnych adresów zamieszkania, danych płatniczych, zewnętrznych
               narzędzi analitycznych ani cookies reklamowych.
             </li>
           </ul>
@@ -127,13 +139,14 @@ export default function PrivacyPage() {
             <li>działanie i utrzymanie serwisu,</li>
             <li>bezpieczeństwo i usuwanie błędów,</li>
             <li>odbieranie i analizowanie opinii,</li>
-            <li>ulepszanie pokrycia lokalnych alertów.</li>
+            <li>ulepszanie pokrycia lokalnych alertów,</li>
+            <li>wysyłanie powiadomień, jeśli je włączysz.</li>
           </ul>
           <p className={`${pClass} mt-2`}>
             Podstawą przetwarzania jest nasz prawnie uzasadniony interes
             (prowadzenie i zabezpieczenie serwisu pilotażowego), a w przypadku
-            wiadomości e-mail — Twoje dobrowolne działanie (wysłanie
-            wiadomości).
+            wiadomości e-mail i powiadomień — Twoje dobrowolne działanie
+            (wysłanie wiadomości, włączenie powiadomień).
           </p>
         </section>
 
@@ -156,11 +169,20 @@ export default function PrivacyPage() {
             </li>
             <li>
               <span className="font-medium">Supabase</span> — baza danych
-              (treść alertów; konta wyłącznie administratorów), region
+              (treść alertów; konta wyłącznie administratorów; subskrypcje
+              powiadomień, jeśli je włączysz), region
               Europa Zachodnia (Londyn, Wielka Brytania). Wielka Brytania
               nie należy do EOG, ale Komisja Europejska uznaje ją za kraj
               zapewniający odpowiedni poziom ochrony danych (decyzja o
               adekwatności).
+            </li>
+            <li>
+              <span className="font-medium">Dostawcy powiadomień przeglądarki</span>{" "}
+              — powiadomienie trafia do Ciebie przez usługę push Twojej
+              przeglądarki (np. Google dla Chrome i Androida, Apple dla
+              Safari, Mozilla dla Firefoksa, Microsoft dla Edge). Usługa
+              otrzymuje zaszyfrowaną treść i adres subskrypcji; nie zna Twojej
+              miejscowości.
             </li>
             <li>
               <span className="font-medium">Dostawca poczty</span> — jeśli
@@ -184,7 +206,10 @@ export default function PrivacyPage() {
             dostawcy hostingu i rotowane automatycznie. E-maile z opiniami
             przechowujemy tak długo, jak są potrzebne do ulepszania projektu, a
             następnie usuwamy. Preferencje lokalne możesz usunąć w każdej
-            chwili, czyszcząc dane przeglądarki.
+            chwili, czyszcząc dane przeglądarki. Wyłączenie powiadomień usuwa
+            subskrypcję z naszej bazy. Jeśli dostawca powiadomień zgłosi, że
+            subskrypcja wygasła, wyłączamy ją i usuwamy po 30 dniach. Historię
+            wysyłek powiadomień przechowujemy do 90 dni.
           </p>
         </section>
 

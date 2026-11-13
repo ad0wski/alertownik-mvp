@@ -577,11 +577,27 @@ test.describe("Legal pages (/prywatnosc, /zasady)", () => {
   test("privacy policy page shows heading, last-updated date and privacy contact", async ({ page }) => {
     await page.goto("/prywatnosc");
     await expect(page.locator("h1")).toContainText("Polityka prywatności");
-    await expect(page.getByText(/Ostatnia aktualizacja: 21 sierpnia 2026/)).toBeVisible();
+    await expect(page.getByText(/Ostatnia aktualizacja: 13 listopada 2026/)).toBeVisible();
     await expect(page.getByText(/Status tego dokumentu/)).toBeVisible();
     await expect(page.getByRole("link", { name: "alertownik.kontakt@gmail.com" }).first()).toBeVisible();
     // The honest "what we do NOT collect" line — a core trust claim.
     await expect(page.getByText(/Czego NIE zbieramy/)).toBeVisible();
+  });
+
+  // LR-8B.1 — push notification data, described only as far as the
+  // feature really goes (staged in LR-8A, docs/LR8A_PUSH_NOTIFICATIONS_DESIGN_V1.md §6).
+  test("privacy policy describes push notification data truthfully", async ({ page }) => {
+    await page.goto("/prywatnosc");
+    const text = await page.locator("main").innerText();
+    expect(text).toContain("Powiadomienia (jeśli je włączysz)");
+    expect(text).toMatch(/Nie zapisujemy imienia,\s+e-maila, numeru telefonu ani dokładnej lokalizacji/);
+    expect(text).toContain("Wyłącz powiadomienia");
+    expect(text).toContain("usuwamy po 30 dniach");
+    expect(text).toContain("do 90 dni");
+    expect(text).toContain("Dostawcy powiadomień przeglądarki");
+    // The old "no push yet" claim is gone; no overclaim of other channels.
+    expect(text).not.toContain("powiadomień jeszcze nie ma");
+    expect(text).not.toMatch(/SMS|newsletter/i);
   });
 
   test("privacy policy names the actual processors", async ({ page }) => {
