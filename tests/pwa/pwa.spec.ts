@@ -358,3 +358,45 @@ test.describe("Network status (M7)", () => {
     await context.setOffline(false);
   });
 });
+
+// FINAL-2 — production-build behaviour of /alerts/[slug]: real HTTP 404
+// for unknown/archived alerts, Polish 404 elsewhere, per-alert metadata.
+test.describe("FINAL-2 alert pages: 404 and metadata (production build)", () => {
+  test("an unknown alert slug returns HTTP 404 with the Polish message", async ({ page }) => {
+    const res = await page.goto("/alerts/nieistniejacy-alert-final-2");
+    expect(res?.status()).toBe(404);
+    await expect(page.getByRole("heading", { name: "Nie znaleziono alertu" })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Zobacz aktualne alerty/ })).toHaveAttribute("href", "/alerty");
+  });
+
+  test("any other unknown URL returns HTTP 404 in Polish, not the default English page", async ({ page }) => {
+    const res = await page.goto("/nie-ma-takiej-strony-final-2");
+    expect(res?.status()).toBe(404);
+    await expect(page.getByRole("heading", { name: "Nie znaleziono strony" })).toBeVisible();
+    expect(await page.locator("body").innerText()).not.toContain("could not be found");
+  });
+
+  test("a real published alert has its own title, description and Open Graph tags", async ({ page, request }) => {
+    await page.goto("/alerty");
+    const links = page.locator('a[href^="/alerts/"]');
+    await page.waitForTimeout(1500);
+    const showEnded = page.getByRole("button", { name: /Pokaż zakończone/ });
+    if ((await links.count()) === 0 && (await showEnded.count()) > 0) await showEnded.click();
+    test.skip((await links.count()) === 0, "no published alert in this database");
+    const href = (await links.first().getAttribute("href"))!;
+    const html = await (await request.get(href)).text();
+    const meta = (prop: string) => html.match(new RegExp(`<meta[^>]+(?:property|name)="${prop}"[^>]+content="([^"]*)"`))?.[1] ?? null;
+    const title = html.match(/<title>([^<]*)<\/title>/)?.[1] ?? "";
+    expect(title).toMatch(/ — Alertownik$/);
+    expect(title).not.toBe("Alertownik");
+    expect(meta("og:title")).toBeTruthy();
+    expect(meta("og:description")).toBeTruthy();
+    expect(meta("og:type")).toBe("article");
+    const ogUrl = meta("og:url") ?? "";
+    expect(ogUrl.startsWith("http")).toBe(true);
+    expect(ogUrl.endsWith(href)).toBe(true);
+    expect(meta("og:image") ?? "").toMatch(/^https?:\/\/.+\/icon-512\.png$/);
+    // Rendered on the server: the alert's own heading is already in the HTML.
+    expect(html).toMatch(new RegExp(`<h1[^>]*>${meta("og:title")!.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}</h1>`));
+  });
+});

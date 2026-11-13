@@ -52,11 +52,15 @@ const severityConfig: Record<
   },
 };
 
-export function AlertDetailClient({ slug }: { slug: string }) {
-  const [alert, setAlert] = useState<Alert | null>(null);
-  const [ready, setReady] = useState(false);
+export function AlertDetailClient({ slug, initialAlert = null }: { slug: string; initialAlert?: Alert | null }) {
+  // FINAL-2 — the server already read the alert (page.tsx); render it at
+  // once. The client lookup below runs only when the server could not
+  // (database unavailable / local development without Supabase).
+  const [alert, setAlert] = useState<Alert | null>(initialAlert);
+  const [ready, setReady] = useState(Boolean(initialAlert));
 
   useEffect(() => {
+    if (initialAlert) return;
     // 1. Supabase — primary source of truth for public alerts
     getSupabaseAlertBySlug(slug).then((found) => {
       if (found) {
@@ -89,7 +93,7 @@ export function AlertDetailClient({ slug }: { slug: string }) {
       setAlert(sample);
       setReady(true);
     });
-  }, [slug]);
+  }, [slug, initialAlert]);
 
   if (!ready) {
     return <main className="max-w-3xl mx-auto w-full px-4 sm:px-6 py-10" />;
@@ -107,7 +111,7 @@ export function AlertDetailClient({ slug }: { slug: string }) {
           </p>
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 dark:bg-blue-500 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 dark:hover:bg-blue-400 transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 dark:bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 dark:hover:bg-blue-700 transition-colors"
           >
             ← Wróć do listy alertów
           </Link>
@@ -146,7 +150,7 @@ export function AlertDetailClient({ slug }: { slug: string }) {
       >
         {/* Badges */}
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 rounded-full px-2.5 py-1">
+          <span className="text-xs font-medium text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 rounded-full px-2.5 py-1">
             {categoryLabels[alert.category]}
           </span>
           <span
@@ -243,7 +247,7 @@ export function AlertDetailClient({ slug }: { slug: string }) {
         {/* Source box — the single most important trust element on this page:
             where this information comes from, one tap from the official notice */}
         <div className="rounded-xl border border-blue-100 dark:border-blue-500/30 bg-blue-50/60 dark:bg-blue-500/10 px-4 py-3.5">
-          <p className="text-xs font-semibold uppercase tracking-wider text-blue-700/80 dark:text-blue-300 mb-1">
+          <p className="text-xs font-semibold uppercase tracking-wider text-blue-700 dark:text-blue-300 mb-1">
             Źródło komunikatu
           </p>
           {alert.sourceName ? (

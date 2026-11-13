@@ -136,7 +136,7 @@ export function NextCollectionCard({ areaKeywords }: Props) {
         </p>
       )}
       {!hasAreaPreference && (
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
+        <p className="text-xs text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
           Ustaw swoją okolicę powyżej, aby spersonalizować to przypomnienie.
         </p>
       )}

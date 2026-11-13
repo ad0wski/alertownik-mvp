@@ -10,7 +10,7 @@ export default function manifest(): MetadataRoute.Manifest {
     // the Android install/app-info dialog, a real first-impression surface
     // for someone deciding whether to install.
     description:
-      "Lokalne alerty w jednym miejscu — transport, woda, prąd, odpady i komunikaty gminne w rejonie gminy Michałowice i powiatu pruszkowskiego.",
+      "Lokalne alerty w jednym miejscu — woda, drogi, odpady i komunikaty gminne w rejonie gminy Michałowice, na podstawie oficjalnych komunikatów.",
     id: "/",
     start_url: "/",
     scope: "/",

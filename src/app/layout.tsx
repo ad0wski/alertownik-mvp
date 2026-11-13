@@ -41,10 +41,25 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+// FINAL-2 — absolute URLs for Open Graph/canonical. Always the public
+// production domain (also when the page is served from the admin alias).
+const SITE_URL = process.env.VERCEL_PROJECT_PRODUCTION_URL
+  ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+  : "http://localhost:3000";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: "Alertownik",
   description:
-    "Lokalne alerty w jednym miejscu — transport, woda, prąd, odpady i komunikaty gminne w rejonie gminy Michałowice i powiatu pruszkowskiego.",
+    "Lokalne alerty w jednym miejscu — woda, drogi, odpady i komunikaty gminne w rejonie gminy Michałowice, na podstawie oficjalnych komunikatów.",
+  openGraph: {
+    type: "website",
+    siteName: "Alertownik",
+    locale: "pl_PL",
+    title: "Alertownik",
+    description: "Lokalne alerty w jednym miejscu — woda, drogi, odpady i komunikaty gminne w rejonie gminy Michałowice.",
+    images: [{ url: "/icon-512.png", width: 512, height: 512, alt: "Alertownik" }],
+  },
   applicationName: "Alertownik",
   appleWebApp: {
     capable: true,

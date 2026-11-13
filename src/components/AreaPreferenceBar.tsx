@@ -67,7 +67,7 @@ export function AreaPreferenceBar({ value, onChange }: Props) {
         <div className="flex flex-wrap gap-2">
           <button
             onClick={handleSave}
-            className="rounded-lg bg-blue-600 dark:bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 dark:hover:bg-blue-400 transition-colors"
+            className="rounded-lg bg-blue-600 dark:bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 dark:hover:bg-blue-700 transition-colors"
           >
             Zapisz
           </button>
@@ -100,7 +100,7 @@ export function AreaPreferenceBar({ value, onChange }: Props) {
         </p>
         <button
           onClick={startEdit}
-          className="self-start rounded-lg bg-blue-600 dark:bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 dark:hover:bg-blue-400 transition-colors"
+          className="self-start rounded-lg bg-blue-600 dark:bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 dark:hover:bg-blue-700 transition-colors"
         >
           Wybierz okolicę
         </button>

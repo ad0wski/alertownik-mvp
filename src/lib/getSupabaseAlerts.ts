@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabaseClient";
 import type { Alert, AlertCategory } from "@/types/alert";
 
-const SELECT_FIELDS =
+export const SELECT_FIELDS =
   "id, slug, category, severity, title, place, starts_at, ends_at, change, action, source_name, source_url, source_id, published_at, updated_at";
 
 // The Supabase table stores "announcement" where the app uses "municipal"
@@ -12,7 +12,7 @@ function toAppCategory(dbCategory: string): AlertCategory {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapRow(row: any): Alert {
+export function mapRow(row: any): Alert {
   return {
     id: String(row.id),
     slug: row.slug,

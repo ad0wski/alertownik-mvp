@@ -280,7 +280,7 @@ export function AlertList() {
             onClick={() => handleSetMode("all")}
             className={`min-h-[44px] inline-flex items-center px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
               mode === "all"
-                ? "bg-blue-600 dark:bg-blue-500 text-white border-blue-600"
+                ? "bg-blue-600 dark:bg-blue-600 text-white border-blue-600"
                 : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-slate-400 hover:text-slate-900 dark:hover:text-white"
             }`}
           >
@@ -290,7 +290,7 @@ export function AlertList() {
             onClick={() => handleSetMode("my")}
             className={`min-h-[44px] inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
               mode === "my"
-                ? "bg-blue-600 dark:bg-blue-500 text-white border-blue-600"
+                ? "bg-blue-600 dark:bg-blue-600 text-white border-blue-600"
                 : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-slate-400 hover:text-slate-900 dark:hover:text-white"
             }`}
           >
@@ -321,7 +321,7 @@ export function AlertList() {
                   <button
                     onClick={() => setShowSettingsPanel((v) => !v)}
                     aria-expanded={showSettingsPanel}
-                    className="shrink-0 min-h-[44px] inline-flex items-center rounded-lg bg-blue-600 dark:bg-blue-500 px-3.5 text-sm font-medium text-white hover:bg-blue-700 dark:hover:bg-blue-400 transition-colors"
+                    className="shrink-0 min-h-[44px] inline-flex items-center rounded-lg bg-blue-600 dark:bg-blue-600 px-3.5 text-sm font-medium text-white hover:bg-blue-700 dark:hover:bg-blue-700 transition-colors"
                   >
                     Ustaw moją okolicę
                   </button>
@@ -498,7 +498,7 @@ export function AlertList() {
                     onClick={() => setSelected(filter.value)}
                     className={`px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors whitespace-nowrap ${
                       isActive
-                        ? "bg-blue-600 dark:bg-blue-500 text-white border-blue-600"
+                        ? "bg-blue-600 dark:bg-blue-600 text-white border-blue-600"
                         : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-slate-400 hover:text-slate-900 dark:hover:text-white"
                     }`}
                   >
@@ -588,7 +588,7 @@ export function AlertList() {
                     </p>
                     <button
                       onClick={() => setShowSettingsPanel(true)}
-                      className="mt-4 rounded-lg bg-blue-600 dark:bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 dark:hover:bg-blue-400 transition-colors"
+                      className="mt-4 rounded-lg bg-blue-600 dark:bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 dark:hover:bg-blue-700 transition-colors"
                     >
                       Wybierz obsługiwaną okolicę
                     </button>
@@ -719,8 +719,8 @@ export function AlertList() {
                 {showAllEndedNotice && (
                   <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 px-4 py-3">
                     <p className="text-sm text-slate-600 dark:text-slate-400">
-                      Brak aktualnych alertów — to dobra wiadomość. Poniżej widać
-                      zakończone alerty z ostatnich miesięcy.
+                      Brak aktualnych alertów — to dobra wiadomość. Zakończone
+                      alerty z ostatnich miesięcy znajdziesz niżej.
                     </p>
                   </div>
                 )}
@@ -730,13 +730,15 @@ export function AlertList() {
                   <AlertCard key={alert.id} alert={alert} />
                 ))}
 
-                {/* Ended alerts — de-emphasized and collapsed by default when
-                    current alerts exist; expanded automatically when they are
-                    the only thing matching (the notice above explains that) */}
+                {/* Ended alerts — always a separate, collapsed-by-default
+                    section (FINAL-2): even when nothing is current, history
+                    must not fill the first view; the notice above already
+                    says nothing is happening right now. No opacity dimming —
+                    it broke WCAG AA contrast; every card already carries its
+                    own "Zakończone" status. */}
                 {endedFiltered.length > 0 && (
                   <div className="flex flex-col gap-4">
-                    {liveFiltered.length > 0 && (
-                      <div className="flex flex-wrap items-center gap-2 pt-2">
+                    <div className="flex flex-wrap items-center gap-2 pt-2">
                         <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                           Zakończone
                         </span>
@@ -749,15 +751,10 @@ export function AlertList() {
                             ? "Ukryj zakończone"
                             : `Pokaż zakończone (${endedFiltered.length})`}
                         </button>
-                        <span className="text-xs text-slate-500 dark:text-slate-400">— pokazane pomocniczo</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">— historia</span>
                       </div>
-                    )}
-                    {(showEnded || liveFiltered.length === 0) &&
-                      endedFiltered.map((alert) => (
-                        <div key={alert.id} className="opacity-60">
-                          <AlertCard alert={alert} />
-                        </div>
-                      ))}
+                    {showEnded &&
+                      endedFiltered.map((alert) => <AlertCard key={alert.id} alert={alert} />)}
                   </div>
                 )}
               </section>

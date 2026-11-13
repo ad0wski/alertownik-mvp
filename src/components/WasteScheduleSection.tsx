@@ -136,7 +136,7 @@ export function WasteScheduleSection({ areaKeywords }: Props) {
             onClick={() => setShowMyArea(false)}
             className={`px-3.5 py-1.5 rounded-full text-xs font-medium border transition-colors ${
               !showMyArea
-                ? "bg-blue-600 dark:bg-blue-500 text-white border-blue-600"
+                ? "bg-blue-600 dark:bg-blue-600 text-white border-blue-600"
                 : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-slate-400"
             }`}
           >
@@ -146,7 +146,7 @@ export function WasteScheduleSection({ areaKeywords }: Props) {
             onClick={() => setShowMyArea(true)}
             className={`px-3.5 py-1.5 rounded-full text-xs font-medium border transition-colors ${
               showMyArea
-                ? "bg-blue-600 dark:bg-blue-500 text-white border-blue-600"
+                ? "bg-blue-600 dark:bg-blue-600 text-white border-blue-600"
                 : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-slate-400"
             }`}
           >

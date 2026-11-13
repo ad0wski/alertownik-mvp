@@ -101,7 +101,7 @@ export function PreferencesSection({ savedPrefs, onSave, onClear, onClose }: Pro
                 aria-pressed={active}
                 className={`px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors ${
                   active
-                    ? "bg-blue-600 dark:bg-blue-500 text-white border-blue-600"
+                    ? "bg-blue-600 dark:bg-blue-600 text-white border-blue-600"
                     : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-blue-300 hover:text-blue-700 dark:hover:text-blue-300"
                 }`}
               >
@@ -163,7 +163,7 @@ export function PreferencesSection({ savedPrefs, onSave, onClear, onClose }: Pro
                 aria-pressed={active}
                 className={`px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors ${
                   active
-                    ? "bg-blue-600 dark:bg-blue-500 text-white border-blue-600"
+                    ? "bg-blue-600 dark:bg-blue-600 text-white border-blue-600"
                     : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-blue-300 hover:text-blue-700 dark:hover:text-blue-300"
                 }`}
               >
@@ -181,7 +181,7 @@ export function PreferencesSection({ savedPrefs, onSave, onClear, onClose }: Pro
       <div className="flex flex-wrap items-center gap-3 pt-0.5">
         <button
           onClick={handleSave}
-          className="rounded-lg bg-blue-600 dark:bg-blue-500 px-4 py-2.5 sm:py-2 text-sm font-medium text-white hover:bg-blue-700 dark:hover:bg-blue-400 transition-colors"
+          className="rounded-lg bg-blue-600 dark:bg-blue-600 px-4 py-2.5 sm:py-2 text-sm font-medium text-white hover:bg-blue-700 dark:hover:bg-blue-700 transition-colors"
         >
           Zapisz preferencje
         </button>

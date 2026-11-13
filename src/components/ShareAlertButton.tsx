@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface Props {
   title: string;
@@ -19,6 +19,13 @@ type Status = "idle" | "shared" | "copied" | "error";
 // request itself.
 export function ShareAlertButton({ title, text }: Props) {
   const [status, setStatus] = useState<Status>("idle");
+  // FINAL-2 — the alert page is now server-rendered: decide the label only
+  // after mount, so server HTML ("Skopiuj link") and the first client render
+  // match (no hydration error); browsers with Web Share switch right after.
+  const [canNativeShare, setCanNativeShare] = useState(false);
+  useEffect(() => {
+    setCanNativeShare(typeof navigator !== "undefined" && typeof navigator.share === "function");
+  }, []);
 
   async function handleShare() {
     const url = window.location.href;
@@ -43,9 +50,6 @@ export function ShareAlertButton({ title, text }: Props) {
       setStatus("error");
     }
   }
-
-  const canNativeShare =
-    typeof navigator !== "undefined" && typeof navigator.share === "function";
 
   return (
     <div>
