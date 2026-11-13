@@ -75,6 +75,9 @@ test.describe("ended alert — source link caveat", () => {
   test("an ended alert's detail page warns that the publisher may have removed the notice", async ({ page }) => {
     await page.goto("/alerty");
     await expect(page.getByText(/Wszystkich alertów|Brak aktualnych alertów/).first()).toBeVisible({ timeout: 15_000 });
+    // FINAL-2: ended alerts live in a collapsed history section — open it first.
+    const showEnded = page.getByRole("button", { name: /Pokaż zakończone/ });
+    if (await showEnded.count()) await showEnded.click();
     const endedCard = page.locator("main article").filter({ hasText: "Zakończone" }).first();
     test.skip((await endedCard.count()) === 0, "no ended alert is published right now");
     await endedCard.getByRole("link", { name: /Otwórz alert/ }).click();

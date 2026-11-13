@@ -7,7 +7,7 @@ import { BetaStatusCard } from "@/components/BetaStatusCard";
 import { NextCollectionCard } from "@/components/NextCollectionCard";
 import { PushNotificationsCard } from "@/components/PushNotificationsCard";
 import { getSupabaseAlerts } from "@/lib/getSupabaseAlerts";
-import { getAlertTimeStatus } from "@/lib/getAlertTimeStatus";
+import { getAlertTimeStatus, isUpcomingSoon } from "@/lib/getAlertTimeStatus";
 import { loadPreferences } from "@/lib/userPreferences";
 import type { Alert } from "@/types/alert";
 
@@ -49,9 +49,18 @@ export function TodayView() {
     )[0];
   }, [activeAlerts]);
 
+  // FINAL-3 — planned disruptions (e.g. a water outage on Monday) are the
+  // main reason to check the app ahead of time, so the next 14 days of
+  // upcoming alerts are shown too: instead of the calm state when nothing is
+  // active, and after the other active alerts otherwise. Soonest first.
+  const upcomingAlerts = useMemo(
+    () => alerts.filter((a) => isUpcomingSoon(a.startsAt, a.endsAt)).sort((a, b) => a.startsAt.localeCompare(b.startsAt)),
+    [alerts]
+  );
+
   const summaryAlerts = useMemo(
-    () => activeAlerts.filter((a) => a.id !== mostImportant?.id).slice(0, 3),
-    [activeAlerts, mostImportant]
+    () => [...activeAlerts.filter((a) => a.id !== mostImportant?.id), ...(mostImportant ? upcomingAlerts : [])].slice(0, 3),
+    [activeAlerts, mostImportant, upcomingAlerts]
   );
 
   const areaLabel = areaKeywords.trim() || "Wszystkie okolice";
@@ -87,6 +96,15 @@ export function TodayView() {
         />
       ) : mostImportant ? (
         <AlertCard alert={mostImportant} />
+      ) : upcomingAlerts.length > 0 ? (
+        <div className="flex flex-col gap-3">
+          <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+            Teraz nic się nie dzieje. Zaplanowane w najbliższych dniach:
+          </p>
+          {upcomingAlerts.slice(0, 3).map((a) => (
+            <AlertCard key={a.id} alert={a} />
+          ))}
+        </div>
       ) : (
         <div className="text-center py-8 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
           <p className="text-base font-semibold text-slate-600 dark:text-slate-400">
@@ -113,7 +131,7 @@ export function TodayView() {
       {!loading && summaryAlerts.length > 0 && (
         <div className="flex flex-col gap-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-            Inne aktualne alerty
+            Inne aktualne i nadchodzące alerty
           </p>
           {summaryAlerts.map((a) => (
             <AlertCard key={a.id} alert={a} />

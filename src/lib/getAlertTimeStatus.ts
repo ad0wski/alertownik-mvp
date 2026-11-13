@@ -91,3 +91,13 @@ export function getAlertTimeStatus(
     return "unknown";
   }
 }
+
+/** FINAL-3 — upcoming alerts starting within this many days are shown on "Dzisiaj". */
+export const UPCOMING_ALERT_HORIZON_DAYS = 14;
+
+/** True when the alert has not started yet and starts within the horizon. */
+export function isUpcomingSoon(startsAt: string | undefined, endsAt?: string): boolean {
+  if (!startsAt || getAlertTimeStatus(startsAt, endsAt) !== "upcoming") return false;
+  const start = new Date(startsAt).getTime();
+  return Number.isFinite(start) && start <= Date.now() + UPCOMING_ALERT_HORIZON_DAYS * 24 * 60 * 60 * 1000;
+}

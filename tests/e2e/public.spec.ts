@@ -1334,3 +1334,38 @@ test.describe("FINAL-2 alert list: ended alerts collapsed", () => {
     await expect(page.getByRole("button", { name: "Pokaż zakończone (1)" })).toBeVisible();
   });
 });
+
+// FINAL-3 — "Dzisiaj" shows planned disruptions of the next 14 days when
+// nothing is active (a Monday water outage must be visible on Friday).
+test.describe("FINAL-3 Dzisiaj: upcoming alerts", () => {
+  const inDays = (d: number, h = 11) => {
+    const t = new Date(Date.now() + d * 86_400_000);
+    t.setUTCHours(h, 0, 0, 0);
+    return t.toISOString();
+  };
+  const SOON = { ...MOCK_ACTIVE_ALERT, id: "mock-upcoming-soon", slug: "mock-nadchodzacy-wkrotce", title: "Testowy alert e2e — za 3 dni", starts_at: inDays(3), ends_at: inDays(3, 15) };
+  const LATER = { ...MOCK_ACTIVE_ALERT, id: "mock-upcoming-later", slug: "mock-nadchodzacy-pozniej", title: "Testowy alert e2e — za 30 dni", starts_at: inDays(30), ends_at: inDays(30, 15) };
+
+  test("nothing active: shows the soon-upcoming alert instead of the calm state, not the far one", async ({ page }) => {
+    await mockAlertsRows(page, [LATER, SOON]);
+    await page.goto("/");
+    await expect(page.getByText("Teraz nic się nie dzieje. Zaplanowane w najbliższych dniach:")).toBeVisible();
+    await expect(page.getByText(SOON.title)).toBeVisible();
+    await expect(page.getByText(LATER.title)).toHaveCount(0);
+    await expect(page.getByText("Brak pilnych alertów w tej chwili.")).toHaveCount(0);
+  });
+
+  test("an active alert stays first; the upcoming one is listed under 'Inne aktualne i nadchodzące alerty'", async ({ page }) => {
+    await mockAlertsRows(page, [SOON, MOCK_ACTIVE_ALERT]);
+    await page.goto("/");
+    await expect(page.locator("main article").first()).toContainText(MOCK_ACTIVE_ALERT.title);
+    await expect(page.getByText("Inne aktualne i nadchodzące alerty")).toBeVisible();
+    await expect(page.getByText(SOON.title)).toBeVisible();
+  });
+
+  test("nothing active or upcoming: the calm state is unchanged", async ({ page }) => {
+    await mockAlertsRows(page, [LATER]);
+    await page.goto("/");
+    await expect(page.getByText("Brak pilnych alertów w tej chwili.")).toBeVisible();
+  });
+});
