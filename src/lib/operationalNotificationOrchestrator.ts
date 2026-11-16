@@ -16,8 +16,9 @@ import type { NotificationAdapter, NotificationSendResult } from "@/lib/notifica
 import { AUTOMATION_ERROR_CATEGORY_LABELS_PL } from "@/lib/automationErrorClassifier";
 import type { RunOutcome } from "@/lib/scheduledWriterRunSafety";
 import {
-  buildRunLevelNotificationCategoryInput,
+  buildRunLevelNotificationInput,
   buildRunLevelSafeSummary,
+  type RunSourceFailure,
 } from "@/lib/scheduledWriterNotificationInput";
 import { OPERATIONAL_NOTIFICATION_EVENT_TYPE_LABELS_PL } from "@/lib/operationalNotificationAdminView";
 
@@ -204,6 +205,11 @@ export interface OrchestrateRunNotificationInput {
   scheduledWriterRunId: string | null;
   sourcesFailed: number;
   sourcesChecked: number;
+  /** POST-RELEASE-3B — the failed sources' own outcome/diagnostic, so a
+   *  failed run is classified by its real cause (e.g. a source timeout →
+   *  transient_fetch/warning) instead of always unexpected_error/critical.
+   *  Omitted or empty → the previous run-outcome-only classification. */
+  sourceFailures?: readonly RunSourceFailure[];
 }
 
 /** The full evaluate → fingerprint → safe content → claim → adapter →
@@ -219,10 +225,13 @@ export async function orchestrateRunLevelNotification(
   adapter: NotificationAdapter,
   input: OrchestrateRunNotificationInput
 ): Promise<void> {
-  const { category, isAbandonedRun } = buildRunLevelNotificationCategoryInput(input.runOutcome);
+  const { category, isAbandonedRun, attemptsMade } = buildRunLevelNotificationInput(
+    input.runOutcome,
+    input.sourceFailures
+  );
   const eligibility = evaluateNotificationEligibility({
     category,
-    attemptsMade: 0,
+    attemptsMade,
     isAbandonedRun,
     lastAlertSentAt: null,
   });

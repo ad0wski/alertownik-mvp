@@ -30,6 +30,7 @@ import { isOperationalNotificationRuntimeEnabled } from "@/lib/operationalNotifi
 import { createSupabaseOperationalNotificationLedger } from "@/lib/operationalNotificationLedgerSupabase";
 import { createConfiguredNotificationAdapter } from "@/lib/notificationAdapterFactory";
 import { attemptOperationalNotification } from "@/lib/operationalNotificationOrchestrator";
+import type { RunSourceFailure } from "@/lib/scheduledWriterNotificationInput";
 
 // Sprint 166G-1 — off by default (OPERATIONAL_NOTIFICATION_RUNTIME_ENABLED
 // is not set in any environment as part of this sprint). See
@@ -46,6 +47,7 @@ async function runOperationalNotification(input: {
   scheduledWriterRunId: string | null;
   sourcesFailed: number;
   sourcesChecked: number;
+  sourceFailures?: readonly RunSourceFailure[];
   writerClient: SupabaseClient;
 }): Promise<void> {
   if (!isOperationalNotificationRuntimeEnabled(process.env.OPERATIONAL_NOTIFICATION_RUNTIME_ENABLED)) {
@@ -60,6 +62,7 @@ async function runOperationalNotification(input: {
       scheduledWriterRunId: input.scheduledWriterRunId,
       sourcesFailed: input.sourcesFailed,
       sourcesChecked: input.sourcesChecked,
+      sourceFailures: input.sourceFailures,
     });
   } catch {
     // Never propagate — see file header comment above.
@@ -331,6 +334,11 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       scheduledWriterRunId: runId,
       sourcesFailed,
       sourcesChecked,
+      // Closed-vocabulary outcome/diagnostic codes only — never a URL,
+      // message, or exception detail.
+      sourceFailures: results
+        .filter((r) => failedOutcomes.has(r.outcome))
+        .map((r) => ({ outcome: r.outcome, diagnostic: "diagnostic" in r ? r.diagnostic : undefined })),
       writerClient: signIn.client,
     });
 
