@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { buildPilotInterestMailto } from "@/lib/feedbackMailto";
+import { INDEPENDENCE_DISCLAIMER } from "@/lib/officialInformationSources";
 
 // Sprint 185A — a short, public, no-login demo page meant to be sent as a
 // single link to a gmina/powiat/partner deciding whether to look further.
@@ -12,7 +13,7 @@ import { buildPilotInterestMailto } from "@/lib/feedbackMailto";
 export const metadata = {
   title: "Zobacz Alertownik — demo dla gmin i partnerów",
   description:
-    "Krótkie demo Alertownika: lokalne komunikaty dla rejonu gminy Michałowice i powiatu pruszkowskiego w jednym miejscu, zebrane z oficjalnych źródeł.",
+    "Krótkie demo Alertownika: lokalne komunikaty dla rejonu gminy Michałowice w jednym miejscu, zawsze z linkiem do oficjalnego źródła.",
 };
 
 const cardClass =
@@ -21,13 +22,13 @@ const h2Class = "text-base font-semibold text-slate-900 dark:text-white mb-2";
 const pClass = "text-sm text-slate-600 dark:text-slate-400 leading-relaxed";
 
 const whatItDoes = [
-  "Zbiera komunikaty z oficjalnych źródeł — stron gmin, miasta, powiatu, WKD, PGE Dystrybucja.",
+  "Zbiera komunikaty z oficjalnych źródeł — przede wszystkim Gminy Michałowice, pojedynczo także Miasta Pruszków i WKD.",
   "Porządkuje je według miejsca i kategorii.",
   "Pokazuje mieszkańcowi tylko najważniejsze, aktualne informacje.",
   "Ogranicza duplikaty i nieaktualne wpisy.",
 ];
 
-const scopeCategories = ["drogi", "komunikaty gminne", "transport (WKD)", "przerwy w dostawie wody"];
+const scopeCategories = ["przerwy w dostawie wody", "drogi", "odpady", "komunikaty gminne"];
 
 export default function DemoPage() {
   return (
@@ -37,9 +38,10 @@ export default function DemoPage() {
           Lokalne komunikaty w jednym miejscu
         </h1>
         <p className="text-base text-slate-600 dark:text-slate-400 leading-relaxed">
-          Ważne informacje dla mieszkańców — o drogach, wodzie, prądzie, odpadach
-          i komunikacji — są dziś rozproszone po wielu stronach urzędów i
-          przewoźników. Alertownik zbiera je w jednym miejscu.
+          Ważne informacje dla mieszkańców — o przerwach w dostawie wody,
+          drogach, odpadach i sprawach gminnych — są dziś rozproszone po
+          stronach urzędów. Alertownik zbiera je w jednym miejscu, zawsze z
+          linkiem do oficjalnego komunikatu.
         </p>
       </div>
 
@@ -81,8 +83,13 @@ export default function DemoPage() {
         <section className={cardClass}>
           <h2 className={h2Class}>Obecny zakres pilotażu</h2>
           <p className={pClass}>
-            Gmina Michałowice, Miasto Pruszków i Powiat Pruszkowski — komunikaty{" "}
-            {scopeCategories.join(", ")}, w zakresie, który już działa.
+            Rejon gminy Michałowice — {scopeCategories.join(", ")}. Pojedyncze
+            alerty o Pruszkowie i kolei WKD dodaje ręcznie administrator. Pełna
+            lista oficjalnych źródeł z linkami:{" "}
+            <Link href="/about#zrodla" className="font-medium text-blue-700 dark:text-blue-300 underline">
+              Oficjalne źródła informacji
+            </Link>
+            .
           </p>
         </section>
 
@@ -90,8 +97,7 @@ export default function DemoPage() {
           <h2 className={h2Class}>Uczciwie o statusie</h2>
           <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-1.5 list-disc list-inside leading-relaxed">
             <li>To lokalny pilotaż — wciąż rozwijany.</li>
-            <li>Alertownik to niezależny projekt.</li>
-            <li>Nie jest oficjalną aplikacją żadnej gminy, WKD, PGE ani innej instytucji.</li>
+            <li>{INDEPENDENCE_DISCLAIMER}</li>
             <li>Część źródeł jest sprawdzana automatycznie, ale każdy alert zatwierdza człowiek przed publikacją.</li>
           </ul>
         </section>

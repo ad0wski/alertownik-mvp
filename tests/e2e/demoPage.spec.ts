@@ -23,19 +23,30 @@ test.describe("Demo page (/demo)", () => {
     await expect(pilotLink).toHaveAttribute("href", /^mailto:alertownik\.kontakt@gmail\.com/);
   });
 
-  test("names the actual pilot scope (Michałowice, Pruszków, Powiat Pruszkowski)", async ({ page }) => {
+  // Google Play policy fix (18.11.2026): same scope and sources as /about
+  // and the store listing — no county, no PGE/power, link to the source list.
+  test("names the actual pilot scope and links to the official source list", async ({ page }) => {
     await page.goto("/demo");
-    await expect(page.getByText(/Gmina Michałowice/)).toBeVisible();
-    await expect(page.getByText(/Miasto Pruszków/)).toBeVisible();
-    await expect(page.getByText(/Powiat Pruszkowski/)).toBeVisible();
+    const main = page.locator("main");
+    await expect(main).toContainText("Rejon gminy Michałowice");
+    await expect(main).toContainText("Miasta Pruszków i WKD");
+    await expect(main.getByRole("link", { name: "Oficjalne źródła informacji" })).toHaveAttribute("href", "/about#zrodla");
+  });
+
+  test("makes no claims about sources or features outside the current scope", async ({ page }) => {
+    await page.goto("/demo");
+    const main = page.locator("main");
+    await expect(main).not.toContainText("PGE");
+    await expect(main).not.toContainText(/powiat/i);
+    await expect(main).not.toContainText(/prąd/i);
   });
 
   test("states pilot / independence status honestly", async ({ page }) => {
     await page.goto("/demo");
     await expect(page.getByText(/lokalny pilotaż/)).toBeVisible();
-    await expect(page.getByText(/niezależny projekt/)).toBeVisible();
+    await expect(page.getByText(/niezależnym projektem/)).toBeVisible();
     await expect(
-      page.getByText(/Nie jest oficjalną aplikacją żadnej gminy, WKD, PGE ani innej instytucji/)
+      page.getByText(/Nie jest oficjalną aplikacją ani przedstawicielem Gminy Michałowice/)
     ).toBeVisible();
   });
 

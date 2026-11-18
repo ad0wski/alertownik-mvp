@@ -120,14 +120,9 @@ export default function AboutPage() {
             serwisu na podstawie komunikatów z oficjalnych źródeł wymienionych
             wyżej. Do przygotowania
             treści admin może korzystać z pomocy AI, ale AI nigdy nie publikuje
-            alertów samodzielnie — każdy alert trafia na stronę główną tylko po
-            akceptacji administratora. Jedyny zaplanowany wyjątek: dla jednego,
-            ściśle zdefiniowanego zaufanego źródła (komunikaty gminy Michałowice)
-            przygotowany jest wąski, w pełni deterministyczny (bez udziału AI)
-            mechanizm automatycznej publikacji, uruchamiany tylko po jednoczesnym
-            spełnieniu wszystkich zdefiniowanych warunków bezpieczeństwa —
-            obecnie wyłączony, a po włączeniu odwracalny natychmiast, jednym
-            przełącznikiem.
+            alertów samodzielnie. Komunikaty gminy są sprawdzane automatycznie,
+            ale każdy alert trafia na stronę główną dopiero wtedy, gdy
+            administrator sprawdzi źródło i go zatwierdzi.
           </p>
         </section>
 
@@ -149,8 +144,8 @@ export default function AboutPage() {
           </h2>
           <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-1.5 list-disc list-inside leading-relaxed">
             <li>To lokalny pilotaż — funkcje i wygląd mogą się jeszcze zmieniać.</li>
-            <li>Automatycznie sprawdzamy na razie jedno źródło — komunikaty gminy Michałowice. Inne okolice i kategorie (np. transport, prąd) mają mniej alertów albo nie mają ich wcale.</li>
-            <li>Alerty są przygotowywane i zatwierdzane ręcznie przez admina, nie w czasie rzeczywistym — poza jednym wąskim, w pełni odwracalnym wyjątkiem automatycznej publikacji dla jednego zaufanego źródła.</li>
+            <li>Automatycznie sprawdzamy na razie jedno źródło — komunikaty gminy Michałowice. Pozostałe źródła z listy wyżej mają tylko pojedyncze alerty.</li>
+            <li>Alerty są zatwierdzane ręcznie przez admina po sprawdzeniu źródła, nie w czasie rzeczywistym.</li>
             <li>AI pomaga przygotować szkic alertu, ale nigdy nie publikuje go samodzielnie.</li>
             <li>Oficjalne źródła pozostają ostatecznym potwierdzeniem informacji — Alertownik je tylko ułatwia znaleźć.</li>
           </ul>
