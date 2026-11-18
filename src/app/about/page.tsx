@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { buildFeedbackMailto } from "@/lib/feedbackMailto";
 import { FeedbackQuickOptions } from "@/components/FeedbackQuickOptions";
+import { INDEPENDENCE_DISCLAIMER, OFFICIAL_INFORMATION_SOURCES } from "@/lib/officialInformationSources";
 
 export const metadata = {
   title: "O projekcie — Alertownik",
@@ -31,6 +32,54 @@ export default function AboutPage() {
       </div>
 
       <div className="flex flex-col gap-4">
+        <section
+          id="niezaleznosc"
+          aria-labelledby="niezaleznosc-heading"
+          className="rounded-2xl border border-amber-300 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-500/10 p-4 sm:p-5"
+        >
+          <h2 id="niezaleznosc-heading" className="text-base font-semibold text-slate-900 dark:text-white mb-2">
+            Niezależny projekt
+          </h2>
+          <p className="text-sm sm:text-base text-slate-800 dark:text-slate-100 leading-relaxed">
+            {INDEPENDENCE_DISCLAIMER}
+          </p>
+        </section>
+
+        <section
+          id="zrodla"
+          aria-labelledby="zrodla-heading"
+          className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 sm:p-5"
+        >
+          <h2 id="zrodla-heading" className="text-base font-semibold text-slate-900 dark:text-white mb-2">
+            Oficjalne źródła informacji
+          </h2>
+          <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-3">
+            Wszystkie informacje w Alertowniku pochodzą z poniższych oficjalnych
+            stron. Przy każdym alercie znajdziesz też bezpośredni link do
+            konkretnego komunikatu („Zobacz źródło”).
+          </p>
+          <ul className="flex flex-col gap-3">
+            {OFFICIAL_INFORMATION_SOURCES.map((source) => (
+              <li key={source.url} className="border border-slate-100 dark:border-slate-800 rounded-xl p-3">
+                <p className="text-sm font-medium text-slate-900 dark:text-white">
+                  {source.institution} — {source.label}
+                </p>
+                <a
+                  href={source.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-700 dark:text-blue-300 underline break-all hover:text-blue-800"
+                >
+                  {source.url}
+                </a>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mt-1">
+                  {source.usedFor}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </section>
+
         <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 sm:p-5">
           <h2 className="text-base font-semibold text-slate-900 dark:text-white mb-2">
             Lokalny pilotaż
@@ -50,8 +99,9 @@ export default function AboutPage() {
             Alertownik obejmuje rejon gminy Michałowice (m.in. Komorów, Nowa
             Wieś, Granica, Michałowice, Reguły, Opacz). Komunikaty gminy są
             sprawdzane automatycznie dwa razy dziennie, a każdy alert publikuje
-            administrator po sprawdzeniu źródła. Informacje z Pruszkowa i o
-            kolei WKD pojawiają się rzadziej — są dodawane ręcznie.
+            administrator po sprawdzeniu źródła. Pojedyncze alerty o Pruszkowie
+            i kolei WKD dodaje ręcznie administrator — na podstawie oficjalnych
+            źródeł wymienionych wyżej.
           </p>
           <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
             Najbardziej pomocny feedback to: zgłoszenie alertu, który jest
@@ -67,8 +117,8 @@ export default function AboutPage() {
           </h2>
           <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
             Każdy alert jest przygotowywany i publikowany przez administratora
-            serwisu na podstawie komunikatów z lokalnych źródeł (np. stron
-            urzędów, operatorów transportu czy dostawców usług). Do przygotowania
+            serwisu na podstawie komunikatów z oficjalnych źródeł wymienionych
+            wyżej. Do przygotowania
             treści admin może korzystać z pomocy AI, ale AI nigdy nie publikuje
             alertów samodzielnie — każdy alert trafia na stronę główną tylko po
             akceptacji administratora. Jedyny zaplanowany wyjątek: dla jednego,

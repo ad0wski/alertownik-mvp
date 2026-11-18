@@ -520,9 +520,13 @@ test.describe("Partner page (/partnerzy)", () => {
 
   test("names Gmina Michałowice, Miasto Pruszków, and Powiat Pruszkowski as target audiences", async ({ page }) => {
     await page.goto("/partnerzy");
-    await expect(page.getByText(/Gminy Michałowice/)).toBeVisible();
-    await expect(page.getByText(/Miasta Pruszków/)).toBeVisible();
-    await expect(page.getByText(/Powiatu Pruszkowskiego/)).toBeVisible();
+    // Scoped to the cooperation paragraph: since the Play policy fix the
+    // sourcing section also names Gmina Michałowice / Miasto Pruszków.
+    const audience = page.getByText(/Dotyczy w szczególności/);
+    await expect(audience).toBeVisible();
+    await expect(audience).toContainText("Gminy Michałowice");
+    await expect(audience).toContainText("Miasta Pruszków");
+    await expect(audience).toContainText("Powiatu Pruszkowskiego");
   });
 
   test("demo scenario is a short numbered list, with a link to the live app", async ({ page }) => {

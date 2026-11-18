@@ -19,7 +19,51 @@ Ground truth used:
 
 > Komunikaty gminy Michałowice w jednym miejscu: woda, drogi, odpady.
 
-## Full description
+## Full description (pl-PL) — POLICY-FIX, 18.11.2026
+
+Rejected by Google Play on 18.11.2026: Misleading Claims — "Missing Source
+Link for Government Information" (in-app "O projekcie" + this description).
+The text between the `<!-- PLAY-FULL-DESCRIPTION -->` markers is the exact
+text to paste into Play Console → Main store listing → pl-PL → Full
+description. It puts the independence disclaimer first and lists every
+official source with its literal URL. The source list must match
+`src/lib/officialInformationSources.ts` (enforced by
+`tests/e2e/playPolicyGovernmentSources.spec.ts`).
+
+<!-- PLAY-FULL-DESCRIPTION:START -->
+WAŻNE: Alertownik jest niezależnym projektem. Nie jest oficjalną aplikacją ani przedstawicielem Gminy Michałowice, Miasta Pruszków, Warszawskiej Kolei Dojazdowej ani żadnej innej instytucji publicznej i nie działa w ich imieniu.
+
+Oficjalne źródła informacji:
+• Gmina Michałowice — komunikaty: https://www.michalowice.pl/dzieje-sie/aktualnosci/komunikaty
+• Gmina Michałowice — harmonogram odbioru odpadów: https://www.michalowice.pl/ochrona-srodowiska/odbior-odpadow/nowy-harmonogram-odbioru-odpadow-komunalnych
+• Miasto Pruszków — aktualności dla mieszkańców: https://www.pruszkow.pl/mieszkancy/aktualnosci-mieszkaniec/
+• Warszawska Kolej Dojazdowa (WKD) — aktualności: https://wkd.com.pl/aktualnosci
+Przy każdym alercie w aplikacji znajdziesz bezpośredni link do konkretnego oficjalnego komunikatu. Pełna lista źródeł jest też w aplikacji: Więcej → O projekcie.
+
+Alertownik zbiera w jednym miejscu lokalne komunikaty z rejonu gminy Michałowice — przede wszystkim o przerwach w dostawie wody, utrudnieniach na drogach i odbiorze odpadów.
+
+Zamiast co chwilę sprawdzać stronę gminy, zobaczysz krótką kartę: co się dzieje, gdzie, kiedy i co warto zrobić — zawsze z linkiem do oficjalnego komunikatu.
+
+Co znajdziesz w aplikacji:
+— Aktualne i nadchodzące alerty na górze listy; zakończone w osobnej, zwiniętej sekcji.
+— Przy każdym alercie: miejsce, godziny, opis zmiany i link do źródła.
+— „Moja okolica" — wybierz miejscowość, a aplikacja pokaże najpierw to, co dotyczy Ciebie. To ustawienie zostaje wyłącznie na Twoim urządzeniu.
+— Harmonogram odbioru odpadów dla obsługiwanych miejscowości.
+— Udostępnianie alertu jednym przyciskiem.
+— Tryb jasny i ciemny.
+
+Jak to działa:
+Komunikaty Gminy Michałowice są sprawdzane automatycznie dwa razy dziennie, a każdy alert publikuje ręcznie administrator po sprawdzeniu źródła. Pojedyncze alerty o Pruszkowie i kolei WKD dodaje ręcznie administrator na podstawie źródeł wymienionych wyżej. To nie jest serwis czasu rzeczywistego ani system alarmowy — w nagłych sytuacjach dzwoń pod 112.
+
+Zasięg:
+Alertownik to lokalny pilotaż dla rejonu gminy Michałowice (m.in. Komorów, Nowa Wieś, Granica, Michałowice, Reguły, Opacz).
+
+Bez konta, bez reklam, bez płatności.
+
+W razie wątpliwości zawsze rozstrzyga oficjalny komunikat źródłowy. Błąd albo brakujący komunikat? Napisz do nas z poziomu aplikacji.
+<!-- PLAY-FULL-DESCRIPTION:END -->
+
+### Previous full description (13.11.2026) — REJECTED, do not reuse
 
 Alertownik zbiera w jednym miejscu lokalne komunikaty z rejonu gminy
 Michałowice — przede wszystkim o przerwach w dostawie wody, utrudnieniach na

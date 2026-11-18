@@ -49,8 +49,10 @@ export default function PartnersPage() {
         <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 leading-relaxed">
           Alertownik to lokalny serwis alertów dla rejonu gminy Michałowice i
           powiatu pruszkowskiego —
-          zbiera w jednym miejscu informacje o utrudnieniach w transporcie,
-          dostawach wody i prądu, drogach, odpadach i komunikatach gminnych.
+          zbiera w jednym miejscu informacje z oficjalnych komunikatów, przede
+          wszystkim o przerwach w dostawie wody, drogach, odpadach i sprawach
+          gminnych. Alertownik jest niezależnym projektem — nie jest oficjalną
+          aplikacją ani przedstawicielem żadnej instytucji publicznej.
         </p>
         <p className="text-sm mt-2">
           <a href="#kontakt" className="font-medium text-emerald-700 dark:text-emerald-300 hover:text-emerald-900 hover:underline">
@@ -65,8 +67,9 @@ export default function PartnersPage() {
             Gdzie jesteśmy dzisiaj
           </h2>
           <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-            Serwis jest we wczesnej fazie pilotażu na obszarze linii WKD,
-            Komorowa i Pruszkowa. Każdy alert jest przygotowywany na podstawie
+            Serwis jest we wczesnej fazie pilotażu w rejonie gminy Michałowice
+            (m.in. Komorów, Nowa Wieś, Granica, Reguły, Opacz). Każdy alert jest
+            przygotowywany na podstawie
             oficjalnych źródeł i ręcznie zatwierdzany przez administratora —
             stawiamy na rzetelność, nie na ilość. Nie obiecujemy więcej, niż
             robimy: to pilotaż, który rozwijamy krok po kroku.
@@ -91,8 +94,13 @@ export default function PartnersPage() {
             Jak zbieramy dane i dbamy o jakość
           </h2>
           <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-            Każdy alert pochodzi z konkretnego, oficjalnego źródła (strona gminy,
-            miasta, powiatu, WKD, PGE Dystrybucja) — nigdy z plotek czy postów w
+            Każdy alert pochodzi z konkretnego, oficjalnego źródła — dziś są to
+            komunikaty Gminy Michałowice, a pojedynczo także strony Miasta
+            Pruszków i WKD (pełna lista z linkami:{" "}
+            <Link href="/about#zrodla" className="font-medium text-emerald-700 dark:text-emerald-300 underline">
+              Oficjalne źródła informacji
+            </Link>
+            ) — nigdy z plotek czy postów w
             mediach społecznościowych, które traktujemy co najwyżej jako trop do
             sprawdzenia. Zanim komunikat trafi na listę, przechodzi automatyczne
             sprawdzenie, czy nie duplikuje już istniejącego alertu lub innego

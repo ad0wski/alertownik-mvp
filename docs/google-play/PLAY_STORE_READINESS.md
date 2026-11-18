@@ -30,6 +30,12 @@ DECYZJI**. Ten dokument nie wykonuje żadnych działań w Google Play Console.
 
 ## 2. Proponowana karta sklepowa
 
+> **NIEAKTUALNE — NIE WKLEJAĆ DO PLAY CONSOLE.** Krótki i pełny opis z tej
+> sekcji obiecują m.in. „prąd” i „transport” i nie zawierają listy
+> oficjalnych źródeł z adresami URL. Aktualny, zgodny z polityką Google Play
+> tekst (po odrzuceniu 18.11.2026 — „Missing Source Link for Government
+> Information”) jest wyłącznie w `docs/google-play/V1_STORE_COPY.md`.
+
 ### Nazwa (App name, limit 30 znaków)
 Alertownik
 
