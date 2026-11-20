@@ -283,3 +283,72 @@ export async function attemptOperationalNotification(
     // Deliberately empty — see doc comment above.
   }
 }
+
+// ── Automation V1 (auto-publish / auto-archive) — event notifications ──────────────────────────
+//
+// Same claim → send → finish path as orchestrateRunLevelNotification above,
+// for the four automation event types. Called ONLY for problems (needs
+// review, publish/archive failure, stale writer) — never for a normal run.
+// The ledger's 6-hour per-fingerprint cooldown (claim RPC) plus a fixed
+// scopeKey per event type caps each one at one email per 6 hours.
+
+export type AutomationNotificationEventType = Extract<
+  OperationalNotificationEventType,
+  "auto_alert_needs_review" | "auto_publish_failed" | "auto_archive_failed" | "writer_stale"
+>;
+
+const AUTOMATION_EVENT_SEVERITY: Record<AutomationNotificationEventType, AutomationSeverity> = {
+  auto_alert_needs_review: "info",
+  auto_publish_failed: "critical",
+  auto_archive_failed: "warning",
+  writer_stale: "warning",
+};
+
+export interface AutomationNotificationInput {
+  environmentTag: string;
+  eventType: AutomationNotificationEventType;
+  scheduledWriterRunId: string | null;
+  /** Plain Polish summary, no PII — truncated to SAFE_SUMMARY_MAX_LENGTH. */
+  summary: string;
+}
+
+/** Never throws — a notification problem must never fail the cron run. */
+export async function notifyAutomationEvent(
+  ledger: OperationalNotificationLedger,
+  adapter: NotificationAdapter,
+  input: AutomationNotificationInput
+): Promise<{ sent: boolean }> {
+  try {
+    const safeSummary = input.summary.slice(0, SAFE_SUMMARY_MAX_LENGTH);
+    const claim = await claimEventForSending(ledger, {
+      environmentTag: input.environmentTag,
+      scopeKey: "automation",
+      eventType: input.eventType,
+      severity: AUTOMATION_EVENT_SEVERITY[input.eventType],
+      scheduledWriterRunId: input.scheduledWriterRunId,
+      sourceId: null,
+      safeSummary,
+    });
+    if (!claim.claimed) return { sent: false };
+    const sendResult = await sendViaAdapter(adapter, {
+      subject: `Alertownik — ${OPERATIONAL_NOTIFICATION_EVENT_TYPE_LABELS_PL[input.eventType]}`,
+      textBody: safeSummary,
+      fingerprint: buildOperationalNotificationFingerprint(input.environmentTag, "automation", input.eventType),
+    });
+    await finalizeOperationalNotificationEvent(ledger, { eventId: claim.eventId, sendResult });
+    return { sent: sendResult.status === "sent" };
+  } catch {
+    return { sent: false };
+  }
+}
+
+/** The candidate writer runs twice a day; 26 h without a finished run
+ *  means at least two missed runs, not one late cron. */
+export const WRITER_STALE_AFTER_HOURS = 26;
+
+export function isWriterStale(lastFinishedAt: string | null, now: Date, staleAfterHours = WRITER_STALE_AFTER_HOURS): boolean {
+  if (!lastFinishedAt) return true;
+  const finishedMs = new Date(lastFinishedAt).getTime();
+  if (!Number.isFinite(finishedMs)) return true;
+  return now.getTime() - finishedMs > staleAfterHours * 3_600_000;
+}

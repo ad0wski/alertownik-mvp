@@ -41,7 +41,15 @@ export type OperationalNotificationEventType =
   | "credentials_not_configured"
   | "environment_guard_blocked"
   | "kill_switch_disabled"
-  | "unexpected_error";
+  | "unexpected_error"
+  // AUTO ALERTS V1 — emitted only by notifyAutomationEvent
+  // (operationalNotificationOrchestrator.ts), never by the run-level
+  // category mapping above. Require docs/sql/PROPOSED_AUTO_ALERTS_V1.sql
+  // (DB check constraint + claim function allow-list).
+  | "auto_alert_needs_review"
+  | "auto_publish_failed"
+  | "auto_archive_failed"
+  | "writer_stale";
 
 // Sprint 166F-2A — canonical, single source of truth for "was this run
 // abandoned" (Etap 2). automationErrorClassifier.categoryFromRunOutcome

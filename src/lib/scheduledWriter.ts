@@ -859,6 +859,9 @@ export interface AutoPublishAlertInsertPayload {
   title: string;
   place: string;
   starts_at: string;
+  /** AUTO ALERTS V1 — present only when autoAlertsV1.ts derived an
+   *  explicit end time; the legacy path never sets it. */
+  ends_at?: string;
   change: string;
   action: string;
   source_name: string;
@@ -917,7 +920,13 @@ export interface ScheduledSourceWriter {
    *  source_notice_candidates already permits this, no new read grant
    *  needed. Ordered oldest-first so a long-pending candidate is
    *  considered before a just-created one. */
-  findPendingAutoPublishCandidates?(sourceIds: readonly string[]): Promise<PendingAutoPublishCandidateRow[]>;
+  findPendingAutoPublishCandidates?(
+    sourceIds: readonly string[],
+    /** AUTO ALERTS V1 — only rows with detected_at >= this. Without it,
+     *  old never-reviewed rows (oldest-first, limit 20) would fill every
+     *  slot and hide new notices from evaluation. */
+    detectedAfterIso?: string
+  ): Promise<PendingAutoPublishCandidateRow[]>;
   /** P0-2C fix — bounded read (limit 50, same convention as
    *  findExistingCandidateTexts) of `pending` candidates from every
    *  OTHER source (source_key != excludeSourceKey), for the new
@@ -929,6 +938,44 @@ export interface ScheduledSourceWriter {
    *  creation, matching this file's own established convention for
    *  optional writer methods. */
   findPendingCandidatesFromOtherSources?(excludeSourceKey: string): Promise<DedupComparisonItem[]>;
+  /** AUTO ALERTS V1 — auto-archive. Bounded read of `published` alerts
+   *  whose ends_at is set and earlier than `cutoffIso`. THROWS on a read
+   *  error (never returns [] for a failure), so the caller can report it.
+   *  Optional, like every other later-added method here. */
+  findAlertsForAutoArchive?(cutoffIso: string, limit: number): Promise<AutoArchiveAlertRow[]>;
+  /** AUTO ALERTS V1 — the ONLY alert UPDATE the writer can make: one row,
+   *  published → archived, re-checking status and ends_at in the same
+   *  statement (so a row an admin changed meanwhile is left alone).
+   *  `archived: false` = no row matched (already archived, edited, or not
+   *  ended) — idempotent, not an error. Requires the narrow UPDATE policy
+   *  + guard trigger from docs/sql/PROPOSED_AUTO_ALERTS_V1.sql; without
+   *  it the call fails with 42501 → `{ ok: false }`. Never DELETE. */
+  archiveEndedAlert?(alertId: string, cutoffIso: string, archivedAtIso: string): Promise<ArchiveEndedAlertResult>;
+  /** AUTO ALERTS V1 — append-only decision log (automation_decisions). */
+  insertAutomationDecision?(row: AutomationDecisionInsert): Promise<{ ok: boolean }>;
+  /** AUTO ALERTS V1 — finished_at of the newest finished candidate-writer
+   *  run (sources_checked > 0, which only write-candidates ever records),
+   *  or null when none exists. THROWS on a read error. */
+  findLastSourceRunFinishedAt?(): Promise<string | null>;
+}
+
+export interface AutoArchiveAlertRow {
+  id: string;
+  status: string;
+  startsAt: string | null;
+  endsAt: string | null;
+}
+
+export type ArchiveEndedAlertResult = { ok: true; archived: boolean } | { ok: false };
+
+export interface AutomationDecisionInsert {
+  run_id: string | null;
+  kind: "auto_publish" | "auto_archive";
+  mode: "dry_run" | "live";
+  subject_id: string;
+  decision: "would_publish" | "published" | "deferred" | "skipped" | "failed" | "would_archive" | "archived";
+  reason: string | null;
+  alert_id: string | null;
 }
 
 /** Postgres unique_violation — the exact code the proposed migration's
@@ -1070,9 +1117,9 @@ export function createSupabaseScheduledWriter(client: SupabaseClient): Scheduled
         .eq("id", candidateId);
       return { ok: !error };
     },
-    async findPendingAutoPublishCandidates(sourceIds) {
+    async findPendingAutoPublishCandidates(sourceIds, detectedAfterIso) {
       if (sourceIds.length === 0) return [];
-      const { data } = await client
+      let query = client
         .from("source_notice_candidates")
         // P0-2C fix: detected_at (candidate-age cap) and source_id (real
         // registry provenance) added — both were previously unselected.
@@ -1080,9 +1127,9 @@ export function createSupabaseScheduledWriter(client: SupabaseClient): Scheduled
           "id, source_key, source_name, source_url, candidate_url, title, excerpt, raw_text, status, converted_alert_id, detected_at, source_id"
         )
         .eq("status", "pending")
-        .in("source_key", [...sourceIds])
-        .order("created_at", { ascending: true })
-        .limit(20);
+        .in("source_key", [...sourceIds]);
+      if (detectedAfterIso) query = query.gte("detected_at", detectedAfterIso);
+      const { data } = await query.order("created_at", { ascending: true }).limit(20);
       return ((data as PendingCandidateFullRow[] | null) ?? []).map((row) => ({
         id: row.id,
         sourceKey: row.source_key,
@@ -1120,11 +1167,16 @@ export function createSupabaseScheduledWriter(client: SupabaseClient): Scheduled
     // diagnostic (e.g. counting RLS-denied reads in the run history) is
     // future work, not part of this change.
     async findExistingAlertComparisons() {
-      const { data } = await client
+      const { data, error } = await client
         .from("alerts")
         .select("title, change, source_url")
         .order("created_at", { ascending: false })
         .limit(EXISTING_ALERT_COMPARISON_LIMIT);
+      // AUTO ALERTS V1 — a failed read now throws instead of looking like
+      // "no alerts". Both callers already wrap this call in try/catch:
+      // writeCandidatesForSource keeps degrading to [] exactly as before,
+      // while autoAlertsV1.ts fails the whole publish step closed.
+      if (error) throw new Error("alert comparison read failed");
       return ((data as ExistingAlertRow[] | null) ?? [])
         .map((row) => ({
           text: [row.title, row.change].filter(Boolean).join(" ").trim(),
@@ -1136,6 +1188,47 @@ export function createSupabaseScheduledWriter(client: SupabaseClient): Scheduled
     // (non source-scoped) SELECT policy on source_notice_candidates,
     // same policy findPendingAutoPublishCandidates already relies on —
     // no new grant needed.
+    async findAlertsForAutoArchive(cutoffIso, limit) {
+      const { data, error } = await client
+        .from("alerts")
+        .select("id, status, starts_at, ends_at")
+        .eq("status", "published")
+        .not("ends_at", "is", null)
+        .lt("ends_at", cutoffIso)
+        .order("ends_at", { ascending: true })
+        .limit(limit);
+      if (error) throw new Error("auto-archive read failed");
+      return ((data as { id: string; status: string; starts_at: string | null; ends_at: string | null }[] | null) ?? []).map(
+        (row) => ({ id: row.id, status: row.status, startsAt: row.starts_at, endsAt: row.ends_at })
+      );
+    },
+    async archiveEndedAlert(alertId, cutoffIso, archivedAtIso) {
+      const { data, error } = await client
+        .from("alerts")
+        .update({ status: "archived", auto_archived_at: archivedAtIso })
+        .eq("id", alertId)
+        .eq("status", "published")
+        .lt("ends_at", cutoffIso)
+        .select("id");
+      if (error) return { ok: false };
+      return { ok: true, archived: ((data as unknown[] | null) ?? []).length === 1 };
+    },
+    async insertAutomationDecision(row) {
+      const { error } = await client.from("automation_decisions").insert(row);
+      return { ok: !error };
+    },
+    async findLastSourceRunFinishedAt() {
+      const { data, error } = await client
+        .from("scheduled_writer_runs")
+        .select("finished_at")
+        .gt("sources_checked", 0)
+        .not("finished_at", "is", null)
+        .order("finished_at", { ascending: false })
+        .limit(1);
+      if (error) throw new Error("run history read failed");
+      const rows = (data as { finished_at: string }[] | null) ?? [];
+      return rows[0]?.finished_at ?? null;
+    },
     async findPendingCandidatesFromOtherSources(excludeSourceKey) {
       const { data } = await client
         .from("source_notice_candidates")

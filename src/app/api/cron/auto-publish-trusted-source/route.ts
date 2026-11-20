@@ -11,9 +11,13 @@ import {
   DATABASE_ENVIRONMENT_GUARD_GENERIC_ERROR,
 } from "@/lib/databaseEnvironmentGuard";
 import { createSupabaseScheduledWriterHistory, buildRunHistoryCloseUpdate } from "@/lib/scheduledWriterHistory";
-import { isAutoPublishEnabled, runTrustedSourceAutoPublish } from "@/lib/trustedSourceAutoPublish";
 import { resolveRunTrigger } from "@/lib/scheduledWriterRunSafety";
 import { randomUUID } from "crypto";
+import { isAnyAutomationStepOn, resolveAutomationCycleModes, runAutomationCycle } from "@/lib/autoAlertsCycle";
+import { isOperationalNotificationRuntimeEnabled } from "@/lib/operationalNotificationRuntimeConfig";
+import { createSupabaseOperationalNotificationLedger } from "@/lib/operationalNotificationLedgerSupabase";
+import { createConfiguredNotificationAdapter } from "@/lib/notificationAdapterFactory";
+import { notifyAutomationEvent } from "@/lib/operationalNotificationOrchestrator";
 
 // Sprint 180C — Trusted Source Auto-Publish v1.
 //
@@ -54,6 +58,19 @@ import { randomUUID } from "crypto";
 // fields to publish) lives in trustedSourceAutoPublish.ts, testable there
 // with a fully in-memory fake writer — this route only wires the real
 // Supabase-backed writer in and manages the shared run-history lock.
+//
+// AUTO ALERTS V1 — this route now runs one automation cycle
+// (src/lib/autoAlertsCycle.ts): stale-writer check, auto-archive of ended
+// alerts, then the stricter V1 auto-publish gate (src/lib/autoAlertsV1.ts,
+// michalowice-komunikaty only). No new cron. Each step has its own switch,
+// all OFF by default:
+//   - SCHEDULED_AUTO_PUBLISH_ENABLED=true  → live auto-publish (V1 gate)
+//   - SCHEDULED_AUTO_ARCHIVE_ENABLED=true  → live auto-archive
+//   - SCHEDULED_AUTOMATION_DRY_RUN=true    → BOTH steps evaluate and log
+//     decisions to automation_decisions, with zero alert/candidate writes;
+//     wins over the two live flags.
+// The legacy runTrustedSourceAutoPublish() is no longer called by any route.
+// Nothing here sends a push notification.
 
 export const dynamic = "force-dynamic";
 
@@ -63,10 +80,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ ok: false, error: DATABASE_ENVIRONMENT_GUARD_GENERIC_ERROR }, { status: 503 });
   }
 
-  if (
-    !isScheduledChecksEnabled(process.env.SCHEDULED_CHECKS_ENABLED) ||
-    !isAutoPublishEnabled(process.env.SCHEDULED_AUTO_PUBLISH_ENABLED)
-  ) {
+  const modes = resolveAutomationCycleModes();
+  if (!isScheduledChecksEnabled(process.env.SCHEDULED_CHECKS_ENABLED) || !isAnyAutomationStepOn(modes)) {
     return NextResponse.json({ ok: false, error: "Automatyczna publikacja jest wyłączona." }, { status: 503 });
   }
 
@@ -107,37 +122,61 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const writer = createSupabaseScheduledWriter(signIn.client);
 
   try {
-    const outcome = await runTrustedSourceAutoPublish(writer);
+    const cycle = await runAutomationCycle(writer, { modes, runId });
+    const publishSkips = cycle.publish.decisions.filter((d) => d.decision === "skipped");
+    const summary =
+      `pub:${cycle.publish.mode}/${cycle.publish.status} arch:${cycle.archive.mode}/${cycle.archive.status}` +
+      ` archived:${cycle.archive.archived.length} would_archive:${cycle.archive.wouldArchive.length}` +
+      ` failed:${cycle.archive.failed.length} review:${cycle.notifications.length}`;
 
     await history
       .closeRun(
         runId,
         buildRunHistoryCloseUpdate({
           finishedAt: new Date().toISOString(),
-          outcome: "success",
+          outcome: cycle.hadFailure ? "partial_failure" : "success",
           sourcesChecked: 0,
           sourcesFailed: 0,
           candidatesInserted: 0,
-          duplicatesSkipped: outcome.skipped.filter((s) => s.reason === "duplicate").length,
-          ambiguousCandidates: outcome.skipped.filter((s) => s.reason === "ambiguous").length,
-          cappedSkipped: 0,
+          duplicatesSkipped: publishSkips.filter((d) => d.reason === "duplicate").length,
+          ambiguousCandidates: publishSkips.filter((d) => d.reason === "ambiguous").length,
+          cappedSkipped: cycle.publish.decisions.filter((d) => d.decision === "deferred").length,
           duplicatesPreventedByDatabase: 0,
-          errorSummary:
-            outcome.status === "insert_failed" || outcome.status === "mark_converted_failed"
-              ? outcome.status
-              : null,
+          errorSummary: summary.slice(0, 200),
         })
       )
       .catch(() => ({ ok: false }));
 
+    if (
+      cycle.notifications.length > 0 &&
+      isOperationalNotificationRuntimeEnabled(process.env.OPERATIONAL_NOTIFICATION_RUNTIME_ENABLED)
+    ) {
+      const ledger = createSupabaseOperationalNotificationLedger(signIn.client);
+      const adapter = createConfiguredNotificationAdapter();
+      for (const n of cycle.notifications) {
+        await notifyAutomationEvent(ledger, adapter, {
+          environmentTag,
+          eventType: n.eventType,
+          scheduledWriterRunId: runId,
+          summary: n.summary,
+        });
+      }
+    }
+
     return NextResponse.json({
       ok: true,
       checkedAt: new Date().toISOString(),
-      status: outcome.status,
-      published: outcome.status === "published",
-      candidateId: outcome.candidateId ?? null,
-      alertId: outcome.alertId ?? null,
-      skipped: outcome.skipped,
+      modes,
+      writerStale: cycle.writerStale,
+      publish: {
+        status: cycle.publish.status,
+        published: cycle.publish.status === "published",
+        alertId: cycle.publish.alertId ?? null,
+        decisions: cycle.publish.decisions,
+        decisionLogFailures: cycle.publish.decisionLogFailures,
+      },
+      archive: cycle.archive,
+      notifications: cycle.notifications.map((n) => n.eventType),
     });
   } catch {
     await history

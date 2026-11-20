@@ -42,6 +42,10 @@ export const OPERATIONAL_NOTIFICATION_EVENT_TYPE_LABELS_PL: Record<OperationalNo
   environment_guard_blocked: "zablokowane przez zabezpieczenie środowiska",
   kill_switch_disabled: "automatyzacja wyłączona",
   unexpected_error: "nieoczekiwany błąd",
+  auto_alert_needs_review: "komunikat wymaga decyzji administratora",
+  auto_publish_failed: "błąd automatycznej publikacji",
+  auto_archive_failed: "błąd automatycznej archiwizacji",
+  writer_stale: "writer nie działał zbyt długo",
 };
 
 export const OPERATIONAL_NOTIFICATION_STATUS_LABELS_PL: Record<OperationalNotificationStatus, string> = {

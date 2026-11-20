@@ -28,6 +28,10 @@ export const ALLOWED_NOTIFICATION_EVENT_TYPES: ReadonlySet<string> = new Set([
   "environment_guard_blocked",
   "kill_switch_disabled",
   "unexpected_error",
+  "auto_alert_needs_review",
+  "auto_publish_failed",
+  "auto_archive_failed",
+  "writer_stale",
 ] satisfies OperationalNotificationEventType[]);
 
 export const ALLOWED_NOTIFICATION_SEVERITIES: ReadonlySet<string> = new Set([

@@ -143,9 +143,9 @@ Only the **anon/publishable key** is used (named `NEXT_PUBLIC_SUPABASE_PUBLISHAB
 9. **Never call external AI APIs from client-side code.** All calls to Anthropic, OpenAI, or any AI API must go through a server-side route handler (e.g. `/api/ai/draft-alert`). The API key must never leave the server.
 10. **AI-generated drafts require manual admin review by default — no exceptions to this default.** AI output is loaded into Builder for admin review; admin must explicitly click "Opublikuj w Supabase" for every draft **unless** it qualifies for the narrow Trusted Source Auto-Publish path below.
 
-    **Trusted Source Auto-Publish (scoped exception, Sprint 180C):** a single, explicit, revocable automated path exists for candidates from an allowlisted trusted source — currently only `pruszkow-aktualnosci`. Auto-publish may fire **only** when every one of the following is simultaneously true; any single failing condition fails closed (candidate stays `pending`, no partial write):
+    **Trusted Source Auto-Publish (scoped exception, Sprint 180C; tightened by AUTO ALERTS V1, 2026-11-20):** a single, explicit, revocable automated path exists for candidates from an allowlisted trusted source — since AUTO ALERTS V1 hard-limited in code to `michalowice-komunikaty` (`AUTO_ALERTS_V1_SOURCE_IDS` in `src/lib/autoAlertsV1.ts`; the env allowlist can only narrow it). The full V1 gate (exact Warsaw start AND end time, single locality, event-aware dedup, per-category opt-in via `SCHEDULED_AUTO_PUBLISH_CATEGORIES`, confidence threshold) is documented in `docs/AUTO_ALERTS_V1.md`. Auto-publish may fire **only** when every one of the following is simultaneously true; any single failing condition fails closed (candidate stays `pending`, no partial write):
     - `SCHEDULED_AUTO_PUBLISH_ENABLED=true` (separate flag, independent of `SCHEDULED_WRITES_ENABLED`, off by default).
-    - The candidate's `source_key` is on the dedicated auto-publish allowlist (currently `pruszkow-aktualnosci` only).
+    - The candidate's `source_key` is on the dedicated auto-publish allowlist (`SCHEDULED_AUTO_PUBLISH_SOURCE_IDS`), intersected with the V1 code scope — effectively `michalowice-komunikaty` only.
     - `candidate_url` is a direct, safe, public `http(s)` permalink — never a `/wp-json/` API endpoint, never missing.
     - The notice is current or upcoming (not expired/past).
     - Every required alert field (title, category, location/area, dates, description, "co zrobić", source URL) can be populated completely and faithfully from the source.
@@ -153,6 +153,8 @@ Only the **anon/publishable key** is used (named `NEXT_PUBLIC_SUPABASE_PUBLISHAB
     - The candidate is still `status = pending` and `converted_alert_id IS NULL` at the moment of conversion (no double-processing).
     - At most one candidate is auto-published per scheduled run (cap = 1).
     - The conversion is idempotent — re-running against an already-converted candidate publishes nothing a second time.
+
+    **Auto-archive (AUTO ALERTS V1):** `SCHEDULED_AUTO_ARCHIVE_ENABLED=true` (off by default) lets the same automation identity change a `published` alert whose `ends_at` passed more than the grace period (default 60 min, DB floor 30 min) to `archived`, setting `auto_archived_at`. Never DELETE, never drafts, never alerts without `ends_at`, never content changes (DB guard trigger), never push. `SCHEDULED_AUTOMATION_DRY_RUN=true` turns both automations into log-only dry runs and wins over the live flags.
 
     Duplicate, ambiguous, expired, incomplete candidates, and candidates from any source not on the auto-publish allowlist must **never** be auto-published — always fail closed to `pending`, never partially published. The flag and allowlist must both support instant, code-free rollback (env var flip + redeploy only, never a code revert) back to fully manual review. This exception never widens `anon`/`public` RLS access and never bypasses RLS — the automation identity's existing narrow policies are the only write path, unchanged.
 

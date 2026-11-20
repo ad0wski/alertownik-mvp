@@ -208,6 +208,11 @@ export interface AutoPublishAlertFields {
   title: string;
   place: string;
   startsAt: string;
+  /** AUTO ALERTS V1 — set only by autoAlertsV1.ts, which derives it from
+   *  an explicit "HH:MM-HH:MM" range in the notice. The legacy evaluator
+   *  above never sets it (it cannot derive an end with confidence), so
+   *  its payload keeps carrying no ends_at at all. */
+  endsAt?: string;
   change: string;
   action: string;
   sourceName: string;
@@ -263,52 +268,14 @@ export function evaluateAutoPublishEligibility(
   existingItems: DedupComparisonItem[],
   now: Date = new Date()
 ): AutoPublishEligibility {
-  if (candidate.status !== "pending" || candidate.convertedAlertId !== null) {
-    return { eligible: false, reason: "not_pending_or_already_converted" };
-  }
-  // P0-2C fix — cheapest check (no text parsing), so it runs early: a
-  // candidate detected more than MAX_AUTO_PUBLISH_CANDIDATE_AGE_HOURS ago
-  // is never eligible, regardless of what its own text says. Exactly 24
-  // hours still passes (`>`, not `>=`) — matches this codebase's existing
-  // boundary-inclusive convention (e.g. getAlertTimeStatus.ts's
-  // OPEN_ENDED_ALERT_FRESHNESS_DAYS check).
-  const candidateAgeMs = now.getTime() - new Date(candidate.detectedAt).getTime();
-  if (candidateAgeMs > MAX_AUTO_PUBLISH_CANDIDATE_AGE_MS) {
-    return { eligible: false, reason: "candidate_too_old" };
-  }
-  if (!getAutoPublishSourceIds().includes(candidate.sourceKey)) {
-    return { eligible: false, reason: "source_not_on_auto_publish_allowlist" };
-  }
-
-  // P0-2H.2 — trusted provenance gate. Being on the auto-publish
-  // allowlist only proves candidate.sourceKey is a trusted STRING — it
-  // says nothing about whether this specific row actually came from the
-  // automated writer for that source, as opposed to a manual/legacy/
-  // forged candidate that merely happens to share the same source_key
-  // (source_key is admin-settable free text on every other write path —
-  // nothing before this gate ever constrained it). Requires candidate.
-  // registrySourceId to exactly equal the SAME SCHEDULED_WRITER_SOURCE_
-  // REGISTRY_IDS mapping the writer itself already uses for this exact
-  // sourceKey (getRegistrySourceId, scheduledWriter.ts) — reused, not
-  // reparsed, so there is exactly one place this env var's JSON shape is
-  // ever understood. Any of: no mapping configured for this sourceKey,
-  // no source_id on the candidate at all, or a source_id that doesn't
-  // match → fails closed, every one a distinct, reported reason, never
-  // a guess or a silent pass.
-  const expectedRegistrySourceId = getRegistrySourceId(candidate.sourceKey);
-  if (!expectedRegistrySourceId) {
-    return { eligible: false, reason: "source_registry_mapping_missing" };
-  }
-  if (!candidate.registrySourceId) {
-    return { eligible: false, reason: "candidate_source_id_missing" };
-  }
-  if (candidate.registrySourceId !== expectedRegistrySourceId) {
-    return { eligible: false, reason: "candidate_source_id_mismatch" };
-  }
-
+  const provenanceFailure = checkTrustedCandidateProvenance(candidate, now);
+  if (provenanceFailure) return { eligible: false, reason: provenanceFailure };
+  // checkTrustedCandidateProvenance already proved these two; repeated
+  // only so TypeScript narrows them to `string` for the fields below.
   if (!isDirectSafePermalink(candidate.candidateUrl)) {
     return { eligible: false, reason: "missing_or_unsafe_candidate_url" };
   }
+  if (!candidate.registrySourceId) return { eligible: false, reason: "candidate_source_id_missing" };
 
   const classification = classifyProposalAgainstExisting(
     { text: candidate.text, url: candidate.candidateUrl ?? undefined },
@@ -365,6 +332,61 @@ export function evaluateAutoPublishEligibility(
       sourceId: candidate.registrySourceId,
     },
   };
+}
+
+/** AUTO ALERTS V1 — the trusted-provenance prefix of
+ *  evaluateAutoPublishEligibility, extracted verbatim (same checks, same
+ *  order, same reasons) so autoAlertsV1.ts reuses it instead of keeping a
+ *  second copy: pending + not converted, candidate age cap, auto-publish
+ *  allowlist, registry mapping/provenance, direct safe permalink. Returns
+ *  the first failing reason, or null when every check passes. */
+export function checkTrustedCandidateProvenance(
+  candidate: AutoPublishCandidateInput,
+  now: Date,
+  allowedSourceIds: readonly string[] = getAutoPublishSourceIds()
+): AutoPublishIneligibleReason | null {
+  if (candidate.status !== "pending" || candidate.convertedAlertId !== null) {
+    return "not_pending_or_already_converted";
+  }
+  // P0-2C fix — cheapest check (no text parsing), so it runs early: a
+  // candidate detected more than MAX_AUTO_PUBLISH_CANDIDATE_AGE_HOURS ago
+  // is never eligible, regardless of what its own text says. Exactly 24
+  // hours still passes (`>`, not `>=`) — matches this codebase's existing
+  // boundary-inclusive convention (e.g. getAlertTimeStatus.ts's
+  // OPEN_ENDED_ALERT_FRESHNESS_DAYS check).
+  const candidateAgeMs = now.getTime() - new Date(candidate.detectedAt).getTime();
+  // AUTO ALERTS V1 — an unparseable detected_at yields NaN, which the
+  // `>` comparison below would silently let through; fail closed instead.
+  if (!Number.isFinite(candidateAgeMs) || candidateAgeMs > MAX_AUTO_PUBLISH_CANDIDATE_AGE_MS) {
+    return "candidate_too_old";
+  }
+  if (!allowedSourceIds.includes(candidate.sourceKey)) {
+    return "source_not_on_auto_publish_allowlist";
+  }
+
+  // P0-2H.2 — trusted provenance gate. Being on the auto-publish
+  // allowlist only proves candidate.sourceKey is a trusted STRING — it
+  // says nothing about whether this specific row actually came from the
+  // automated writer for that source, as opposed to a manual/legacy/
+  // forged candidate that merely happens to share the same source_key
+  // (source_key is admin-settable free text on every other write path —
+  // nothing before this gate ever constrained it). Requires candidate.
+  // registrySourceId to exactly equal the SAME SCHEDULED_WRITER_SOURCE_
+  // REGISTRY_IDS mapping the writer itself already uses for this exact
+  // sourceKey (getRegistrySourceId, scheduledWriter.ts) — reused, not
+  // reparsed, so there is exactly one place this env var's JSON shape is
+  // ever understood. Any of: no mapping configured for this sourceKey,
+  // no source_id on the candidate at all, or a source_id that doesn't
+  // match → fails closed, every one a distinct, reported reason, never
+  // a guess or a silent pass.
+  const expectedRegistrySourceId = getRegistrySourceId(candidate.sourceKey);
+  if (!expectedRegistrySourceId) return "source_registry_mapping_missing";
+  if (!candidate.registrySourceId) return "candidate_source_id_missing";
+  if (candidate.registrySourceId !== expectedRegistrySourceId) return "candidate_source_id_mismatch";
+
+  if (!isDirectSafePermalink(candidate.candidateUrl)) return "missing_or_unsafe_candidate_url";
+
+  return null;
 }
 
 // ── Insert payload builder — mirrors buildPendingCandidateInsert's own
@@ -427,6 +449,7 @@ export function buildAutoPublishAlertInsert(fields: AutoPublishAlertFields): Aut
     title: fields.title,
     place: fields.place,
     starts_at: fields.startsAt,
+    ...(fields.endsAt ? { ends_at: fields.endsAt } : {}),
     change: fields.change,
     action: fields.action,
     source_name: fields.sourceName,
